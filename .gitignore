@@ -1,0 +1,42 @@
+# dependencies
+/node_modules
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# IDE / local tooling
+.idea/
+.vscode/
+.claude/
+
+# debug
+npm-debug.log*
+
+# env files
+.env*
+!.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# raw downloads made by `npm run maps`
+/scripts/.cache/
+
+# Supabase CLI local state
+/supabase/.temp/
+/supabase/.branches/

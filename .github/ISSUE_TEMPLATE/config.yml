@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security problem · Проблема безопасности
+    url: https://github.com/Darhaal/GulfOfTrump/blob/main/docs/security.md#reporting-a-problem
+    about: Do not open a public issue; write to the address in the security notes. · Не открывайте публичный issue — напишите на адрес из заметок о безопасности.

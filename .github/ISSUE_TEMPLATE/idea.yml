@@ -1,0 +1,28 @@
+name: Idea · Идея
+description: Something the game should let you do, or do better. · Что игра должна уметь или делать лучше.
+labels: [idea, beta]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea · Идея
+      description: What you would like to do in the game. · Что вы хотели бы делать в игре.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why · Зачем
+      description: The moment in a game where you missed it. · Момент в партии, где этого не хватило.
+  - type: dropdown
+    id: scenario
+    attributes:
+      label: Start date · Дата старта
+      multiple: true
+      options:
+        - 28 June 1914
+        - 1 September 1939
+        - 19 August 1991
+        - 16 January 2014
+        - 24 February 2022
+        - Any · Любая

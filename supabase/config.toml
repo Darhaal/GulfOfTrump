@@ -1,0 +1,8 @@
+# Only what the hosted project needs from this repo. `supabase config push`
+# changes the properties declared here and leaves everything else as set in
+# the dashboard (the Google provider and its secret live there, not here).
+project_id = "gulf-of-trump"
+
+[auth]
+site_url = "http://127.0.0.1:3000"
+additional_redirect_urls = ["http://127.0.0.1:3000/auth/callback", "http://localhost:3000/auth/callback"]

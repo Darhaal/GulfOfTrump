@@ -1,0 +1,147 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Two sizes below Tailwind's smallest, as tokens so they can grow on wide screens. */
+@theme {
+  --text-3xs: 0.5625rem;
+  --text-3xs--line-height: 1.45;
+  --text-2xs: 0.625rem;
+  --text-2xs--line-height: 1.45;
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --text-3xs: 0.6563rem;
+    --text-2xs: 0.7188rem;
+    --text-xs: 0.8438rem;
+    --text-xs--line-height: 1.4;
+    --text-sm: 0.9375rem;
+    --text-sm--line-height: 1.45;
+  }
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* ==========================================================================
+ * Theme — the Darhaal design system's tokens (see docs/design-system.md),
+ * light by default and redefined under `.dark`, which layout.tsx sets on
+ * <html> before the first paint. Components use the token utilities, never
+ * hex values; tests/theme.test.ts refuses hard-coded design colours.
+ *
+ *   page / surface / line / divider / ink / on-ink / muted / accent / warm /
+ *   scrim / shade / night — as in Darhaal Games
+ *   sea       the ocean on the map
+ *   map-line  borders drawn on the map
+ *   map-quiet grey land of the resource and transport maps
+ *   map-halo  the outline that keeps map labels readable on any colour
+ *   map-glow  the faint, thin halo of place names
+ *   river     rivers and lake shores
+ *
+ * Country colours on the map are data (scenario seeds), the same in both
+ * themes, like seat colours on a board.
+ * ========================================================================== */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-divider: var(--divider);
+  --color-ink: var(--ink);
+  --color-on-ink: var(--on-ink);
+  --color-muted: var(--muted);
+  --color-faded: var(--faded);
+  --color-accent: var(--accent);
+  --color-warm: var(--warm);
+  --color-scrim: var(--scrim);
+  --color-shade: var(--shade);
+  --color-night: var(--night);
+  --color-sea: var(--sea);
+}
+
+:root {
+  color-scheme: light;
+  --page: #F8FAFC;
+  --surface: #FFFFFF;
+  --line: #E6E1DC;
+  --divider: #F1F5F9;
+  --ink: #1A1F26;
+  --on-ink: #FFFFFF;
+  --muted: #8A9099;
+  --faded: #B5B3AD;
+  --accent: #9e1316;
+  --warm: #F5F5F0;
+  --scrim: #1A1F26;
+  --shade: #1A1F26;
+  --night: #1A1F26;
+  --sea: #DCE6EC;
+  --map-line: #2B2F36;
+  --map-quiet: #dddcd7;
+  --map-halo: rgba(255, 255, 255, 0.85);
+  --map-glow: rgba(255, 255, 255, 0.5);
+  --map-text: #3d434c;
+  --river: #4f88bf;
+}
+
+.dark {
+  color-scheme: dark;
+  --page: #0E1116;
+  --surface: #161A20;
+  --line: #2A3038;
+  --divider: #1E232A;
+  --ink: #E8EAED;
+  --on-ink: #0E1116;
+  --muted: #8C949F;
+  --faded: #59606A;
+  --accent: #E5484D;
+  --warm: #1D2229;
+  --scrim: #000000;
+  --shade: #000000;
+  --night: #1E232B;
+  --sea: #142231;
+  --map-line: #0B0E12;
+  --map-quiet: #3a3f47;
+  --map-halo: rgba(14, 17, 22, 0.8);
+  --map-glow: rgba(14, 17, 22, 0.45);
+  --map-text: #d6d9de;
+  --river: #3f78ad;
+
+  --color-gray-50: #12161B; --color-gray-100: #191E24; --color-gray-200: #262C34; --color-gray-300: #353C45; --color-gray-400: #5A626D; --color-gray-500: #7A828D; --color-gray-600: #9AA1AB; --color-gray-700: #B7BDC5; --color-gray-800: #D2D6DB; --color-gray-900: #E8EAED; --color-gray-950: #F4F5F7;
+  --color-red-50: color-mix(in oklab, oklch(25.8% 0.092 26.042) 45%, #0E1116); --color-red-100: color-mix(in oklab, oklch(39.6% 0.141 25.723) 65%, #0E1116); --color-red-200: oklch(44.4% 0.177 26.899); --color-red-300: oklch(50.5% 0.213 27.518); --color-red-400: oklch(57.7% 0.245 27.325); --color-red-600: oklch(70.4% 0.191 22.216); --color-red-700: oklch(80.8% 0.114 19.571);
+  --color-amber-50: color-mix(in oklab, oklch(27.9% 0.077 45.635) 45%, #0E1116); --color-amber-100: color-mix(in oklab, oklch(41.4% 0.112 45.904) 65%, #0E1116); --color-amber-600: oklch(82.8% 0.189 84.429); --color-amber-700: oklch(87.9% 0.169 91.605);
+  --color-emerald-50: color-mix(in oklab, oklch(26.2% 0.051 172.552) 45%, #0E1116); --color-emerald-100: color-mix(in oklab, oklch(37.8% 0.077 168.94) 65%, #0E1116); --color-emerald-600: oklch(76.5% 0.177 163.223); --color-emerald-700: oklch(84.5% 0.143 164.978);
+  --color-blue-50: color-mix(in oklab, oklch(28.2% 0.091 267.935) 45%, #0E1116); --color-blue-100: color-mix(in oklab, oklch(37.9% 0.146 265.522) 65%, #0E1116); --color-blue-600: oklch(70.7% 0.165 254.624); --color-blue-700: oklch(80.9% 0.105 251.813);
+}
+
+html,
+body {
+  background: var(--page);
+  color: var(--ink);
+}
+
+/* A turn's changes on the map flash a few times, then stay, quieter. */
+/* Starts and ends visible: where the animation does not run (a hidden tab), the highlight still shows. */
+@keyframes map-pulse {
+  0% { opacity: 1; }
+  25% { opacity: 0.35; }
+  50% { opacity: 1; }
+  75% { opacity: 0.35; }
+  100% { opacity: 0.8; }
+}
+
+.map-pulse {
+  opacity: 0.8;
+  animation: map-pulse 2.4s ease-in-out both;
+}
+
+/* Entrances are decoration: someone who asked the system for less motion gets none. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .animate-out,
+  .map-pulse {
+    animation: none !important;
+  }
+}

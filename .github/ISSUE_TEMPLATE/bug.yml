@@ -1,0 +1,57 @@
+name: Bug · Ошибка
+description: Something broke or behaved wrongly. · Что-то сломалось или повело себя неправильно.
+labels: [bug, beta]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for testing. A save file helps more than anything: on the front page open the game's menu → **Download the file**, then drag the `.json` here.
+        Спасибо, что тестируете. Больше всего помогает файл сохранения: на главной откройте меню игры → **Скачать файл** и перетащите `.json` сюда.
+  - type: input
+    id: version
+    attributes:
+      label: Version · Версия
+      description: Shown on the front page and in About. · Видна на главной и в «О проекте».
+      placeholder: 1.0.0-beta
+    validations:
+      required: true
+  - type: dropdown
+    id: scenario
+    attributes:
+      label: Start date · Дата старта
+      options:
+        - 28 June 1914
+        - 1 September 1939
+        - 19 August 1991
+        - 16 January 2014
+        - 24 February 2022
+        - Not in a game · Вне партии
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Country and turn · Страна и ход
+      placeholder: Ukraine, turn 4 · Украина, ход 4
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened · Что случилось
+      description: What you did, what you saw. · Что вы сделали и что увидели.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected · Чего ожидали
+  - type: textarea
+    id: save
+    attributes:
+      label: Save file and screenshots · Сохранение и скриншоты
+      description: Drag files here. · Перетащите файлы сюда.
+  - type: input
+    id: setup
+    attributes:
+      label: Browser, system, model · Браузер, система, модель
+      description: The model is in Settings. · Модель — в настройках.
+      placeholder: Chrome 140, Windows 11, gpt-5
