@@ -11,6 +11,7 @@ import Dialog from "@/components/ui/Dialog";
 import { ui } from "@/components/ui/classes";
 import { addStep, formatDate, yearOf } from "@/engine/calendar";
 import { CONTENT_REPORT_URL, MAX_ORDERS as MAX_TURN_ORDERS } from "@/constants/app";
+import { coupRiskIn } from "@/engine/abroad";
 import { addAdvice, type AdvisorId } from "@/engine/advisors";
 import { countryCrises } from "@/engine/crises";
 import { nationalAccounts, seedEconomies, setBudget } from "@/engine/economy";
@@ -50,6 +51,7 @@ import ResourceBar from "./ResourceBar";
 import SharePicture from "./SharePicture";
 import Timelapse from "./Timelapse";
 import TurnReport from "./TurnReport";
+import WorldNews from "./WorldNews";
 
 /** Panels that open on the left, from the rail; the right side shows the selection. */
 type LeftPanel = "orders" | "chronicle" | "cabinet" | "politics" | "state" | "foreign" | "economy";
@@ -94,6 +96,8 @@ export default function GameClient({ id }: { id: string }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [selectedProvince, setSelectedProvince] = useState<string | null>(null);
   const [openTurns, setOpenTurns] = useState<Set<number>>(new Set());
+  // The chronicle shows the player's own turns, or the world's news (engine/news.ts).
+  const [chronicleView, setChronicleView] = useState<"ours" | "world">("ours");
   const [diplomacyTarget, setDiplomacyTarget] = useState<string | null>(null);
   const [busy, setBusy] = useState<Busy | null>(null);
   // A question for a minister prepared elsewhere (a protest abroad, a plot): the cabinet opens on it.
@@ -108,7 +112,7 @@ export default function GameClient({ id }: { id: string }) {
   // replays their highlight, and where the camera was last asked to go.
   const [mapTurn, setMapTurn] = useState<number | null>(null);
   const [pulse, setPulse] = useState(0);
-  const [focus, setFocus] = useState<{ key: number; regions: string[] } | null>(null);
+  const [focus, setFocus] = useState<{ key: number; regions?: string[]; country?: string } | null>(null);
   // The meeting the player is holding in person, if any.
   const [live, setLive] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -494,7 +498,40 @@ export default function GameClient({ id }: { id: string }) {
               />
             )}
 
+            {left === "chronicle" && state.chronicle.length > 0 && (
+              <div className="mb-3 grid grid-cols-2 gap-1 rounded-xl bg-page p-1">
+                {(["ours", "world"] as const).map((view) => (
+                  <button
+                    key={view}
+                    type="button"
+                    aria-pressed={chronicleView === view}
+                    onClick={() => setChronicleView(view)}
+                    className={`rounded-lg px-1 py-2 text-2xs font-bold transition-all ${chronicleView === view ? `${ui.segmentOn} bg-surface shadow-sm` : ui.segmentOff}`}
+                  >
+                    {t(view === "ours" ? "news.view.ours" : "news.view.world")}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {left === "chronicle" && chronicleView === "world" && state.chronicle.length > 0 && (
+              <WorldNews
+                state={state}
+                index={map?.index ?? null}
+                onCountry={(tag) => {
+                  setSelected(tag);
+                  setSelectedProvince(null);
+                  if (tag !== state.player) setDiplomacyTarget(tag);
+                  setRight("country");
+                  setFocus({ key: Date.now(), country: tag });
+                  // Where both side panels do not fit, the country replaces the chronicle, as a click on the map does.
+                  if (!window.matchMedia("(min-width: 1536px)").matches) setLeft(null);
+                }}
+              />
+            )}
+
             {left === "chronicle" &&
+              (chronicleView === "ours" || state.chronicle.length === 0) &&
               (state.chronicle.length === 0 ? (
                 <p className="rounded-xl border-2 border-dashed border-line px-4 py-8 text-center text-xs font-medium text-muted">{t("game.chronicle.empty")}</p>
               ) : (
@@ -813,6 +850,7 @@ export default function GameClient({ id }: { id: string }) {
                 alliances={state.alliances}
                 countries={state.countries}
                 isPlayer={selectedCountry.tag === state.player}
+                coupRisk={selectedCountry.domestic ? coupRiskIn(state, selectedCountry.tag) : undefined}
                 footer={
                   selectedCountry.tag !== state.player && (
                     <button

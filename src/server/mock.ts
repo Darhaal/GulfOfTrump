@@ -78,11 +78,16 @@ function mockTurn(prompt: string): string {
   // Every trade proposal is accepted.
   const trade = [...section("PLAYER'S TRADE PROPOSALS").matchAll(/^- (deal-[\w-]+) \|/gm)].map(([, deal]) => ({ deal, status: "accepted", note: "[mock] Agreed." }));
   const atWar = player !== "" && section("WARS").includes(player);
+  // One piece of news from abroad: the first other country in the list, so the world's news always has an item.
+  const abroad = [...section("COUNTRIES (tag").matchAll(/^- ([\w-]+) \|/gm)].map(([, tag]) => tag).find((tag) => tag !== player);
   const population = atWar ? [{ country: player, deaths: 12, refugees: 30, cause: "[mock] the war" }] : [];
   return JSON.stringify({
     headline: `[mock] A quiet period ${period ? `from ${period[1]} to ${period[2]}` : ""}`.trim(),
     narrative: `This is the offline mock game master (GOT_MOCK_AI=1). Nothing real was simulated.\n\nOrders received:\n${orders}`,
-    events: [{ title: "[mock] Diplomats exchange notes", body: "Embassies report a calm week.", kind: "diplomacy", countries: player ? [player] : [] }],
+    events: [
+      { title: "[mock] Diplomats exchange notes", body: "Embassies report a calm week.", kind: "diplomacy", countries: player ? [player] : [] },
+      ...(abroad ? [{ title: "[mock] A cabinet reshuffle abroad", body: "A minister resigns; the government carries on.", kind: "politics", countries: [abroad] }] : []),
+    ],
     transfers: [],
     newCountries: [],
     warsStarted: [],

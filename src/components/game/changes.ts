@@ -59,6 +59,10 @@ export function describeChange(change: AppliedChange, state: GameState, t: T, te
       return t(`change.party.${change.change}` as MessageKey, { party: change.party });
     case "election":
       return t("change.election", { party: change.winner, share: change.share });
+    case "vote":
+      return t(change.kept ? "change.vote.kept" : "change.vote.lost", { country: country(change.country) });
+    case "coup":
+      return t(change.succeeded ? "change.coup.succeeded" : "change.coup.failed", { country: country(change.country) });
     case "plot":
       return t(`change.plot.${change.change}` as MessageKey, { title: change.title });
     case "exile":
@@ -127,7 +131,7 @@ export function describeChange(change: AppliedChange, state: GameState, t: T, te
 /** Map changes first, then politics, then the numbers. */
 export function sortChanges(changes: AppliedChange[]): AppliedChange[] {
   const rank: Record<AppliedChange["kind"], number> = {
-    overthrown: -2, exile: -1, return: -1, "new-country": 0, war: 1, peace: 2, truce: 3, "truce-ended": 4, annex: 5, liberate: 6, occupy: 7, contest: 8, repel: 9, alliance: 10, invitation: 11, "alliance-ended": 12, leave: 13, "summit-planned": 14, election: 15, party: 16, protest: 16.5, plot: 17, leader: 18, official: 18.2, sanction: 14.5, deal: 14.6, funds: 14.7, law: 16.8, bill: 16.7, identity: 0.5, budget: 18.3, population: 18.5, stats: 19,
+    overthrown: -2, exile: -1, return: -1, "new-country": 0, war: 1, peace: 2, truce: 3, "truce-ended": 4, annex: 5, liberate: 6, occupy: 7, contest: 8, repel: 9, alliance: 10, invitation: 11, "alliance-ended": 12, leave: 13, "summit-planned": 14, election: 15, coup: 15.2, vote: 15.4, party: 16, protest: 16.5, plot: 17, leader: 18, official: 18.2, sanction: 14.5, deal: 14.6, funds: 14.7, law: 16.8, bill: 16.7, identity: 0.5, budget: 18.3, population: 18.5, stats: 19,
   };
   return [...changes].sort((a, b) => rank[a.kind] - rank[b.kind]);
 }

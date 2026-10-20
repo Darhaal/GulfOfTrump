@@ -1,13 +1,15 @@
 "use client";
 
-import { Building2, Handshake, Swords, Users } from "lucide-react";
+import { Building2, Handshake, Landmark, Swords, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { ui } from "@/components/ui/classes";
 import { leaderName } from "@/i18n/leaders";
 import { useI18n } from "@/i18n/useI18n";
 import type { Accounts } from "@/engine/economy";
+import { formatDate } from "@/engine/calendar";
+import type { MessageKey } from "@/i18n/messages";
 import Flag from "@/components/Flag";
-import type { Alliance, CountryState, ScenarioId, War } from "@/engine/types";
+import type { Alliance, CountryState, Domestic, ScenarioId, War } from "@/engine/types";
 import EconomyPanel from "./EconomyPanel";
 
 interface CountryDetailsProps {
@@ -27,11 +29,68 @@ interface CountryDetailsProps {
   isPlayer?: boolean;
   /** Only what matters when choosing a country: no trade, resources or organisations. */
   brief?: boolean;
+  /** The chance of a coup against its government, % a year (engine/abroad.ts). */
+  coupRisk?: number;
   footer?: ReactNode;
 }
 
+/** A 0–100 figure as a bar, red when low. */
+function Meter({ label, value, unit = "" }: { label: string; value: number; unit?: string }) {
+  const tone = value < 30 ? "bg-red-500" : value < 45 ? "bg-amber-500" : "bg-emerald-500";
+  return (
+    <div>
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-bold text-muted">{label}</span>
+        <span className="font-black tabular-nums text-ink">
+          {Math.round(value)}
+          {unit}
+        </span>
+      </div>
+      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-divider">
+        <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.max(2, Math.min(100, value))}%` }} />
+      </div>
+    </div>
+  );
+}
+
+/** How another country is governed, as the engine keeps it: support, stability, the next election, the risk of a coup. */
+function DomesticBlock({ d, coupRisk }: { d: Domestic; coupRisk?: number }) {
+  const { t, locale } = useI18n();
+  const level = coupRisk === undefined ? null : coupRisk < 2 ? "low" : coupRisk < 8 ? "elevated" : "high";
+  return (
+    <div className="flex flex-col gap-2.5 rounded-xl bg-page p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className={`${ui.label} flex items-center gap-1.5`}>
+          <Landmark className="h-3.5 w-3.5" />
+          {t("abroad.title")}
+        </div>
+        <span className="text-xs font-bold text-muted">{t(`abroad.regime.${d.regime}` as MessageKey)}</span>
+      </div>
+      <Meter label={t("abroad.support")} value={d.support} unit="%" />
+      <Meter label={t("abroad.stability")} value={d.stability} />
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <span className="font-bold text-muted">{t("abroad.election")}</span>
+        <span className="text-right font-black text-ink">{d.nextElection ? formatDate(d.nextElection, locale) : t("abroad.noElection")}</span>
+      </div>
+      {level && (
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <span className="font-bold text-muted">{t("abroad.coupRisk")}</span>
+          <span className={`font-black ${level === "high" ? "text-red-600" : level === "elevated" ? "text-amber-600" : "text-ink"}`}>
+            {t(`abroad.risk.${level}` as MessageKey, { n: coupRisk ?? 0 })}
+          </span>
+        </div>
+      )}
+      {d.changed ? (
+        <p className="text-xs font-medium text-muted">{t(`abroad.changed.${d.changed.how}` as MessageKey, { date: formatDate(d.changed.date, locale) })}</p>
+      ) : (
+        d.lastElection && <p className="text-xs font-medium text-muted">{t("abroad.kept", { date: formatDate(d.lastElection.date, locale) })}</p>
+      )}
+    </div>
+  );
+}
+
 /** Everything the player can know about one country at a glance. */
-export default function CountryDetails({ country, scenario, regionCount, population, accounts, detailed, wars, alliances, countries, isPlayer, brief, footer }: CountryDetailsProps) {
+export default function CountryDetails({ country, scenario, regionCount, population, accounts, detailed, wars, alliances, countries, isPlayer, brief, coupRisk, footer }: CountryDetailsProps) {
   const { t, text, people, locale } = useI18n();
   const name = (tag: string) => text(countries[tag]?.name ?? tag);
   const enemies = [
@@ -67,6 +126,8 @@ export default function CountryDetails({ country, scenario, regionCount, populat
           <div className="mt-1 text-sm font-bold text-ink">{leaderName(country.leader, locale)}</div>
         </div>
       )}
+
+      {country.domestic && !isPlayer && !brief && <DomesticBlock d={country.domestic} coupRisk={coupRisk} />}
 
       {country.economy && <EconomyPanel economy={country.economy} accounts={accounts} detailed={detailed} trade={!brief} />}
 

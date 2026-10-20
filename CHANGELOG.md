@@ -11,6 +11,62 @@ included.
 
 ## [Unreleased]
 
+## [1.0.2-beta] — 2026-10-20
+
+The world moves on its own. Since 1.0.1-beta:
+
+- every country you do not play keeps its politics: support, stability,
+  the next election and the risk of a coup;
+- elections fall on their real dates and coups come with their risk, by
+  the engine's seeded dice, whether you act or not;
+- the chronicle has a second view, the world's news, and each item opens
+  on its story.
+
+### Added
+- **Politics in every country, in brief.** The engine now keeps the politics
+  of every country you do not play, with no model call
+  ([src/engine/abroad.ts](src/engine/abroad.ts)):
+  - how it is governed: free elections, managed elections, one-party rule,
+    no contested vote, or military rule, for every country on each date
+    ([src/engine/scenarios/regimes.ts](src/engine/scenarios/regimes.ts));
+  - the government's support, which follows growth, prices, jobs,
+    blockade, land lost, a war (a rally at first, weariness after) and the
+    years in office;
+  - stability, which follows support and the country's crises;
+  - the next election that can change the government: the real date where
+    it is known (about 350 of them across the eight dates), else a day in
+    its term;
+  - the risk of a coup, from the kind of government, stability, a slump,
+    runaway inflation and lost land. A settled democracy, a one-party state
+    or a country with almost no army is all but safe; a junta is not.
+- **The world moves on its own.** Elections fall on their dates and coups
+  come with their risk, decided by the engine's dice before the turn is
+  written. The game master is told what happened and names the new leaders.
+  The turn report lists each election and coup.
+  - Left alone, the dates run close to history: about five coups a year in
+    the 1960s and the 1990s, two or three in the 2010s and 2020s, and governments
+    losing 40–50% of free elections.
+  - The country panel shows support, stability, the next election and the
+    risk of a coup, and how the government came to power.
+- **World news.** The chronicle has a second view, "The world": what
+  happened elsewhere, turn by turn, from the game master's events and the
+  engine's changes (elections, coups, new leaders, wars, truces and peace,
+  blocs, sanctions, land that changed hands)
+  ([src/engine/news.ts](src/engine/news.ts)).
+  - Filter by wars, politics, diplomacy or the economy.
+  - An item opens on its story: everything before and after about the same
+    country, war or bloc, with its date. From there, open the country.
+  - Governments that keep power at elections fold into one line a turn.
+  - Read from the chronicle, so games saved before it have their news too.
+- **Seeded dice** ([src/engine/dice.ts](src/engine/dice.ts)). A roll is
+  fixed by the game, the turn and what it is for, so playing a turn again or
+  reloading the save before it never rerolls: a lost election stays lost.
+  The server and the browser cast the same dice.
+
+### Changed
+- Saves go through migration step 7: every country but the player's gets
+  its politics, with elections already past moved to their next date.
+
 ## [1.0.1-beta] — 2026-10-19
 
 The Windows app and three more dates. Since 1.0.0-beta:

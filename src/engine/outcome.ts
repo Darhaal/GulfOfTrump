@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { applyAbroad, castAbroad } from "./abroad";
 import { countryColor, isHexColor } from "./colors";
 import { addStep } from "./calendar";
 import { countryCrises, unrestFloor } from "./crises";
@@ -106,7 +107,8 @@ const OutcomeFields = z.object({
     .default([]),
   alliancesJoined: z.array(z.object({ alliance: shortText.min(1), country: tag })).max(12).default([]),
   alliancesLeft: z.array(z.object({ alliance: shortText.min(1), country: tag })).max(12).default([]),
-  leaders: z.array(z.object({ country: tag, leader: shortText.min(1), government: shortText.optional() })).max(12).default([]),
+  // Elections and coups abroad can bring many new leaders in a long turn (engine/abroad.ts).
+  leaders: z.array(z.object({ country: tag, leader: shortText.min(1), government: shortText.optional() })).max(48).default([]),
   // New levels and rates for economies this period changed; the engine limits them.
   economy: z
     .array(
@@ -434,6 +436,8 @@ export function applyOutcome(
   const applied: AppliedChange[] = [];
   const years = STEP_YEARS[state.step];
   const peopleBefore = peopleOf(state, regions, state.player);
+  // The elections and coups abroad were decided before the turn was written (engine/abroad.ts).
+  const abroad = castAbroad(state);
 
   // People grow before the borders move; GDP then follows the land and the
   // losses measured from here, so natural growth does not count twice.
@@ -516,7 +520,7 @@ export function applyOutcome(
   outcome.warsStarted.forEach((w, i) => {
     const war: War = { id: `w${state.turn}-${i + 1}`, name: w.name, attackers: w.attackers, defenders: w.defenders, since: from };
     next.wars.push(war);
-    applied.push({ kind: "war", war: war.id, name: war.name });
+    applied.push({ kind: "war", war: war.id, name: war.name, sides: [...war.attackers, ...war.defenders] });
   });
 
   for (const j of outcome.warsJoined) {
@@ -529,7 +533,7 @@ export function applyOutcome(
     const war = matchByName(next.wars, e.war);
     if (!war) continue;
     next.wars = next.wars.filter((w) => w.id !== war.id);
-    applied.push({ kind: "peace", war: war.id, name: war.name });
+    applied.push({ kind: "peace", war: war.id, name: war.name, sides: [...war.attackers, ...war.defenders] });
     // Peace returns occupied land to its owner unless the treaty annexed it,
     // which the model reports as an annex transfer in the same turn.
     const sides = new Set([...war.attackers, ...war.defenders]);
@@ -554,7 +558,7 @@ export function applyOutcome(
   for (const war of [...next.wars]) {
     if (!conquered(war.attackers) && !conquered(war.defenders)) continue;
     next.wars = next.wars.filter((w) => w.id !== war.id);
-    applied.push({ kind: "peace", war: war.id, name: war.name });
+    applied.push({ kind: "peace", war: war.id, name: war.name, sides: [...war.attackers, ...war.defenders] });
     const sides = new Set([...war.attackers, ...war.defenders]);
     for (const region of Object.values(next.regions)) {
       if (region.contested && sides.has(region.contested) && sides.has(region.controller)) {
@@ -576,7 +580,7 @@ export function applyOutcome(
       ...(a.until && a.until > from ? { until: a.until } : {}),
       ...(a.terms ? { terms: a.terms } : {}),
     });
-    applied.push({ kind: "alliance", alliance: id, name: a.name });
+    applied.push({ kind: "alliance", alliance: id, name: a.name, members: [...a.members] });
   });
 
   for (const j of outcome.alliancesJoined) {
@@ -590,11 +594,21 @@ export function applyOutcome(
     alliance.members = alliance.members.filter((m) => m !== l.country);
     applied.push({ kind: "leave", alliance: alliance.id, name: alliance.name, country: l.country });
   }
+  // A bloc that members' leaving brings below two is over; one that never had two is dropped without a word.
+  for (const a of next.alliances) {
+    const was = state.alliances.find((x) => x.id === a.id);
+    if (a.members.length < 2 && was && was.members.length >= 2) applied.push({ kind: "alliance-ended", alliance: a.id, name: a.name, members: [...was.members] });
+  }
   next.alliances = next.alliances.filter((a) => a.members.length >= 2);
 
+  // Who has a new leader this turn, and of those who replaced one in office (rather than filling a name a fall left empty).
+  const named = new Set<string>();
+  const replaced = new Set<string>();
   for (const l of outcome.leaders) {
     const country = next.countries[l.country];
     if (country.leader === l.leader) continue;
+    if (country.leader) replaced.add(l.country);
+    named.add(l.country);
     country.leader = l.leader;
     if (l.government) country.government = l.government;
     applied.push({ kind: "leader", country: l.country, leader: l.leader });
@@ -641,6 +655,8 @@ export function applyOutcome(
   // Deals in force pay out and deliver over the turn.
   settleDeals(next, economies, years, regions);
   for (const [tag, economy] of Object.entries(economies)) next.countries[tag].economy = economy;
+  // Politics abroad follow the economies and the war; then the dice land.
+  applyAbroad(next, abroad, { to, years, named, replaced }, applied);
   const before = state.countries[state.player]?.economy;
   const after = next.countries[state.player]?.economy;
   const borders = bordersBefore(state.regions, next.regions);

@@ -1,5 +1,5 @@
 export const APP_NAME = "Gulf of Trump";
-export const APP_VERSION = "1.0.1";
+export const APP_VERSION = "1.0.2";
 export const APP_STAGE = "beta";
 export const REPO_URL = "https://github.com/Darhaal/GulfOfTrump";
 export const ISSUES_URL = `${REPO_URL}/issues/new/choose`;
