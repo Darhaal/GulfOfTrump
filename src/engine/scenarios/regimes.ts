@@ -255,7 +255,7 @@ export const REGIMES: Record<ScenarioId, RegimeTable> = {
       macedonia: ["1994-10-16", 4],
       finland: ["1995-03-19", 4],
       argentina: ["1995-05-14", 4],
-      russia: ["1996-06-16", 4],
+      russia: ["1996-06-16", 5],
       india: ["1996-04-27", 5],
       bangladesh: ["1996-02-15", 5],
       "bosnia-and-herzegovina": ["1996-09-14", 4],

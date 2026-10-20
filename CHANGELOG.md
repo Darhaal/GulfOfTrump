@@ -27,9 +27,9 @@ included.
     vote of 2014; Fiji 2014 holds its election of September 2014 and no
     longer stays a junta for good; Portugal 2022: autumn 2026, when the
     legislature elected in the snap vote of 2022 was due to end;
-  - terms of the day: Russia's president four years after 1996, Chile's
-    six from 1994, Turkey's parliament five in 1999, Latvia's Saeima
-    three, Austria's parliament five from 2014;
+  - terms of the day: Chile's president six years from 1994, Turkey's
+    parliament five in 1999, Latvia's Saeima three, Austria's parliament
+    five from 2014;
   - real dates for Peru, Japan and Finland in 1939, and for Chile and
     Costa Rica in 1914.
 - **Taiwan under the Kuomintang** is a one-party state in 1950 and 1964:
