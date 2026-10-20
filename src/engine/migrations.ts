@@ -72,10 +72,12 @@ export function isMigrated(state: Pick<GameState, "migration">): boolean {
 
 /**
  * What the game ships as data, picked up on every load rather than once: the
- * palette (a colour the player chose stays), the world bodies, and the terms
- * of treaties and the treaties added to a scenario since the save was made.
+ * palette (a colour the player chose stays), the world bodies, the terms of
+ * treaties and the treaties added to a scenario since the save was made, and
+ * the politics of any country that has none.
  */
 export function refreshSave(state: GameState, scenario: Scenario): GameState {
   const seeds = scenario.alliances;
-  return fillTreaties(ensureWorldBodies(recolor(state), seeds), seeds);
+  // Politics abroad fill in on every load as well as by step 7: a save an older build wrote back has lost them.
+  return seedDomestic(fillTreaties(ensureWorldBodies(recolor(state), seeds), seeds), scenario);
 }

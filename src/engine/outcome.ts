@@ -107,7 +107,8 @@ const OutcomeFields = z.object({
     .default([]),
   alliancesJoined: z.array(z.object({ alliance: shortText.min(1), country: tag })).max(12).default([]),
   alliancesLeft: z.array(z.object({ alliance: shortText.min(1), country: tag })).max(12).default([]),
-  leaders: z.array(z.object({ country: tag, leader: shortText.min(1), government: shortText.optional() })).max(12).default([]),
+  // Elections and coups abroad can bring many new leaders in a long turn (engine/abroad.ts).
+  leaders: z.array(z.object({ country: tag, leader: shortText.min(1), government: shortText.optional() })).max(48).default([]),
   // New levels and rates for economies this period changed; the engine limits them.
   economy: z
     .array(
@@ -600,9 +601,14 @@ export function applyOutcome(
   }
   next.alliances = next.alliances.filter((a) => a.members.length >= 2);
 
+  // Who has a new leader this turn, and of those who replaced one in office (rather than filling a name a fall left empty).
+  const named = new Set<string>();
+  const replaced = new Set<string>();
   for (const l of outcome.leaders) {
     const country = next.countries[l.country];
     if (country.leader === l.leader) continue;
+    if (country.leader) replaced.add(l.country);
+    named.add(l.country);
     country.leader = l.leader;
     if (l.government) country.government = l.government;
     applied.push({ kind: "leader", country: l.country, leader: l.leader });
@@ -650,7 +656,7 @@ export function applyOutcome(
   settleDeals(next, economies, years, regions);
   for (const [tag, economy] of Object.entries(economies)) next.countries[tag].economy = economy;
   // Politics abroad follow the economies and the war; then the dice land.
-  applyAbroad(next, abroad, { to, years, named: new Set(outcome.leaders.map((l) => l.country)) }, applied);
+  applyAbroad(next, abroad, { to, years, named, replaced }, applied);
   const before = state.countries[state.player]?.economy;
   const after = next.countries[state.player]?.economy;
   const borders = bordersBefore(state.regions, next.regions);

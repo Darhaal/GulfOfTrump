@@ -249,8 +249,10 @@ function stabilityTarget(state: GameState, tag: string, d: Domestic, lost: numbe
 interface AbroadContext {
   to: string;
   years: number;
-  /** Countries whose new leader the game master named this turn. */
+  /** Countries whose leader the game master changed this turn. */
   named: Set<string>;
+  /** Of those, the ones whose leader was in office: a new government, not a name filled in after a fall. */
+  replaced: Set<string>;
 }
 
 /**
@@ -266,10 +268,12 @@ export function applyAbroad(next: GameState, events: AbroadEvent[], ctx: AbroadC
   const slow = 1 - 0.5 ** (ctx.years / 2);
   const lost = lostShares(next);
   const start = next.chronicle[0]?.from ?? next.date;
+  // Countries born this turn get politics from their description; any other without them waits for the date's table on load.
+  const born = new Set(applied.flatMap((a) => (a.kind === "new-country" ? [a.country] : [])));
   for (const [tag, c] of Object.entries(next.countries)) {
     if (tag === next.player) continue;
     if (!c.domestic) {
-      c.domestic = newDomestic(c, next.scenarioId, ctx.to);
+      if (born.has(tag)) c.domestic = newDomestic(c, next.scenarioId, ctx.to);
       continue;
     }
     const d = { ...c.domestic };
@@ -281,7 +285,7 @@ export function applyAbroad(next: GameState, events: AbroadEvent[], ctx: AbroadC
     d.support = fine(d.support + (supportTarget(c, { lost: share, warYears, tenure }) - d.support) * pace);
     d.stability = fine(d.stability + (stabilityTarget(next, tag, d, share) - d.stability) * slow);
     // A leader the game master put in office outside an election or a coup: a new government, given a little goodwill.
-    if (ctx.named.has(tag) && !events.some((e) => e.country === tag)) {
+    if (ctx.replaced.has(tag) && !events.some((e) => e.country === tag)) {
       d.support = fine((d.support + 55) / 2);
       d.changed = { date: ctx.to, how: "leader" };
     }
