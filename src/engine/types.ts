@@ -541,7 +541,7 @@ export type AppliedChange =
   | { kind: "summit-planned"; summit: string; title: string; date: string }
   | { kind: "party"; party: string; change: Party["status"] | "new" | "dissolved" }
   | { kind: "election"; winner: string; share: number }
-  | { kind: "vote"; country: string; kept: boolean }
+  | { kind: "vote"; country: string; kept: boolean; date?: string }
   | { kind: "coup"; country: string; succeeded: boolean }
   | { kind: "plot"; title: string; change: "discovered" | "foiled" | "succeeded" | "faded" }
   | { kind: "exile"; country: string; host?: string }

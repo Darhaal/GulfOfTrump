@@ -102,6 +102,14 @@ try {
     await page.keyboard.press("Escape");
   });
 
+  await step("the world news opens, and an item opens on its story", async () => {
+    await button(/^The world$/).first().click();
+    const item = page.locator("li button[aria-expanded]").first();
+    if (await item.count()) await item.click();
+    await page.waitForTimeout(300);
+    await button(/^Our chronicle$/).first().click();
+  });
+
   // Every date starts with its first featured country and plays a turn.
   for (const date of ["1914", "1939", "1950", "1964", "1991", "1999", "2014", "2022"]) {
     await step(`a turn is played on ${date}`, async () => {

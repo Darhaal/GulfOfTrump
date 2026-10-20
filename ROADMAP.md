@@ -35,6 +35,8 @@ world should move on its own, and every result should hold up to scrutiny.
   world): every government's support, stability, next election and risk of
   a coup, moved by the engine. Elections and coups happen by seeded dice
   whether the player acts or not.
+- **World news:** what happened elsewhere, turn by turn; each item opens on
+  the story of its country, war or bloc.
 
 ## Next: turns that are cheaper and proven
 
@@ -80,8 +82,8 @@ crises or breakthroughs, not only wars.
    decide what an attack can do. Taking a capital is not winning a war:
    holding ground, keeping it safe, being accepted there and settling the war
    are separate things.
-6. **World news**: a feed of what happened elsewhere. Each item can be opened
-   to see its history and what followed.
+6. **World news that explains.** The feed is in; next, each item should say
+   why it happened — the slump before a coup, the war before a lost vote.
 
 This is built into the engine, with no model call per country. The engine
 moves every country and its plans; the game master settles the few decisions

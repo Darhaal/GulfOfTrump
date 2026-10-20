@@ -307,7 +307,7 @@ export function applyAbroad(next: GameState, events: AbroadEvent[], ctx: AbroadC
       }
       continue;
     }
-    applied.push({ kind: "vote", country: e.country, kept: e.kept });
+    applied.push({ kind: "vote", country: e.country, kept: e.kept, date: e.date });
     const term = d.term ?? TERM[d.regime];
     let nextElection = addYears(e.date, term);
     while (nextElection <= ctx.to) nextElection = addYears(nextElection, term);

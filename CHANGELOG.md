@@ -37,6 +37,16 @@ included.
     losing 40–50% of free elections.
   - The country panel shows support, stability, the next election and the
     risk of a coup, and how the government came to power.
+- **World news.** The chronicle has a second view, "The world": what
+  happened elsewhere, turn by turn, from the game master's events and the
+  engine's changes (elections, coups, new leaders, wars, truces and peace,
+  blocs, sanctions, land that changed hands)
+  ([src/engine/news.ts](src/engine/news.ts)).
+  - Filter by wars, politics, diplomacy or the economy.
+  - An item opens on its story: everything before and after about the same
+    country, war or bloc, with its date. From there, open the country.
+  - Governments that keep power at elections fold into one line a turn.
+  - Read from the chronicle, so games saved before it have their news too.
 - **Seeded dice** ([src/engine/dice.ts](src/engine/dice.ts)). A roll is
   fixed by the game, the turn and what it is for, so playing a turn again or
   reloading the save before it never rerolls: a lost election stays lost.

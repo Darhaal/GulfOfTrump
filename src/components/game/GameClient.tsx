@@ -51,6 +51,7 @@ import ResourceBar from "./ResourceBar";
 import SharePicture from "./SharePicture";
 import Timelapse from "./Timelapse";
 import TurnReport from "./TurnReport";
+import WorldNews from "./WorldNews";
 
 /** Panels that open on the left, from the rail; the right side shows the selection. */
 type LeftPanel = "orders" | "chronicle" | "cabinet" | "politics" | "state" | "foreign" | "economy";
@@ -95,6 +96,8 @@ export default function GameClient({ id }: { id: string }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [selectedProvince, setSelectedProvince] = useState<string | null>(null);
   const [openTurns, setOpenTurns] = useState<Set<number>>(new Set());
+  // The chronicle shows the player's own turns, or the world's news (engine/news.ts).
+  const [chronicleView, setChronicleView] = useState<"ours" | "world">("ours");
   const [diplomacyTarget, setDiplomacyTarget] = useState<string | null>(null);
   const [busy, setBusy] = useState<Busy | null>(null);
   // A question for a minister prepared elsewhere (a protest abroad, a plot): the cabinet opens on it.
@@ -495,7 +498,36 @@ export default function GameClient({ id }: { id: string }) {
               />
             )}
 
+            {left === "chronicle" && state.chronicle.length > 0 && (
+              <div className="mb-3 grid grid-cols-2 gap-1 rounded-xl bg-page p-1">
+                {(["ours", "world"] as const).map((view) => (
+                  <button
+                    key={view}
+                    type="button"
+                    aria-pressed={chronicleView === view}
+                    onClick={() => setChronicleView(view)}
+                    className={`rounded-lg px-1 py-2 text-2xs font-bold transition-all ${chronicleView === view ? `${ui.segmentOn} bg-surface shadow-sm` : ui.segmentOff}`}
+                  >
+                    {t(view === "ours" ? "news.view.ours" : "news.view.world")}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {left === "chronicle" && chronicleView === "world" && state.chronicle.length > 0 && (
+              <WorldNews
+                state={state}
+                index={map?.index ?? null}
+                onCountry={(tag) => {
+                  setSelected(tag);
+                  setSelectedProvince(null);
+                  setRight("country");
+                }}
+              />
+            )}
+
             {left === "chronicle" &&
+              (chronicleView === "ours" || state.chronicle.length === 0) &&
               (state.chronicle.length === 0 ? (
                 <p className="rounded-xl border-2 border-dashed border-line px-4 py-8 text-center text-xs font-medium text-muted">{t("game.chronicle.empty")}</p>
               ) : (
