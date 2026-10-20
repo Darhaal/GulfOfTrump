@@ -11,6 +11,34 @@ included.
 
 ## [Unreleased]
 
+### Fixed
+- **Election dates that decide the government.** Where the table had a
+  vote that could not change the government, or a date that was not due,
+  it now has the one that could:
+  - France 1939: 1942, as the decrees of July 1939 extended the Chamber;
+  - Chile 1939: the presidential election of 1944, every six years;
+  - Colombia 1991 and Georgia 1999: the presidential elections of 1994 and
+    2000;
+  - Portugal 1914 votes every three years;
+  - real dates for Peru, Japan and Finland in 1939, and for Chile and
+    Costa Rica in 1914.
+- **Taiwan under the Kuomintang** is a one-party state in 1950 and 1964:
+  the party holds the army, so a coup is all but ruled out.
+- **A year between coups, whatever the turn.** The pause after an attempt
+  is measured by the calendar, so leap years no longer shorten it, and
+  monthly, quarterly and yearly turns give the same number of coups.
+- **No coup risk where no coup can happen**: the country panel and the
+  game master's list of shaky governments leave out countries with no
+  land, movements without territory and governments abroad.
+- **New leaders are asked for until they are named.** A government that
+  fell keeps being listed for the game master until it names a leader,
+  however the turn fell.
+- **Countries born in play** get the kind of government the game master
+  gives them; when it gives none, the description is read in Russian and
+  Ukrainian too, not only in English.
+- **A copy of a game keeps its dice.** A copy made to try another course
+  no longer rerolls the world's elections and coups.
+
 ## [1.0.2-beta] — 2026-10-20
 
 The world moves on its own. Since 1.0.1-beta:

@@ -617,6 +617,8 @@ export interface GameState {
   /** The last numbered save migration this save has been through (engine/migrations.ts); none when missing. */
   migration?: number;
   id: string;
+  /** What the engine's dice are cast from (engine/dice.ts): the id the game began with, kept by its copies. */
+  seed?: string;
   /** The name the player gave this game; without one it goes by country and year. */
   title?: string;
   createdAt: string;

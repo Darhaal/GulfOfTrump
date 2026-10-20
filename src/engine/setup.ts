@@ -81,11 +81,13 @@ export function createGame(scenario: Scenario, mapRegions: MapRegion[], player: 
   const known = (tags: string[]) => tags.filter((t) => countries[t]);
   const stamp = now.toISOString();
   const byId = Object.fromEntries(mapRegions.map((r) => [r.id, r]));
+  const id = newGameId();
   const game = seedEconomies({
     schema: 2,
     // A new game is in today's shape: no migration is for it.
     migration: SAVE_MIGRATION,
-    id: newGameId(),
+    id,
+    seed: id,
     createdAt: stamp,
     updatedAt: stamp,
     scenarioId: scenario.id,

@@ -44,14 +44,23 @@ function kindsOn(era: ScenarioId): Map<string, RegimeKind> {
   return kinds;
 }
 
-/** How a country that appears in play is governed, read from the words the game master gave it. */
+/**
+ * How a country that appears in play is governed, read from the words the
+ * game master gave it, in any of the game's languages (it writes them in the
+ * player's). Used when its answer names no kind of government.
+ */
 export function regimeFromText(government: string | undefined): RegimeKind {
   const g = (government ?? "").toLowerCase();
-  if (/junta|military|martial law|army/.test(g)) return "military";
-  if (/one-party|communis|people's|socialist/.test(g)) return "party";
-  if (/dictator|totalitarian|absolute|fascis|theocra|emirate|caliphate|sultanate|insurgen|resistance|protectorate|occupation|puppet|satellite/.test(g)) return "autocracy";
-  if (/islamic|provisional|transitional|revolutionary|authoritarian|guided|dominant|council/.test(g)) return "limited";
-  if (/parliament|democra|federal|presidential|constitutional|republic|commonwealth|dominion/.test(g)) return "democracy";
+  if (/junta|military|martial law|army|хунт|военн|військов|воєнн/.test(g)) return "military";
+  if (/one-party|communis|people's|socialist|однопарти|однопартій|коммунист|комуніст|социалист|соціаліст|народн/.test(g)) return "party";
+  if (
+    /dictator|totalitarian|absolute|fascis|theocra|emirate|caliphate|sultanate|insurgen|resistance|protectorate|occupation|puppet|satellite|диктат|тоталит|тоталіт|абсолют|фашист|теократ|эмират|емірат|халифат|халіфат|султан|повстан|сопротивл|опір|протекторат|оккупац|окупац|марионет|маріонет|сателлит|сателіт/.test(
+      g,
+    )
+  )
+    return "autocracy";
+  if (/islamic|provisional|transitional|revolutionary|authoritarian|guided|dominant|council|исламск|ісламськ|временн|тимчасов|переходн|перехідн|революц|авторитар/.test(g)) return "limited";
+  if (/parliament|democra|federal|presidential|constitutional|republic|commonwealth|dominion|парламент|демократ|федерат|федерал|президент|конституц|республик|республік|содружеств|співдружн|доминион|домініон/.test(g)) return "democracy";
   return "limited";
 }
 
@@ -88,9 +97,9 @@ export function startingDomestic(scenario: Pick<Scenario, "id" | "startDate" | "
   return schedule(d, scenario.id, tag, scenario.startDate, addYears(after, -1 / 365.25));
 }
 
-/** A country that appears in play: its kind of government from its description, an election within its term. */
-export function newDomestic(country: Pick<CountryState, "tag" | "government">, era: ScenarioId, date: string): Domestic {
-  const regime = regimeFromText(en(country.government));
+/** A country that appears in play: its kind of government as the game master gave it (or read from its description), an election within its term. */
+export function newDomestic(country: Pick<CountryState, "tag" | "government">, era: ScenarioId, date: string, kind?: RegimeKind): Domestic {
+  const regime = kind ?? regimeFromText(en(country.government));
   const d = fresh(regime, 40, 55);
   if (regime !== "democracy" && regime !== "limited") return d;
   return { ...d, term: TERM[regime], nextElection: addYears(date, Math.max(0.5, fixed(`${era}:${country.tag}:new`) * TERM[regime])) };
@@ -173,10 +182,11 @@ export function lostShares(state: Pick<GameState, "regions">): Map<string, numbe
 const warsOf = (state: Pick<GameState, "wars" | "date">, tag: string) =>
   state.wars.filter((w) => (w.attackers.includes(tag) || w.defenders.includes(tag)) && !(w.truce && w.truce.until > state.date));
 
-/** The coup risk of one country in a state, % a year. */
+/** The coup risk of one country in a state, % a year; none where no coup can happen (no land, a movement without territory, a government abroad). */
 export function coupRiskIn(state: Pick<GameState, "countries" | "regions" | "wars" | "date" | "scenarioId">, tag: string, lost = lostShares(state)): number {
   const c = state.countries[tag];
-  if (!c?.domestic) return 0;
+  // lostShares has every country that owns a province, and only those.
+  if (!c?.domestic || c.dormant || c.exile || !lost.has(tag)) return 0;
   return coupRisk(c.domestic, { era: state.scenarioId, economy: c.economy, atWar: warsOf(state, tag).length > 0, lost: lost.get(tag) ?? 0 });
 }
 
@@ -189,6 +199,8 @@ export type AbroadEvent = { kind: "election"; country: string; date: string; kep
  * applies the answer.
  */
 export function castAbroad(state: GameState): AbroadEvent[] {
+  // A copy of a game keeps the game's dice (lib/saves.ts duplicateSave).
+  const game = state.seed ?? state.id;
   const to = addStep(state.date, state.step);
   const years = STEP_YEARS[state.step];
   const lost = lostShares(state);
@@ -198,11 +210,11 @@ export function castAbroad(state: GameState): AbroadEvent[] {
     const d = c.domestic;
     // A country conquered outright holds no vote and has no army to rise; one that never had land (a Soviet republic in 1991) still votes.
     if (!d || tag === state.player || c.exile || (!c.dormant && !owners.has(tag))) continue;
-    // A year passes between one attempt on a government and the next, whatever the length of a turn.
-    if (!c.dormant && !(d.lastCoup && yearsBetween(d.lastCoup, to) < 1)) {
+    // A calendar year passes between one attempt on a government and the next, whatever the length of a turn.
+    if (!c.dormant && !(d.lastCoup && to < addStep(d.lastCoup, "year"))) {
       const risk = coupRiskIn(state, tag, lost) / 100;
-      if (happens(1 - (1 - risk) ** years, state.id, state.turn, `coup:${tag}`)) {
-        const succeeded = happens(coupSuccess(d), state.id, state.turn, `coup-success:${tag}`);
+      if (happens(1 - (1 - risk) ** years, game, state.turn, `coup:${tag}`)) {
+        const succeeded = happens(coupSuccess(d), game, state.turn, `coup-success:${tag}`);
         out.push({ kind: "coup", country: tag, succeeded });
         if (succeeded) continue;
       }
@@ -210,7 +222,7 @@ export function castAbroad(state: GameState): AbroadEvent[] {
     if (d.nextElection && d.nextElection <= to) {
       // An election that fell while the country could not hold it (all its land lost) is held now.
       const date = d.nextElection < state.date ? state.date : d.nextElection;
-      out.push({ kind: "election", country: tag, date, kept: happens(keepChance(d), state.id, state.turn, `election:${tag}`) });
+      out.push({ kind: "election", country: tag, date, kept: happens(keepChance(d), game, state.turn, `election:${tag}`) });
     }
   }
   return out;
@@ -253,6 +265,8 @@ interface AbroadContext {
   named: Set<string>;
   /** Of those, the ones whose leader was in office: a new government, not a name filled in after a fall. */
   replaced: Set<string>;
+  /** The kind of government the game master gave the countries it created this turn. */
+  regimes?: Map<string, RegimeKind>;
 }
 
 /**
@@ -273,7 +287,7 @@ export function applyAbroad(next: GameState, events: AbroadEvent[], ctx: AbroadC
   for (const [tag, c] of Object.entries(next.countries)) {
     if (tag === next.player) continue;
     if (!c.domestic) {
-      if (born.has(tag)) c.domestic = newDomestic(c, next.scenarioId, ctx.to);
+      if (born.has(tag)) c.domestic = newDomestic(c, next.scenarioId, ctx.to, ctx.regimes?.get(tag));
       continue;
     }
     const d = { ...c.domestic };
@@ -339,9 +353,11 @@ export function describeAbroad(state: GameState, name: (tag: string) => string):
     if (votes(false).length) lines.push(`- governments that LOSE national elections: ${votes(false).join("; ")}`);
     if (votes(true).length) lines.push(`- governments that keep power at national elections: ${votes(true).join("; ")}`);
   }
-  // Governments that fell last turn and still have no named leader.
-  const since = state.chronicle.at(-1)?.from ?? state.date;
-  const unnamed = Object.values(state.countries).filter((c) => c.tag !== state.player && !c.leader && c.domestic?.changed && c.domestic.changed.date >= since);
+  // Governments that fell and still have no named leader, asked for until they get one, while they still govern somewhere.
+  const owners = new Set(Object.values(state.regions).map((r) => r.owner));
+  const unnamed = Object.values(state.countries).filter(
+    (c) => c.tag !== state.player && !c.leader && c.domestic?.changed && c.domestic.changed.how !== "leader" && !c.exile && (c.dormant || owners.has(c.tag)),
+  );
   if (unnamed.length) lines.push(`NEW GOVERNMENTS WITHOUT A NAMED LEADER (name them in leaders): ${unnamed.map((c) => `${name(c.tag)} [${c.tag}]`).join(", ")}`);
   const lost = lostShares(state);
   const shaky = Object.values(state.countries)

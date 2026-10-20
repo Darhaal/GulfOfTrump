@@ -31,6 +31,7 @@ export const GameStateSchema = z.object({
   schema: z.union([z.literal(1), z.literal(2)]),
   migration: z.number().int().min(0).optional(),
   id: z.string().min(1).max(100),
+  seed: z.string().min(1).max(100).optional(),
   title: z.string().max(120).optional(),
   createdAt: z.string(),
   updatedAt: z.string(),

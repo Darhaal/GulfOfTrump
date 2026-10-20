@@ -850,7 +850,7 @@ export default function GameClient({ id }: { id: string }) {
                 alliances={state.alliances}
                 countries={state.countries}
                 isPlayer={selectedCountry.tag === state.player}
-                coupRisk={selectedCountry.domestic ? coupRiskIn(state, selectedCountry.tag) : undefined}
+                coupRisk={selectedCountry.domestic && !selectedCountry.dormant && (counts.get(selectedCountry.tag) ?? 0) > 0 ? coupRiskIn(state, selectedCountry.tag) : undefined}
                 footer={
                   selectedCountry.tag !== state.player && (
                     <button

@@ -145,7 +145,8 @@ export async function duplicateSave(id: string, title: string): Promise<GameStat
   const state = await loadSave(id);
   if (!state) return null;
   const now = new Date().toISOString();
-  const copy: GameState = { ...structuredClone(state), id: newGameId(), title: title.slice(0, 120), createdAt: now, updatedAt: now };
+  // The copy keeps the game's dice: trying another course does not reroll the world's elections and coups.
+  const copy: GameState = { ...structuredClone(state), id: newGameId(), seed: state.seed ?? state.id, title: title.slice(0, 120), createdAt: now, updatedAt: now };
   await writeSave(copy);
   return copy;
 }

@@ -20,7 +20,7 @@ import { applyOverthrow, applyProtests, overthrowField, protestsField, updateExi
 import { bordersBefore } from "./history";
 import { withoutNulls } from "./json";
 import { slug } from "./text";
-import { EVENT_KINDS } from "./types";
+import { EVENT_KINDS, REGIME_KINDS } from "./types";
 import type { AppliedChange, ChronicleEntry, GameState, MapIndex, MapRegion, OrderVerdict, RegionState, War } from "./types";
 
 /**
@@ -80,6 +80,8 @@ const OutcomeFields = z.object({
         color: z.string().optional(),
         leader: shortText.optional(),
         government: shortText.optional(),
+        // How it is governed (engine/abroad.ts); read from "government" when left out.
+        regime: z.enum(REGIME_KINDS).optional().catch(undefined),
       }),
     )
     .max(8)
@@ -656,7 +658,8 @@ export function applyOutcome(
   settleDeals(next, economies, years, regions);
   for (const [tag, economy] of Object.entries(economies)) next.countries[tag].economy = economy;
   // Politics abroad follow the economies and the war; then the dice land.
-  applyAbroad(next, abroad, { to, years, named, replaced }, applied);
+  const regimes = new Map(outcome.newCountries.flatMap((c) => (c.regime ? [[c.tag, c.regime] as const] : [])));
+  applyAbroad(next, abroad, { to, years, named, replaced, regimes }, applied);
   const before = state.countries[state.player]?.economy;
   const after = next.countries[state.player]?.economy;
   const borders = bordersBefore(state.regions, next.regions);

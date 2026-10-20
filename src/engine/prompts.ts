@@ -96,7 +96,7 @@ Answer with ONE JSON object and nothing else (no markdown fences), shaped like t
   "orders": [{ "n": 1, "result": "success|partial|failed", "note": "string" }],
   "events": [{ "title": "string", "body": "string", "kind": "war|diplomacy|politics|economy|military|disaster|other", "countries": ["tag"] }],
   "transfers": [{ "region": "province-id", "to": "tag", "mode": "occupy|contest|annex|liberate", "share": 40, "towns": ["town"] }, { "country": "tag", "to": "tag", "mode": "annex" }],
-  "newCountries": [{ "tag": "new-tag", "name": "string", "color": "#rrggbb", "leader": "string", "government": "string" }],
+  "newCountries": [{ "tag": "new-tag", "name": "string", "color": "#rrggbb", "leader": "string", "government": "string", "regime": "democracy|limited|party|autocracy|military" }],
   "warsStarted": [{ "name": "string", "attackers": ["tag"], "defenders": ["tag"] }],
   "warsJoined": [{ "war": "war id or name", "country": "tag", "side": "attackers|defenders" }],
   "warsEnded": [{ "war": "war id or name" }],
