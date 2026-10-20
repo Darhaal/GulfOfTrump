@@ -1,3 +1,4 @@
+import { seedDomestic } from "./abroad";
 import { countryColor } from "./colors";
 import { seedEconomies } from "./economy";
 import { SAVE_MIGRATION } from "./migrations";
@@ -80,7 +81,7 @@ export function createGame(scenario: Scenario, mapRegions: MapRegion[], player: 
   const known = (tags: string[]) => tags.filter((t) => countries[t]);
   const stamp = now.toISOString();
   const byId = Object.fromEntries(mapRegions.map((r) => [r.id, r]));
-  return seedEconomies({
+  const game = seedEconomies({
     schema: 2,
     // A new game is in today's shape: no migration is for it.
     migration: SAVE_MIGRATION,
@@ -120,6 +121,8 @@ export function createGame(scenario: Scenario, mapRegions: MapRegion[], player: 
         }
       : {}),
   } satisfies GameState, byId);
+  // Every other country's politics in brief (engine/abroad.ts).
+  return seedDomestic(game, scenario);
 }
 
 /** The members of a world body: every country in the game but those left out (the scenario lists them, republics without a seat among them). */

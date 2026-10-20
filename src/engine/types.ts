@@ -171,6 +171,31 @@ export interface CountryState {
   economy?: Economy;
   /** A government that holds no land and carries on abroad. */
   exile?: { since: string; host?: string };
+  /** Its politics in brief, kept by the engine for every country but the player's (engine/abroad.ts). */
+  domestic?: Domestic;
+}
+
+export const REGIME_KINDS = ["democracy", "limited", "party", "autocracy", "military"] as const;
+/** Elections the government can lose; elections it seldom loses; a ruling party that holds the army too; no contested vote; army rule. */
+export type RegimeKind = (typeof REGIME_KINDS)[number];
+
+/** A country's politics as the engine moves them, without a model call. */
+export interface Domestic {
+  regime: RegimeKind;
+  /** The government's support, 0–100. */
+  support: number;
+  /** How firmly the state holds together, 0–100. */
+  stability: number;
+  /** The next election that can change the government. */
+  nextElection?: string;
+  /** Years between such elections. */
+  term?: number;
+  /** The last such election, and whether the government kept power. */
+  lastElection?: { date: string; kept: boolean };
+  /** The last time the government changed, and how. */
+  changed?: { date: string; how: "election" | "coup" | "leader" };
+  /** The last attempt on the government by force, whether it succeeded or not. */
+  lastCoup?: string;
 }
 
 export const PROTEST_STAGES = ["rally", "strike", "riot", "uprising"] as const;
@@ -516,6 +541,8 @@ export type AppliedChange =
   | { kind: "summit-planned"; summit: string; title: string; date: string }
   | { kind: "party"; party: string; change: Party["status"] | "new" | "dissolved" }
   | { kind: "election"; winner: string; share: number }
+  | { kind: "vote"; country: string; kept: boolean }
+  | { kind: "coup"; country: string; succeeded: boolean }
   | { kind: "plot"; title: string; change: "discovered" | "foiled" | "succeeded" | "faded" }
   | { kind: "exile"; country: string; host?: string }
   | { kind: "return"; country: string }

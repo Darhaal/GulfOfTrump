@@ -1,3 +1,4 @@
+import { describeAbroad } from "./abroad";
 import { addStep, STEP_LABEL_EN, yearOf } from "./calendar";
 import { ADVISOR_PERSONAS, ADVISOR_TITLES, ADVISORS, directiveLine, type AdvisorId, OPERATION_MINISTRIES } from "./advisors";
 import { balance, formatMoney, nationalAccounts } from "./economy";
@@ -384,6 +385,8 @@ export function buildTurnPrompt(state: GameState, orders: string[], index: MapIn
     `PERIOD TO SIMULATE: ${state.date} to ${to} (${STEP_LABEL_EN[state.step]}). Turn ${state.turn}.`,
     "",
     describeWorld(state, index),
+    // What the engine's dice decided abroad for this period: for the turn only, never for ministers or diplomats (engine/abroad.ts).
+    ...describeAbroad(state, (tag) => en(state.countries[tag]?.name ?? tag)),
     "",
     "HISTORY SO FAR:",
     describeHistory(state),

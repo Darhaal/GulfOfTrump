@@ -1,3 +1,4 @@
+import { seedDomestic } from "./abroad";
 import { recolor } from "./colors";
 import { seedEconomies } from "./economy";
 import { ensureWorldBodies, fillBlocKinds, fillTreaties } from "./foreign";
@@ -47,6 +48,7 @@ const MIGRATIONS: Migration[] = [
   { n: 4, what: "A front past half of a province hands the province to the side holding most of it.", run: (s) => settleFronts(s) },
   { n: 5, what: "Provinces instead of one region per country (schema 2).", map: true, run: (s, { scenario, map }) => migrateToProvinces(s, scenario, map.regions) },
   { n: 6, what: "An economy for every country, for a save from before the economy.", map: true, run: (s, { map }) => seedEconomies(s, map.byId) },
+  { n: 7, what: "Politics in brief for every country but the player's, with elections already past moved to their next date.", run: (s, { scenario }) => seedDomestic(s, scenario) },
 ];
 
 /** The number of the last step: what a new game starts at. */

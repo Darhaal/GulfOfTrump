@@ -11,6 +11,7 @@ import Dialog from "@/components/ui/Dialog";
 import { ui } from "@/components/ui/classes";
 import { addStep, formatDate, yearOf } from "@/engine/calendar";
 import { CONTENT_REPORT_URL, MAX_ORDERS as MAX_TURN_ORDERS } from "@/constants/app";
+import { coupRiskIn } from "@/engine/abroad";
 import { addAdvice, type AdvisorId } from "@/engine/advisors";
 import { countryCrises } from "@/engine/crises";
 import { nationalAccounts, seedEconomies, setBudget } from "@/engine/economy";
@@ -813,6 +814,7 @@ export default function GameClient({ id }: { id: string }) {
                 alliances={state.alliances}
                 countries={state.countries}
                 isPlayer={selectedCountry.tag === state.player}
+                coupRisk={selectedCountry.domestic ? coupRiskIn(state, selectedCountry.tag) : undefined}
                 footer={
                   selectedCountry.tag !== state.player && (
                     <button

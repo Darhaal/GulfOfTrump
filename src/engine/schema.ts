@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ADVISORS } from "./advisors";
 import { BLOC_KINDS } from "./foreign";
-import { EVENT_KINDS, LOCALES, OFFICIAL_POSTS, PROTEST_STAGES, type GameState } from "./types";
+import { EVENT_KINDS, LOCALES, OFFICIAL_POSTS, PROTEST_STAGES, REGIME_KINDS, type GameState } from "./types";
 
 /**
  * Shape check for a state that arrives from outside — a request body or a
@@ -52,6 +52,18 @@ export const GameStateSchema = z.object({
       dormant: z.boolean().optional(),
       economy: economy.optional(),
       exile: z.object({ since: z.string(), host: z.string().optional() }).optional(),
+      domestic: z
+        .object({
+          regime: z.enum(REGIME_KINDS),
+          support: z.number(),
+          stability: z.number(),
+          nextElection: date.optional(),
+          term: z.number().optional(),
+          lastElection: z.object({ date, kept: z.boolean() }).optional(),
+          changed: z.object({ date, how: z.enum(["election", "coup", "leader"]) }).optional(),
+          lastCoup: date.optional(),
+        })
+        .optional(),
     }),
   ),
   regions: z.record(z.string(), z.object({ name: text.optional(), owner: z.string(), controller: z.string(), contested: z.string().optional(), held: z.number().optional(), taken: z.array(z.string()).optional(), pop: z.number().optional() })),

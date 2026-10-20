@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { applyAbroad, castAbroad } from "./abroad";
 import { countryColor, isHexColor } from "./colors";
 import { addStep } from "./calendar";
 import { countryCrises, unrestFloor } from "./crises";
@@ -434,6 +435,8 @@ export function applyOutcome(
   const applied: AppliedChange[] = [];
   const years = STEP_YEARS[state.step];
   const peopleBefore = peopleOf(state, regions, state.player);
+  // The elections and coups abroad were decided before the turn was written (engine/abroad.ts).
+  const abroad = castAbroad(state);
 
   // People grow before the borders move; GDP then follows the land and the
   // losses measured from here, so natural growth does not count twice.
@@ -641,6 +644,8 @@ export function applyOutcome(
   // Deals in force pay out and deliver over the turn.
   settleDeals(next, economies, years, regions);
   for (const [tag, economy] of Object.entries(economies)) next.countries[tag].economy = economy;
+  // Politics abroad follow the economies and the war; then the dice land.
+  applyAbroad(next, abroad, { to, years, named: new Set(outcome.leaders.map((l) => l.country)) }, applied);
   const before = state.countries[state.player]?.economy;
   const after = next.countries[state.player]?.economy;
   const borders = bordersBefore(state.regions, next.regions);
