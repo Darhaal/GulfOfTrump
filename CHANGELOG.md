@@ -20,6 +20,11 @@ included.
   - Colombia 1991 and Georgia 1999: the presidential elections of 1994 and
     2000;
   - Portugal 1914 votes every three years;
+  - Iran 1999: the presidential election of 2001; Azerbaijan 1999: the
+    presidential election of 2003; Moldova 2022: the parliamentary
+    election of 2025, not the presidential one;
+  - terms of the day: Russia's president four years after 1996, Chile's
+    six from 1994, Turkey's parliament five, Latvia's Saeima three;
   - real dates for Peru, Japan and Finland in 1939, and for Chile and
     Costa Rica in 1914.
 - **Taiwan under the Kuomintang** is a one-party state in 1950 and 1964:
