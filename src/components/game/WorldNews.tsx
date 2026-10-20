@@ -24,6 +24,8 @@ const SECTION_ICON: Record<NewsSection, typeof Newspaper> = {
 const TURNS_PAGE = 6;
 /** Province names in one line of land that changed hands. */
 const NAMES_PER_LINE = 4;
+/** Stories offered under an opened item; a bloc's dozens of members are not all listed. */
+const STORIES_SHOWN = 12;
 
 const MONTH_LOCALE: Record<Locale, string> = { en: "en-GB", ru: "ru-RU", uk: "uk-UA" };
 
@@ -47,7 +49,7 @@ export default function WorldNews({ state, index, onCountry }: { state: GameStat
   const date = (iso: string) => formatDate(iso, locale);
   const month = (iso: string) => new Intl.DateTimeFormat(MONTH_LOCALE[locale], { month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
   /** When an item happened: an election's own day, else the month its turn began. */
-  const when = (item: NewsItem) => (item.type === "change" && item.change.kind === "vote" && item.change.date ? date(item.change.date) : month(item.from));
+  const when = (item: NewsItem) => (item.type === "change" && item.change.kind === "vote" && item.change.date && item.change.date >= item.from ? date(item.change.date) : month(item.from));
   const region = (id: string) => regionLabel(id, index, locale);
   const scenario = getScenario(state.scenarioId);
 
@@ -149,7 +151,7 @@ export default function WorldNews({ state, index, onCountry }: { state: GameStat
                       <div className="mt-2.5 grid gap-2 border-t border-line pt-2.5">
                         {topics.length > 0 && (
                           <div className="flex flex-wrap gap-1">
-                            {topics.map((k) => (
+                            {topics.slice(0, STORIES_SHOWN).map((k) => (
                               <button
                                 key={k}
                                 type="button"
@@ -161,6 +163,7 @@ export default function WorldNews({ state, index, onCountry }: { state: GameStat
                                 {topicName(k)}
                               </button>
                             ))}
+                            {topics.length > STORIES_SHOWN && <span className="px-1 py-0.5 text-2xs font-bold text-muted">+{topics.length - STORIES_SHOWN}</span>}
                           </div>
                         )}
                         {current && (
@@ -192,7 +195,11 @@ export default function WorldNews({ state, index, onCountry }: { state: GameStat
             {kept.length > 0 && (
               <p className={`${items.length ? "mt-2" : ""} flex items-start gap-2 px-1 text-2xs font-medium leading-relaxed text-muted`}>
                 <Landmark className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                <span>{t("news.kept", { list: kept.map((item) => name(item.countries[0])).join(", ") })}</span>
+                <span>
+                  {kept.length === 1
+                    ? t("change.vote.kept", { country: name(kept[0].countries[0]) })
+                    : t("news.kept", { list: kept.map((item) => name(item.countries[0])).join(", ") })}
+                </span>
               </p>
             )}
           </section>

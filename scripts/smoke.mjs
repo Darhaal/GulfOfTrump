@@ -104,9 +104,9 @@ try {
 
   await step("the world news opens, and an item opens on its story", async () => {
     await button(/^The world$/).first().click();
-    const item = page.locator("li button[aria-expanded]").first();
-    if (await item.count()) await item.click();
-    await page.waitForTimeout(300);
+    // The offline game master reports one event abroad each turn, so there is always an item to open.
+    await page.locator("li button[aria-expanded]").first().click();
+    await page.locator("li ol li").first().waitFor();
     await button(/^Our chronicle$/).first().click();
   });
 

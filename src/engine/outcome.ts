@@ -519,7 +519,7 @@ export function applyOutcome(
   outcome.warsStarted.forEach((w, i) => {
     const war: War = { id: `w${state.turn}-${i + 1}`, name: w.name, attackers: w.attackers, defenders: w.defenders, since: from };
     next.wars.push(war);
-    applied.push({ kind: "war", war: war.id, name: war.name });
+    applied.push({ kind: "war", war: war.id, name: war.name, sides: [...war.attackers, ...war.defenders] });
   });
 
   for (const j of outcome.warsJoined) {
@@ -532,7 +532,7 @@ export function applyOutcome(
     const war = matchByName(next.wars, e.war);
     if (!war) continue;
     next.wars = next.wars.filter((w) => w.id !== war.id);
-    applied.push({ kind: "peace", war: war.id, name: war.name });
+    applied.push({ kind: "peace", war: war.id, name: war.name, sides: [...war.attackers, ...war.defenders] });
     // Peace returns occupied land to its owner unless the treaty annexed it,
     // which the model reports as an annex transfer in the same turn.
     const sides = new Set([...war.attackers, ...war.defenders]);
@@ -557,7 +557,7 @@ export function applyOutcome(
   for (const war of [...next.wars]) {
     if (!conquered(war.attackers) && !conquered(war.defenders)) continue;
     next.wars = next.wars.filter((w) => w.id !== war.id);
-    applied.push({ kind: "peace", war: war.id, name: war.name });
+    applied.push({ kind: "peace", war: war.id, name: war.name, sides: [...war.attackers, ...war.defenders] });
     const sides = new Set([...war.attackers, ...war.defenders]);
     for (const region of Object.values(next.regions)) {
       if (region.contested && sides.has(region.contested) && sides.has(region.controller)) {
@@ -579,7 +579,7 @@ export function applyOutcome(
       ...(a.until && a.until > from ? { until: a.until } : {}),
       ...(a.terms ? { terms: a.terms } : {}),
     });
-    applied.push({ kind: "alliance", alliance: id, name: a.name });
+    applied.push({ kind: "alliance", alliance: id, name: a.name, members: [...a.members] });
   });
 
   for (const j of outcome.alliancesJoined) {
@@ -592,6 +592,11 @@ export function applyOutcome(
     if (!alliance || !alliance.members.includes(l.country)) continue;
     alliance.members = alliance.members.filter((m) => m !== l.country);
     applied.push({ kind: "leave", alliance: alliance.id, name: alliance.name, country: l.country });
+  }
+  // A bloc that members' leaving brings below two is over; one that never had two is dropped without a word.
+  for (const a of next.alliances) {
+    const was = state.alliances.find((x) => x.id === a.id);
+    if (a.members.length < 2 && was && was.members.length >= 2) applied.push({ kind: "alliance-ended", alliance: a.id, name: a.name, members: [...was.members] });
   }
   next.alliances = next.alliances.filter((a) => a.members.length >= 2);
 

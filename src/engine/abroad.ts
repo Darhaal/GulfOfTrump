@@ -208,7 +208,9 @@ export function castAbroad(state: GameState): AbroadEvent[] {
       }
     }
     if (d.nextElection && d.nextElection <= to) {
-      out.push({ kind: "election", country: tag, date: d.nextElection, kept: happens(keepChance(d), state.id, state.turn, `election:${tag}`) });
+      // An election that fell while the country could not hold it (all its land lost) is held now.
+      const date = d.nextElection < state.date ? state.date : d.nextElection;
+      out.push({ kind: "election", country: tag, date, kept: happens(keepChance(d), state.id, state.turn, `election:${tag}`) });
     }
   }
   return out;

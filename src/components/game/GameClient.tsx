@@ -112,7 +112,7 @@ export default function GameClient({ id }: { id: string }) {
   // replays their highlight, and where the camera was last asked to go.
   const [mapTurn, setMapTurn] = useState<number | null>(null);
   const [pulse, setPulse] = useState(0);
-  const [focus, setFocus] = useState<{ key: number; regions: string[] } | null>(null);
+  const [focus, setFocus] = useState<{ key: number; regions?: string[]; country?: string } | null>(null);
   // The meeting the player is holding in person, if any.
   const [live, setLive] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -521,7 +521,11 @@ export default function GameClient({ id }: { id: string }) {
                 onCountry={(tag) => {
                   setSelected(tag);
                   setSelectedProvince(null);
+                  if (tag !== state.player) setDiplomacyTarget(tag);
                   setRight("country");
+                  setFocus({ key: Date.now(), country: tag });
+                  // Where both side panels do not fit, the country replaces the chronicle, as a click on the map does.
+                  if (!window.matchMedia("(min-width: 1536px)").matches) setLeft(null);
                 }}
               />
             )}

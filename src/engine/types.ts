@@ -528,15 +528,15 @@ export type AppliedChange =
   | { kind: "contest"; region: string; by: string; holder: string; held?: number; was?: number }
   | { kind: "repel"; region: string; by: string; holder: string }
   | { kind: "new-country"; country: string }
-  | { kind: "war"; war: string; name: Text }
-  | { kind: "peace"; war: string; name: Text }
-  | { kind: "alliance"; alliance: string; name: Text }
+  | { kind: "war"; war: string; name: Text; sides?: string[] }
+  | { kind: "peace"; war: string; name: Text; sides?: string[] }
+  | { kind: "alliance"; alliance: string; name: Text; members?: string[] }
   | { kind: "leave"; alliance: string; name: Text; country: string }
   | { kind: "leader"; country: string; leader: string }
   | { kind: "stats"; country: string; delta: Partial<Stats> }
   | { kind: "truce"; war: string; name: Text; until: string }
   | { kind: "truce-ended"; war: string; name: Text }
-  | { kind: "alliance-ended"; alliance: string; name: Text }
+  | { kind: "alliance-ended"; alliance: string; name: Text; members?: string[] }
   | { kind: "invitation"; name: Text; country: string; answer: "accept" | "decline" }
   | { kind: "summit-planned"; summit: string; title: string; date: string }
   | { kind: "party"; party: string; change: Party["status"] | "new" | "dissolved" }

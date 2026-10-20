@@ -171,7 +171,7 @@ export function applyForeign(
     }
   }
   const expired = next.alliances.filter((a) => a.until && a.until < ctx.to);
-  for (const a of expired) applied.push({ kind: "alliance-ended", alliance: a.id, name: a.name });
+  for (const a of expired) applied.push({ kind: "alliance-ended", alliance: a.id, name: a.name, members: [...a.members] });
   next.alliances = next.alliances.filter((a) => !(a.until && a.until < ctx.to));
   for (const s of next.summits ?? []) if (s.status === "planned" && s.date < ctx.to && !held.includes(s.id)) s.status = "missed";
   return held;
