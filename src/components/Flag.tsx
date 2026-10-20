@@ -80,6 +80,37 @@ const DRAWN: Record<DrawnFlag, ReactNode> = {
       {star(7.4, 5.6, 0.55, "#fff")}
     </>
   ),
+  "south-vietnam": (
+    <>
+      <rect width="12" height="9" fill="#ffcd00" />
+      <rect y="3.1" width="12" height="0.6" fill="#da251d" />
+      <rect y="4.2" width="12" height="0.6" fill="#da251d" />
+      <rect y="5.3" width="12" height="0.6" fill="#da251d" />
+    </>
+  ),
+  "viet-cong": (
+    <>
+      <rect width="12" height="4.5" fill="#da251d" />
+      <rect y="4.5" width="12" height="4.5" fill="#0f47af" />
+      {star(6, 4.5, 2, "#ffcd00")}
+    </>
+  ),
+  gdr: (
+    <>
+      {stripes(["#000", "#dd0000", "#ffce00"])}
+      <circle cx="6" cy="4.5" r="1.6" fill="#ffce00" stroke="#dd0000" strokeWidth="0.3" />
+    </>
+  ),
+  uar: (
+    <>
+      {stripes(["#ce1126", "#fff", "#000"])}
+      {star(4.6, 4.5, 0.75, "#007a3d")}
+      {star(7.4, 4.5, 0.75, "#007a3d")}
+    </>
+  ),
+  fry: stripes(["#0c4076", "#fff", "#c6363c"]),
+  // The Taliban's white banner (the creed written on it is left out at this size).
+  taliban: <rect width="12" height="9" fill="#fff" />,
   "northern-cyprus": (
     <>
       <rect width="12" height="9" fill="#fff" />

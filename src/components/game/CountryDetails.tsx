@@ -1,8 +1,9 @@
 "use client";
 
-import { Swords, Users } from "lucide-react";
+import { Building2, Handshake, Swords, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { ui } from "@/components/ui/classes";
+import { leaderName } from "@/i18n/leaders";
 import { useI18n } from "@/i18n/useI18n";
 import type { Accounts } from "@/engine/economy";
 import Flag from "@/components/Flag";
@@ -24,12 +25,14 @@ interface CountryDetailsProps {
   alliances: Alliance[];
   countries: Record<string, CountryState>;
   isPlayer?: boolean;
+  /** Only what matters when choosing a country: no trade, resources or organisations. */
+  brief?: boolean;
   footer?: ReactNode;
 }
 
 /** Everything the player can know about one country at a glance. */
-export default function CountryDetails({ country, scenario, regionCount, population, accounts, detailed, wars, alliances, countries, isPlayer, footer }: CountryDetailsProps) {
-  const { t, text, people } = useI18n();
+export default function CountryDetails({ country, scenario, regionCount, population, accounts, detailed, wars, alliances, countries, isPlayer, brief, footer }: CountryDetailsProps) {
+  const { t, text, people, locale } = useI18n();
   const name = (tag: string) => text(countries[tag]?.name ?? tag);
   const enemies = [
     ...new Set(
@@ -37,6 +40,13 @@ export default function CountryDetails({ country, scenario, regionCount, populat
     ),
   ];
   const memberOf = alliances.filter((a) => a.members.includes(country.tag));
+  const groups = [
+    { key: "alliances", icon: Users, label: t("country.alliances"), blocs: memberOf.filter((a) => !a.kind || a.kind === "alliance") },
+    { key: "pacts", icon: Handshake, label: t("country.pacts"), blocs: memberOf.filter((a) => a.kind === "pact") },
+    ...(brief
+      ? []
+      : [{ key: "organisations", icon: Building2, label: t("country.organisations"), blocs: memberOf.filter((a) => a.kind === "organization" || a.kind === "trade") }]),
+  ];
 
   return (
     <div className="flex flex-col gap-4">
@@ -54,11 +64,11 @@ export default function CountryDetails({ country, scenario, regionCount, populat
       {country.leader && (
         <div className="rounded-xl bg-page p-3">
           <div className={ui.label}>{t("country.leader")}</div>
-          <div className="mt-1 text-sm font-bold text-ink">{country.leader}</div>
+          <div className="mt-1 text-sm font-bold text-ink">{leaderName(country.leader, locale)}</div>
         </div>
       )}
 
-      {country.economy && <EconomyPanel economy={country.economy} accounts={accounts} detailed={detailed} />}
+      {country.economy && <EconomyPanel economy={country.economy} accounts={accounts} detailed={detailed} trade={!brief} />}
 
       <div className="grid grid-cols-1 gap-3 text-sm">
         <div className="flex items-center justify-between rounded-xl bg-page px-3 py-2">
@@ -89,23 +99,25 @@ export default function CountryDetails({ country, scenario, regionCount, populat
             <div className="text-xs font-medium text-muted">{t("country.none")}</div>
           )}
         </div>
-        <div>
-          <div className={`${ui.label} mb-1.5 flex items-center gap-1.5`}>
-            <Users className="h-3.5 w-3.5" />
-            {t("country.alliances")}
-          </div>
-          {memberOf.length ? (
-            <div className="flex flex-wrap gap-1.5">
-              {memberOf.map((a) => (
-                <span key={a.id} className={ui.chip}>
-                  {text(a.name)}
-                </span>
-              ))}
+        {groups.map(({ key, icon: Icon, label, blocs }) => (
+          <div key={key}>
+            <div className={`${ui.label} mb-1.5 flex items-center gap-1.5`}>
+              <Icon className="h-3.5 w-3.5" />
+              {label}
             </div>
-          ) : (
-            <div className="text-xs font-medium text-muted">{t("country.none")}</div>
-          )}
-        </div>
+            {blocs.length ? (
+              <div className="flex flex-wrap gap-1.5">
+                {blocs.map((a) => (
+                  <span key={a.id} className={ui.chip}>
+                    {text(a.name)}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className="text-xs font-medium text-muted">{t("country.none")}</div>
+            )}
+          </div>
+        ))}
       </div>
       {footer}
     </div>

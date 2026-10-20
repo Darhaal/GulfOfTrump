@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  // The desktop app ships its own small server (desktop/README.md).
+  ...(process.env.GOT_DESKTOP === "1" ? { output: "standalone" as const } : {}),
   // The game routes read the map files from disk; on a host such as Vercel
   // they must travel with the functions.
   outputFileTracingIncludes: {

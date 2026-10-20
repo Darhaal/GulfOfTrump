@@ -34,6 +34,18 @@ export function rejectNonLocal(request: Request): Response | null {
   return null;
 }
 
+/**
+ * For a page the browser reaches by a sign-in provider's redirect. Such a
+ * request is a cross-site navigation by design, so only the Host is checked
+ * (a loopback name, which still defeats DNS rebinding). A route behind this
+ * check may only accept what the provider hands back for a sign-in this
+ * computer started: it spends nothing and reveals nothing.
+ */
+export function rejectNonLoopback(request: Request): Response | null {
+  const hostname = (request.headers.get("host") ?? "").replace(/:\d+$/, "");
+  return LOOPBACK.has(hostname) ? null : forbidden("This server only answers requests from the same computer.");
+}
+
 /** Signing in with ChatGPT is off in the public demo. */
 export function rejectInDemo(): Response | null {
   return isDemo() ? Response.json({ error: { code: "demo", message: "Signing in is not available in the demo." } }, { status: 403 }) : null;

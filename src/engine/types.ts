@@ -17,7 +17,7 @@ export type Localized = Record<Locale, string>;
 /** Authored text comes in three languages; text the model writes, in one. */
 export type Text = string | Localized;
 
-export type ScenarioId = "1914" | "1939" | "1991" | "2014" | "2022";
+export type ScenarioId = "1914" | "1939" | "1950" | "1964" | "1991" | "1999" | "2014" | "2022";
 export type MapId = "world_1914" | "world_1938" | "world_1994" | "world_2010";
 export type TimeStep = "week" | "month" | "quarter" | "half" | "year";
 
@@ -100,6 +100,13 @@ export interface Scenario {
   protests?: ProtestSeed[];
   /** How loyal each country's army, police, security services and elites are on the start date. */
   loyalty?: Record<string, Loyalty>;
+  /**
+   * People on the start date, for a scenario that borrows another date's map:
+   * thousands by modern country (Natural Earth adm0), today's borders. The
+   * provinces of a country listed share its figure as the map shares the
+   * map's; the rest are scaled by `others`.
+   */
+  people?: { byCountry: Record<string, number>; others: number };
 }
 
 /** A protest a scenario starts with; its words in each language. */
@@ -271,6 +278,9 @@ export interface RegionState {
   /** People now, thousands, once the game has moved them from the map's start figure. */
   pop?: number;
 }
+
+/** What the map draws of a province: kept per turn so the past can be drawn again (engine/history.ts). */
+export type RegionBorder = Pick<RegionState, "owner" | "controller" | "contested" | "held">;
 
 export interface War {
   id: string;
@@ -547,6 +557,8 @@ export interface ChronicleEntry {
   reports?: MinistryReport[];
   /** The player's economy before and after the turn, for the report. */
   economy?: { before: EconomyFigures; after: EconomyFigures };
+  /** The provinces whose holder or front the turn changed, as they stood before it (engine/history.ts). */
+  borders?: Record<string, RegionBorder>;
 }
 
 /** The figures a turn report compares. */
@@ -575,6 +587,8 @@ export interface DiplomacyMessage {
 export interface GameState {
   /** 2 = provinces. Version-1 saves (one region per country) are migrated on load. */
   schema: 2;
+  /** The last numbered save migration this save has been through (engine/migrations.ts); none when missing. */
+  migration?: number;
   id: string;
   /** The name the player gave this game; without one it goes by country and year. */
   title?: string;

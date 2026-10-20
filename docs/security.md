@@ -32,6 +32,15 @@ reachable from the network. The sign-in callback listener binds to
 The return URL after sign-in is built from the server's own host, never taken
 from the request body, so the sign-in cannot be turned into an open redirect.
 
+### The desktop app
+
+The Windows app ([desktop/README.md](../desktop/README.md)) runs this same
+server on `127.0.0.1:41914` and shows it in its own window. The guards are
+unchanged. Sign-in opens the system browser and returns to the loopback
+listener, and the tokens live in the same encrypted store. Links outside the
+game open in the system browser, never in the app's window. Desktop builds
+carry no Supabase project and no `.env` file.
+
 ### The public demo
 
 With `NEXT_PUBLIC_GOT_DEMO=1` (the Vercel site, see [deploy.md](deploy.md)) the

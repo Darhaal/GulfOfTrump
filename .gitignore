@@ -40,3 +40,13 @@ next-env.d.ts
 # Supabase CLI local state
 /supabase/.temp/
 /supabase/.branches/
+
+# desktop app builds
+/desktop/node_modules/
+/desktop/server/
+/desktop/dist/
+/desktop/build/icon.png
+/desktop/build/appx/
+/desktop/build/license.txt
+/desktop/build/installerSidebar.bmp
+/desktop/build/installerHeader.bmp

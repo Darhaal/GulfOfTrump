@@ -10,14 +10,20 @@ type T = (key: MessageKey, vars?: Record<string, string | number>) => string;
 
 /** Hands the browser a file to save, without a server round trip. */
 export function downloadFile(name: string, content: string, type: string) {
-  const url = URL.createObjectURL(new Blob([content], { type: `${type};charset=utf-8` }));
+  downloadBlob(name, new Blob([content], { type: `${type};charset=utf-8` }));
+}
+
+/** The same for a file already made: a picture, a video. */
+export function downloadBlob(name: string, blob: Blob) {
+  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = name;
   document.body.appendChild(a);
   a.click();
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  // Long enough for a large file, a video, to be read before the link goes.
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
 /** The whole chronicle as Markdown — for reading, or for sending to whoever reviews the game. */

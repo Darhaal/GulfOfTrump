@@ -1,0 +1,62 @@
+name: Smoke
+
+# The interface in a real browser: the production build with the offline game
+# master, a game started, a turn played, every panel and dialog opened
+# (scripts/smoke.mjs). Costs no ChatGPT plan.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Interface smoke test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # Playwright is not a dependency of the game; only this job needs it.
+      - name: Install Playwright and Chromium
+        run: |
+          npm i --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+
+      - name: Start the game with the offline game master
+        run: |
+          GOT_MOCK_AI=1 npm start > server.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf -o /dev/null http://127.0.0.1:3000/ && exit 0
+            sleep 1
+          done
+          cat server.log
+          exit 1
+
+      - name: Smoke test
+        run: node scripts/smoke.mjs
+
+      - name: Keep the failure screenshot and the server log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-failure
+          path: |
+            smoke-failure.png
+            server.log
+          if-no-files-found: ignore

@@ -29,11 +29,12 @@ const figures = z.object({ gdp: z.number(), debt: z.number(), reserves: z.number
 export const GameStateSchema = z.object({
   // 1 = one region per country (migrated on load), 2 = provinces.
   schema: z.union([z.literal(1), z.literal(2)]),
+  migration: z.number().int().min(0).optional(),
   id: z.string().min(1).max(100),
   title: z.string().max(120).optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
-  scenarioId: z.enum(["1914", "1939", "1991", "2014", "2022"]),
+  scenarioId: z.enum(["1914", "1939", "1950", "1964", "1991", "1999", "2014", "2022"]),
   player: z.string().min(1),
   date,
   turn: z.number().int().min(1),
@@ -88,6 +89,7 @@ export const GameStateSchema = z.object({
       events: z.array(z.object({ title: z.string(), body: z.string(), kind: z.enum(EVENT_KINDS), countries: z.array(z.string()) })),
       applied: z.array(z.object({ kind: z.string() }).passthrough()),
       economy: z.object({ before: figures, after: figures }).optional(),
+      borders: z.record(z.string(), z.object({ owner: z.string(), controller: z.string(), contested: z.string().optional(), held: z.number().optional() })).optional(),
       summits: z.array(z.string()).optional(),
       reports: z
         .array(

@@ -14,7 +14,16 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Local tooling, including other sessions' worktrees and their builds.
     ".claude/**",
+    // The desktop app's builds and packages.
+    "desktop/server/**",
+    "desktop/dist/**",
+    "desktop/node_modules/**",
   ]),
+  // Electron's main process is CommonJS.
+  {
+    files: ["desktop/**/*.cjs"],
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
 ]);
 
 export default eslintConfig;

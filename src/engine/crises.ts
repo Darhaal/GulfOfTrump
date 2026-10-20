@@ -52,7 +52,7 @@ const round = (v: number, digits = 1) => Math.round(v * 10 ** digits) / 10 ** di
  * debt passes 90% of GDP. A trusted borrower — big reserves, steady prices —
  * pays far less, as Japan or Switzerland do.
  */
-const BASE_RATE: Record<ScenarioId, number> = { "1914": 3.5, "1939": 3.5, "1991": 6, "2014": 3, "2022": 2.5 };
+const BASE_RATE: Record<ScenarioId, number> = { "1914": 3.5, "1939": 3.5, "1950": 3, "1964": 4.5, "1991": 6, "1999": 5.5, "2014": 3, "2022": 2.5 };
 export function interestRate(e: Pick<Economy, "debt" | "gdp" | "reserves" | "inflation">, era: ScenarioId): number {
   const gdp = Math.max(0.01, e.gdp);
   const ratio = (e.debt / gdp) * 100;

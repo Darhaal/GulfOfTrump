@@ -89,12 +89,58 @@ export default function PickClient({ scenarioId }: { scenarioId: ScenarioId }) {
     );
   };
 
+  const list = (
+    <div className={`${ui.card} flex min-h-[320px] flex-col overflow-hidden lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] xl:static xl:h-full xl:max-h-none`}>
+      <div className="border-b border-divider p-3">
+        <label className="flex items-center gap-2 rounded-xl border border-gray-200 bg-page px-3 focus-within:border-ink focus-within:bg-surface">
+          <Search className="h-4 w-4 text-muted" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("pick.search")}
+            className="w-full bg-transparent py-2.5 text-sm font-medium text-ink outline-none placeholder:text-gray-400"
+          />
+        </label>
+      </div>
+      <div className="max-h-[60vh] min-h-0 flex-1 overflow-y-auto p-2 lg:max-h-none">
+        {groups && (
+          <>
+            {groups.featured.length > 0 && (
+              <>
+                <div className={`${ui.label} px-3 pt-2 pb-1`}>{t("pick.featured")}</div>
+                {groups.featured.map(listButton)}
+              </>
+            )}
+            {groups.dormant.length > 0 && (
+              <>
+                <div className={`${ui.label} px-3 pt-4 pb-1`}>{t("pick.dormant")}</div>
+                {groups.dormant.map(listButton)}
+              </>
+            )}
+            {groups.rest.length > 0 && (
+              <>
+                <div className={`${ui.label} px-3 pt-4 pb-1`}>{t("pick.all")}</div>
+                {groups.rest.map(listButton)}
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+
+  // The list on the left, the map and the briefing (the start button in its
+  // footer) in the middle, the chosen country on the right. On wide screens the page
+  // itself stays put and each column scrolls on its own. Narrower screens
+  // move the country under the map, phones stack everything.
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col xl:h-dvh xl:min-h-0 xl:overflow-hidden">
       <AppHeader back="/" title={text(scenario.title)} subtitle={`${formatDate(scenario.startDate, locale)} · ${t("pick.title")}`} />
 
-      <main className="mx-auto grid w-full max-w-[1600px] flex-1 gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="flex min-h-0 flex-col gap-4">
+      <main className="mx-auto grid w-full max-w-[1600px] flex-1 items-start gap-4 p-4 lg:grid-cols-[240px_minmax(0,1fr)] xl:min-h-0 xl:grid-cols-[260px_minmax(0,1fr)_360px] xl:grid-rows-[minmax(0,1fr)] xl:items-stretch">
+        <aside className="order-2 lg:order-none lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:self-stretch xl:row-span-1 xl:min-h-0">{list}</aside>
+
+        <div className="order-1 flex min-w-0 flex-col gap-4 lg:order-none lg:col-start-2 lg:row-start-1 xl:min-h-0 xl:overflow-y-auto">
           <div className={`${ui.card} relative aspect-[1000/540] w-full overflow-hidden`}>
             {map && world ? (
               <WorldMap
@@ -121,11 +167,19 @@ export default function PickClient({ scenarioId }: { scenarioId: ScenarioId }) {
           <div className={`${ui.card} p-5`}>
             <div className={`${ui.label} mb-2`}>{t("pick.briefing")}</div>
             <p className="text-sm font-medium leading-relaxed text-ink">{text(scenario.briefing)}</p>
-            <p className="mt-3 text-xs font-medium text-muted">{t("pick.hint")}</p>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-divider pt-4">
+              <p className="min-w-0 flex-1 text-xs font-medium text-muted">{t("pick.hint")}</p>
+              {country && (
+                <button type="button" onClick={start} disabled={starting || !map} className={`${ui.primary} max-w-full px-5 py-3 text-sm`}>
+                  {starting ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Flag className="h-4 w-4 shrink-0" />}
+                  <span className="truncate">{t("pick.start", { country: text(country.name) })}</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        <aside className="flex min-h-0 flex-col gap-4">
+        <aside className="order-3 min-w-0 lg:order-none lg:col-start-2 lg:row-start-2 xl:col-start-3 xl:row-start-1 xl:min-h-0 xl:overflow-y-auto">
           {country && world && (
             <div className={`${ui.card} p-5`}>
               <CountryDetails
@@ -138,53 +192,10 @@ export default function PickClient({ scenarioId }: { scenarioId: ScenarioId }) {
                 wars={scenario.wars.map((w) => ({ ...w }))}
                 alliances={scenario.alliances.map((a) => ({ ...a }))}
                 countries={world.countries}
-                footer={
-                  <button type="button" onClick={start} disabled={starting || !map} className={`${ui.primary} mt-1 w-full py-4 text-sm`}>
-                    {starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Flag className="h-4 w-4" />}
-                    {t("pick.start", { country: text(country.name) })}
-                  </button>
-                }
+                brief
               />
             </div>
           )}
-
-          <div className={`${ui.card} flex min-h-[320px] flex-1 flex-col overflow-hidden`}>
-            <div className="border-b border-divider p-3">
-              <label className="flex items-center gap-2 rounded-xl border border-gray-200 bg-page px-3 focus-within:border-ink focus-within:bg-surface">
-                <Search className="h-4 w-4 text-muted" />
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder={t("pick.search")}
-                  className="w-full bg-transparent py-2.5 text-sm font-medium text-ink outline-none placeholder:text-gray-400"
-                />
-              </label>
-            </div>
-            <div className="flex-1 overflow-y-auto p-2 lg:max-h-[calc(100vh-30rem)]">
-              {groups && (
-                <>
-                  {groups.featured.length > 0 && (
-                    <>
-                      <div className={`${ui.label} px-3 pt-2 pb-1`}>{t("pick.featured")}</div>
-                      {groups.featured.map(listButton)}
-                    </>
-                  )}
-                  {groups.dormant.length > 0 && (
-                    <>
-                      <div className={`${ui.label} px-3 pt-4 pb-1`}>{t("pick.dormant")}</div>
-                      {groups.dormant.map(listButton)}
-                    </>
-                  )}
-                  {groups.rest.length > 0 && (
-                    <>
-                      <div className={`${ui.label} px-3 pt-4 pb-1`}>{t("pick.all")}</div>
-                      {groups.rest.map(listButton)}
-                    </>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
         </aside>
       </main>
     </div>

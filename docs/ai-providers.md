@@ -10,9 +10,23 @@ round. Alpha 0.1.0 ships one real provider — ChatGPT — and an offline mock.
 OpenAI's [Sign in with ChatGPT](https://developers.openai.com/siwc) lets a user
 connect their ChatGPT account to an app and, with explicit consent, let the app
 spend their **ChatGPT plan** on the Responses API — no API key, no separate
-billing. At launch OpenAI offers plan usage to **open-source projects and
-personal projects that run locally**; paid or remotely hosted apps go through
-an [interest form](https://openai.com/form/sign-in-with-chatgpt-interest/).
+billing. OpenAI offers plan usage to **open-source projects and personal
+projects that run locally**; commercial partners go through an
+[interest form](https://openai.com/form/sign-in-with-chatgpt-interest/).
+
+The [terms](https://openai.com/policies/sign-in-with-chatgpt-terms/) (29
+September 2026) set the shape of any app that uses it:
+
+- Tokens may be stored persistently **only locally, under the user's
+  control**, not in a remote or managed environment.
+- Requests must come from **the user's local runtime**, or a remote one that
+  only that user controls.
+- Users must be able to play on their plan **without paying the app**.
+- One user's plan never serves another user's requests.
+
+So a hosted copy of the game cannot play on its visitors' plans, whatever
+approval it gets. That is why the public site is a demo, and why the way to
+make playing easier is a desktop app rather than a website.
 
 Gulf of Trump is open source and runs on the player's machine, which is the
 case the program describes. Consequences:

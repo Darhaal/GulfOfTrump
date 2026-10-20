@@ -9,7 +9,7 @@ import AppHeader from "@/components/AppHeader";
 import Flag from "@/components/Flag";
 import Dialog from "@/components/ui/Dialog";
 import { ui } from "@/components/ui/classes";
-import { APP_NAME, APP_VERSION, isDemo, ISSUES_URL, REPO_URL } from "@/constants/app";
+import { APP_NAME, APP_VERSION, DOWNLOAD_URL, isDemo, ISSUES_URL, REPO_URL } from "@/constants/app";
 import { formatDate, yearOf } from "@/engine/calendar";
 import { SCENARIO_ORDER, SCENARIOS } from "@/engine/scenarios";
 import { parseGameState } from "@/engine/schema";
@@ -23,11 +23,37 @@ import { useUser } from "@/lib/supabase";
 
 type Sort = "recent" | "turn" | "name";
 
-/** Screenshots on the public demo's front page, in public/screens. */
-const SCREENS = [
-  { name: "map", width: 1002, height: 626 },
-  { name: "parliament", width: 664, height: 520 },
-  { name: "turn", width: 808, height: 631 },
+/**
+ * The public demo's tour of the game, screenshots of one 1950 game in
+ * public/screens/1950. Each row's columns follow its pictures' proportions, so
+ * the pictures in a row come out the same height.
+ */
+const HOW = [
+  {
+    cols: "md:grid-cols-2",
+    cards: [
+      { name: "orders", width: 1600, height: 1000 },
+      { name: "turn", width: 1600, height: 1000 },
+    ],
+  },
+  {
+    cols: "sm:grid-cols-2 lg:grid-cols-3",
+    cards: [
+      { name: "cabinet", width: 760, height: 950 },
+      { name: "parliament", width: 760, height: 950 },
+      { name: "economy", width: 760, height: 950 },
+      { name: "foreign", width: 760, height: 950 },
+      { name: "state", width: 760, height: 950 },
+      { name: "modes", width: 900, height: 1125 },
+    ],
+  },
+  {
+    cols: "md:grid-cols-[minmax(0,1.78fr)_minmax(0,1.37fr)]",
+    cards: [
+      { name: "picture", width: 1600, height: 900 },
+      { name: "timelapse", width: 1160, height: 847 },
+    ],
+  },
 ] as const;
 
 /** "2 hours ago" in the interface language. */
@@ -190,8 +216,9 @@ export default function HomeClient() {
       <AppHeader
         title={
           <span className="flex items-center gap-2">
+            <Image src="/brand/emblem.webp" alt="" width={28} height={28} unoptimized className="h-7 w-7 shrink-0" />
             {APP_NAME}
-            <span className="rounded-md bg-ink px-1.5 py-0.5 text-2xs font-black uppercase tracking-widest text-on-ink">
+            <span className="rounded-md bg-accent px-1.5 py-0.5 text-2xs font-black uppercase tracking-widest text-on-ink">
               {t("app.stage")} {APP_VERSION}
             </span>
           </span>
@@ -207,10 +234,17 @@ export default function HomeClient() {
               <span className="text-accent">.</span>
             </h1>
             <p className="mt-4 max-w-2xl text-base md:text-lg font-medium text-muted">{t("app.tagline")}</p>
-            <a href="#dates" className={`${ui.secondary} mt-6 px-4 py-2.5 text-sm`}>
-              {t("home.newGame")}
-              <ArrowRight className="h-4 w-4" />
-            </a>
+            <div className="mt-6 flex flex-wrap gap-2">
+              <a href="#dates" className={`${ui.secondary} px-4 py-2.5 text-sm`}>
+                {t("home.newGame")}
+                <ArrowRight className="h-4 w-4" />
+              </a>
+              {isDemo() && (
+                <a href="#how" className={`${ui.secondary} px-4 py-2.5 text-sm`}>
+                  {t("home.how.title")}
+                </a>
+              )}
+            </div>
           </div>
           {last && (
             <Link href={`/play/${last.id}`} className={`${ui.row} group flex flex-col gap-3 p-5`}>
@@ -235,7 +269,7 @@ export default function HomeClient() {
         <section id="dates" className="scroll-mt-20">
           <h2 className={`${ui.label} mb-1`}>{t("home.chooseDate")}</h2>
           <p className="mb-4 text-sm text-muted font-medium">{t("home.chooseDateHint")}</p>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {SCENARIO_ORDER.map((id, i) => {
               const s = SCENARIOS[id];
               return (
@@ -266,17 +300,47 @@ export default function HomeClient() {
         </section>
 
         {isDemo() && (
-          <section id="real" className="mt-12 grid scroll-mt-20 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-            <div className={`${ui.card} p-6`}>
+          <section id="how" className="mt-14 scroll-mt-20">
+            <h2 className={`${ui.label} mb-1`}>{t("home.how.title")}</h2>
+            <p className="mb-4 text-sm font-medium text-muted">{t("home.how.lead")}</p>
+            <div className="flex flex-col gap-4">
+              {HOW.map(({ cols, cards }) => (
+                <div key={cards[0].name} className={`grid gap-4 ${cols}`}>
+                  {cards.map(({ name, width, height }) => (
+                    <figure key={name} className={`${ui.card} flex flex-col overflow-hidden`}>
+                      <Image
+                        src={`/screens/1950/${name}.jpg`}
+                        alt={t(`home.how.${name}.title` as MessageKey)}
+                        width={width}
+                        height={height}
+                        unoptimized
+                        loading="lazy"
+                        className="h-auto w-full border-b border-line"
+                      />
+                      <figcaption className="p-5">
+                        <h3 className="text-lg font-black leading-tight text-ink">{t(`home.how.${name}.title` as MessageKey)}</h3>
+                        <p className="mt-1.5 text-sm font-medium leading-relaxed text-muted">{t(`home.how.${name}.body` as MessageKey)}</p>
+                      </figcaption>
+                    </figure>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {isDemo() && (
+          <section id="real" className={`${ui.card} mt-12 grid scroll-mt-20 gap-6 p-6 md:grid-cols-2 md:p-8`}>
+            <div>
               <h2 className="text-2xl font-black tracking-tight text-ink">{t("home.real.title")}</h2>
               <p className="mt-2 text-sm font-medium leading-relaxed text-muted">{t("home.real.body")}</p>
-              <p className="mt-4 text-sm font-bold text-ink">{t("home.real.needs")}</p>
-              <pre className="mt-2 overflow-x-auto rounded-xl bg-night p-4 text-xs leading-relaxed text-white">
-                <code>{`git clone ${REPO_URL}.git\ncd GulfOfTrump\nnpm install\nnpm run dev`}</code>
-              </pre>
-              <p className="mt-2 text-sm font-medium text-muted">{t("home.real.then")}</p>
+              <a href={DOWNLOAD_URL} target="_blank" rel="noreferrer" className={`${ui.primary} mt-5 px-5 py-3 text-sm`}>
+                <Download className="h-4 w-4" />
+                {t("home.real.download")}
+              </a>
+              <p className="mt-2 text-xs font-medium leading-relaxed text-muted">{t("home.real.unsigned")}</p>
               <div className="mt-5 flex flex-wrap gap-2">
-                <a href={REPO_URL} target="_blank" rel="noreferrer" className={`${ui.primary} px-4 py-2.5 text-xs`}>
+                <a href={REPO_URL} target="_blank" rel="noreferrer" className={`${ui.secondary} px-4 py-2.5 text-xs`}>
                   <CodeXml className="h-4 w-4" />
                   {t("home.real.source")}
                 </a>
@@ -286,16 +350,12 @@ export default function HomeClient() {
                 </a>
               </div>
             </div>
-            <div>
-              <h2 className={`${ui.label} mb-3`}>{t("home.screens.title")}</h2>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {SCREENS.map(({ name, width, height }, i) => (
-                  <figure key={name} className={i === 0 ? "sm:col-span-2" : ""}>
-                    <Image src={`/screens/${name}.jpg`} alt={t(`home.screens.${name}` as MessageKey)} width={width} height={height} unoptimized className="h-auto w-full rounded-2xl border border-line shadow-sm" />
-                    <figcaption className="mt-1.5 text-xs font-medium text-muted">{t(`home.screens.${name}` as MessageKey)}</figcaption>
-                  </figure>
-                ))}
-              </div>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-ink">{t("home.real.needs")}</p>
+              <pre className="mt-2 overflow-x-auto rounded-xl bg-night p-4 text-xs leading-relaxed text-white">
+                <code>{`git clone ${REPO_URL}.git\ncd GulfOfTrump\nnpm install\nnpm run dev`}</code>
+              </pre>
+              <p className="mt-2 text-sm font-medium text-muted">{t("home.real.then")}</p>
             </div>
           </section>
         )}
@@ -430,6 +490,9 @@ export default function HomeClient() {
           <span className="flex items-center gap-4">
             <Link href="/about" className="hover:text-accent">
               {t("nav.about")}
+            </Link>
+            <Link href="/privacy" className="hover:text-accent">
+              {t("nav.privacy")}
             </Link>
             <a href={REPO_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-accent">
               <CodeXml className="h-4 w-4" />

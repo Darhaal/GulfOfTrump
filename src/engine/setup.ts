@@ -1,28 +1,34 @@
 import { countryColor } from "./colors";
 import { seedEconomies } from "./economy";
+import { SAVE_MIGRATION } from "./migrations";
+import { startingOwner } from "./provinces";
 import { startingPolitics } from "./politics";
 import { countryName } from "./names";
 import { same, titleCase, tr } from "./text";
 import type { CountryState, GameState, Locale, MapRegion, RegionState, Scenario } from "./types";
 
+const roundPeople = (v: number) => (v >= 100 ? Math.round(v) : Math.round(v * 10) / 10);
+
 /**
- * The owner tag of a province at the scenario's start: the finest correction
- * wins — the province itself, then its modern country, then the historical
- * polygon it lies in, then that polygon's owner as the map names it.
+ * How many times the map's people a province has on the start date, by its
+ * modern country: null when the map counts them for the scenario's own date.
  */
-export function startingOwner(scenario: Scenario, region: Pick<MapRegion, "id" | "hist" | "owner" | "adm0">): string {
-  return (
-    scenario.provinceOwners?.[region.id] ??
-    scenario.modernOwners?.[region.adm0] ??
-    scenario.owners[region.hist] ??
-    scenario.aliases[region.owner] ??
-    region.owner
-  );
+function peopleScale(scenario: Scenario, mapRegions: MapRegion[]): ((adm0: string) => number) | null {
+  const people = scenario.people;
+  if (!people) return null;
+  const onMap = new Map<string, number>();
+  for (const r of mapRegions) onMap.set(r.adm0, (onMap.get(r.adm0) ?? 0) + (r.pop ?? 0));
+  return (adm0) => {
+    const target = people.byCountry[adm0];
+    const total = onMap.get(adm0) ?? 0;
+    return target !== undefined && total > 0 ? target / total : people.others;
+  };
 }
 
 /** Every region with its owner, and every country that holds land or is seeded. */
 export function startingWorld(scenario: Scenario, mapRegions: MapRegion[]) {
   const regions: Record<string, RegionState> = {};
+  const scale = peopleScale(scenario, mapRegions);
   for (const region of mapRegions) {
     const owner = startingOwner(scenario, region);
     const contested = scenario.provinceContested?.[region.id];
@@ -32,6 +38,7 @@ export function startingWorld(scenario: Scenario, mapRegions: MapRegion[]) {
       owner,
       controller: scenario.provinceControllers?.[region.id] ?? owner,
       ...(contested ? { contested, ...(held ? { held } : {}), ...(taken?.length ? { taken } : {}) } : {}),
+      ...(scale && region.pop !== undefined ? { pop: roundPeople(region.pop * scale(region.adm0)) } : {}),
     };
   }
 
@@ -75,6 +82,8 @@ export function createGame(scenario: Scenario, mapRegions: MapRegion[], player: 
   const byId = Object.fromEntries(mapRegions.map((r) => [r.id, r]));
   return seedEconomies({
     schema: 2,
+    // A new game is in today's shape: no migration is for it.
+    migration: SAVE_MIGRATION,
     id: newGameId(),
     createdAt: stamp,
     updatedAt: stamp,

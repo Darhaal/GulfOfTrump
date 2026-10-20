@@ -1,0 +1,21 @@
+{
+  "name": "gulf-of-trump",
+  "productName": "Gulf of Trump",
+  "version": "1.0.1-beta",
+  "description": "Alternate-history grand strategy where a language model is the game master. Plays on your own ChatGPT plan.",
+  "author": "Artem Okhten",
+  "license": "MIT",
+  "private": true,
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --publish never"
+  },
+  "dependencies": {
+    "electron-updater": "6.8.9"
+  },
+  "devDependencies": {
+    "electron": "44.5.1",
+    "electron-builder": "26.15.3"
+  }
+}

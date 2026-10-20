@@ -21,7 +21,20 @@ const LINES = [
  * player (or with `detailed`) also the budget, prices and jobs, trade and
  * every strategic resource it produces against what it needs.
  */
-export default function EconomyPanel({ economy, accounts, detailed, columns }: { economy: Economy; accounts?: Accounts; detailed?: boolean; columns?: boolean }) {
+export default function EconomyPanel({
+  economy,
+  accounts,
+  detailed,
+  columns,
+  trade = true,
+}: {
+  economy: Economy;
+  accounts?: Accounts;
+  detailed?: boolean;
+  columns?: boolean;
+  /** Trade and resources; off where a country is only being picked. */
+  trade?: boolean;
+}) {
   const { t, money, people, locale } = useI18n();
   const pct = (n: number) => `${n > 0 ? "+" : ""}${n.toLocaleString(locale, { maximumFractionDigits: 1 })}%`;
   const total = spending(economy);
@@ -94,7 +107,7 @@ export default function EconomyPanel({ economy, accounts, detailed, columns }: {
         </div>
       )}
 
-      {detailed && accounts && (
+      {detailed && accounts && trade && (
         <div className="rounded-xl bg-page p-3">
           <div className={`${ui.label} mb-2 flex items-center gap-1.5`}>
             <Ship className="h-3.5 w-3.5" />

@@ -16,6 +16,7 @@ import { applyBills, billsField } from "./acts";
 import { adjustTaken, carry, matchTown, townShare } from "./towns";
 import { reachableProvinces } from "./provinces";
 import { applyOverthrow, applyProtests, overthrowField, protestsField, updateExile } from "./unrest";
+import { bordersBefore } from "./history";
 import { withoutNulls } from "./json";
 import { slug } from "./text";
 import { EVENT_KINDS } from "./types";
@@ -642,6 +643,7 @@ export function applyOutcome(
   for (const [tag, economy] of Object.entries(economies)) next.countries[tag].economy = economy;
   const before = state.countries[state.player]?.economy;
   const after = next.countries[state.player]?.economy;
+  const borders = bordersBefore(state.regions, next.regions);
 
   const entry: ChronicleEntry = {
     turn: state.turn,
@@ -658,6 +660,7 @@ export function applyOutcome(
       : {}),
     ...(held.length ? { summits: held } : {}),
     ...(reports.length ? { reports } : {}),
+    ...(Object.keys(borders).length ? { borders } : {}),
   };
   next.chronicle.push(entry);
   next.date = to;

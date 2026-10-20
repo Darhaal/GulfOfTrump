@@ -58,7 +58,8 @@ Games save automatically in the browser (and to your account, if signed in).
    application", authorised redirect URI
    `https://<your-ref>.supabase.co/auth/v1/callback`).
 4. Set the site URL and redirect URLs (`http://127.0.0.1:3000/auth/callback`,
-   `http://localhost:3000/auth/callback`) — they are declared in
+   `http://localhost:3000/auth/callback`, and for the desktop app
+   `http://127.0.0.1:41914/auth/app/**`) — they are declared in
    [`supabase/config.toml`](../supabase/config.toml), so with a linked CLI:
    ```bash
    npx supabase config push

@@ -11,6 +11,178 @@ included.
 
 ## [Unreleased]
 
+## [1.0.1-beta] — 2026-10-19
+
+The Windows app and three more dates. Since 1.0.0-beta:
+
+- the game installs on Windows, signs in with ChatGPT and Google there, and
+  updates itself;
+- Korea 1950, the Gulf of Tonkin 1964 and NATO against Yugoslavia 1999 join
+  the five dates;
+- a turn as a picture and a whole game as a timelapse;
+- characters stay in the game and always lay out your own course;
+- choosing a country side by side, with leaders in your language;
+- a privacy policy and a way to report the game master's text.
+
+### Added
+- **The Windows app.** Gulf of Trump installs like any game, with no Node.js
+  and no terminal ([desktop/README.md](desktop/README.md)):
+  - It runs the game's own server on this computer and shows it in its own
+    window.
+  - Signing in with ChatGPT opens the system browser and comes back to the
+    app, as OpenAI's guide for open-source apps describes. The tokens stay on
+    this computer.
+  - It updates itself from the public repository's releases. A release tag
+    builds the installer on GitHub.
+  - The installer asks what a player expects: the language (English,
+    Russian or Ukrainian), the licence, whether to install for this user or
+    for everyone, the folder, and whether to put shortcuts on the desktop
+    and in the Start menu. At the end it offers to start the game. Its pages
+    carry the emblem in the brand's black and orange.
+  - Uninstalling asks whether to delete the saved games and the ChatGPT
+    sign-in as well. They stay by default, so a reinstall brings them back.
+    An update asks nothing and keeps the shortcuts as they are.
+  - The installer from GitHub is not signed yet, so SmartScreen warns about
+    it.
+  - The site's "Play for real" section offers it first.
+  - Google sign-in and cloud saves work in it too. Google's page opens in
+    the system browser (Google refuses embedded browsers). The browser comes
+    back to the game's own server, which passes the one-time code to the
+    app's window, and the window finishes the sign-in. The code is accepted
+    only for a sign-in the window started, and it is handed out once.
+- **A package for the Microsoft Store** (`npm run desktop -- --store`,
+  [docs/store.md](docs/store.md)). The Store signs and updates it, so Windows
+  shows no warning and the publisher is the developer's own account:
+  - It is the same app, except that it never checks GitHub for updates: the
+    Store alone updates games.
+  - Its tiles and logos are drawn from the emblem at build time. Its identity
+    comes from Partner Center in `desktop/store.json`, and the build refuses
+    to run without it.
+- **A privacy policy** at `/privacy`, in three languages, linked from the
+  front page and Settings. It covers what the game sends where: to OpenAI
+  for turns, to Supabase for cloud saves, to GitHub for updates.
+- **Reporting the game master's text.** A flag button in the game's header,
+  in Settings and on the privacy page opens a public "AI text report" form.
+  The Store asks this of apps with live generative AI.
+- **The brand: black, white and orange.**
+  - The accent is a deep orange from the new emblem (a spruce, an eagle and
+    mountains at sunset), brighter in the dark theme.
+  - The emblem is the favicon and the app icon, and sits beside the name on
+    the front page. The version badge is orange.
+- **Three new dates, eight in all.**
+  - **25 June 1950, the Korean War.** The 38th parallel runs through three
+    provinces, so the front starts inside them. Around it: the Soviet
+    boycott of the Security Council, Mao's army facing Taiwan, the two
+    Germanies, France and the Viet Minh in Indochina, and an Africa that is
+    almost all colonies.
+  - **2 August 1964, the Gulf of Tonkin.** Vietnam is divided at the 17th
+    parallel; the Viet Cong hold shares of the South's provinces and the
+    Pathet Lao the north-east of Laos. Also: Indonesia's confrontation with
+    Malaysia, Khrushchev's last months, Southern Rhodesia, Portugal's
+    colonial wars, and protests against the junta in Saigon.
+  - **24 March 1999, NATO bombs Yugoslavia.** The KLA in Kosovo, Montenegro
+    drifting away, an alliance of nineteen, and Primakov's U-turn over the
+    Atlantic. Also: the Taliban against the Northern Alliance, the Second
+    Congo War, Eritrea against Ethiopia, Chechnya and Abkhazia outside
+    Moscow's and Tbilisi's control.
+  - Each date has its own leaders, treaties and organisations with their
+    terms, economy, city names (Stalingrad, Saigon, Léopoldville, Titograd)
+    and capitals, flags of the day, and first-turn ideas in the tour.
+  - **People on the start date.** The new dates use the 1994 map, so a
+    scenario can now give the population of its own year by country (UN
+    estimates); the provinces share it out, and economies start from it.
+- **A turn as a picture.** "Picture" in the chronicle and in the turn report
+  draws the map as the turn left it, centred on what changed, with the
+  turn's moves, its headline, its dates and the country played.
+  - 1600×900 PNG: save it, copy it, or hand it to the system's share sheet
+    where the browser has one.
+  - Drawn in the browser in the light theme's colours, so a picture looks
+    the same whoever made it; nothing is uploaded.
+- **The game as a timelapse.** "Timelapse" in the chronicle plays the whole
+  game on one map: the start, then every turn with its moves and headline.
+  - Scrub to any turn, play at three speeds.
+  - Save it as a video the browser records itself (MP4 or WebM), in real
+    time, so the tab has to stay in front.
+- **Every turn keeps the borders it changed** (`borders` in a chronicle
+  entry: how those provinces stood before it), so the map of any past turn
+  can be drawn again exactly. Turns played before this keep only their list
+  of changes, from which the timelapse draws them close but not exact; it
+  says so.
+- **An interface smoke test** ([scripts/smoke.mjs](scripts/smoke.mjs)),
+  run in CI on the production build with the offline game master: a game
+  started, a turn played, every panel and dialog opened, the game at phone
+  size; any error on the page fails it. It plays a turn on every date.
+- **How it plays, on the demo's front page.** Ten mechanics, each with an
+  English screenshot of one 1950 game as the United States (in
+  `public/screens/1950`): orders, the turn's chronicle, ministers, politics,
+  the economy, wars and blocs, acts of state, the six map modes, a turn as
+  a picture and the timelapse. The texts are in all three languages; the
+  README shows the same screenshots.
+
+### Changed
+- **Choosing a country.** The list is on the left, the chosen country on
+  the right, and the button to start sits at the foot of the briefing, under
+  the map:
+  - On a wide screen the page stays put and each column scrolls on its own.
+    On narrower screens the country moves under the map. On phones the list
+    comes before it.
+  - The country's card keeps what matters for the choice: the leader, the
+    economy and budget, provinces, people, wars, alliances and pacts. Trade,
+    resources and organisations wait for the game.
+- **Leaders in your language.** Every leader of every date reads in Russian
+  and Ukrainian too ("Фюрер Адольф Гитлер", "Прем'єр Кім Ір Сен"). The game
+  master still gets them in English. A test makes sure a new date names its
+  leaders in all three languages.
+- **Alliances and pacts apart.** A country's card lists its military
+  alliances, its pacts and, in the game, its organisations separately.
+- **Settings without cloud saves** no longer show the developer's note about
+  Supabase: the account section is simply absent.
+- **Characters stay in the game.**
+  - The game master, ministers, the chief of staff and foreign governments
+    play harsh orders as history did: arrests, executions, purges,
+    deportations, wars. None of them refuses on the model's own account or
+    lectures. A character may still object, drag their feet, resign or
+    betray inside the world, as their loyalty allows. Violence is written
+    like a report, without graphic detail.
+  - A minister carries out an order in their field and says how.
+- **Your own course is always on the table.** When a minister advises against
+  what you want, one of the suggested orders is still the best way to do it.
+  The chief of staff drafts an act you insist on all the same.
+- **Long answers open at their first line.** In every conversation, a reply
+  taller than the window starts at the top instead of the bottom.
+- **The site is always a demo on Vercel.** A build there turns demo mode on by
+  itself, so a forgotten variable can no longer leave every turn refused.
+- **Fronts and violent protests keep their red** (a `war` colour of their
+  own), apart from the new orange accent.
+- **OpenAI's terms in the docs.** Sign in with ChatGPT keeps tokens and
+  requests on the player's own machine, so a hosted copy cannot play on
+  players' plans. The docs, the front page and the roadmap say so.
+- **The roadmap is rebuilt:**
+  1. turns that are cheaper and proven by campaign tests;
+  2. a living world, where countries have intentions, relations, crises in
+     stages and politics of their own;
+  3. a desktop app.
+
+- **Saves upgrade through numbered migrations**
+  ([src/engine/migrations.ts](src/engine/migrations.ts)). A save records
+  the last one it has been through (`migration`); the rest run once, in
+  order, when the game opens, and those that need the map wait for it. The
+  upgrades that used to run on every load are the first six steps: politics,
+  bloc kinds, false defeats, fronts past half, provinces, the economy. What
+  the game ships as data (the palette, world bodies, treaties) is still
+  picked up on every load. A new game starts at the latest step.
+- **Supabase loads only when cloud saves are configured.** Without its two
+  variables (the demo, most local copies) the pages no longer carry its
+  code: 235 KB less script on the front page (1,360 KB
+  instead of 1,595, uncompressed). With them, it loads on the pages that
+  sign in or sync saves.
+
+### Fixed
+- **Cloud saves of the 2014 scenario** were refused by the database, whose
+  first schema knew only 1914, 1939, 1991 and 2022. A new migration lets in
+  2014 and the three new dates, and a test keeps the database's list in step
+  with the game's scenarios.
+
 ## [1.0.0-beta] — 2026-10-19 (the first public beta)
 
 The first version published in the open, with a demo site for testers. Since

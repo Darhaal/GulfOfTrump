@@ -29,7 +29,7 @@ export type SaveSource = "local" | "cloud";
 export type ListedSave = SaveMeta & { sources: SaveSource[] };
 
 async function cloudUserId(): Promise<string | null> {
-  const supabase = getSupabase();
+  const supabase = await getSupabase();
   if (!supabase) return null;
   const { data } = await supabase.auth.getSession();
   return data.session?.user.id ?? null;
@@ -40,7 +40,7 @@ export async function listSaves(): Promise<ListedSave[]> {
   const local = await (await localStore()).list().catch(() => [] as SaveMeta[]);
   for (const meta of local) merged.set(meta.id, { ...meta, sources: ["local"] });
 
-  const supabase = getSupabase();
+  const supabase = await getSupabase();
   if (supabase && (await cloudUserId())) {
     const { data } = await supabase
       .from("games")
@@ -77,7 +77,7 @@ export async function loadSave(id: string): Promise<GameState | null> {
   } catch {
     local = null;
   }
-  const supabase = getSupabase();
+  const supabase = await getSupabase();
   if (supabase && (await cloudUserId())) {
     const { data } = await supabase.from("games").select("state").eq("id", id).maybeSingle();
     const cloud = data ? parseGameState(data.state) : null;
@@ -97,7 +97,7 @@ export async function writeSave(state: GameState): Promise<{ local: boolean; clo
   }
 
   let cloud = false;
-  const supabase = getSupabase();
+  const supabase = await getSupabase();
   const userId = supabase ? await cloudUserId() : null;
   if (supabase && userId) {
     const meta = metaOf(state);
@@ -124,7 +124,7 @@ export async function deleteSave(id: string): Promise<void> {
   } catch {
     // nothing stored locally
   }
-  const supabase = getSupabase();
+  const supabase = await getSupabase();
   if (supabase && (await cloudUserId())) await supabase.from("games").delete().eq("id", id);
 }
 

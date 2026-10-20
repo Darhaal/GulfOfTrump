@@ -3,6 +3,7 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { AiError, fromApiError } from "../errors";
+import { appReturnPage } from "../returnPage";
 import { clearConnection, hostId, loadClientId, loadConnection, saveClientId, saveConnection, type StoredConnection } from "./store";
 
 /**
@@ -156,6 +157,12 @@ export async function startSignIn(returnTo: string): Promise<{ authUrl: string }
   const back = new URL(returnTo);
 
   const finish = (response: ServerResponse, result: "connected" | string) => {
+    if (process.env.GOT_DESKTOP === "1") {
+      // The game runs in the app's own window; this tab only says to go back to it.
+      response.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "referrer-policy": "no-referrer" });
+      response.end(appReturnPage(result === "connected"), () => closePending());
+      return;
+    }
     const target = new URL(back);
     if (result === "connected") target.searchParams.set("chatgpt", "connected");
     else target.searchParams.set("chatgpt", "error");

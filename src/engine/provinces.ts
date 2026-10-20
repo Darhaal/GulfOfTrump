@@ -3,11 +3,25 @@ import type { GeometryCollection, Topology } from "topojson-specification";
 import { countryColor } from "./colors";
 import { peopleIn } from "./population";
 import { countryName } from "./names";
-import { startingOwner } from "./setup";
 import { titleCase } from "./text";
 import type { GameState, Locale, MapIndex, MapRegion, RegionState, Scenario } from "./types";
 
 export type ProvinceTopology = Topology<{ regions: GeometryCollection<MapRegion> }>;
+
+/**
+ * The owner tag of a province at the scenario's start: the finest correction
+ * wins — the province itself, then its modern country, then the historical
+ * polygon it lies in, then that polygon's owner as the map names it.
+ */
+export function startingOwner(scenario: Scenario, region: Pick<MapRegion, "id" | "hist" | "owner" | "adm0">): string {
+  return (
+    scenario.provinceOwners?.[region.id] ??
+    scenario.modernOwners?.[region.adm0] ??
+    scenario.owners[region.hist] ??
+    scenario.aliases[region.owner] ??
+    region.owner
+  );
+}
 
 /** The province's name in a locale, falling back to its English name. */
 export function provinceName(region: Pick<MapRegion, "name" | "ru" | "uk">, locale: Locale): string {

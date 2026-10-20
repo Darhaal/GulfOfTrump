@@ -1,0 +1,73 @@
+# The Windows installer for Gulf of Trump (see README.md).
+appId: com.okhten.gulfoftrump
+productName: Gulf of Trump
+copyright: © Artem Okhten · Okhten Group LLC
+directories:
+  output: dist
+  buildResources: build
+files:
+  - main.cjs
+  - package.json
+  - build/icon.png
+# The game's server stays outside the archive: Node.js needs real files.
+extraResources:
+  - from: server
+    to: server
+    filter:
+      - "**/*"
+  # electron-builder leaves node_modules out of extra resources unless asked.
+  - from: server/node_modules
+    to: server/node_modules
+    filter:
+      - "**/*"
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.png
+# The installer asks: the language, a welcome, the licence, for whom (this
+# user or everyone) and where to install, which shortcuts to make
+# (build/installer.nsh), and offers to start the game at the end. The
+# pictures and the licence copy are made by build.mjs.
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  multiLanguageInstaller: true
+  displayLanguageSelector: true
+  installerLanguages:
+    - en_US
+    - ru_RU
+    - uk_UA
+  license: build/license.txt
+  include: build/installer.nsh
+  installerSidebar: build/installerSidebar.bmp
+  uninstallerSidebar: build/installerSidebar.bmp
+  installerHeader: build/installerHeader.bmp
+  # installer.nsh makes the shortcuts the player chose.
+  createDesktopShortcut: false
+  createStartMenuShortcut: false
+  shortcutName: Gulf of Trump
+  uninstallDisplayName: Gulf of Trump
+  runAfterFinish: true
+  artifactName: GulfOfTrump-Setup-${version}.${ext}
+# The Microsoft Store package: `npm run desktop -- --store`. The Store signs
+# it and updates it. Its identity (name, publisher) comes from Partner Center
+# and lives in store.json; build.mjs passes it in and draws the tiles.
+appx:
+  applicationId: GulfOfTrump
+  displayName: Gulf of Trump
+  backgroundColor: transparent
+  languages:
+    - en-US
+    - ru-RU
+    - uk-UA
+  artifactName: GulfOfTrump-Store-${version}.${ext}
+# Updates are read from the public repository's releases.
+publish:
+  provider: github
+  owner: Darhaal
+  repo: GulfOfTrump
+  releaseType: release

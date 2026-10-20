@@ -1,0 +1,49 @@
+name: Store package
+
+# Builds the Microsoft Store package (MSIX) on demand and keeps it as an
+# artifact, ready to upload in Partner Center (docs/store.md). It runs on
+# GitHub's Windows machine because the packaging tools need rights that a
+# normal desktop session lacks.
+on:
+  workflow_dispatch:
+    inputs:
+      test-identity:
+        description: Stand-in identity, only to check the packaging (cannot be uploaded)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  store:
+    name: MSIX for the Store
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install the game's dependencies
+        run: npm ci
+
+      - name: Install the app's dependencies
+        working-directory: desktop
+        run: npm ci --no-audit --no-fund
+
+      - name: Build the Store package
+        run: npm run desktop -- --store ${{ inputs.test-identity && '--test-identity' || '' }}
+        env:
+          # Google sign-in and cloud saves; empty builds the app without them.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GulfOfTrump-Store
+          path: desktop/dist/*.appx
+          if-no-files-found: error

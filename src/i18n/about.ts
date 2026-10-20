@@ -28,7 +28,7 @@ const en: AboutContent = {
     "Gulf of Trump is a free, open-source alternate-history sandbox. A language model plays the rest of the world as game master; the game engine keeps the map, the wars, the economy and the books honest. It runs on your own computer and your own ChatGPT plan.",
   rulesTitle: "How to play",
   rules: [
-    { title: "Pick a date and a country", body: "Five turning points — 1914, 1939, 1991, 2014, 2022. Any country on the map, and in 1991 even the Soviet and Yugoslav republics that have no land of their own yet." },
+    { title: "Pick a date and a country", body: "Eight turning points — 1914, 1939, 1950, 1964, 1991, 1999, 2014, 2022. Any country on the map, and in 1991 even the Soviet and Yugoslav republics that have no land of their own yet; in 1964 the Viet Cong, in 1999 the Kosovo Liberation Army." },
     { title: "Give orders", body: "Write what your government does this turn in plain language, or take moves from the panels — the cabinet, politics, the economy, foreign policy. Up to twelve orders. They are intentions, not guarantees." },
     { title: "End the turn", body: "Choose how long a turn lasts — a week to a year. The game master decides how far each order gets and how the world answers, and a report tells you what happened." },
     { title: "Talk to the world", body: "Write to any government, sit in a session of the UN and speak there yourself, ask your ministers. What you agree on counts when the turn ends." },
@@ -64,7 +64,7 @@ const ru: AboutContent = {
     "Gulf of Trump — бесплатная песочница об альтернативной истории с открытым кодом. Языковая модель в роли ведущего играет за весь остальной мир, а игровой движок следит, чтобы карта, войны, экономика и счета оставались честными. Игра работает на вашем компьютере и на вашей подписке ChatGPT.",
   rulesTitle: "Как играть",
   rules: [
-    { title: "Выберите дату и страну", body: "Пять переломных моментов — 1914, 1939, 1991, 2014, 2022. Любая страна на карте, а в 1991-м даже советские и югославские республики, у которых ещё нет своей территории." },
+    { title: "Выберите дату и страну", body: "Восемь переломных моментов — 1914, 1939, 1950, 1964, 1991, 1999, 2014, 2022. Любая страна на карте, а в 1991-м даже советские и югославские республики, у которых ещё нет своей территории; в 1964-м — Вьетконг, в 1999-м — Армия освобождения Косова." },
     { title: "Отдавайте приказы", body: "Напишите обычным языком, что делает ваше правительство за ход, или возьмите действия из панелей — кабинет, политика, экономика, внешняя политика. До двенадцати приказов. Это намерения, а не гарантии." },
     { title: "Завершите ход", body: "Выберите длину хода — от недели до года. Ведущий решит, насколько удался каждый приказ и как ответил мир, а отчёт расскажет, что произошло." },
     { title: "Говорите с миром", body: "Пишите любому правительству, участвуйте в сессиях ООН и выступайте сами, советуйтесь с министрами. Договорённости учитываются в конце хода." },
@@ -100,7 +100,7 @@ const uk: AboutContent = {
     "Gulf of Trump — безкоштовна пісочниця про альтернативну історію з відкритим кодом. Мовна модель у ролі ведучого грає за весь інший світ, а ігровий рушій стежить, щоб мапа, війни, економіка й рахунки лишалися чесними. Гра працює на вашому комп'ютері й на вашій підписці ChatGPT.",
   rulesTitle: "Як грати",
   rules: [
-    { title: "Оберіть дату й країну", body: "П'ять переломних моментів — 1914, 1939, 1991, 2014, 2022. Будь-яка країна на мапі, а в 1991-му навіть радянські та югославські республіки, які ще не мають власної території." },
+    { title: "Оберіть дату й країну", body: "Вісім переломних моментів — 1914, 1939, 1950, 1964, 1991, 1999, 2014, 2022. Будь-яка країна на мапі, а в 1991-му навіть радянські та югославські республіки, які ще не мають власної території; у 1964-му — В'єтконг, у 1999-му — Армія визволення Косова." },
     { title: "Віддавайте накази", body: "Напишіть звичайною мовою, що робить ваш уряд за хід, або візьміть дії з панелей — кабінет, політика, економіка, зовнішня політика. До дванадцяти наказів. Це наміри, а не гарантії." },
     { title: "Завершіть хід", body: "Оберіть тривалість ходу — від тижня до року. Ведучий вирішить, наскільки вдався кожен наказ і як відповів світ, а звіт розповість, що сталося." },
     { title: "Говоріть зі світом", body: "Пишіть будь-якому уряду, беріть участь у сесіях ООН і виступайте самі, радьтеся з міністрами. Домовленості враховуються наприкінці ходу." },

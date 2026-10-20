@@ -1,0 +1,48 @@
+name: Desktop app
+
+# A version tag in the public repository builds the Windows installer and
+# attaches it, with the update manifest, to that tag's GitHub release. The
+# app's auto-updater reads those releases.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Windows installer
+    if: github.repository == 'Darhaal/GulfOfTrump'
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install the game's dependencies
+        run: npm ci
+
+      - name: Install the app's dependencies
+        working-directory: desktop
+        run: npm ci --no-audit --no-fund
+
+      - name: Build the installer
+        run: npm run desktop
+        env:
+          # Google sign-in and cloud saves; empty builds the app without them.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: Attach it to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          gh release view "$tag" > /dev/null 2>&1 || gh release create "$tag" --latest --title "Gulf of Trump ${tag#v}" --notes "See CHANGELOG.md."
+          gh release upload "$tag" desktop/dist/*.exe desktop/dist/*.exe.blockmap desktop/dist/latest.yml --clobber

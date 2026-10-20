@@ -1,0 +1,39 @@
+name: AI text report · Жалоба на текст ИИ
+description: The game master wrote something offensive, harmful or unlawful. · Ведущий написал что-то оскорбительное, вредное или незаконное.
+labels: [content]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The game master's text is written by an AI during play. Thank you for telling us. This report is public: paste the passage, not your personal details.
+        Текст ведущего пишет ИИ во время игры. Спасибо, что сообщаете. Жалоба публичная: вставьте отрывок, а не свои личные данные.
+  - type: textarea
+    id: passage
+    attributes:
+      label: The passage · Отрывок
+      description: Copy the text as the game showed it. · Скопируйте текст так, как его показала игра.
+    validations:
+      required: true
+  - type: dropdown
+    id: problem
+    attributes:
+      label: What is wrong · Что не так
+      options:
+        - Hateful or offensive · Ненависть или оскорбления
+        - Sexual content · Сексуальный контент
+        - Graphic violence · Натуралистичное насилие
+        - Defames a real person · Клевета на реального человека
+        - Unlawful or dangerous · Незаконное или опасное
+        - Something else · Другое
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: What you ordered or asked · Что вы приказали или спросили
+      description: Optional. Helps to see why the AI answered so. · По желанию. Помогает понять, почему ИИ так ответил.
+  - type: input
+    id: version
+    attributes:
+      label: Version · Версия
+      placeholder: 1.0.1-beta

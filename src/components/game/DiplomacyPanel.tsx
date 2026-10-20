@@ -8,6 +8,7 @@ import { ui } from "@/components/ui/classes";
 import type { GameState, Stance } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
+import { leaderName } from "@/i18n/leaders";
 
 interface DiplomacyPanelProps {
   state: GameState;
@@ -70,7 +71,7 @@ export default function DiplomacyPanel({ state, target, busy, disabled, onTarget
             <Flag tag={them.tag} scenario={state.scenarioId} color={them.color} size="lg" />
             <div className="min-w-0">
               <div className="truncate text-sm font-black text-ink">{text(them.name)}</div>
-              {them.leader && <div className="truncate text-xs font-medium text-muted">{them.leader}</div>}
+              {them.leader && <div className="truncate text-xs font-medium text-muted">{leaderName(them.leader, locale)}</div>}
             </div>
           </div>
 

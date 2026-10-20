@@ -9,9 +9,17 @@ The site testers open is the game itself built in **demo mode**:
   "Play for real" section: how to run the game locally, the source and the
   bug forms.
 
-Real play stays local, on each player's own ChatGPT plan. Sign in with ChatGPT
-in a hosted app needs OpenAI's approval ([ai-providers.md](ai-providers.md));
-until then the hosted copy is the demo.
+Real play stays local, on each player's own ChatGPT plan. OpenAI's terms keep
+a player's tokens and requests on their own machine
+([ai-providers.md](ai-providers.md)), so the hosted copy is a demo and stays
+one.
+
+**On Vercel the demo needs no flag**: a build there is always the demo, since
+the game recognises Vercel's own variables. On another host set the flag
+before the build — `NEXT_PUBLIC_` variables are baked into it.
+
+The front page's "Play for real" section offers the Windows app from the
+public repository's latest release.
 
 ## Setting it up
 

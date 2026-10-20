@@ -658,7 +658,7 @@ export default function WorldMap({ topology, regions, countries, selected, selec
                 <path d={f.outline} stroke="var(--map-glow)" strokeWidth={f.truce ? 8 : 10} vectorEffect="non-scaling-stroke" />
                 <path
                   d={f.outline}
-                  stroke={f.truce ? "var(--muted)" : "var(--accent)"}
+                  stroke={f.truce ? "var(--muted)" : "var(--war)"}
                   strokeWidth={f.truce ? 4 : 5.2}
                   strokeDasharray={f.truce ? "6 4" : undefined}
                   vectorEffect="non-scaling-stroke"
@@ -761,9 +761,9 @@ export default function WorldMap({ topology, regions, countries, selected, selec
                   return (
                     <g key={`${p.id}-${id}`}>
                       <title>{p.title}</title>
-                      <circle cx={c[0]} cy={c[1]} r={s * 0.82} fill="var(--accent)" fillOpacity={0.18} stroke="var(--accent)" strokeOpacity={0.55} strokeWidth={(1.2 * unit) / k} />
-                      <circle cx={c[0]} cy={c[1]} r={s * 0.62} fill={violent ? "var(--accent)" : "var(--surface)"} stroke={violent ? "var(--surface)" : "var(--accent)"} strokeWidth={(2 * unit) / k} />
-                      <Icon x={c[0] - s * 0.36} y={c[1] - s * 0.36} width={s * 0.72} height={s * 0.72} color={violent ? "var(--map-glow)" : "var(--accent)"} strokeWidth={2.4} />
+                      <circle cx={c[0]} cy={c[1]} r={s * 0.82} fill="var(--war)" fillOpacity={0.18} stroke="var(--war)" strokeOpacity={0.55} strokeWidth={(1.2 * unit) / k} />
+                      <circle cx={c[0]} cy={c[1]} r={s * 0.62} fill={violent ? "var(--war)" : "var(--surface)"} stroke={violent ? "var(--surface)" : "var(--war)"} strokeWidth={(2 * unit) / k} />
+                      <Icon x={c[0] - s * 0.36} y={c[1] - s * 0.36} width={s * 0.72} height={s * 0.72} color={violent ? "var(--map-glow)" : "var(--war)"} strokeWidth={2.4} />
                     </g>
                   );
                 }),
@@ -804,7 +804,7 @@ export default function WorldMap({ topology, regions, countries, selected, selec
         <div className="absolute left-3 top-3 flex max-w-[16rem] flex-col gap-1 rounded-xl border border-line bg-surface/90 p-2.5 shadow-sm backdrop-blur @lg:bottom-3 @lg:top-auto">
           {frontKinds.war && (
             <span className="inline-flex items-center gap-2 text-2xs font-bold text-ink">
-              <span className="h-0.5 w-5 rounded-full bg-accent" />
+              <span className="h-0.5 w-5 rounded-full bg-war" />
               {t("map.legend.front")}
             </span>
           )}

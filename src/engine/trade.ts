@@ -13,7 +13,7 @@ import type { AppliedChange, GameState, MapRegion, Sanction, ScenarioId } from "
  */
 
 /** Exports as a share of GDP in each era, for an economy of middling size; big ones trade less of their output, small ones more. */
-const OPENNESS: Record<ScenarioId, number> = { "1914": 0.14, "1939": 0.08, "1991": 0.18, "2014": 0.3, "2022": 0.28 };
+const OPENNESS: Record<ScenarioId, number> = { "1914": 0.14, "1939": 0.08, "1950": 0.1, "1964": 0.12, "1991": 0.18, "1999": 0.24, "2014": 0.3, "2022": 0.28 };
 
 /** How much distance hurts trade: well above 1, so neighbours matter more than distant giants. */
 const DISTANCE = 1.3;

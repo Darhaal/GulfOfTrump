@@ -7,7 +7,7 @@ export const ui = {
   row: "group bg-surface border border-line rounded-2xl hover:shadow-lg hover:shadow-shade/5 hover:border-accent/20 transition-all duration-300",
   label: "text-2xs font-black text-muted uppercase tracking-widest",
   primary:
-    "inline-flex items-center justify-center gap-2 bg-ink text-on-ink rounded-xl font-black uppercase tracking-wide hover:bg-accent hover:text-white hover:shadow-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none",
+    "inline-flex items-center justify-center gap-2 bg-ink text-on-ink rounded-xl font-black uppercase tracking-wide hover:bg-accent hover:text-on-ink hover:shadow-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none",
   secondary:
     "inline-flex items-center justify-center gap-2 bg-surface border border-line rounded-xl font-bold text-ink hover:border-accent/30 hover:shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none",
   iconButton: "group grid place-items-center p-2.5 bg-surface border border-line rounded-xl hover:border-accent/30 hover:shadow-sm transition-all",

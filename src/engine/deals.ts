@@ -25,7 +25,7 @@ export const TRADE_GOODS = ["grain", "oil", "gas", "coal", "metals", "uranium", 
 const METALS: ResourceType[] = ["iron", "copper", "nickel", "tin", "bauxite"];
 
 /** Below this, $bn a year, a surplus or a lack is not worth a contract: less in the far smaller economies of the world wars. */
-const MIN_TRADE: Record<ScenarioId, number> = { "1914": 0.02, "1939": 0.03, "1991": 0.08, "2014": 0.08, "2022": 0.08 };
+const MIN_TRADE: Record<ScenarioId, number> = { "1914": 0.02, "1939": 0.03, "1950": 0.03, "1964": 0.04, "1991": 0.08, "1999": 0.08, "2014": 0.08, "2022": 0.08 };
 /** The smallest contract offered, $bn a year. */
 const smallest = (era: ScenarioId) => Math.max(0.01, round(MIN_TRADE[era] * 0.6));
 /** Offers on the market each turn. */
@@ -40,7 +40,7 @@ const STOCKPILE_SHARE = 0.01;
 const RESERVE_SHARE = 0.2;
 
 /** Value of the world's grain harvest as a share of world output, by era. */
-const GRAIN_MARKET: Record<ScenarioId, number> = { "1914": 0.05, "1939": 0.035, "1991": 0.012, "2014": 0.011, "2022": 0.01 };
+const GRAIN_MARKET: Record<ScenarioId, number> = { "1914": 0.05, "1939": 0.035, "1950": 0.03, "1964": 0.022, "1991": 0.012, "1999": 0.01, "2014": 0.011, "2022": 0.01 };
 /** How yields and grain eaten per head grow with income. */
 const YIELD = 0.3;
 const APPETITE = 0.25;
@@ -54,7 +54,10 @@ const REACH: Record<TradeGood, number> = { gas: 1.6, coal: 1.1, oil: 0.9, metals
 const ARMOURERS: Record<ScenarioId, string[]> = {
   "1914": ["germany", "uk", "france", "usa", "austria-hungary", "russia", "italy", "japan"],
   "1939": ["usa", "uk", "germany", "france", "ussr", "italy", "japan", "czechoslovakia", "sweden"],
+  "1950": ["usa", "ussr", "uk", "france", "czechoslovakia", "sweden", "belgium"],
+  "1964": ["usa", "ussr", "uk", "france", "west-germany", "czechoslovakia", "china", "sweden", "italy", "belgium"],
   "1991": ["usa", "ussr", "russia", "france", "uk", "china", "germany", "italy", "israel", "czechoslovakia", "sweden"],
+  "1999": ["usa", "russia", "france", "uk", "germany", "china", "israel", "italy", "sweden", "ukraine", "netherlands"],
   "2014": ["usa", "russia", "france", "china", "germany", "italy", "uk", "spain", "israel", "ukraine", "sweden", "czechia"],
   "2022": ["usa", "russia", "france", "china", "germany", "italy", "uk", "spain", "south-korea", "israel", "turkey", "poland", "sweden", "czechia"],
 };
@@ -63,7 +66,10 @@ const ARMOURERS: Record<ScenarioId, string[]> = {
 const PRICES: Record<ScenarioId, Partial<Record<TradeGood, number>>> = {
   "1914": { grain: 30, oil: 0.8, coal: 2.5, metals: 3 },
   "1939": { grain: 22, oil: 1.1, gas: 15, coal: 3.5, metals: 4 },
+  "1950": { grain: 85, oil: 2.5, gas: 5, coal: 8, metals: 8, uranium: 20 },
+  "1964": { grain: 65, oil: 1.8, gas: 10, coal: 9, metals: 10, uranium: 17 },
   "1991": { grain: 110, oil: 20, gas: 90, coal: 40, metals: 30, uranium: 25 },
+  "1999": { grain: 110, oil: 17.5, gas: 70, coal: 30, metals: 25, uranium: 26 },
   "2014": { grain: 240, oil: 100, gas: 400, coal: 80, metals: 110, uranium: 75 },
   "2022": { grain: 330, oil: 95, gas: 600, coal: 250, metals: 120, uranium: 110 },
 };

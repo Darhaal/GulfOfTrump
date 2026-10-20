@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Briefcase, Coins, Download, Globe, Landmark, Loader2, MapPin, MessageSquare, PanelLeftClose, Play, Scale, ScrollText, Settings, Swords, TriangleAlert, Users } from "lucide-react";
+import { Briefcase, Clapperboard, Coins, Download, Flag as ReportIcon, Globe, Image as ImageIcon, Landmark, Loader2, MapPin, MessageSquare, PanelLeftClose, Play, Scale, ScrollText, Settings, Swords, TriangleAlert, Users } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import Flag from "@/components/Flag";
@@ -10,19 +10,19 @@ import { changedRegions } from "@/components/map/overlays";
 import Dialog from "@/components/ui/Dialog";
 import { ui } from "@/components/ui/classes";
 import { addStep, formatDate, yearOf } from "@/engine/calendar";
-import { MAX_ORDERS as MAX_TURN_ORDERS } from "@/constants/app";
+import { CONTENT_REPORT_URL, MAX_ORDERS as MAX_TURN_ORDERS } from "@/constants/app";
 import { addAdvice, type AdvisorId } from "@/engine/advisors";
-import { recolor } from "@/engine/colors";
 import { countryCrises } from "@/engine/crises";
 import { nationalAccounts, seedEconomies, setBudget } from "@/engine/economy";
 import { setSanction } from "@/engine/trade";
 import { cancelDeal, declineOffer, proposeDeal, signOffer } from "@/engine/deals";
 import EconomyCenter from "./EconomyCenter";
 import { addDiplomacyExchange } from "@/engine/diplomacy";
-import { applyOutcome, ownedRegions, settleFronts } from "@/engine/outcome";
+import { applyOutcome, ownedRegions } from "@/engine/outcome";
 import { proclaim } from "@/engine/identity";
 import { addLegal, proposeBill, withdrawBill } from "@/engine/acts";
-import { migrateToProvinces, peopleByOwner, provinceName } from "@/engine/provinces";
+import { isMigrated, migrateSave, refreshSave } from "@/engine/migrations";
+import { peopleByOwner, provinceName } from "@/engine/provinces";
 import { getScenario } from "@/engine/scenarios";
 import type { ChronicleEntry, GameState, OfficialPost, Summit, TimeStep } from "@/engine/types";
 import { errorKey, useI18n } from "@/i18n/useI18n";
@@ -39,9 +39,7 @@ import DefeatDialog from "./DefeatDialog";
 import CabinetPanel from "./CabinetPanel";
 import DiplomacyPanel from "./DiplomacyPanel";
 import ForeignPanel from "./ForeignPanel";
-import { closeSummit, conveneSummit, ensureWorldBodies, fillBlocKinds, fillTreaties, speakAtSummit } from "@/engine/foreign";
-import { ensurePolitics } from "@/engine/politics";
-import { dropFalseDefeat } from "@/engine/unrest";
+import { closeSummit, conveneSummit, speakAtSummit } from "@/engine/foreign";
 import PoliticsPanel from "./PoliticsPanel";
 import StatePanel, { type CityChoice } from "./StatePanel";
 import Tour, { tourSeen } from "./Tour";
@@ -49,6 +47,8 @@ import SummitDialog from "./SummitDialog";
 import OrdersPanel from "./OrdersPanel";
 import ProvinceDetails from "./ProvinceDetails";
 import ResourceBar from "./ResourceBar";
+import SharePicture from "./SharePicture";
+import Timelapse from "./Timelapse";
 import TurnReport from "./TurnReport";
 
 /** Panels that open on the left, from the rail; the right side shows the selection. */
@@ -101,6 +101,9 @@ export default function GameClient({ id }: { id: string }) {
   // The first-run tour, once the game has loaded.
   const [touring, setTouring] = useState(false);
   const [report, setReport] = useState<ChronicleEntry | null>(null);
+  // A turn being made into a picture, and the timelapse of the whole game.
+  const [picture, setPicture] = useState<ChronicleEntry | null>(null);
+  const [timelapse, setTimelapse] = useState(false);
   // The turn whose changes the map shows (null: the last one), a counter that
   // replays their highlight, and where the camera was last asked to go.
   const [mapTurn, setMapTurn] = useState<number | null>(null);
@@ -116,8 +119,9 @@ export default function GameClient({ id }: { id: string }) {
     loadSave(id).then((s) => {
       if (!alive) return;
       if (s) {
-        const seeds = getScenario(s.scenarioId).alliances;
-        setState(settleFronts(dropFalseDefeat(ensurePolitics(fillTreaties(ensureWorldBodies(fillBlocKinds(recolor(s), seeds), seeds), seeds)))));
+        // The save's migrations that need no map run now, the rest once the map is here.
+        const scenario = getScenario(s.scenarioId);
+        setState(refreshSave(migrateSave(s, { scenario }), scenario));
         setSelected(s.player);
         setTouring(!tourSeen());
       } else setMissing(true);
@@ -130,12 +134,12 @@ export default function GameClient({ id }: { id: string }) {
   const scenario = state ? getScenario(state.scenarioId) : null;
   const { map } = useMap(scenario?.map ?? null);
 
-  // A save from before provinces, or from before the economy, is upgraded once its map is here.
+  // The migrations that need the map run once it is here; a country still without an economy gets one.
   useEffect(() => {
     if (!state || !map || !scenario) return;
     const needsEconomy = Object.values(state.countries).some((c) => !c.economy);
-    if (state.schema === 2 && !needsEconomy) return;
-    const migrated = seedEconomies(migrateToProvinces(state, scenario, map.regions), map.index.regions);
+    if (isMigrated(state) && !needsEconomy) return;
+    const migrated = seedEconomies(migrateSave(state, { scenario, map: { regions: map.regions, byId: map.index.regions } }), map.index.regions);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time upgrade of loaded data
     setState(migrated);
     void writeSave(migrated);
@@ -436,7 +440,15 @@ export default function GameClient({ id }: { id: string }) {
             {formatDate(state.date, locale)} · {t("game.turn", { n: state.turn })} · {text(scenario.title)}
           </span>
         }
-        actions={endTurnButton("max-md:hidden px-4 py-2.5 text-xs")}
+        actions={
+          <>
+            {/* The game master's text can be reported (Microsoft Store policy 11.16). */}
+            <a href={CONTENT_REPORT_URL} target="_blank" rel="noreferrer" className={ui.iconButton} aria-label={t("report.ai")} title={t("report.ai")}>
+              <ReportIcon className="h-5 w-5 text-muted group-hover:text-accent" />
+            </a>
+            {endTurnButton("max-md:hidden px-4 py-2.5 text-xs")}
+          </>
+        }
       />
       {player.economy && (
         <ResourceBar economy={player.economy} accounts={accounts?.get(state.player)} crises={crises} era={state.scenarioId} open={barOpen} onToggle={() => setBarOpen((v) => !v)} />
@@ -504,6 +516,12 @@ export default function GameClient({ id }: { id: string }) {
                       <Download className="h-3.5 w-3.5" />
                       {t("game.export.chronicle")}
                     </button>
+                    {map && (
+                      <button type="button" onClick={() => setTimelapse(true)} className={`${ui.secondary} px-3 py-2 text-xs`}>
+                        <Clapperboard className="h-3.5 w-3.5" />
+                        {t("timelapse.open")}
+                      </button>
+                    )}
                   </div>
                   {[...state.chronicle].reverse().map((entry, i) => {
                     const open = i === 0 ? !openTurns.has(-entry.turn) : openTurns.has(entry.turn);
@@ -528,6 +546,12 @@ export default function GameClient({ id }: { id: string }) {
                                 <button type="button" onClick={() => showOnMap(entry)} className="inline-flex items-center gap-1 text-2xs font-black uppercase tracking-wider text-muted hover:text-accent">
                                   <MapPin className="h-3 w-3" />
                                   {t("chronicle.onMap")}
+                                </button>
+                              )}
+                              {map && (
+                                <button type="button" onClick={() => setPicture(entry)} className="inline-flex items-center gap-1 text-2xs font-black uppercase tracking-wider text-muted hover:text-accent">
+                                  <ImageIcon className="h-3 w-3" />
+                                  {t("share.turn")}
                                 </button>
                               )}
                             </div>
@@ -872,6 +896,19 @@ export default function GameClient({ id }: { id: string }) {
                 {t("game.report.showOnMap")}
               </button>
             )}
+            {report && map && (
+              <button
+                type="button"
+                onClick={() => {
+                  setPicture(report);
+                  setReport(null);
+                }}
+                className={`${ui.secondary} w-full py-3 text-sm`}
+              >
+                <ImageIcon className="h-4 w-4" />
+                {t("share.turn")}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -887,6 +924,9 @@ export default function GameClient({ id }: { id: string }) {
       >
         {report && <TurnReport entry={report} state={state} index={map?.index ?? null} />}
       </Dialog>
+
+      {picture && map && <SharePicture key={picture.turn} state={state} entry={picture} topology={map.topology} onClose={() => setPicture(null)} />}
+      {timelapse && map && <Timelapse state={state} topology={map.topology} onClose={() => setTimelapse(false)} />}
     </div>
   );
 }

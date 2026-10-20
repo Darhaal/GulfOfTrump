@@ -229,7 +229,7 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
                 <span className="absolute -bottom-1 -right-1 grid h-4.5 w-4.5 place-items-center rounded-full border border-line bg-surface text-muted">
                   <Icon className="h-2.5 w-2.5" />
                 </span>
-                {count > 0 && <span className="absolute -top-1 -right-1 min-w-4 rounded-full bg-accent px-1 text-center text-[9px] font-black leading-4 text-white">{count}</span>}
+                {count > 0 && <span className="absolute -top-1 -right-1 min-w-4 rounded-full bg-accent px-1 text-center text-[9px] font-black leading-4 text-on-ink">{count}</span>}
               </span>
               <span className={`w-full truncate text-center text-[10px] font-bold ${on ? "text-ink" : "text-muted"}`}>{p ? surname(p.name) : t(`post.${ADVISOR_POST[id]}` as MessageKey)}</span>
             </button>

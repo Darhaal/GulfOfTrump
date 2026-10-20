@@ -1,6 +1,6 @@
 # Gulf of Trump
 
-![Version](https://img.shields.io/badge/version-1.0.0--beta-blue.svg) ![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Node](https://img.shields.io/badge/node-%E2%89%A522.12-339933.svg)
+![Version](https://img.shields.io/badge/version-1.0.1--beta-blue.svg) ![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Node](https://img.shields.io/badge/node-%E2%89%A522.12-339933.svg)
 
 An alternate-history grand strategy game where a language model is the game
 master. Pick a turning point of the 20th or 21st century, pick any country,
@@ -12,14 +12,26 @@ It is a free, open-source take on the idea behind
 [Pax Historia](https://paxhistoria.co), which is a good game with a paywall in
 front of every turn.
 
-![The map in a 2022 game: fronts, offensives and occupied land](public/screens/map.jpg)
+![A 1950 game as the United States: the Pusan perimeter, with the front running through Korean provinces between the towns each side holds](public/screens/1950/turn.jpg)
 
 > **Beta. A sandbox: no goals and no victory screen — your country, your
-> plan.** Five dates; about 2,700 provinces with terrain, people, resources and
+> plan.** Eight dates; about 2,700 provinces with terrain, people, resources and
 > railways, and fronts that run between the towns each side holds; an
 > economy for every country with trade, sanctions and trade deals; a
 > government of named ministers; parties, a parliament and the street;
 > alliances, summits and sessions of the UN. Single player.
+
+| | | |
+|---|---|---|
+| ![Ministers of the day, with character, ability and loyalty](public/screens/1950/cabinet.jpg) | ![The House of Representatives seat by seat](public/screens/1950/parliament.jpg) | ![A budget in dollars of 1950](public/screens/1950/economy.jpg) |
+| **Ministers of the day** answer from what they know on that date | **Politics at home:** parties, elections, laws that need votes | **An economy that keeps its books**, in money of the day |
+| ![Wars, blocs and the UN of 1950](public/screens/1950/foreign.jpg) | ![Acts of state: rename, recolour, rewrite a law](public/screens/1950/state.jpg) | ![Resources, transport, people and terrain over Korea](public/screens/1950/modes.jpg) |
+| **Wars, blocs and the UN** of the date, with their terms | **Acts of state:** rename the country or a city, rewrite a law | **Six maps** of about 2,700 provinces |
+
+Any turn can be shared as a picture, and the whole game replayed as a
+timelapse video of its borders:
+
+![A turn as a picture: the Pusan perimeter holds on the Naktong](public/screens/1950/picture.jpg)
 
 ---
 
@@ -29,7 +41,10 @@ front of every turn.
 |------|----------|-------|
 | **28 June 1914** | The Shot at Sarajevo | The Archduke is dead; the July Crisis has not started. The war can still be avoided. |
 | **1 September 1939** | The Invasion of Poland | The Wehrmacht crosses the border; London and Paris have two days to decide. |
+| **25 June 1950** | The Korean War | North Korean tanks cross the 38th parallel; the Soviets boycott the Security Council, Mao eyes Taiwan, France fights in Indochina. |
+| **2 August 1964** | The Gulf of Tonkin | Torpedo boats attack the USS Maddox. The Viet Cong hold half the South's countryside, the Pathet Lao the Plain of Jars; Sukarno confronts Malaysia. |
 | **19 August 1991** | The August Coup | Gorbachev is isolated in Foros, tanks are in Moscow; the USSR still exists. Every Soviet and Yugoslav republic is playable. |
+| **24 March 1999** | NATO Bombs Yugoslavia | Rambouillet has failed; Allied Force begins without a UN mandate. Play Milošević, NATO, Russia, the KLA or Đukanović's Montenegro. |
 | **16 January 2014** | Euromaidan | The eighth week of the Maidan; parliament has passed the "dictatorship laws". Yanukovych's police are loyal, the army wavers, the oligarchs wait. |
 | **24 February 2022** | The Invasion of Ukraine | The full-scale invasion begins at dawn. |
 
@@ -148,8 +163,14 @@ project folder, AES-256-GCM encrypted. Details and limits: [docs/security.md](do
 
 ## Running it
 
-Requires **Node 22.12+** and a **ChatGPT account** (plan usage for apps
-depends on your plan and OpenAI's current limits).
+**Windows:** download `GulfOfTrump-Setup-….exe` from the
+[latest release](https://github.com/Darhaal/GulfOfTrump/releases/latest), install it and
+sign in with ChatGPT in Settings. The app updates itself. It is not signed
+yet, so Windows SmartScreen may warn about it: *More info* → *Run anyway*.
+How the app is built: [desktop/README.md](desktop/README.md).
+
+**From source** — requires **Node 22.12+** and a **ChatGPT account** (plan
+usage for apps depends on your plan and OpenAI's current limits).
 
 ```bash
 git clone https://github.com/Darhaal/GulfOfTrump.git
@@ -162,8 +183,8 @@ Open **http://127.0.0.1:3000** → Settings → **Sign in with ChatGPT**. A brow
 tab asks you to approve the app and its use of your plan; then pick a date.
 
 Playing with friends: each person runs their own copy and signs in with their
-own account. Hosting one copy for other people is not covered by OpenAI's
-open-source/local terms and needs their approval — see
+own account. OpenAI's terms keep the sign-in and the requests on the player's
+own machine, so one copy cannot be hosted for other people — see
 [docs/ai-providers.md](docs/ai-providers.md).
 
 **Optional — Google sign-in and cloud saves.** Create a Supabase project,

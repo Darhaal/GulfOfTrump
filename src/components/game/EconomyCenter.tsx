@@ -96,7 +96,7 @@ export default function EconomyCenter({ state, accounts, regions, disabled, onBu
           <button key={id} type="button" onClick={() => setTab(id)} aria-pressed={tab === id} className={`${ui.segment} ${tab === id ? ui.segmentOn : ui.segmentOff} relative flex items-center justify-center gap-1.5`}>
             <Icon className="h-3.5 w-3.5" />
             {t(`econ.tab.${id}` as MessageKey)}
-            {badge ? <span className="min-w-4 rounded-full bg-accent px-1 text-center text-[9px] font-black leading-4 text-white">{badge}</span> : null}
+            {badge ? <span className="min-w-4 rounded-full bg-accent px-1 text-center text-[9px] font-black leading-4 text-on-ink">{badge}</span> : null}
           </button>
         ))}
       </div>

@@ -33,6 +33,8 @@
  *
  *   page / surface / line / divider / ink / on-ink / muted / accent / warm /
  *   scrim / shade / night — as in Darhaal Games
+ *   accent    the brand orange (black, white and orange are the brand)
+ *   war       fronts and violent protests on the map, red in both themes
  *   sea       the ocean on the map
  *   map-line  borders drawn on the map
  *   map-quiet grey land of the resource and transport maps
@@ -55,6 +57,7 @@
   --color-muted: var(--muted);
   --color-faded: var(--faded);
   --color-accent: var(--accent);
+  --color-war: var(--war);
   --color-warm: var(--warm);
   --color-scrim: var(--scrim);
   --color-shade: var(--shade);
@@ -72,7 +75,8 @@
   --on-ink: #FFFFFF;
   --muted: #8A9099;
   --faded: #B5B3AD;
-  --accent: #9e1316;
+  --accent: #C2410C;
+  --war: #9e1316;
   --warm: #F5F5F0;
   --scrim: #1A1F26;
   --shade: #1A1F26;
@@ -96,7 +100,8 @@
   --on-ink: #0E1116;
   --muted: #8C949F;
   --faded: #59606A;
-  --accent: #E5484D;
+  --accent: #F97316;
+  --war: #E5484D;
   --warm: #1D2229;
   --scrim: #000000;
   --shade: #000000;

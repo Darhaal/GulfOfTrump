@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CodeXml, GraduationCap, ExternalLink, Info, Loader2, LogIn, LogOut, Sparkles, Unplug } from "lucide-react";
+import { CodeXml, Flag, GraduationCap, ExternalLink, Info, Loader2, LogIn, LogOut, ShieldCheck, Sparkles, Unplug } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import AppHeader from "@/components/AppHeader";
 import GoogleMark from "@/components/GoogleMark";
 import { ui } from "@/components/ui/classes";
-import { APP_VERSION, CHATGPT_USAGE_URL, REPO_URL, isDemo } from "@/constants/app";
+import { APP_VERSION, CHATGPT_USAGE_URL, CONTENT_REPORT_URL, REPO_URL, isDemo, isDesktopApp } from "@/constants/app";
 import { LOCALES, type Locale } from "@/engine/types";
 import { errorKey, useI18n } from "@/i18n/useI18n";
 import { ApiError, connectAi, disconnectAi, getModels } from "@/lib/api";
@@ -39,8 +39,19 @@ export default function SettingsClient() {
   const [working, setWorking] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [tourNote, setTourNote] = useState(false);
+  const [google, setGoogle] = useState<"idle" | "waiting" | "failed">("idle");
 
   const connected = status?.status === "connected";
+
+  const googleSignIn = async () => {
+    setGoogle("waiting");
+    try {
+      await signInWithGoogle();
+      setGoogle("idle");
+    } catch {
+      setGoogle("failed");
+    }
+  };
 
   useEffect(() => {
     if (!connected) return;
@@ -65,7 +76,9 @@ export default function SettingsClient() {
   const connect = async () => {
     setAiError(null);
     // Open the tab synchronously, inside the click, or the browser blocks it.
-    const tab = window.open("about:blank", "_blank");
+    // The desktop app opens the system browser instead and gets no handle back.
+    const desktop = isDesktopApp();
+    const tab = desktop ? null : window.open("about:blank", "_blank");
     setWorking(true);
     try {
       const { authUrl } = await connectAi();
@@ -73,6 +86,7 @@ export default function SettingsClient() {
         tab.opener = null;
         tab.location.href = authUrl;
       }
+      else if (desktop) window.open(authUrl, "_blank");
       else if (!window.open(authUrl, "_blank")) setAiError(t("ai.popupBlocked"));
       await refresh();
     } catch (error) {
@@ -162,10 +176,9 @@ export default function SettingsClient() {
           </div>
         </Section>
 
+        {cloud && (
         <Section title={t("account.title")}>
-          {!cloud ? (
-            <p className="text-sm font-medium text-muted">{t("account.cloudOff")}</p>
-          ) : user ? (
+          {user ? (
             <div className="flex flex-wrap items-center gap-3">
               <div className="min-w-0 flex-1">
                 <div className="truncate font-black text-ink">{t("account.signedIn", { name: displayName(user) })}</div>
@@ -177,16 +190,21 @@ export default function SettingsClient() {
               </button>
             </div>
           ) : (
-            <div className="flex flex-wrap items-center gap-3">
-              <p className="min-w-0 flex-1 text-sm font-medium text-muted">{t("account.guest")}</p>
-              <button type="button" onClick={() => void signInWithGoogle()} className={`${ui.secondary} px-4 py-2.5 text-xs`}>
-                <GoogleMark />
-                {t("account.google")}
-                <LogIn className="h-4 w-4 text-muted" />
-              </button>
+            <div className="grid gap-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="min-w-0 flex-1 text-sm font-medium text-muted">{t("account.guest")}</p>
+                <button type="button" onClick={() => void googleSignIn()} disabled={google === "waiting"} className={`${ui.secondary} px-4 py-2.5 text-xs`}>
+                  <GoogleMark />
+                  {t("account.google")}
+                  {google === "waiting" ? <Loader2 className="h-4 w-4 animate-spin text-muted" /> : <LogIn className="h-4 w-4 text-muted" />}
+                </button>
+              </div>
+              {google === "waiting" && isDesktopApp() && <p className="text-xs font-medium text-muted">{t("account.googleWaiting")}</p>}
+              {google === "failed" && <p className="text-xs font-medium text-war">{t("account.googleFailed")}</p>}
             </div>
           )}
         </Section>
+        )}
 
         <Section title={t("settings.language")}>
           <div className="flex flex-wrap gap-1 rounded-xl bg-page p-1">
@@ -215,9 +233,17 @@ export default function SettingsClient() {
               <Info className="h-4 w-4" />
               {t("nav.about")}
             </Link>
+            <Link href="/privacy" className={`${ui.secondary} px-4 py-2.5 text-xs`}>
+              <ShieldCheck className="h-4 w-4" />
+              {t("nav.privacy")}
+            </Link>
             <a href={REPO_URL} target="_blank" rel="noreferrer" className={`${ui.secondary} px-4 py-2.5 text-xs`}>
               <CodeXml className="h-4 w-4" />
               {t("settings.source")}
+            </a>
+            <a href={CONTENT_REPORT_URL} target="_blank" rel="noreferrer" className={`${ui.secondary} px-4 py-2.5 text-xs`}>
+              <Flag className="h-4 w-4" />
+              {t("report.ai")}
             </a>
             <button
               type="button"
