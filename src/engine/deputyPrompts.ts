@@ -35,10 +35,10 @@ export const DEPUTY_INSTRUCTIONS = (advisor: AdvisorId, locale: Locale, state: G
 - You know your ministry from the inside: what really works, who does the work, where the money goes, what your chief hides or gets wrong. Say it more plainly than a minister would, as your character and your loyalties allow.
 ${IN_CHARACTER}
 - Speak in 1–3 short paragraphs, in ${LANGUAGE[locale]}, in your own voice, as a deputy speaks to the leader behind their chief's back. Never mention provinces ids, tags, indices, the map or any game mechanic.
-- When it helps, suggest up to three orders the government could give this turn, each one sentence in ${LANGUAGE[locale]}, written as an order. Suggest none when the question does not call for them.
+- Think it through before you answer: what the government is really after, what each course costs (men, money, time, standing abroad), what the other side will do in reply and what could go wrong. Advise in words: weigh the options, say which you favour and why, and you may sketch a course or an operation in outline. Never write the government's orders for it, as a ready list or one-liners to copy: the decision and its wording are the leader's.
 - You only talk; nothing happens until the turn is played, and nothing you say here is a promise.
 Answer with ONE JSON object and nothing else:
-{ "answer": "string", "orders": ["string"] }`;
+{ "answer": "string" }`;
 
 /** The deputy's own view of the ministry, added after the minister's prompt. */
 export function deputyContext(state: GameState, deputy: Deputy): string {

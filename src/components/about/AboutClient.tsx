@@ -62,10 +62,13 @@ export default function AboutClient() {
         <div className="grid gap-4 md:grid-cols-2">
           <section className={`${ui.card} p-5 md:p-6`}>
             <h2 className={`${ui.label} mb-4`}>{a.authorTitle}</h2>
-            <div className="flex items-center gap-4">
+            <div className="flex items-end gap-5">
               {/* eslint-disable-next-line @next/next/no-img-element -- a static file, no optimisation needed */}
-              <img src="/about/artem-okhten.webp" alt={a.authorName} width={80} height={80} className="h-20 w-20 shrink-0 rounded-2xl border border-line object-cover shadow-sm" />
-              <div className="text-xl font-black leading-tight text-ink">{a.authorName}</div>
+              <img src="/about/artem-okhten-oil.webp" alt={a.authorName} width={128} height={160} className="h-40 w-32 shrink-0 rounded-2xl border border-line object-cover shadow-lg" />
+              <div className="pb-1">
+                <div className="text-2xl font-black leading-tight text-ink">{a.authorName}</div>
+                <div className="mt-1 text-xs font-medium italic text-muted">{t("about.oil")}</div>
+              </div>
             </div>
             <p className="mt-2 text-sm font-medium leading-relaxed text-muted">{a.authorBio}</p>
             <div className="mt-4 flex flex-wrap gap-2">

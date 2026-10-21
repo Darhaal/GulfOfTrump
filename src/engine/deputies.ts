@@ -414,7 +414,7 @@ export const ministryOfDeputy = (deputy: Pick<Deputy, "deputyOf">): AdvisorId | 
 export function addDeputyAdvice(state: GameState, deputyId: string, question: string, reply: AdviceReply, now = new Date()): GameState {
   const thread = state.deputyAdvice?.[deputyId] ?? [];
   const asked: AdviceMessage = { from: "player", text: question, date: state.date, turn: state.turn };
-  const answered: AdviceMessage = { from: "advisor", text: reply.answer, date: state.date, turn: state.turn, ...(reply.orders.length ? { orders: reply.orders } : {}) };
+  const answered: AdviceMessage = { from: "advisor", text: reply.answer, date: state.date, turn: state.turn };
   return { ...state, deputyAdvice: { ...state.deputyAdvice, [deputyId]: [...thread, asked, answered].slice(-MAX_ADVICE) }, updatedAt: now.toISOString() };
 }
 

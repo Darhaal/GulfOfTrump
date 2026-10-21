@@ -1,6 +1,6 @@
 {
   "name": "gulf-of-trump",
-  "version": "1.0.3-beta",
+  "version": "1.0.4-beta",
   "private": true,
   "description": "Open-source alternate-history grand strategy where a language model is the game master. Plays on your own ChatGPT plan.",
   "license": "MIT",

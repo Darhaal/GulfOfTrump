@@ -14,7 +14,7 @@ import { nationalAccounts, seedEconomies } from "@/engine/economy";
 import { peopleByOwner } from "@/engine/provinces";
 import { createGame, regionsByOwner, startingWorld } from "@/engine/setup";
 import { tr } from "@/engine/text";
-import { GAME_MODES, type GameMode, type ScenarioId } from "@/engine/types";
+import { GAME_MODES, ROLE_KINDS, type GameMode, type RoleKind, type ScenarioId } from "@/engine/types";
 import { useI18n } from "@/i18n/useI18n";
 import { useMap } from "@/lib/maps";
 import { writeSave } from "@/lib/saves";
@@ -30,6 +30,10 @@ export default function PickClient({ scenarioId }: { scenarioId: ScenarioId }) {
   const [starting, setStarting] = useState(false);
   const [mode, setMode] = useState<GameMode>("free");
   const [fog, setFog] = useState(true);
+  // Who the player is: the country's leader, or its opposition with the names they give (engine/role.ts).
+  const [role, setRole] = useState<RoleKind>("leader");
+  const [person, setPerson] = useState("");
+  const [movement, setMovement] = useState("");
 
   // The starting world with every country's economy, as a new game will have it.
   const world = useMemo(
@@ -62,7 +66,7 @@ export default function PickClient({ scenarioId }: { scenarioId: ScenarioId }) {
     if (!map || !selected) return;
     setStarting(true);
     try {
-      const state = createGame(scenario, map.regions, selected, new Date(), locale, { fog, mode });
+      const state = createGame(scenario, map.regions, selected, new Date(), locale, { fog, mode, role: { kind: role, person, movement } });
       await writeSave(state);
       router.push(`/play/${state.id}`);
     } catch {
@@ -179,6 +183,29 @@ export default function PickClient({ scenarioId }: { scenarioId: ScenarioId }) {
                 ))}
               </div>
               <p className="mt-2 text-xs font-medium text-muted">{t(`pick.mode.${mode}.hint`)}</p>
+            </div>
+            <div className="mt-4 border-t border-divider pt-4">
+              <div className={`${ui.label} mb-2`}>{t("pick.role")}</div>
+              <div className="flex flex-wrap gap-1" role="radiogroup" aria-label={t("pick.role")}>
+                {ROLE_KINDS.map((r) => (
+                  <button key={r} type="button" role="radio" aria-checked={role === r} onClick={() => setRole(r)} className={`${ui.segment} ${role === r ? ui.segmentOn : ui.segmentOff}`}>
+                    {t(`pick.role.${r}`)}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-xs font-medium text-muted">{t(`pick.role.${role}.hint`)}</p>
+              {role === "opposition" && (
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <label className="block">
+                    <span className={`${ui.label} mb-1 block`}>{t("pick.role.person")}</span>
+                    <input value={person} onChange={(e) => setPerson(e.target.value)} maxLength={80} placeholder={t("pick.role.optional")} className={`${ui.input} py-2 text-sm`} />
+                  </label>
+                  <label className="block">
+                    <span className={`${ui.label} mb-1 block`}>{t("pick.role.movement")}</span>
+                    <input value={movement} onChange={(e) => setMovement(e.target.value)} maxLength={80} placeholder={t("pick.role.optional")} className={`${ui.input} py-2 text-sm`} />
+                  </label>
+                </div>
+              )}
             </div>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-divider pt-4">
               <div className="min-w-0 flex-1">

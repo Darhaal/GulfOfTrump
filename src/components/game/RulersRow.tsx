@@ -23,8 +23,8 @@ export default function RulersRow({ country, scenario }: { country: CountryState
   return (
     <div className="mt-2 flex flex-wrap items-end gap-3">
       {order.map((p, i) => (
-        <figure key={p.id} className="flex w-[72px] flex-col items-center gap-1">
-          <Portrait portrait={p.portrait} gender={p.gender} name={personName(p, locale)} size={i === 0 ? "lg" : "md"} className={i === 0 ? "ring-2 ring-accent/50" : ""} />
+        <figure key={p.id} className={`flex flex-col items-center gap-1 ${i === 0 ? "w-24" : "w-[72px]"}`}>
+          <Portrait portrait={p.portrait} gender={p.gender} name={personName(p, locale)} size={i === 0 ? "xl" : "lg"} className={i === 0 ? "ring-2 ring-accent/50" : ""} />
           <figcaption className="w-full truncate text-center text-2xs font-bold text-muted">{personName(p, locale)}</figcaption>
         </figure>
       ))}

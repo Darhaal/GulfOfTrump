@@ -10,9 +10,10 @@ import { seedInterests } from "./interests";
 import { withPeople } from "./people";
 import { ensurePolitics } from "./politics";
 import { migrateToProvinces } from "./provinces";
-import { startingResearch } from "./research";
+import { migrateResearch } from "./research";
+import { roleOf } from "./role";
 import { dropFalseDefeat } from "./unrest";
-import type { GameState, MapRegion, Scenario } from "./types";
+import type { GameState, MapRegion, Research, Scenario } from "./types";
 
 /**
  * Saves are upgraded by numbered steps. A save's `migration` is the number
@@ -70,10 +71,17 @@ const MIGRATIONS: Migration[] = [
     n: 12,
     what: "Weapons for every country by the counts of its start date, and an empty research list for the player; the science post stays vacant until someone is appointed.",
     map: true,
-    run: (s, { map }) => seedArsenals({ ...s, research: s.research ?? startingResearch() }, map.byId),
+    // The research list of the day, empty; step 16 turns it into directions.
+    run: (s, { map }) => seedArsenals({ ...s, research: s.research ?? ({ active: [], done: [] } as unknown as Research) }, map.byId),
   },
   { n: 13, what: "Leaders and ministers as people: who each leader line names, their sex and their portrait.", run: (s) => withPeople(s) },
   { n: 14, what: "Deputies in the ministries and the government's own plots against their chiefs: empty lists, filled when the player first asks after a ministry's people.", run: (s) => ensureDeputies(s) },
+  { n: 15, what: "The player's role: a game begun before roles is played as the country's leader, as it always was.", run: (s) => ({ ...s, role: s.role ?? { ...roleOf(s), how: "start" } }) },
+  {
+    n: 16,
+    what: "Research directions instead of projects: the default split, each direction as far ahead as the save's projects took it (unfinished ones by their progress), an unfinished bomb as the atomic programme, finished projects kept as breakthroughs.",
+    run: (s) => migrateResearch(s),
+  },
 ];
 
 /** The number of the last step: what a new game starts at. */

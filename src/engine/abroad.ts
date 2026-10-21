@@ -46,6 +46,9 @@ function kindsOn(era: ScenarioId): Map<string, RegimeKind> {
   return kinds;
 }
 
+/** How a country was governed on the start date, by the scenario's table: an autocracy when it lists it nowhere. */
+export const regimeAtStart = (era: ScenarioId, tag: string): RegimeKind => kindsOn(era).get(tag) ?? "autocracy";
+
 /**
  * How a country that appears in play is governed, read from the words the
  * game master gave it, in any of the game's languages (it writes them in the

@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 interface DialogProps {
   open: boolean;
@@ -14,7 +15,11 @@ interface DialogProps {
   huge?: boolean;
 }
 
-/** The app's own modal — never window.confirm. Escape and the backdrop close it. */
+/**
+ * The app's own modal — never window.confirm. Escape and the backdrop close it.
+ * It is drawn into the page's body, so a parent with a filter or transform
+ * (the blurred sticky header) cannot clip it to its own box.
+ */
 export default function Dialog({ open, onClose, title, children, footer, wide, huge }: DialogProps) {
   const panel = useRef<HTMLDivElement>(null);
 
@@ -27,7 +32,7 @@ export default function Dialog({ open, onClose, title, children, footer, wide, h
   }, [open, onClose]);
 
   if (!open) return null;
-  return (
+  const dialog = (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6">
       <div className="absolute inset-0 bg-scrim/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose} />
       <div
@@ -48,4 +53,5 @@ export default function Dialog({ open, onClose, title, children, footer, wide, h
       </div>
     </div>
   );
+  return typeof document === "undefined" ? dialog : createPortal(dialog, document.body);
 }

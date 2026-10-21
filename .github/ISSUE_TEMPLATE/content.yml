@@ -36,4 +36,4 @@ body:
     id: version
     attributes:
       label: Version · Версия
-      placeholder: 1.0.3-beta
+      placeholder: 1.0.4-beta

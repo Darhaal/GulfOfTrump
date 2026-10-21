@@ -3,22 +3,24 @@
 // Signing in with ChatGPT opens the system browser and returns to the server's
 // loopback listener, as OpenAI's guide for open-source apps describes; the
 // tokens stay on this computer, in ~/.gulf-of-trump.
-const { app, BrowserWindow, dialog, ipcMain, Menu, shell } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell } = require("electron");
 const { spawn } = require("node:child_process");
 const fs = require("node:fs");
 const http = require("node:http");
 const net = require("node:net");
 const path = require("node:path");
+const { pathToFileURL } = require("node:url");
+const splashLogic = require("./splash-logic.cjs");
 
 const HOST = "127.0.0.1";
 // A fixed port: the game keeps its saves in the browser storage of this origin.
-const PORT = 41914;
+// GOT_PORT moves it only for a test run beside an installed copy.
+const PORT = Number(process.env.GOT_PORT) || 41914;
 const ORIGIN = `http://${HOST}:${PORT}`;
 
 /** The few words the app itself says, in the game's three languages. */
 const TEXT = {
   en: {
-    starting: "Starting Gulf of Trump…",
     portBusy: `Another program is using port ${PORT}, which the game needs. Close it and start the game again.`,
     stopped: (code, logs) => `The game's server stopped (code ${code}). Its log is in ${logs}.`,
     noStart: (logs) => `The game's server did not start. Its log is in ${logs}.`,
@@ -26,9 +28,14 @@ const TEXT = {
     updateDetail: "Restart to update. Your games are kept.",
     restart: "Restart now",
     later: "Later",
+    phasePort: "Checking the game's port…",
+    phaseServer: "Starting the game's server…",
+    phaseWaiting: "Loading the maps and the world…",
+    phaseOpening: "Opening the game…",
+    author: "Artem Okhten",
+    madeBy: (name) => `Made by ${name}`,
   },
   ru: {
-    starting: "Запуск Gulf of Trump…",
     portBusy: `Порт ${PORT}, нужный игре, занят другой программой. Закройте её и запустите игру снова.`,
     stopped: (code, logs) => `Сервер игры остановился (код ${code}). Журнал лежит в ${logs}.`,
     noStart: (logs) => `Сервер игры не запустился. Журнал лежит в ${logs}.`,
@@ -36,9 +43,14 @@ const TEXT = {
     updateDetail: "Перезапустите, чтобы обновиться. Партии сохранятся.",
     restart: "Перезапустить",
     later: "Позже",
+    phasePort: "Проверяем порт игры…",
+    phaseServer: "Запускаем сервер игры…",
+    phaseWaiting: "Загружаем карты и мир…",
+    phaseOpening: "Открываем игру…",
+    author: "Артём Охтень",
+    madeBy: (name) => `Сделал ${name}`,
   },
   uk: {
-    starting: "Запуск Gulf of Trump…",
     portBusy: `Порт ${PORT}, потрібний грі, зайнятий іншою програмою. Закрийте її й запустіть гру знову.`,
     stopped: (code, logs) => `Сервер гри зупинився (код ${code}). Журнал лежить у ${logs}.`,
     noStart: (logs) => `Сервер гри не запустився. Журнал лежить у ${logs}.`,
@@ -46,12 +58,15 @@ const TEXT = {
     updateDetail: "Перезапустіть, щоб оновитися. Партії збережуться.",
     restart: "Перезапустити",
     later: "Пізніше",
+    phasePort: "Перевіряємо порт гри…",
+    phaseServer: "Запускаємо сервер гри…",
+    phaseWaiting: "Завантажуємо мапи й світ…",
+    phaseOpening: "Відкриваємо гру…",
+    author: "Артем Охтень",
+    madeBy: (name) => `Зробив ${name}`,
   },
 };
-const text = () => {
-  const lang = app.getLocale().slice(0, 2);
-  return TEXT[lang === "uk" ? "uk" : lang === "ru" || lang === "be" ? "ru" : "en"];
-};
+const text = () => TEXT[splashLogic.localeOf(app.getLocale())];
 
 let server = null;
 let window = null;
@@ -59,6 +74,22 @@ let quitting = false;
 
 const serverDir = () => (app.isPackaged ? path.join(process.resourcesPath, "server") : path.join(__dirname, "server"));
 const logDir = () => path.join(app.getPath("userData"), "logs");
+
+function readJson(file, fallback) {
+  try {
+    return JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch {
+    return fallback;
+  }
+}
+function writeJson(file, value) {
+  try {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(value));
+  } catch {
+    // Not kept: the next start guesses again.
+  }
+}
 
 /** The window as the player left it: full screen unless they chose a window. */
 const windowFile = () => path.join(app.getPath("userData"), "window.json");
@@ -147,7 +178,8 @@ function createWindow() {
     minWidth: 1100,
     minHeight: 680,
     title: "Gulf of Trump",
-    backgroundColor: "#F8FAFC",
+    // The page colour of the system's theme from the first frame, so a dark desktop never flashes white.
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#0E1116" : "#F8FAFC",
     icon: path.join(__dirname, "build", "icon.png"),
     fullscreen: fullScreenWanted(),
     webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false, preload: path.join(__dirname, "preload.cjs") },
@@ -177,38 +209,161 @@ function createWindow() {
   window.on("closed", () => {
     window = null;
   });
-  const splash = `<!doctype html><meta charset="utf-8"><body style="margin:0;height:100vh;display:grid;place-items:center;background:#F8FAFC;color:#1A1F26;font:600 15px system-ui,sans-serif">${text().starting}</body>`;
-  void window.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(splash)}`);
+  splashReady = new Promise((resolve) => window.webContents.once("did-finish-load", resolve));
+  void window.loadFile(path.join(__dirname, "splash.html"));
 }
 
 /**
- * Updates come from the public repository's releases; one is installed when
- * the player restarts. The Microsoft Store copy is updated by the Store alone
- * (its policy 10.2.5), so it never checks.
+ * The loading screen (splash.html): quotes of the game's eras with their
+ * speakers' portraits, who made the game, and a bar that follows the start —
+ * the port, the server, the wait for it to answer (paced by how long the
+ * last start took), opening the game. The sums are in splash-logic.cjs.
  */
-function checkForUpdates() {
+const startup = { phase: "port", since: Date.now(), expected: splashLogic.FIRST_GUESS_MS, timer: null };
+let splashReady = Promise.resolve();
+const startupFile = () => path.join(app.getPath("userData"), "startup.json");
+
+function onSplash(script) {
+  if (!window || window.webContents.getURL().startsWith(ORIGIN)) return;
+  void window.webContents.executeJavaScript(`window.splash && ${script}`).catch(() => undefined);
+}
+
+function phase(name) {
+  startup.phase = name;
+  startup.since = Date.now();
+  paintSplash();
+}
+
+function paintSplash() {
+  const t = text();
+  const share = splashLogic.startupProgress(startup.phase, Date.now() - startup.since, startup.expected);
+  const status = { port: t.phasePort, server: t.phaseServer, waiting: t.phaseWaiting, opening: t.phaseOpening, done: t.phaseOpening }[startup.phase];
+  onSplash(`window.splash.progress(${share}, ${JSON.stringify(status)})`);
+}
+
+/** The quotes for this start (none repeats until all have been seen), the made-by line and the version. */
+function fillSplash() {
+  const t = text();
+  const locale = splashLogic.localeOf(app.getLocale());
+  const publicDir = path.join(serverDir(), "public");
+  const all = readJson(path.join(publicDir, "quotes.json"), []);
+  const seenFile = path.join(app.getPath("userData"), "quotes-seen.json");
+  const { picked, seen } = splashLogic.pickQuotes(all.map((q) => q.id), readJson(seenFile, []), 4);
+  writeJson(seenFile, seen);
+  const fileUrl = (file) => (fs.existsSync(file) ? pathToFileURL(file).href : null);
+  const quotes = picked
+    .map((id) => all.find((q) => q.id === id))
+    .filter(Boolean)
+    .map((q) => ({ ...splashLogic.quoteIn(q, locale), portrait: q.person ? fileUrl(path.join(publicDir, "portraits", `${q.person}.webp`)) : null }));
+  const data = {
+    quotes,
+    madeBy: { name: t.author, line: t.madeBy(t.author), portrait: fileUrl(path.join(publicDir, "about", "artem-okhten-oil.webp")) },
+    version: `v${app.getVersion()}`,
+    status: t.phasePort,
+  };
+  onSplash(`window.splash.setup(${JSON.stringify(data)})`);
+}
+
+/**
+ * Updates come from the public repository's releases. The page sees every
+ * step (preload.cjs → src/lib/updates.ts): checking, downloading with its
+ * percent, ready to restart, up to date, failed; it checks at start and every
+ * four hours, and each event goes to logs/updater.log. "Later" installs the
+ * update when the game quits. The first start of a new version tells the page
+ * which version it came from. The Microsoft Store copy is updated by the Store
+ * alone (its policy 10.2.5), so it never checks.
+ */
+const CHECK_EVERY_MS = 4 * 60 * 60 * 1000;
+const updates = { status: "idle", version: null, percent: 0, bytesPerSecond: 0, error: null, checkedAt: null, updatedFrom: null };
+let updater = null;
+const versionFile = () => path.join(app.getPath("userData"), "version.json");
+
+function updaterLog(level, message) {
+  try {
+    fs.mkdirSync(logDir(), { recursive: true });
+    fs.appendFileSync(path.join(logDir(), "updater.log"), `${new Date().toISOString()} ${level} ${String(message).split("\n")[0]}\n`);
+  } catch {
+    // No log: the update still runs.
+  }
+}
+
+/** The same steps as the page's reduceUpdate (src/lib/updates.ts), for the state a page asks for when it opens. */
+function applyUpdate(state, event) {
+  switch (event.type) {
+    case "checking":
+      return { ...state, status: state.status === "ready" ? "ready" : "checking", error: null };
+    case "available":
+      return { ...state, status: "downloading", version: event.version, percent: 0 };
+    case "progress":
+      return { ...state, status: "downloading", percent: event.percent, bytesPerSecond: event.bytesPerSecond };
+    case "downloaded":
+      return { ...state, status: "ready", version: event.version, percent: 100 };
+    case "none":
+      return { ...state, status: "none", checkedAt: event.at };
+    case "error":
+      return { ...state, status: state.status === "ready" ? "ready" : "error", error: event.message };
+    default:
+      return state;
+  }
+}
+
+function updateEvent(event) {
+  Object.assign(updates, applyUpdate(updates, event));
+  updaterLog(event.type === "error" ? "error" : "info", `${event.type}${event.version ? ` ${event.version}` : ""}${event.percent !== undefined ? ` ${Math.round(event.percent)}%` : ""}${event.message ? ` ${event.message}` : ""}`);
+  window?.webContents.send("updates:event", event);
+}
+
+function updatesSnapshot() {
+  return { ...updates, current: app.getVersion(), store: Boolean(process.windowsStore), enabled: Boolean(updater) };
+}
+
+const errorText = (error) => String(error?.message ?? error).split("\n")[0].slice(0, 240);
+
+function checkNow() {
+  if (!updater || updates.status === "downloading" || updates.status === "ready") return;
+  updater.checkForUpdates().catch((error) => {
+    // The updater's own "error" event has usually said it already.
+    if (updates.status !== "error" || updates.error !== errorText(error)) updateEvent({ type: "error", message: errorText(error) });
+  });
+}
+
+/** With no window to show it in, the old question in a dialog. */
+async function askToRestart(version) {
+  const t = text();
+  const { response } = await dialog.showMessageBox({ type: "info", buttons: [t.restart, t.later], defaultId: 0, cancelId: 1, message: t.updateReady(version), detail: t.updateDetail });
+  if (response === 0) restartToUpdate();
+}
+
+function restartToUpdate() {
+  if (!updater || updates.status !== "ready") return;
+  quitting = true;
+  updater.quitAndInstall();
+}
+
+function setUpUpdates() {
+  const previous = readJson(versionFile(), {}).version;
+  if (previous && previous !== app.getVersion()) updates.updatedFrom = previous;
+  writeJson(versionFile(), { version: app.getVersion() });
   if (!app.isPackaged || process.windowsStore) return;
   try {
     const { autoUpdater } = require("electron-updater");
+    updater = autoUpdater;
     autoUpdater.autoDownload = true;
-    autoUpdater.on("update-downloaded", async (info) => {
-      const t = text();
-      const { response } = await dialog.showMessageBox(window ?? undefined, {
-        type: "info",
-        buttons: [t.restart, t.later],
-        defaultId: 0,
-        cancelId: 1,
-        message: t.updateReady(info.version),
-        detail: t.updateDetail,
-      });
-      if (response === 0) {
-        quitting = true;
-        autoUpdater.quitAndInstall();
-      }
+    autoUpdater.autoInstallOnAppQuit = true;
+    autoUpdater.logger = { info: (m) => updaterLog("info", m), warn: (m) => updaterLog("warn", m), error: (m) => updaterLog("error", m), debug: () => undefined };
+    autoUpdater.on("checking-for-update", () => updateEvent({ type: "checking" }));
+    autoUpdater.on("update-available", (info) => updateEvent({ type: "available", version: info.version }));
+    autoUpdater.on("update-not-available", () => updateEvent({ type: "none", at: Date.now() }));
+    autoUpdater.on("download-progress", (p) => updateEvent({ type: "progress", percent: p.percent, bytesPerSecond: p.bytesPerSecond }));
+    autoUpdater.on("update-downloaded", (info) => {
+      updateEvent({ type: "downloaded", version: info.version });
+      if (!window || !window.isVisible()) void askToRestart(info.version);
     });
-    autoUpdater.checkForUpdates().catch(() => undefined);
-  } catch {
-    // No updater: the game still runs.
+    autoUpdater.on("error", (error) => updateEvent({ type: "error", message: errorText(error) }));
+    checkNow();
+    setInterval(checkNow, CHECK_EVERY_MS);
+  } catch (error) {
+    updaterLog("error", `no updater: ${error}`);
   }
 }
 
@@ -223,6 +378,17 @@ function answerThePage() {
   ipcMain.handle("app:quit", (event) => {
     if (fromGame(event)) app.quit();
   });
+  ipcMain.handle("updates:get", (event) => (fromGame(event) ? updatesSnapshot() : null));
+  ipcMain.handle("updates:check", (event) => {
+    if (fromGame(event)) checkNow();
+    return fromGame(event) ? updatesSnapshot() : null;
+  });
+  ipcMain.handle("updates:restart", (event) => {
+    if (fromGame(event)) restartToUpdate();
+  });
+  ipcMain.handle("updates:seen", (event) => {
+    if (fromGame(event)) updates.updatedFrom = null;
+  });
 }
 
 async function main() {
@@ -230,21 +396,37 @@ async function main() {
   answerThePage();
   app.setAppUserModelId("com.okhten.gulfoftrump");
   createWindow();
+  startup.expected = readJson(startupFile(), {}).waitMs || splashLogic.FIRST_GUESS_MS;
+  // The loading screen fills in once it has loaded; the start does not wait more than a moment for it.
+  void Promise.race([splashReady, new Promise((r) => setTimeout(r, 1500))]).then(() => {
+    fillSplash();
+    paintSplash();
+    startup.timer = setInterval(paintSplash, 150);
+  });
+  phase("port");
   if (!(await portFree(PORT))) {
     dialog.showErrorBox("Gulf of Trump", text().portBusy);
     app.quit();
     return;
   }
+  phase("server");
   startServer();
+  phase("waiting");
+  const waitFrom = Date.now();
   try {
     await waitForServer();
   } catch {
+    clearInterval(startup.timer);
     dialog.showErrorBox("Gulf of Trump", text().noStart(logDir()));
     app.quit();
     return;
   }
-  if (window) await window.loadURL(ORIGIN);
-  checkForUpdates();
+  writeJson(startupFile(), { waitMs: splashLogic.nextEstimate(startup.expected, Date.now() - waitFrom) });
+  phase("opening");
+  // A click before the first page has finished loading aborts this load; the start goes on regardless.
+  if (window) await window.loadURL(ORIGIN).catch(() => undefined);
+  clearInterval(startup.timer);
+  setUpUpdates();
 }
 
 if (!app.requestSingleInstanceLock()) {

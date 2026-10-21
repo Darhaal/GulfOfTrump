@@ -1,6 +1,7 @@
 import { grainBooks, type GrainBook } from "./deals";
 import { type Accounts, nationalAccounts, RICH_INCOME, socialNorm } from "./economy";
 import { peopleIn } from "./population";
+import { harvestBonus, medicineBonus } from "./researchEffects";
 import type { ResourceType } from "./resources";
 import type { GameState, MapRegion } from "./types";
 
@@ -31,6 +32,7 @@ export const PROVISION_CAUSES = [
   "inflation",
   "recession",
   "austerity",
+  "research",
 ] as const;
 export type ProvisionCause = (typeof PROVISION_CAUSES)[number];
 
@@ -65,7 +67,7 @@ export interface ProvisionBooks {
   grain: Map<string, GrainBook>;
 }
 
-type ProvisionState = Pick<GameState, "countries" | "regions" | "scenarioId" | "date" | "wars"> & Partial<Pick<GameState, "player" | "deals" | "politics">>;
+type ProvisionState = Pick<GameState, "countries" | "regions" | "scenarioId" | "date" | "wars"> & Partial<Pick<GameState, "player" | "deals" | "politics" | "research">>;
 
 export function provisionBooks(state: ProvisionState, map: Record<string, MapRegion>): ProvisionBooks {
   return { accounts: nationalAccounts(state, map), grain: grainBooks(state, map) };
@@ -111,6 +113,10 @@ export function provisionOf(state: ProvisionState, tag: string, map: Record<stri
 
   const lines: ProvisionLine[] = [];
   const line = (kind: ProvisionKind, value: number, causes: ProvisionCause[]) => lines.push({ kind, level: Math.round(clamp(value, 0.05, 1) * 100), causes });
+  // The player's farming and medical research, ahead of the world or behind it (engine/researchEffects.ts).
+  const researched = tag === state.player && state.research?.tech;
+  const harvest = researched ? harvestBonus(state) : 0;
+  const cure = researched ? medicineBonus(state) : 0;
 
   // Food: the harvest of the land it holds, and imports for the rest while they can come in and be paid for.
   {
@@ -118,7 +124,7 @@ export function provisionOf(state: ProvisionState, tag: string, map: Record<stri
     let food = 1;
     const g = books.grain.get(tag);
     if (g && g.need > 0) {
-      const own = g.harvest / g.need;
+      const own = (g.harvest * (1 + harvest)) / g.need;
       if (own >= 1) causes.push("harvest");
       else {
         const gap = 1 - own;
@@ -135,6 +141,7 @@ export function provisionOf(state: ProvisionState, tag: string, map: Record<stri
         if (cut > 0.05) causes.unshift("blockade");
         if (broke) causes.unshift("broke");
       }
+      if (Math.abs(harvest) >= 0.02 && own < 1.2) causes.push("research");
     }
     if (occupied > 0.05) {
       causes.unshift("occupation");
@@ -243,8 +250,9 @@ export function provisionOf(state: ProvisionState, tag: string, map: Record<stri
   // Medicine: hospitals the state pays for, medicines that come from abroad, and the wounded of a war.
   {
     const causes: ProvisionCause[] = [];
-    let medicine = 0.75 + 0.25 * Math.min(1, social);
+    let medicine = 0.75 + 0.25 * Math.min(1, social) + cure;
     if (social < 0.8) causes.push("austerity");
+    if (Math.abs(cure) >= 0.02) causes.push("research");
     if (cut > 0.05) {
       medicine -= cut * 0.25;
       causes.push("blockade");

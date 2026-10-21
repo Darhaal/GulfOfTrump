@@ -14,12 +14,12 @@ export default function LeaderCard({ state }: { state: GameState }) {
   const official = state.officials?.find((o) => (o.post === "head" || o.post === "government") && samePerson(o.name, leader.name));
   const name = personName(leader, locale);
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-page p-3">
-      <Portrait portrait={leader.portrait} gender={leader.gender} name={name} size="lg" className="ring-2 ring-accent/50" />
-      <div className="min-w-0">
+    <div className="flex items-start gap-4 rounded-2xl bg-page p-3">
+      <Portrait portrait={leader.portrait} gender={leader.gender} name={name} size="hero" className="ring-2 ring-accent/50" />
+      <div className="min-w-0 pt-1">
         <div className="text-2xs font-black uppercase tracking-widest text-muted">{t("cabinet.leader")}</div>
-        <div className="truncate text-base font-black text-ink">{name}</div>
-        {(official?.title ?? leader.title) && <div className="truncate text-xs font-medium text-muted">{official?.title ?? leader.title}</div>}
+        <div className="text-lg font-black leading-tight text-ink">{name}</div>
+        {(official?.title ?? leader.title) && <div className="mt-0.5 text-xs font-medium leading-snug text-muted">{official?.title ?? leader.title}</div>}
         {official && official.traits.length > 0 && (
           <div className="mt-1.5">
             <Traits traits={official.traits} />

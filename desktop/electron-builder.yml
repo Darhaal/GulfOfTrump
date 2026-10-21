@@ -8,6 +8,8 @@ directories:
 files:
   - main.cjs
   - preload.cjs
+  - splash.html
+  - splash-logic.cjs
   - package.json
   - build/icon.png
 # The game's server stays outside the archive: Node.js needs real files.

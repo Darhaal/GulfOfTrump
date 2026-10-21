@@ -45,12 +45,16 @@ const MAX_LOSS = 0.25;
 
 const round = (v: number) => (v >= 100 ? Math.round(v) : Math.round(v * 10) / 10);
 
-/** Natural growth over a period, everywhere: each province by its country's pace for the era. Changes `regions` in place. */
-export function growPopulation(regions: Record<string, RegionState>, map: Record<string, MapRegion>, years: number): void {
+/**
+ * Natural growth over a period, everywhere: each province by its country's
+ * pace for the era, plus `bonus` percentage points a year for its owner (the
+ * player's medicine, engine/researchEffects.ts). Changes `regions` in place.
+ */
+export function growPopulation(regions: Record<string, RegionState>, map: Record<string, MapRegion>, years: number, bonus: (owner: string) => number = () => 0): void {
   for (const [id, r] of Object.entries(regions)) {
     const p = map[id];
     if (!p) continue;
-    r.pop = round(Math.max(0, peopleIn(r, p) * (1 + (p.gr ?? 0) / 100) ** years));
+    r.pop = round(Math.max(0, peopleIn(r, p) * (1 + ((p.gr ?? 0) + bonus(r.owner)) / 100) ** years));
   }
 }
 

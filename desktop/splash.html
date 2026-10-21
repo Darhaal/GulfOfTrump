@@ -1,0 +1,147 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src file: data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>Gulf of Trump</title>
+<!--
+  The loading screen of the desktop app (main.cjs fills it): the emblem, a
+  quote of the game's eras with its speaker's oil portrait, a bar that moves
+  with the real start, and who made the game. Colours are the game's tokens.
+-->
+<style>
+  :root {
+    --page: #F8FAFC; --surface: #FFFFFF; --line: #E6E1DC; --ink: #1A1F26; --muted: #8A9099; --accent: #C2410C;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --page: #0E1116; --surface: #161A20; --line: #2A3038; --ink: #E8EAED; --muted: #8C949F; --accent: #F97316; color-scheme: dark; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--page); color: var(--ink);
+    font: 500 14px/1.5 "Segoe UI", system-ui, sans-serif;
+    display: grid; grid-template-rows: 1fr auto; overflow: hidden;
+    -webkit-user-select: none; user-select: none; cursor: default;
+  }
+  main { display: grid; place-items: center; padding: 48px 32px 24px; }
+  .stage { width: min(720px, 100%); display: grid; gap: 40px; }
+  .brand { display: flex; align-items: center; gap: 14px; justify-content: center; }
+  .brand img { width: 52px; height: 52px; border-radius: 14px; }
+  .brand h1 { margin: 0; font-size: 30px; font-weight: 900; letter-spacing: -0.02em; }
+  .brand h1 span { color: var(--accent); }
+  figure.quote {
+    margin: 0; min-height: 168px; display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: center;
+    padding: 22px 26px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface);
+    box-shadow: 0 10px 30px rgba(26, 31, 38, 0.08); transition: opacity 0.6s ease;
+  }
+  figure.quote.fading { opacity: 0; }
+  figure.quote.bare { grid-template-columns: 1fr; }
+  .portrait { width: 96px; height: 120px; border-radius: 14px; object-fit: cover; border: 1px solid var(--line); box-shadow: 0 6px 18px rgba(26, 31, 38, 0.18); }
+  figure.quote.bare .portrait { display: none; }
+  blockquote { margin: 0; font: italic 400 19px/1.45 Georgia, "Times New Roman", serif; }
+  blockquote::before { content: "\201C"; color: var(--accent); font-size: 32px; line-height: 0; margin-right: 4px; vertical-align: -10px; }
+  figcaption { margin-top: 10px; font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .progress { display: grid; gap: 10px; }
+  .bar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  #fill { height: 100%; width: 2%; border-radius: 999px; background: var(--accent); transition: width 0.25s linear; }
+  .status { display: flex; justify-content: space-between; gap: 16px; font-size: 12px; font-weight: 700; color: var(--muted); }
+  #pct { font-variant-numeric: tabular-nums; }
+  footer { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px 18px; font-size: 12px; color: var(--muted); }
+  .made { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+  .made img { width: 30px; height: 38px; border-radius: 8px; object-fit: cover; border: 1px solid var(--line); }
+  .made b { color: var(--ink); }
+  #version { font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+  <main>
+    <div class="stage">
+      <header class="brand"><img src="build/icon.png" alt=""><h1>Gulf of Trump<span>.</span></h1></header>
+      <figure class="quote bare" id="quote">
+        <img class="portrait" id="portrait" alt="">
+        <div>
+          <blockquote id="text"></blockquote>
+          <figcaption id="who"></figcaption>
+        </div>
+      </figure>
+      <section class="progress" aria-live="polite">
+        <div class="bar"><div id="fill"></div></div>
+        <div class="status"><span id="status"></span><span id="pct"></span></div>
+      </section>
+    </div>
+  </main>
+  <footer>
+    <span class="made"><img id="author" alt="" hidden><span id="made"></span></span>
+    <span id="version"></span>
+  </footer>
+<script>
+  "use strict";
+  // Big screens get a bigger splash: the layout is drawn for about 1100 px and scaled up to 1.6×.
+  const fit = () => { document.body.style.zoom = String(Math.min(1.6, Math.max(1, window.innerWidth / 1100))); };
+  fit();
+  window.addEventListener("resize", fit);
+  const $ = (id) => document.getElementById(id);
+  let quotes = [];
+  let shown = -1;
+  let timer = null;
+
+  function showQuote(next) {
+    const q = quotes[next];
+    if (!q) return;
+    const box = $("quote");
+    box.classList.add("fading");
+    setTimeout(() => {
+      $("text").textContent = q.text;
+      $("who").textContent = `${q.name}, ${q.year}`;
+      const img = $("portrait");
+      if (q.portrait) {
+        img.onerror = () => box.classList.add("bare");
+        img.src = q.portrait;
+        box.classList.remove("bare");
+      } else {
+        box.classList.add("bare");
+      }
+      box.classList.remove("fading");
+    }, shown < 0 ? 0 : 600);
+    shown = next;
+  }
+
+  window.splash = {
+    /** Everything but the bar, once: { quotes: [{ text, name, year, portrait }], madeBy: { line, portrait }, version, status }. */
+    setup(data) {
+      quotes = Array.isArray(data.quotes) ? data.quotes : [];
+      if (data.madeBy) {
+        const parts = String(data.madeBy.line).split(data.madeBy.name);
+        const made = $("made");
+        made.textContent = parts[0] ?? "";
+        const name = document.createElement("b");
+        name.textContent = data.madeBy.name;
+        made.append(name, parts[1] ?? "");
+        if (data.madeBy.portrait) {
+          const img = $("author");
+          img.onerror = () => (img.hidden = true);
+          img.src = data.madeBy.portrait;
+          img.hidden = false;
+        }
+      }
+      $("version").textContent = data.version ?? "";
+      if (data.status) $("status").textContent = data.status;
+      if (quotes.length) {
+        showQuote(0);
+        clearInterval(timer);
+        if (quotes.length > 1) timer = setInterval(() => showQuote((shown + 1) % quotes.length), 9000);
+      }
+    },
+    /** The bar's share (0–1) and the phase's words. */
+    progress(share, status) {
+      const p = Math.max(0, Math.min(1, Number(share) || 0));
+      $("fill").style.width = `${(p * 100).toFixed(1)}%`;
+      $("pct").textContent = `${Math.round(p * 100)}%`;
+      if (status) $("status").textContent = status;
+    },
+  };
+</script>
+</body>
+</html>

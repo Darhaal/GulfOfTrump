@@ -32,6 +32,7 @@ const SAY = {
     uk: "Великих потрясінь за цей період не сталося. Міністерства займаються своєю роботою, посольства повідомляють про спокійну обстановку за кордоном, ринки чекають на новини.",
   },
   ordersUnderWay: { en: "The government's orders are under way:", ru: "Приказы правительства выполняются:", uk: "Накази уряду виконуються:" },
+  actionsUnderWay: { en: "The movement's actions are under way:", ru: "Действия движения идут своим чередом:", uk: "Дії руху тривають:" },
   noOrders: {
     en: "The government gave no new orders; the country carries on as before.",
     ru: "Новых приказов правительство не отдавало, страна живёт прежним курсом.",
@@ -75,9 +76,9 @@ const SAY = {
     uk: "Робоча група збереться наступного місяця",
   },
   report: {
-    en: "{who}: the ministry carried on with its work this period, and its plans hold.",
-    ru: "{who}: министерство в этом периоде продолжало работу, планы в силе.",
-    uk: "{who}: міністерство в цьому періоді продовжувало роботу, плани в силі.",
+    en: "{who}: To my mind the period changed little for us. The work goes on, and our plans still hold.",
+    ru: "{who}: по-моему, период мало что изменил для нас. Работа идёт, наши планы в силе.",
+    uk: "{who}: на мою думку, період мало що змінив для нас. Робота триває, наші плани в силі.",
   },
   reportFailed: {
     en: " One task failed, and I will not hide my concern.",
@@ -154,6 +155,8 @@ const SAY = {
   plot: { en: "Officers' circle", ru: "Кружок офицеров", uk: "Гурток офіцерів" },
   plotBy: { en: "Army officers", ru: "Армейские офицеры", uk: "Армійські офіцери" },
   head: { en: "Head of state", ru: "Глава государства", uk: "Глава держави" },
+  movementName: { en: "Civic Forum", ru: "Гражданский форум", uk: "Громадянський форум" },
+  movementLeader: { en: "A. Varga", ru: "А. Варга", uk: "А. Варга" },
 } satisfies Record<string, Text>;
 
 const say = (locale: Locale, key: keyof typeof SAY, vars: Record<string, string> = {}) =>
@@ -234,13 +237,30 @@ function mockTurn(prompt: string, locale: Locale): string {
   const population = atWar ? [{ country: player, deaths: 12, refugees: 30, cause: say(locale, "war") }] : [];
   const narrative = [
     say(locale, "calm"),
-    orderLines.length ? `${say(locale, "ordersUnderWay")}\n${orderLines.map((l) => l.trim()).join("\n")}` : say(locale, "noOrders"),
+    orderLines.length ? `${say(locale, /THE PLAYER IS NOT THE GOVERNMENT/.test(prompt) ? "actionsUnderWay" : "ordersUnderWay")}\n${orderLines.map((l) => l.trim()).join("\n")}` : say(locale, "noOrders"),
     say(locale, "demoNote"),
   ].join("\n\n");
-  // A war costs a few tanks; a directive to the science ministry starts the first project on offer.
-  const research = ministries.some((m) => m.ministry === "science") ? /could start[^:]*: ([\w:-]+) \(/.exec(prompt)?.[1] : undefined;
-  const arms = { losses: atWar ? [{ country: player, kind: "tanks", lost: 3 }] : [], research: research ? [{ project: research, action: "start" }] : [] };
+  // A war costs a few tanks; a directive to the science ministry puts ten more points into the direction furthest behind.
+  const split = /RESEARCH OF THE PLAYER'S GOVERNMENT \([^)]*\): ([^\n]*)/.exec(prompt)?.[1] ?? "";
+  const behind = [...split.matchAll(/(\w+) \d+% \(([+−])([\d.]+) yr\)/g)]
+    .map(([, direction, sign, years]) => ({ direction, ahead: (sign === "−" ? -1 : 1) * Number(years) }))
+    .reduce<{ direction: string; ahead: number } | undefined>((worst, d) => (!worst || d.ahead < worst.ahead ? d : worst), undefined);
+  const research = ministries.some((m) => m.ministry === "science") && behind ? [{ direction: behind.direction, shift: 10 }] : [];
+  const arms = { losses: atWar ? [{ country: player, kind: "tanks", lost: 3 }] : [], research };
+  // A player who leads the opposition: the movement grows a little, and gets a name and a leader if it has none (engine/role.ts).
+  const role = /THE PLAYER IS NOT THE GOVERNMENT: [^\n]*/.exec(prompt)?.[0];
+  const opposition = role
+    ? {
+        ...(role.includes("name it in opposition.name") ? { name: say(locale, "movementName") } : {}),
+        ...(role.includes("name them in opposition.leader") ? { leader: say(locale, "movementLeader"), gender: "male" } : {}),
+        support: 1,
+        members: 2,
+        street: 2,
+        press: 1,
+      }
+    : undefined;
   return JSON.stringify({
+    ...(opposition ? { opposition } : {}),
     headline: say(locale, "headline"),
     narrative,
     events: [
@@ -458,15 +478,14 @@ function mockPolitics(prompt: string, locale: Locale, withOfficials = false): st
   });
 }
 
-/** A minister reports after the turn; one whose directive failed is uneasy about it. */
+/** A minister gives their view after the turn; one whose directive failed is uneasy about it. */
 function mockReport(prompt: string, locale: Locale): string {
-  const who = /Write the report of ([^\n]+)\.$/m.exec(prompt)?.[1] ?? "";
+  const who = /Give the view of ([^\n]+), in one paragraph\.$/m.exec(prompt)?.[1] ?? "";
   const failed = /— failed/.test(prompt);
   return JSON.stringify({
     report: `${say(locale, "report", { who })}${failed ? say(locale, "reportFailed") : ""}`.replace(/^: /, ""),
     stance: failed ? "uneasy" : "loyal",
     grievance: "",
-    orders: [say(locale, "keepBudget")],
   });
 }
 
@@ -475,7 +494,7 @@ function mockAdvice(instructions: string, locale: Locale): string {
   const operation = instructions.includes('"operation": {')
     ? { name: say(locale, "opName"), target: say(locale, "opTarget"), goal: say(locale, "opGoal"), means: say(locale, "opMeans"), timing: say(locale, "opTiming"), secrecy: "deniable" }
     : undefined;
-  return JSON.stringify({ answer: say(locale, "advice"), orders: [say(locale, "garrisons")], ...(operation ? { operation } : {}) });
+  return JSON.stringify({ answer: say(locale, "advice"), ...(operation ? { operation } : {}) });
 }
 
 /** The chief of staff drafts what the leader asked for, judged by keywords. */

@@ -1,6 +1,7 @@
 import { coupRiskIn, lostShares } from "./abroad";
 import { roll } from "./dice";
 import { officialAt } from "./government";
+import { intelligenceBonus } from "./researchEffects";
 import type { GameState, Localized, MapIndex, MapRegion, RegimeKind } from "./types";
 
 /**
@@ -16,7 +17,7 @@ import type { GameState, Localized, MapIndex, MapRegion, RegimeKind } from "./ty
  */
 
 export type KnowledgeLevel = "full" | "good" | "partial" | "poor";
-export type KnowledgeReason = "open" | "closed" | "ally" | "pact" | "bloc" | "enemy" | "sanctions" | "border" | "agents" | "service-good" | "service-weak" | "talks";
+export type KnowledgeReason = "open" | "closed" | "ally" | "pact" | "bloc" | "enemy" | "sanctions" | "border" | "agents" | "service-good" | "service-weak" | "signals-good" | "signals-weak" | "talks";
 
 export interface Knowledge {
   /** 0–100: how much of the country's real state the player's government knows. */
@@ -100,7 +101,7 @@ function watched(state: Pick<GameState, "directives" | "countries">, tag: string
   });
 }
 
-type KnowledgeState = Pick<GameState, "player" | "countries" | "alliances" | "wars" | "sanctions" | "directives" | "officials" | "diplomacy">;
+type KnowledgeState = Pick<GameState, "player" | "countries" | "alliances" | "wars" | "sanctions" | "directives" | "officials" | "diplomacy"> & Partial<Pick<GameState, "research" | "date">>;
 
 /** How much the player's government knows of one country. `borders` is borderingPlayer's result, when the map has loaded. */
 export function knowledgeOf(state: KnowledgeState, tag: string, borders?: Set<string>): Knowledge {
@@ -128,6 +129,9 @@ export function knowledgeOf(state: KnowledgeState, tag: string, borders?: Set<st
 
   const competence = officialAt(state, "intelligence")?.competence;
   if (competence !== undefined && competence !== 3) parts.push([competence > 3 ? "service-good" : "service-weak", (competence - 3) * SERVICE]);
+  // Signals, computers and satellites: the player's communications research against the world's (engine/researchEffects.ts).
+  const signals = state.research?.tech && state.date ? intelligenceBonus({ research: state.research, date: state.date }) : 0;
+  if (signals) parts.push([signals > 0 ? "signals-good" : "signals-weak", signals]);
   if ((state.diplomacy[tag] ?? []).some((m) => m.from === "them")) parts.push(["talks", TALKS]);
 
   const score = Math.max(MIN_SCORE, Math.min(MAX_SCORE, base + parts.reduce((sum, [, d]) => sum + d, 0)));

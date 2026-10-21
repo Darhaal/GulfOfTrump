@@ -1,8 +1,12 @@
 import type { MessageKey } from "@/i18n/messages";
 import { INSTITUTIONS } from "@/engine/funds";
 import { formatPopulation } from "@/engine/provinces";
-import type { AppliedChange, GameState, Stats, Text } from "@/engine/types";
-import { projectLabel } from "./armsText";
+import { breakthroughOf } from "@/engine/research";
+import type { AppliedChange, GameState, ResearchDirection, Stats, Text } from "@/engine/types";
+import { researchLabel, versusText } from "./armsText";
+
+/** Directions whose breakthroughs say what the direction brings; the military and strategic ones say it themselves. */
+const GIVES = new Set<ResearchDirection>(["industry", "agriculture", "medicine", "science", "communications"]);
 
 type T = (key: MessageKey, vars?: Record<string, string | number>) => string;
 type TextFn = (value: Text | undefined) => string;
@@ -122,12 +126,27 @@ export function describeChange(change: AppliedChange, state: GameState, t: T, te
     }
     case "official":
       return t(`change.official.${change.change}` as MessageKey, { title: change.title, name: change.name });
-    case "research":
-      return t(`change.research.${change.change}` as MessageKey, { project: projectLabel(change.project, state, t, text) });
+    case "research": {
+      const project = researchLabel(change.project, t, text);
+      if (change.change === "focus") return t("change.research.focus", { project, shift: `${(change.shift ?? 0) > 0 ? "+" : "−"}${Math.abs(change.shift ?? 0)}` });
+      const line = t(`change.research.${change.change}` as MessageKey, { project });
+      const b = change.change === "done" ? breakthroughOf(change.project) : undefined;
+      if (!b) return line;
+      // A breakthrough with when it came against history, what it is and what its direction brings.
+      const when = change.ahead === undefined ? "" : `, ${versusText(change.ahead, t)}`;
+      const gives = GIVES.has(b.direction) ? ` — ${t(`research.gives.${b.direction}` as MessageKey)}` : "";
+      return `${line}${when}. ${text(b.effect)}${gives}`;
+    }
     case "captured":
       return t("change.captured", { by: country(change.by), from: country(change.from), n: change.n.toLocaleString(), kind: t(`arms.kind.${change.arms}` as MessageKey) });
     case "intrigue":
       return t((change.event === "done" ? `change.intrigue.done.${change.goal}` : "change.intrigue.exposed") as MessageKey, { deputy: change.deputy, target: change.target });
+    case "rise":
+      return t(`change.rise.${change.how}` as MessageKey, { name: change.name });
+    case "repression":
+      return t(`change.repression.${change.event}` as MessageKey);
+    case "movement":
+      return t(`change.movement.${change.change}` as MessageKey, { name: change.name });
     case "population": {
       const parts = [
         change.deaths > 0 ? t("change.population.deaths", { n: formatPopulation(change.deaths) }) : "",
@@ -151,7 +170,7 @@ export function describeChange(change: AppliedChange, state: GameState, t: T, te
 /** Map changes first, then politics, then the numbers. */
 export function sortChanges(changes: AppliedChange[]): AppliedChange[] {
   const rank: Record<AppliedChange["kind"], number> = {
-    overthrown: -2, exile: -1, return: -1, "new-country": 0, war: 1, peace: 2, truce: 3, "truce-ended": 4, annex: 5, liberate: 6, occupy: 7, contest: 8, repel: 9, alliance: 10, invitation: 11, "alliance-ended": 12, leave: 13, "summit-planned": 14, election: 15, coup: 15.2, vote: 15.4, party: 16, protest: 16.5, plot: 17, leader: 18, official: 18.2, enter: 1.5, accession: 10.5, plan: 14.2, "plan-end": 14.3, sanction: 14.5, deal: 14.6, funds: 14.7, law: 16.8, bill: 16.7, identity: 0.5, budget: 18.3, population: 18.5, stats: 19, research: 18.25, captured: 14.8, intrigue: 18.1,
+    overthrown: -2, rise: -1.9, exile: -1, return: -1, "new-country": 0, war: 1, peace: 2, truce: 3, "truce-ended": 4, annex: 5, liberate: 6, occupy: 7, contest: 8, repel: 9, alliance: 10, invitation: 11, "alliance-ended": 12, leave: 13, "summit-planned": 14, election: 15, coup: 15.2, vote: 15.4, party: 16, protest: 16.5, plot: 17, leader: 18, official: 18.2, enter: 1.5, accession: 10.5, plan: 14.2, "plan-end": 14.3, sanction: 14.5, deal: 14.6, funds: 14.7, law: 16.8, bill: 16.7, identity: 0.5, budget: 18.3, population: 18.5, stats: 19, research: 18.25, captured: 14.8, intrigue: 18.1, repression: 16.6, movement: 16.65,
   };
   return [...changes].sort((a, b) => rank[a.kind] - rank[b.kind]);
 }

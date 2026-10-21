@@ -1,7 +1,9 @@
 export const APP_NAME = "Gulf of Trump";
-export const APP_VERSION = "1.0.3";
+export const APP_VERSION = "1.0.4";
 export const APP_STAGE = "beta";
 export const REPO_URL = "https://github.com/Darhaal/GulfOfTrump";
+/** The public demo site, the address its sitemap and robots.txt give search engines. */
+export const SITE_URL = "https://gulfoftrump.vercel.app";
 export const ISSUES_URL = `${REPO_URL}/issues/new/choose`;
 /** Reporting the game master's text (Microsoft Store policy 11.16). */
 export const CONTENT_REPORT_URL = `${REPO_URL}/issues/new?template=content.yml`;

@@ -1,20 +1,4 @@
 {
- "_shadow-female": {
-  "name": "Shadow (female)",
-  "source": "https://commons.wikimedia.org/wiki/File:Black_-_replace_this_image_female.svg",
-  "file": "File:Black - replace this image female.svg",
-  "author": "Replace this image female (red).svg : Lord Leatherface / derivative work: Dove",
-  "licence": "public domain",
-  "changes": "placed against a lit wall and painted in oil"
- },
- "_shadow-male": {
-  "name": "Shadow (male)",
-  "source": "https://commons.wikimedia.org/wiki/File:Black_-_replace_this_image_male.svg",
-  "file": "File:Black - replace this image male.svg",
-  "author": "Replace this image male (blue).svg : Lord Leatherface / derivative work: Dove",
-  "licence": "public domain",
-  "changes": "placed against a lit wall and painted in oil"
- },
  "abd-al-ilah": {
   "name": "Abd al-Ilah",
   "source": "https://commons.wikimedia.org/wiki/File:%27Abd_al-Ilah_of_Hejaz.jpg",
@@ -106,6 +90,16 @@
   "author": "State Department photo by Michael Gross",
   "licence": "public domain",
   "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "ahmad-shah-massoud": {
+  "name": "Ahmad Shah Massoud",
+  "source": "https://commons.wikimedia.org/wiki/File:Ahmad_Shah_Massoud_EP_2001_(2)_(cropped).jpg",
+  "file": "File:Ahmad Shah Massoud EP 2001 (2) (cropped).jpg",
+  "author": "European Parliament",
+  "licence": "European Parliament",
+  "licenceName": "European Parliament",
+  "licenceUrl": "https://www.europarl.europa.eu/legal-notice/",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "ahmad-shah-qajar": {
@@ -297,6 +291,16 @@
   "licence": "CC BY",
   "licenceName": "CC BY 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "alexander-rutskoy": {
+  "name": "Alexander Rutskoy",
+  "source": "https://commons.wikimedia.org/wiki/File:Alexander_Rutskoy_MoscowRia_08-2016_(cropped).jpg",
+  "file": "File:Alexander Rutskoy MoscowRia 08-2016 (cropped).jpg",
+  "author": "A.Savin",
+  "licence": "FAL",
+  "licenceName": "FAL",
+  "licenceUrl": "http://artlibre.org/licence/lal/en",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "alexander-von-dornberg": {
@@ -648,6 +652,16 @@
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "askar-akayev": {
+  "name": "Askar Akayev",
+  "source": "https://commons.wikimedia.org/wiki/File:Askar_Akaev_MoscowRia_08-2016.jpg",
+  "file": "File:Askar Akaev MoscowRia 08-2016.jpg",
+  "author": "A.Savin",
+  "licence": "FAL",
+  "licenceName": "FAL",
+  "licenceUrl": "http://artlibre.org/licence/lal/en",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "aslan-maskhadov": {
   "name": "Aslan Maskhadov",
   "source": "https://commons.wikimedia.org/wiki/File:Aslan_Maskhadov.jpg",
@@ -656,6 +670,16 @@
   "licence": "CC BY-SA",
   "licenceName": "CC BY-SA 3.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "atal-bihari-vajpayee": {
+  "name": "Atal Bihari Vajpayee",
+  "source": "https://commons.wikimedia.org/wiki/File:Atal_Bihari_Vajpayee_(crop_2).jpg",
+  "file": "File:Atal Bihari Vajpayee (crop 2).jpg",
+  "author": "Government of India",
+  "licence": "GODL-India",
+  "licenceName": "GODL-India",
+  "licenceUrl": "https://data.gov.in/sites/default/files/Gazette_Notification_OGDL.pdf",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "auguste-calas": {
@@ -932,6 +956,16 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "carlos-westendorp": {
+  "name": "Carlos Westendorp",
+  "source": "https://commons.wikimedia.org/wiki/File:19990000_WESTENDORP.jpg",
+  "file": "File:19990000 WESTENDORP.jpg",
+  "author": "© European Union 1999",
+  "licence": "European Parliament",
+  "licenceName": "European Parliament",
+  "licenceUrl": "https://www.europarl.europa.eu/legal-notice/",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "carol-i-of-romania": {
   "name": "Carol I of Romania",
   "source": "https://commons.wikimedia.org/wiki/File:Carol_I_of_Romania_edited.jpg",
@@ -966,6 +1000,16 @@
   "author": "Anonymous Unknown author",
   "licence": "public domain",
   "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "charles-de-gaulle": {
+  "name": "Charles de Gaulle",
+  "source": "https://commons.wikimedia.org/wiki/File:General_Charles_de_Gaulle_in_1945.jpg",
+  "file": "File:General Charles de Gaulle in 1945.jpg",
+  "author": "The National Archives UK",
+  "licence": "no known restrictions",
+  "licenceName": "No restrictions",
+  "licenceUrl": "https://www.flickr.com/commons/usage/",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "charles-guthrie-baron-guthrie-of-craigiebank": {
@@ -1687,6 +1731,16 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "evaldas-gustas": {
+  "name": "Evaldas Gustas",
+  "source": "https://commons.wikimedia.org/wiki/File:Evaldas_Gustas_by_Augustas_Didzgalvis_(cropped).jpg",
+  "file": "File:Evaldas Gustas by Augustas Didzgalvis (cropped).jpg",
+  "author": "Augustas Didžgalvis",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "evgeny-primakov": {
   "name": "Evgeny Primakov",
   "source": "https://commons.wikimedia.org/wiki/File:YPrimakov_(cropped).jpg",
@@ -1912,6 +1966,16 @@
   "author": "United States Office of War Information, Overseas Picture Division, Washington Division.",
   "licence": "public domain",
   "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "george-marshall": {
+  "name": "George Marshall",
+  "source": "https://commons.wikimedia.org/wiki/File:General_George_C._Marshall_(4616939916).jpg",
+  "file": "File:General George C. Marshall (4616939916).jpg",
+  "author": "NASA on The Commons",
+  "licence": "no known restrictions",
+  "licenceName": "No restrictions",
+  "licenceUrl": "https://www.flickr.com/commons/usage/",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "george-osborne": {
@@ -2788,6 +2852,15 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "john-edwards": {
+  "name": "John Edwards",
+  "source": "https://commons.wikimedia.org/wiki/File:John_Edwards_in_1949.jpg",
+  "file": "File:John Edwards in 1949.jpg",
+  "author": "Elliott & Fry",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "john-glen": {
   "name": "John Glen",
   "source": "https://commons.wikimedia.org/wiki/File:Official_portrait_of_John_Glen_MP_crop_2,_2024.jpg",
@@ -2975,6 +3048,25 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "juozas-olekas": {
+  "name": "Juozas Olekas",
+  "source": "https://commons.wikimedia.org/wiki/File:Juozas_Olekas.jpg",
+  "file": "File:Juozas Olekas.jpg",
+  "author": "Robert D. Ward",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "jurgen-christian-mertens": {
+  "name": "Jürgen Christian Mertens",
+  "source": "https://commons.wikimedia.org/wiki/File:Jurguen_Mertens_presenta_copia_de_cartas_credenciales_(cropped).jpg",
+  "file": "File:Jurguen Mertens presenta copia de cartas credenciales (cropped).jpg",
+  "author": "Cancillería Argentina",
+  "licence": "CC BY",
+  "licenceName": "CC BY 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+  "changes": "cut from a group photograph to this person's head and shoulders, toned and painted in oil"
+ },
  "jury-sieliviorstaw": {
   "name": "Jury Sieliviorstaw",
   "source": "https://commons.wikimedia.org/wiki/File:Juryj_Sieliviorstau.jpg",
@@ -3060,6 +3152,16 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "kim-dae-jung": {
+  "name": "Kim Dae-jung",
+  "source": "https://commons.wikimedia.org/wiki/File:Kim_Dae-jung_presidential_portrait.jpg",
+  "file": "File:Kim Dae-jung presidential portrait.jpg",
+  "author": "대한민국 국가기록원",
+  "licence": "KOGL Type 1",
+  "licenceName": "KOGL Type 1",
+  "licenceUrl": "http://www.kogl.or.kr/info/licenseType1.do",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "kim-il-sung": {
   "name": "Kim Il-sung",
   "source": "https://commons.wikimedia.org/wiki/File:Kim_Il_Sung_Portrait-3.jpg",
@@ -3098,6 +3200,16 @@
   "licence": "CC BY",
   "licenceName": "CC BY 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "klaus-iohannis": {
+  "name": "Klaus Iohannis",
+  "source": "https://commons.wikimedia.org/wiki/File:Klaus_Iohannis_-_Feb_2024.jpg",
+  "file": "File:Klaus Iohannis - Feb 2024.jpg",
+  "author": "European Union",
+  "licence": "European Parliament",
+  "licenceName": "European Parliament",
+  "licenceUrl": "https://www.europarl.europa.eu/legal-notice/",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "klement-gottwald": {
@@ -3148,6 +3260,26 @@
   "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "kyrylo-shevchenko": {
+  "name": "Kyrylo Shevchenko",
+  "source": "https://commons.wikimedia.org/wiki/File:Foto_KShevchenko_2017.jpg",
+  "file": "File:Foto KShevchenko 2017.jpg",
+  "author": "Liliya xWins",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "lal-bahadur-shastri": {
+  "name": "Lal Bahadur Shastri",
+  "source": "https://commons.wikimedia.org/wiki/File:Lal_Bahadur_Shastri_(from_stamp).jpg",
+  "file": "File:Lal Bahadur Shastri (from stamp).jpg",
+  "author": "India Post, Government of India",
+  "licence": "GODL-India",
+  "licenceName": "GODL-India",
+  "licenceUrl": "https://data.gov.in/sites/default/files/Gazette_Notification_OGDL.pdf",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "laurent-desire-kabila": {
   "name": "Laurent-Désiré Kabila",
   "source": "https://commons.wikimedia.org/wiki/File:Visit_of_Laurent_D%C3%A9sir%C3%A9_Kabila,_President_of_the_Democratic_Republic_of_Congo,_to_the_EC_(cropped).jpg",
@@ -3196,12 +3328,12 @@
  },
  "lech-wa-esa": {
   "name": "Lech Wałęsa",
-  "source": "https://commons.wikimedia.org/wiki/File:Lech_Walesa_-_2009.jpg",
-  "file": "File:Lech Walesa - 2009.jpg",
-  "author": "MEDEF",
+  "source": "https://commons.wikimedia.org/wiki/File:Lech_Wa%C5%82%C4%99sa_1990.jpg",
+  "file": "File:Lech Wałęsa 1990.jpg",
+  "author": "FOTO:Fortepan — ID 76155 : Adományozó/Donor: Erdei Katalin.",
   "licence": "CC BY-SA",
-  "licenceName": "CC BY-SA 2.0",
-  "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+  "licenceName": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "lee-teng-hui": {
@@ -3367,6 +3499,16 @@
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "lionel-jospin": {
+  "name": "Lionel Jospin",
+  "source": "https://commons.wikimedia.org/wiki/File:Lionel_Jospin,_Klaus_H%C3%A4nsch_1996_(cropped).jpg",
+  "file": "File:Lionel Jospin, Klaus Hänsch 1996 (cropped).jpg",
+  "author": "European Parliament",
+  "licence": "European Parliament",
+  "licenceName": "European Parliament",
+  "licenceUrl": "https://www.europarl.europa.eu/legal-notice/",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "liu-kun": {
   "name": "Liu Kun",
   "source": "https://commons.wikimedia.org/wiki/File:Liu_Kun_2019.png",
@@ -3490,6 +3632,15 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "luo-ruiqing": {
+  "name": "Luo Ruiqing",
+  "source": "https://commons.wikimedia.org/wiki/File:1965-11_1965_%E7%BD%97%E7%91%9E%E5%8D%BF.jpg",
+  "file": "File:1965-11 1965 罗瑞卿.jpg",
+  "author": "《人民画报》",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "lutz-graf-schwerin-von-krosigk": {
   "name": "Lutz Graf Schwerin von Krosigk",
   "source": "https://commons.wikimedia.org/wiki/File:Ludwig_Schwerin_von_Krosigk.jpg",
@@ -3545,6 +3696,16 @@
   "licence": "CC BY",
   "licenceName": "CC BY 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "manmohan-singh": {
+  "name": "Manmohan Singh",
+  "source": "https://commons.wikimedia.org/wiki/File:Official_Portrait_of_the_Prime_Minister_Dr._Manmohan_Singh.jpg",
+  "file": "File:Official Portrait of the Prime Minister Dr. Manmohan Singh.jpg",
+  "author": "Prime Minister's Office",
+  "licence": "GODL-India",
+  "licenceName": "GODL-India",
+  "licenceUrl": "https://data.gov.in/sites/default/files/Gazette_Notification_OGDL.pdf",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "manny-shinwell": {
@@ -3871,6 +4032,16 @@
   "licenceName": "Attribution",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "milo-ukanovic": {
+  "name": "Milo Đukanović",
+  "source": "https://commons.wikimedia.org/wiki/File:Milo_%C4%90ukanovi%C4%87_EP_2018_(cropped).jpg",
+  "file": "File:Milo Đukanović EP 2018 (cropped).jpg",
+  "author": "© European Union 2018",
+  "licence": "European Parliament",
+  "licenceName": "European Parliament",
+  "licenceUrl": "https://www.europarl.europa.eu/legal-notice/",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "mircea-snegur": {
   "name": "Mircea Snegur",
   "source": "https://commons.wikimedia.org/wiki/File:Mircea_Snegur_1996_(cropped).jpg",
@@ -3938,6 +4109,16 @@
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "moon-jae-in": {
+  "name": "Moon Jae-in",
+  "source": "https://commons.wikimedia.org/wiki/File:President_Moon_Jae_In.jpg",
+  "file": "File:President Moon Jae In.jpg",
+  "author": "Government of the Republic of Korea",
+  "licence": "KOGL Type 1",
+  "licenceName": "KOGL Type 1",
+  "licenceUrl": "http://www.kogl.or.kr/info/licenseType1.do",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "mustafa-al-nahhas": {
   "name": "Mustafa al-Nahhas",
   "source": "https://commons.wikimedia.org/wiki/File:Elnahas_basha.jpg",
@@ -3955,6 +4136,26 @@
   "licence": "CC BY-SA",
   "licenceName": "CC BY-SA 2.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "naftali-bennett": {
+  "name": "Naftali Bennett",
+  "source": "https://commons.wikimedia.org/wiki/File:Naftali_Bennett_official_portrait_(cropped).jpg",
+  "file": "File:Naftali Bennett official portrait (cropped).jpg",
+  "author": "Avi Ohayon",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "narendra-modi": {
+  "name": "Narendra Modi",
+  "source": "https://commons.wikimedia.org/wiki/File:Prime_Minister_Of_Bharat_Shri_Narendra_Damodardas_Modi.jpg",
+  "file": "File:Prime Minister Of Bharat Shri Narendra Damodardas Modi.jpg",
+  "author": "Prime Minister's Office",
+  "licence": "GODL-India",
+  "licenceName": "GODL-India",
+  "licenceUrl": "https://data.gov.in/sites/default/files/Gazette_Notification_OGDL.pdf",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "natalia-gavrilita": {
@@ -4038,6 +4239,16 @@
   "author": "Unknown author Unknown author",
   "licence": "public domain",
   "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "nguyen-khanh": {
+  "name": "Nguyễn Khánh",
+  "source": "https://commons.wikimedia.org/wiki/File:Nguy%E1%BB%85n_Kh%C3%A1nh_1964.jpg",
+  "file": "File:Nguyễn Khánh 1964.jpg",
+  "author": "Unknown author Unknown author",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 3.0 nl",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0/nl/deed.en",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "nicholas-f-brady": {
@@ -4321,6 +4532,16 @@
   "licence": "CC BY-SA",
   "licenceName": "CC BY-SA 2.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "park-geun-hye": {
+  "name": "Park Geun-hye",
+  "source": "https://commons.wikimedia.org/wiki/File:Park_Geun-hye_presidential_portrait.png",
+  "file": "File:Park Geun-hye presidential portrait.png",
+  "author": "대한민국 국가기록원",
+  "licence": "KOGL Type 1",
+  "licenceName": "KOGL Type 1",
+  "licenceUrl": "http://www.kogl.or.kr/info/licenseType1.do",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "park-hon-young": {
@@ -5214,6 +5435,16 @@
   "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "subandrio": {
+  "name": "Subandrio",
+  "source": "https://commons.wikimedia.org/wiki/File:Subandrio_1964.jpg",
+  "file": "File:Subandrio 1964.jpg",
+  "author": "Harry Pot",
+  "licence": "public domain",
+  "licenceName": "CC0",
+  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "sukarno": {
   "name": "Sukarno",
   "source": "https://commons.wikimedia.org/wiki/File:Presiden_Sukarno.jpg",
@@ -5316,6 +5547,16 @@
   "licence": "CC BY",
   "licenceName": "CC BY 3.0",
   "licenceUrl": "https://creativecommons.org/licenses/by/3.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "theobald-von-bethmann-hollweg": {
+  "name": "Theobald von Bethmann Hollweg",
+  "source": "https://commons.wikimedia.org/wiki/File:Theobald_von_Bethmann_Hollweg_by_E._Bieber.jpg",
+  "file": "File:Theobald von Bethmann Hollweg by E. Bieber.jpg",
+  "author": "Internet Archive Book Images",
+  "licence": "no known restrictions",
+  "licenceName": "No restrictions",
+  "licenceUrl": "https://www.flickr.com/commons/usage/",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "theodor-heuss": {
@@ -6138,6 +6379,15 @@
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "yim-byeong-jik": {
+  "name": "Yim Byeong-jik",
+  "source": "https://commons.wikimedia.org/wiki/File:LimByeongJik1948.jpg",
+  "file": "File:LimByeongJik1948.jpg",
+  "author": "Ministry of Foreign Affairs - 외무부",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "yoweri-museveni": {
   "name": "Yoweri Museveni",
   "source": "https://commons.wikimedia.org/wiki/File:Yoweri_Museveni_September_2015.jpg",
@@ -6230,6 +6480,16 @@
   "author": "anonymous (Gov)",
   "licence": "public domain",
   "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "zhu-rongji": {
+  "name": "Zhu Rongji",
+  "source": "https://commons.wikimedia.org/wiki/File:Zhu_Rongji_in_2000.jpg",
+  "file": "File:Zhu Rongji in 2000.jpg",
+  "author": "대한민국 국가기록원 (Korea’s National Archives)",
+  "licence": "KOGL Type 1",
+  "licenceName": "KOGL Type 1",
+  "licenceUrl": "http://www.kogl.or.kr/info/licenseType1.do",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "zivadin-jovanovic": {

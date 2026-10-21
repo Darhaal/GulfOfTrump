@@ -1,5 +1,6 @@
-// The little the game's page may ask of the desktop app's window: full screen
-// and quitting (src/lib/desktop.ts). Nothing else crosses over.
+// The little the game's page may ask of the desktop app's window: full screen,
+// quitting and the updates (src/lib/desktop.ts, src/lib/updates.ts). Nothing
+// else crosses over, and main.cjs answers only the game's own page.
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("gulfDesktop", {
@@ -11,4 +12,15 @@ contextBridge.exposeInMainWorld("gulfDesktop", {
     return () => ipcRenderer.removeListener("window:full-screen", handler);
   },
   quit: () => ipcRenderer.invoke("app:quit"),
+  updates: {
+    get: () => ipcRenderer.invoke("updates:get"),
+    check: () => ipcRenderer.invoke("updates:check"),
+    restart: () => ipcRenderer.invoke("updates:restart"),
+    seen: () => ipcRenderer.invoke("updates:seen"),
+    onEvent: (listener) => {
+      const handler = (_event, update) => listener(update);
+      ipcRenderer.on("updates:event", handler);
+      return () => ipcRenderer.removeListener("updates:event", handler);
+    },
+  },
 });

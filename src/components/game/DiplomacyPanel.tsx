@@ -78,7 +78,7 @@ export default function DiplomacyPanel({ state, target, busy, disabled, onTarget
               <div className="truncate text-sm font-black text-ink">{text(them.name)}</div>
               {them.leader && <div className="truncate text-xs font-medium text-muted">{leaderName(them.leader, locale)}</div>}
             </div>
-            {theirLeader && <Portrait portrait={theirLeader.portrait} gender={theirLeader.gender} name={personName(theirLeader, locale)} size="sm" />}
+            {theirLeader && <Portrait portrait={theirLeader.portrait} gender={theirLeader.gender} name={personName(theirLeader, locale)} size="md" />}
           </div>
 
           <ChatScroll watch={`${target}-${thread.length}-${Boolean(busy)}`}>

@@ -4,15 +4,18 @@ import { Banknote, Check, CircleDashed, Flag, Handshake, Landmark, Loader2, News
 import { useState } from "react";
 import { ui } from "@/components/ui/classes";
 import SpeakButton from "@/components/voice/SpeakButton";
-import { formatDate } from "@/engine/calendar";
+import { formatDate, yearOf } from "@/engine/calendar";
 import { turnSpeechId } from "@/lib/voice/speaker";
 import { turnSpeech } from "@/lib/voice/text";
 import { regionLabel } from "@/engine/provinces";
-import type { ChronicleEntry, EventKind, GameState, MapIndex, Verdict } from "@/engine/types";
+import type { ChronicleEntry, EventKind, GameState, MapIndex, MinistryReport, Verdict } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
 import { ADVISOR_TITLES, type AdvisorId } from "@/engine/advisors";
+import { ADVISOR_POST } from "@/engine/government";
+import { personFor, samePerson } from "@/engine/people";
 import { DirectiveList, MINISTRY_ICONS, StanceChip, type ReportStatus } from "./CabinetPanel";
+import Portrait from "./Portrait";
 import { describeChange, groupTerritory, isNotableStats, sortChanges } from "./changes";
 
 const KIND_ICON: Record<EventKind, typeof Newspaper> = {
@@ -30,6 +33,39 @@ const VERDICT_STYLE: Record<Verdict, { icon: typeof Check; chip: string }> = {
   partial: { icon: CircleDashed, chip: "bg-amber-50 text-amber-700" },
   failed: { icon: X, chip: "bg-red-50 text-red-700" },
 };
+
+/** Who gave a view: the minister in office if it is still them, else the name the view keeps. */
+function speakerOf(state: GameState, entry: ChronicleEntry, ministry: AdvisorId, by?: string) {
+  const o = state.officials?.find((x) => x.post === ADVISOR_POST[ministry] && (!by || samePerson(x.name, by)));
+  if (o) return { name: o.name, portrait: o.portrait, gender: o.gender };
+  if (!by) return undefined;
+  const p = personFor(by, yearOf(entry.to));
+  return { name: p.name, portrait: p.portrait, gender: p.gender };
+}
+
+/** One minister's view of the turn: their portrait, their name and a paragraph in their own words. */
+function MinisterView({ state, entry, report, compact }: { state: GameState; entry: ChronicleEntry; report: MinistryReport; compact?: boolean }) {
+  const { t, text } = useI18n();
+  const Icon = MINISTRY_ICONS[report.ministry];
+  const who = speakerOf(state, entry, report.ministry, report.by);
+  return (
+    <figure className="flex items-start gap-3 rounded-xl bg-page p-3">
+      {who ? <Portrait portrait={who.portrait} gender={who.gender} name={who.name} size="md" /> : <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted" />}
+      <div className="min-w-0 flex-1">
+        <figcaption className="flex items-center gap-2">
+          <span className="min-w-0 flex-1 leading-tight">
+            {who && <span className="block truncate text-xs font-black text-ink">{who.name}</span>}
+            <span className={`block truncate text-2xs font-bold ${who ? "text-muted" : "text-ink"}`}>{text(ADVISOR_TITLES[report.ministry])}</span>
+          </span>
+          {report.stance && report.stance !== "loyal" && <StanceChip stance={report.stance} />}
+          <SpeakButton id={`report-${entry.turn}-${report.ministry}`} text={report.text} className="-my-1" />
+        </figcaption>
+        <blockquote className={`mt-1.5 text-sm font-medium leading-relaxed text-ink/90 ${compact ? "line-clamp-3" : ""}`}>{t("report.quote", { text: report.text })}</blockquote>
+        <DirectiveList directives={report.directives} />
+      </div>
+    </figure>
+  );
+}
 
 /** How many province names a grouped line spells out before "+N". */
 const NAMES_PER_LINE = 6;
@@ -50,9 +86,11 @@ export default function TurnReport({
   reporting?: Partial<Record<AdvisorId, ReportStatus>>;
 }) {
   const { t, text, locale, money, people } = useI18n();
-  // Reports come after the turn; the ministries still owing one show what became of their directives meanwhile.
+  // Views come after the turn; the ministers still owing one, and the quiet ones, show what became of their directives meanwhile.
   const reports = entry.reports ?? [];
-  const owed = (entry.briefs ?? []).filter((b) => !reports.some((r) => r.ministry === b.ministry));
+  const unheard = (entry.briefs ?? []).filter((b) => !reports.some((r) => r.ministry === b.ministry));
+  const owed = unheard.filter((b) => !b.quiet);
+  const quiet = unheard.filter((b) => b.quiet && b.directives.length > 0);
   const latestTurn = state.chronicle.at(-1)?.turn === entry.turn;
   const economy = entry.economy;
   const economyLines = economy
@@ -171,43 +209,43 @@ export default function TurnReport({
         </section>
       )}
 
-      {(reports.length > 0 || owed.length > 0) && (
+      {(reports.length > 0 || owed.length > 0 || quiet.length > 0) && (
         <section>
           <div className={`${ui.label} mb-2 flex items-center gap-1.5`}>
             <ScrollText className="h-3.5 w-3.5" />
             {t("report.ministries")}
           </div>
           <div className="grid gap-2">
-            {reports.map((r) => {
-              const Icon = MINISTRY_ICONS[r.ministry];
-              return (
-                <details key={r.ministry} open={!compact} className="group rounded-xl bg-page px-3 py-2">
-                  <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-black text-ink">
-                    <Icon className="h-3.5 w-3.5 text-muted" />
-                    <span className="min-w-0 flex-1">{text(ADVISOR_TITLES[r.ministry])}</span>
-                    {r.stance && r.stance !== "loyal" && <StanceChip stance={r.stance} />}
-                    <SpeakButton id={`report-${entry.turn}-${r.ministry}`} text={r.text} className="-my-1" />
-                  </summary>
-                  <p className="mt-1.5 text-sm font-medium leading-relaxed text-ink/90">{r.text}</p>
-                  <DirectiveList directives={r.directives} />
-                </details>
-              );
-            })}
+            {reports.map((r) => (
+              <MinisterView key={r.ministry} state={state} entry={entry} report={r} compact={compact} />
+            ))}
             {owed.map((b) => {
               const Icon = MINISTRY_ICONS[b.ministry];
               const writing = latestTurn && reporting?.[b.ministry]?.status === "writing";
               return (
-                <details key={b.ministry} open={!compact} className="group rounded-xl bg-page px-3 py-2">
-                  <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-black text-ink">
+                <div key={b.ministry} className="rounded-xl bg-page px-3 py-2">
+                  <div className="flex items-center gap-2 text-xs font-black text-ink">
                     <Icon className="h-3.5 w-3.5 text-muted" />
                     {text(ADVISOR_TITLES[b.ministry])}
-                  </summary>
+                  </div>
                   <p className="mt-1.5 flex items-center gap-2 text-xs font-medium text-muted">
                     {writing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                     {writing ? t("report.writing") : t("report.missing")}
                   </p>
                   <DirectiveList directives={b.directives} />
-                </details>
+                </div>
+              );
+            })}
+            {quiet.map((b) => {
+              const Icon = MINISTRY_ICONS[b.ministry];
+              return (
+                <div key={b.ministry} className="rounded-xl border border-line px-3 py-2">
+                  <div className="flex items-center gap-2 text-xs font-black text-muted">
+                    <Icon className="h-3.5 w-3.5" />
+                    {text(ADVISOR_TITLES[b.ministry])}
+                  </div>
+                  <DirectiveList directives={b.directives} />
+                </div>
               );
             })}
           </div>

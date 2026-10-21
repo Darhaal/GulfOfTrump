@@ -3,8 +3,8 @@ import type { Directive, GameState, Localized, Operation } from "./types";
 
 /**
  * The cabinet: the leader's chief of staff and six ministries the player governs through. Each minister can
- * be questioned between turns (answers in character, may suggest orders,
- * changes nothing), given standing directives — special operations planned
+ * be questioned between turns (answers in character and advises, but the
+ * orders are the player's own; changes nothing), given standing directives — special operations planned
  * in detail among them — and reports on them after every turn, in a request
  * of its own once the turn is played (engine/reports.ts). The turn's game
  * master sees the directives, not the conversations.
@@ -45,15 +45,12 @@ export interface AdviceMessage {
   text: string;
   date: string;
   turn: number;
-  /** Orders the minister suggests, ready to add to the turn. */
-  orders?: string[];
   /** A special operation the minister proposes, for the government to approve. */
   operation?: Operation;
 }
 
 export const AdviceSchema = z.object({
   answer: z.string().trim().min(1).max(4000),
-  orders: z.array(z.string().trim().min(1).max(300)).max(3).catch([]).default([]),
   // A special operation the minister proposes; it starts only when the government approves it.
   operation: z
     .object({
@@ -83,7 +80,6 @@ export function addAdvice(state: GameState, advisor: AdvisorId, question: string
     text: reply.answer,
     date: state.date,
     turn: state.turn,
-    ...(reply.orders.length ? { orders: reply.orders } : {}),
     ...(reply.operation ? { operation: reply.operation } : {}),
   };
   next.advice = { ...next.advice, [advisor]: [...thread, asked, answered].slice(-MAX_ADVICE) };

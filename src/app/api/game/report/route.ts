@@ -14,9 +14,10 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 /**
- * One minister's report on a turn already played (engine/reports.ts). The
- * client asks for each report once the turn is applied, in the background,
- * and applies the checked report with the engine.
+ * One minister's view of a turn already played (engine/reports.ts). The
+ * client asks for each view once the turn is applied, in the background (a
+ * quiet minister's only when the player asks), and applies the checked view
+ * with the engine.
  */
 export async function POST(request: Request) {
   const rejected = rejectNonLocal(request);

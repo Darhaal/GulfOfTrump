@@ -1,6 +1,6 @@
 # Gulf of Trump
 
-![Version](https://img.shields.io/badge/version-1.0.3--beta-blue.svg) ![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Node](https://img.shields.io/badge/node-%E2%89%A522.12-339933.svg)
+![Version](https://img.shields.io/badge/version-1.0.4--beta-blue.svg) ![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Node](https://img.shields.io/badge/node-%E2%89%A522.12-339933.svg)
 
 An alternate-history grand strategy game where a language model is the game
 master. Pick a turning point of the 20th or 21st century, pick any country,

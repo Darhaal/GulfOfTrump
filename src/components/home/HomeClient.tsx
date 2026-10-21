@@ -495,7 +495,9 @@ export default function HomeClient() {
         <footer className="mt-16 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-6 text-xs font-medium text-muted">
           <span>
             {APP_NAME} {t("app.stage")} {APP_VERSION} · MIT ·{" "}
-            <Link href="/about" className="font-bold text-ink hover:text-accent">
+            <Link href="/about" className="inline-flex items-center gap-2 align-middle font-bold text-ink hover:text-accent">
+              {/* eslint-disable-next-line @next/next/no-img-element -- a small static portrait */}
+              <img src="/about/artem-okhten-oil.webp" alt="" width={24} height={30} className="h-[30px] w-6 rounded-md border border-line object-cover" />
               {t("home.madeBy", { name: ABOUT[locale].authorName })}
             </Link>
           </span>

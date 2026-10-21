@@ -6,7 +6,7 @@ import type { CountryState, GameState, Gender, Locale, Official, Person, Rulers 
  * The people of the game as people: who a leader line names, their sex and
  * their portrait. A name the portrait data knows (scripts/portraits/
  * people.json, in English, Russian and Ukrainian) gets that person's
- * portrait; anyone else gets the shadow of their sex. Anyone can lead: a
+ * portrait; anyone else gets a shadow of their sex and era. Anyone can lead: a
  * leader line the game master writes is read again, and a minister named to
  * the top post takes their own portrait with them.
  */
@@ -114,7 +114,7 @@ export function guessGender(name: string, year: number): Gender {
 
 const TITLE_WORDS = new Set(
   `president pm premier prime minister king queen emperor kaiser tsar sultan shah emir chancellor chairman general secretary first party leader supreme paramount field marshal generalissimo führer duce caudillo regent prince crown chief of state the high representative transitional vice-president acting head commander army sir mullah
-  президент премьер-министр премьер прем'єр-міністр прем'єр король королева император імператор кайзер царь цар султан шах канцлер канцлерка председатель голова генерал генеральный генеральний секретарь секретар первый перший лидер лідер партии партії верховный верховний руководитель керівник маршал фюрер дуче регент принц министр міністр глава государства держави временный тимчасовий командующий командувач сэр сер фельдмаршал и.о. в.о.`
+  президент президентка премьер-министр премьер прем'єр-міністр прем'єр прем'єрка премьерша председательница головуюча король королева император імператор кайзер царь цар султан шах канцлер канцлерка председатель голова генерал генеральный генеральний секретарь секретар первый перший лидер лідер партии партії верховный верховний руководитель керівник маршал фюрер дуче регент принц министр міністр глава государства держави временный тимчасовий командующий командувач сэр сер фельдмаршал и.о. в.о.`
     .split(/\s+/)
     .filter(Boolean),
 );
@@ -133,7 +133,7 @@ const NOBODY = new Set(["directed from Hanoi", "Georges Bidault's government fel
 
 const asPerson = (k: KnownPerson): Person => ({ id: k.id, name: k.name.en, gender: k.gender, ...(k.portrait ? { portrait: k.id } : {}) });
 
-/** Someone by name: the known person if the data has them, otherwise a new one with the shadow of their sex. */
+/** Someone by name: the known person if the data has them, otherwise a new one, shown as a shadow of their sex. */
 export function personFor(name: string, year: number, gender?: Gender): Person {
   const known = findKnown(name);
   if (known) return asPerson(known);
@@ -234,27 +234,34 @@ export function samePerson(a: string, b: string): boolean {
 }
 
 /**
- * Who leads a country now, as a person. For the player's government the
- * cabinet's head of state, or its head of government under a reigning king;
- * for anyone else the one the leader line puts in charge.
+ * Who leads a country now, as a person: the one its leader line puts in
+ * charge — the ruler, not a ceremonial head of state (Kim Il-sung, not the
+ * Presidium's chairman; Stalin, not Kalinin). The line is rebuilt from the
+ * cabinet when power changes hands, so it stays the record. For the player's
+ * government the cabinet's entry for that person adds the title and portrait;
+ * the cabinet's own head is used only when the line names nobody.
  */
 export function leaderOf(state: Pick<GameState, "countries" | "player" | "officials" | "date">, tag: string): (Person & { title?: string }) | undefined {
   const rulers = state.countries[tag]?.rulers;
-  if (tag === state.player && state.officials?.length) {
-    const head = state.officials.find((o) => o.post === "head");
-    const government = state.officials.find((o) => o.post === "government");
-    // A king "who reigns but does not rule": the head of government, or, with none named, whom the leader line puts in charge.
-    const crowned = head && (MONARCH.test(head.title) || MONARCH.test(head.name));
-    const lead = rulers?.people[rulers.lead];
-    if (crowned && !government && lead && !samePerson(lead.name, head.name)) return lead;
-    const chosen = crowned && government ? government : (head ?? government);
-    if (chosen) {
-      const dressed = dressOfficial(chosen, yearOf(state.date));
-      const known = findKnown(dressed.name);
-      return { id: known?.id ?? `${NEW_PERSON}${nameTokens(dressed.name).join("-")}`, name: dressed.name, gender: dressed.gender ?? "male", ...(dressed.portrait ? { portrait: dressed.portrait } : {}), title: dressed.title };
-    }
+  const lead = rulers?.people[rulers.lead];
+  if (tag !== state.player || !state.officials?.length) return lead;
+  const year = yearOf(state.date);
+  const dress = (o: Official) => {
+    const dressed = dressOfficial(o, year);
+    const known = findKnown(dressed.name);
+    return { id: known?.id ?? lead?.id ?? `${NEW_PERSON}${nameTokens(dressed.name).join("-")}`, name: dressed.name, gender: dressed.gender ?? lead?.gender ?? "male", ...(dressed.portrait ? { portrait: dressed.portrait } : lead?.portrait ? { portrait: lead.portrait } : {}), title: dressed.title };
+  };
+  if (lead) {
+    // The line may keep a title the name reader does not know ("Президентка …"): its end is the cabinet's name.
+    const same = state.officials.find((o) => samePerson(o.name, lead.name) || lead.name.endsWith(` ${o.name}`));
+    return same ? dress(same) : lead;
   }
-  return rulers?.people[rulers.lead];
+  // A line naming nobody: the cabinet's head of government under a reigning king, else its head of state.
+  const head = state.officials.find((o) => o.post === "head");
+  const government = state.officials.find((o) => o.post === "government");
+  const crowned = head && (MONARCH.test(head.title) || MONARCH.test(head.name));
+  const chosen = crowned && government ? government : (head ?? government);
+  return chosen ? dress(chosen) : undefined;
 }
 
 /** A person's name in the interface language, when the data knows it. */
@@ -263,7 +270,38 @@ export function personName(p: Pick<Person, "id" | "name">, locale: Locale): stri
   return known ? (known.name[locale] ?? known.name.en) : p.name;
 }
 
-/** The picture to show: the person's portrait, or the shadow of their sex. */
-export function portraitSrc(p: { portrait?: string; gender?: Gender }): string {
-  return p.portrait ? `/portraits/${p.portrait}.webp` : `/portraits/_shadow-${p.gender ?? "male"}.webp`;
+/** The eras the shadows dress for. */
+export type ShadowEra = 1910 | 1940 | 1960 | 1990 | 2020;
+
+/**
+ * How many shadows each era has, by sex: public/portraits/_shadow-<era>-<sex>-<n>.webp,
+ * drawn by scripts/portraits/shadows.mjs (SHADOW_ERAS) and painted by npm run portraits.
+ */
+export const SHADOW_LOOKS: Record<ShadowEra, Record<Gender, number>> = {
+  1910: { male: 6, female: 3 },
+  1940: { male: 6, female: 3 },
+  1960: { male: 6, female: 3 },
+  1990: { male: 6, female: 3 },
+  2020: { male: 6, female: 4 },
+};
+
+/** The era a year's people dress for: 1914; the forties; the fifties to seventies; the nineties; today. */
+export function shadowEra(year: number): ShadowEra {
+  if (year < 1930) return 1910;
+  if (year < 1950) return 1940;
+  if (year < 1980) return 1960;
+  if (year < 2005) return 1990;
+  return 2020;
+}
+
+/**
+ * The picture to show: the person's portrait, or a shadow of their sex and
+ * of the year's era, the same one for a name every time it is drawn.
+ */
+export function portraitSrc(p: { portrait?: string; gender?: Gender; name?: string; year?: number }): string {
+  if (p.portrait) return `/portraits/${p.portrait}.webp`;
+  const era = shadowEra(p.year ?? 2022);
+  const sex = p.gender ?? "male";
+  const look = Math.floor(fixed(`look:${nameTokens(p.name ?? "").join(" ")}`) * SHADOW_LOOKS[era][sex]);
+  return `/portraits/_shadow-${era}-${sex}-${look}.webp`;
 }

@@ -8,6 +8,7 @@ import { isDemo } from "@/constants/app";
 import { usePreference } from "@/lib/preferences";
 import AiStatusChip from "./AiStatusChip";
 import QuitButton from "./QuitButton";
+import UpdateToast from "./UpdateToast";
 import { ui } from "./ui/classes";
 
 interface AppHeaderProps {
@@ -43,6 +44,7 @@ export default function AppHeader({ title, subtitle, back, actions }: AppHeaderP
         </Link>
         <QuitButton />
       </div>
+      <UpdateToast />
       {isDemo() && (
         <div className="border-t border-line bg-accent/10 px-4 py-1.5 text-center text-2xs font-bold text-ink">
           {t("demo.banner")}{" "}

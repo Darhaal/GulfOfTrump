@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { leaderOf } from "./people";
 import { loyaltyOf } from "./politics";
 import type { AppliedChange, CountryState, Defeat, GameState, Protest } from "./types";
 import { PROTEST_STAGES } from "./types";
@@ -169,9 +170,21 @@ export function applyOverthrow(
     applied.push({ kind: "plot", title: overthrow.by, change: "foiled" });
     return;
   }
-  const defeat: Defeat = { date: ctx.to, turn: ctx.turn, how: overthrow.how, by: overthrow.by, note: overthrow.note };
-  next.defeat = defeat;
   const player: CountryState = next.countries[next.player];
+  // A player in opposition is not the government: its fall changes who governs, and the player stays where they are (engine/role.ts).
+  if (next.role?.kind === "opposition") {
+    if (overthrow.leader) player.leader = overthrow.leader;
+    if (overthrow.government) player.government = overthrow.government;
+    next.protests = (next.protests ?? []).filter((p) => p.country);
+    if (next.politics) next.politics = { ...next.politics, plots: [] };
+    applied.push({ kind: "overthrown", how: overthrow.how, by: overthrow.by });
+    return;
+  }
+  // The leader who falls, kept for the player's choice: to play on with the country, or with them in opposition.
+  const fallen = leaderOf(next, next.player);
+  const party = next.politics?.parties.find((p) => p.status === "ruling")?.name;
+  const defeat: Defeat = { date: ctx.to, turn: ctx.turn, how: overthrow.how, by: overthrow.by, note: overthrow.note, ...(fallen ? { fallen } : {}), ...(party ? { party } : {}) };
+  next.defeat = defeat;
   if (overthrow.leader) player.leader = overthrow.leader;
   if (overthrow.government) player.government = overthrow.government;
   // The old regime's street and plotters have had their day.

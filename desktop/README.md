@@ -25,9 +25,22 @@ and quitting — and only the game's own page.
 The server's log is in `%APPDATA%\Gulf of Trump\logs\server.log`; attach it to
 a bug report.
 
-Updates come from the public repository's releases (`electron-updater`). When
-one has downloaded, the app offers to restart. The Microsoft Store copy is
-updated by the Store instead ([docs/store.md](../docs/store.md)).
+The loading screen is `splash.html`: the emblem, quotes of the game's eras
+(`public/quotes.json`, with the speakers' portraits from `public/portraits`)
+and a bar that follows the start — checking the port, starting the server,
+waiting for it to answer, opening the game. The wait is paced by how long
+the last one took (`%APPDATA%\Gulf of Trump\startup.json`); the sums are in
+`splash-logic.cjs`, and `quotes-seen.json` keeps quotes from repeating until
+all have been shown.
+
+Updates come from the public repository's releases (`electron-updater`). The
+app checks at start and every four hours, and the page sees each step through
+`preload.cjs`: a toast with the download's percent, then "ready — restart now
+or later" (later installs on quit); Settings → Version and updates has a
+check button. The first start of a new version tells the page which version it
+came from (`version.json`). Each step is logged to `logs\updater.log`. The
+Microsoft Store copy is updated by the Store instead
+([docs/store.md](../docs/store.md)).
 
 ## The installer
 

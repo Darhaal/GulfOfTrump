@@ -99,11 +99,22 @@ const LEADING: OfficialPost[] = ["head", "government"];
  * After a change at the top, the player's leader line is the cabinet's:
  * "President X; Prime Minister Y", read again into people.
  */
-function retitlePlayer(state: GameState): GameState {
+function retitlePlayer(state: GameState, replaced?: { post: OfficialPost; name: string }): GameState {
   const top = LEADING.flatMap((post) => state.officials?.filter((o) => o.post === post) ?? []);
   const player = state.countries[state.player];
   if (!top.length || !player) return state;
-  const line = top.map((o) => `${o.title} ${o.name}`).join("; ");
+  // The ruler goes first: whoever led before, if still at the top, or whoever now holds the post they held —
+  // a president named in the president's place leads; a new ceremonial head under a ruling premier does not.
+  const lead = player.rulers?.people[player.rulers.lead];
+  let ruling: Official | undefined;
+  if (lead) {
+    ruling = top.find((o) => samePerson(o.name, lead.name));
+    if (!ruling && replaced && samePerson(replaced.name, lead.name)) ruling = top.find((o) => o.post === replaced.post);
+    // The ruler holds neither top post (a premier over a Presidium's chairman the cabinet calls head): the line stays.
+    if (!ruling) return state;
+  }
+  const ordered = ruling ? [ruling, ...top.filter((o) => o !== ruling)] : top;
+  const line = ordered.map((o) => `${o.title} ${o.name}`).join("; ");
   if (player.leader === line) return state;
   const next = { ...state, countries: { ...state.countries, [state.player]: { ...player, leader: line } } };
   syncRulers(next);
@@ -175,7 +186,7 @@ export function appoint(state: GameState, post: OfficialPost, person: Omit<Offic
     personnel: [...(state.personnel ?? []), { date: state.date, post, title, ...(before ? { from: before.name } : {}), to: next.name, ...(note ? { note } : {}) }],
     updatedAt: now.toISOString(),
   };
-  return LEADING.includes(post) ? retitlePlayer(appointed) : appointed;
+  return LEADING.includes(post) ? retitlePlayer(appointed, before ? { post, name: before.name } : undefined) : appointed;
 }
 
 /** A turn's changes to the government: someone leaves a post, someone takes it. */
@@ -202,7 +213,7 @@ export function applyOfficials(next: GameState, changes: z.infer<typeof official
       next.officials = seat(next.officials, seated.taken);
       if (seated.deputies) next.deputies = seated.deputies;
       applied.push({ kind: "official", post: c.post, title: taken.title, name: c.name, change: "appointed" });
-      if (LEADING.includes(c.post)) Object.assign(next, { countries: retitlePlayer(next).countries });
+      if (LEADING.includes(c.post)) Object.assign(next, { countries: retitlePlayer(next, before ? { post: c.post, name: before.name } : undefined).countries });
     } else if (before && before.name === c.name) {
       // The post stays empty until someone is named; the cabinet falls back to a deputy.
       next.officials = (next.officials ?? []).filter((o) => o.post !== c.post);

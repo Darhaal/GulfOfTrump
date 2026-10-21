@@ -27,7 +27,7 @@ import { arrowPath, countryLabels, insideRings, pathRings, splitByTowns, splitPr
 const W = 1000;
 const H = 540;
 const MIN_ZOOM = 1;
-const MAX_ZOOM = 24;
+const MAX_ZOOM = 64;
 /** Detail grows with zoom: from the whole world down, fronts appear first, then province borders. */
 const FRONTS_FROM = 2;
 const PROVINCES_FROM = 2.6;

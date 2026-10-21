@@ -12,6 +12,7 @@ import { LOCALES, type Locale } from "@/engine/types";
 import { errorKey, useI18n } from "@/i18n/useI18n";
 import { ApiError, connectAi, disconnectAi, getModels } from "@/lib/api";
 import { useDesktopWindow } from "@/lib/desktop";
+import UpdatesSection from "./UpdatesSection";
 import { usePreference, type Theme } from "@/lib/preferences";
 import { displayName, isCloudEnabled, signInWithGoogle, signOut, useUser } from "@/lib/supabase";
 import { useGameMaster } from "@/lib/gameMaster";
@@ -261,6 +262,8 @@ export default function SettingsClient() {
             <p className="mt-2 text-xs font-medium text-muted">{t("settings.window.hint")}</p>
           </Section>
         )}
+
+        <UpdatesSection />
 
         <Section title={t("settings.about")}>
           <p className="text-sm font-medium leading-relaxed text-ink">{t("settings.aboutText")}</p>

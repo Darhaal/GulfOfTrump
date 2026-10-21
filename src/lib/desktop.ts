@@ -2,12 +2,22 @@
 
 import { useSyncExternalStore } from "react";
 
+import type { UpdateEvent, UpdateSnapshot } from "./updates";
+
 /** What the desktop app's window lets the game do (desktop/preload.cjs). */
 export interface DesktopWindow {
   isFullScreen(): Promise<boolean>;
   setFullScreen(on: boolean): Promise<boolean>;
   onFullScreen(listener: (on: boolean) => void): () => void;
   quit(): Promise<void>;
+  /** Missing in an app built before visible updates. */
+  updates?: {
+    get(): Promise<UpdateSnapshot | null>;
+    check(): Promise<UpdateSnapshot | null>;
+    restart(): Promise<void>;
+    seen(): Promise<void>;
+    onEvent(listener: (event: UpdateEvent) => void): () => void;
+  };
 }
 
 /** The desktop app's window, or nothing in a browser. */

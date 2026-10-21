@@ -94,10 +94,13 @@ export default function Tour({
   orders,
   onAddOrder,
   onClose,
+  opposition = false,
 }: {
   scenario: ScenarioId;
   country: string;
   orders: string[];
+  /** The player leads the opposition: no cabinet, acts of state or letters to show (engine/role.ts). */
+  opposition?: boolean;
   onAddOrder: (order: string) => void;
   onClose: () => void;
 }) {
@@ -105,8 +108,9 @@ export default function Tour({
   const [step, setStep] = useState(0);
   const [box, setBox] = useState<Box | null>(null);
   const [card, setCard] = useState<HTMLDivElement | null>(null);
-  const current = STEPS[step];
-  const last = step === STEPS.length - 1;
+  const steps = opposition ? STEPS.filter((s) => s.id !== "cabinet" && s.id !== "state" && s.id !== "diplomacy") : STEPS;
+  const current = steps[step];
+  const last = step === steps.length - 1;
 
   // Follow the element as the layout settles and the window changes (a
   // timer rather than animation frames, which stop in a hidden tab).
@@ -159,7 +163,7 @@ export default function Tour({
         style={{ top: at.top, left: at.left, width: `min(${CARD}px, calc(100vw - ${2 * GAP}px))`, opacity: ready ? 1 : 0 }}
       >
         <div className="mb-1 flex items-center justify-between gap-2">
-          <span className={ui.label}>{t("tour.step", { n: step + 1, total: STEPS.length })}</span>
+          <span className={ui.label}>{t("tour.step", { n: step + 1, total: steps.length })}</span>
           <button type="button" onClick={finish} title={t("tour.skip")} aria-label={t("tour.skip")} className="-m-1 rounded-lg p-1 text-muted hover:bg-page hover:text-ink">
             <X className="h-4 w-4" />
           </button>

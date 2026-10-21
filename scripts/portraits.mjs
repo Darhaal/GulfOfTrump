@@ -4,15 +4,20 @@
  *   npm run portraits              all people in scripts/portraits/people.json
  *   npm run portraits -- molotov   only these ids (and the shadows)
  *   npm run portraits -- --index   only the engine's index, after editing names in people.json
+ *   npm run portraits -- --author  the developer's own photograph (public/about), for the about page
+ *   npm run portraits -- --shadows only the shadows
  *
  * For each person with a Wikidata id it reads the picture (P18) and sex
  * (P21), keeps the picture only if Commons gives it a free licence (public
- * domain, CC0, CC BY, CC BY-SA, OGL — never NC, ND or GFDL alone), downloads
+ * domain, CC0, CC BY, CC BY-SA, OGL, GODL-India, KOGL Type 1, FAL, the European
+ * Parliament's, or "no known restrictions"
+ * — never NC, ND or GFDL alone), downloads
  * it into scripts/.cache/portraits, crops head and shoulders 4:5 (a `crop`
- * in people.json overrides the guess), paints it and writes
- * public/portraits/<id>.webp. People without a usable picture get the
- * shadow of their sex, painted from Wikimedia's public-domain placeholder
- * busts. It also writes public/portraits/credits.json (who made each source
+ * in people.json overrides the guess; `group` marks a cut from a group photo), paints it and writes
+ * public/portraits/<id>.webp. People without a usable picture get a shadow:
+ * a dark bust of their era and sex drawn for the game (scripts/portraits/
+ * shadows.mjs), several to each, so strangers do not share one face. It also
+ * writes public/portraits/credits.json (who made each source
  * picture, its licence, what was changed) and src/engine/people.data.ts, the
  * index the engine matches names against.
  *
@@ -24,6 +29,7 @@
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { SHADOW_ERAS, shadowSvg } from "./portraits/shadows.mjs";
 
 let sharp;
 try {
@@ -44,12 +50,6 @@ const W = 480;
 const H = 600;
 const OUT_W = 256;
 const OUT_H = 320;
-
-/** The placeholder busts the shadows are painted from (Wikimedia Commons, public domain). */
-const SHADOWS = {
-  male: "File:Black - replace this image male.svg",
-  female: "File:Black - replace this image female.svg",
-};
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -137,7 +137,7 @@ async function commons(titles) {
   return out;
 }
 
-/** Free enough to paint and publish: public domain, CC0, CC BY, CC BY-SA, OGL. */
+/** Free enough to paint and publish: public domain, CC0, CC BY, CC BY-SA, OGL, GODL-India, KOGL Type 1, FAL, the European Parliament's, no known restrictions. */
 export function freeLicence({ licence, code }) {
   const s = `${licence} ${code}`.toLowerCase();
   if (/\bnc\b|-nc|noncommercial|\bnd\b|-nd|noderiv|fair use|non-free/.test(s)) return null;
@@ -145,6 +145,16 @@ export function freeLicence({ licence, code }) {
   if (/cc[ -]by[ -]sa|cc-by-sa|share ?alike/.test(s)) return "CC BY-SA";
   if (/cc[ -]by\b|cc-by-\d|attribution/.test(s)) return "CC BY";
   if (/\bogl\b|open government licence/.test(s)) return "OGL";
+  // India's Government Open Data Licence: free to use and adapt, with the source named.
+  if (/godl|government open data licen[cs]e/.test(s)) return "GODL-India";
+  // Korea's open government licence, type 1 only: types 2-4 bar commercial use or changes.
+  if (/kogl type 1|korea open government licen[cs]e type 1/.test(s)) return "KOGL Type 1";
+  // The Free Art License: free to use and change, the result under the same licence.
+  if (/\bfal\b|free art licen[cs]e|licence art libre/.test(s)) return "FAL";
+  // The European Parliament's photographs: free to reuse with the source named.
+  if (/european parliament/.test(s)) return "European Parliament";
+  // Flickr Commons and archives that know of no copyright on the picture.
+  if (/no (known )?(copyright )?restrictions/.test(s)) return "no known restrictions";
   return null;
 }
 
@@ -295,8 +305,8 @@ function faceMask(cx, cy, rx = 0.2, ry = 0.19, soft = 0.9) {
   return m;
 }
 
-/** Paints a grey picture (W×H, 0–1) in oil; returns the webp. */
-async function paint(g, face) {
+/** Paints a grey picture (W×H, 0–1) in oil; returns the webp, at the portraits' size unless told otherwise. */
+async function paint(g, face, size = { width: OUT_W, height: OUT_H, quality: 68 }) {
   const lum = kuwahara(g, 3);
   const brush = strokes(7, 0.4, 6, 0.025);
   const rgb = Buffer.alloc(W * H * 3);
@@ -325,7 +335,7 @@ async function paint(g, face) {
       }
     }
   }
-  return sharp(out, raw).sharpen({ sigma: 1.2 }).resize(OUT_W, OUT_H, { kernel: "lanczos3" }).webp({ quality: 68, effort: 6 }).toBuffer();
+  return sharp(out, raw).sharpen({ sigma: 1.2 }).resize(size.width, size.height, { kernel: "lanczos3" }).webp({ quality: size.quality ?? 68, effort: 6 }).toBuffer();
 }
 
 /**
@@ -372,18 +382,10 @@ async function blurGrey(grey, sigma) {
   return Float32Array.from(out, (v) => v / 255);
 }
 
-/** A placeholder bust as a dark figure against a lit wall, its edge caught by the light. */
-async function shadowGrey(buf) {
-  const bw = Math.round(W * 0.92);
-  const img = sharp(buf).ensureAlpha();
-  const meta = await img.metadata();
-  const bh = Math.round((bw * meta.height) / meta.width);
-  const alpha = await sharp(buf).ensureAlpha().resize(bw, bh).extractChannel("alpha").raw().toBuffer();
-  let m = new Float32Array(W * H);
-  const ox = Math.round((W - bw) / 2);
-  const oy = H - bh;
-  for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) if (y + oy >= 0) m[(y + oy) * W + x + ox] = alpha[y * bw + x] / 255;
-  m = await blurGrey(m, 1.5);
+/** A drawn bust (an SVG of the W×H canvas) as a dark figure against a lit wall, its edge caught by the light. */
+async function shadowGrey(svg) {
+  const alpha = await sharp(Buffer.from(svg)).ensureAlpha().extractChannel("alpha").raw().toBuffer();
+  const m = await blurGrey(Float32Array.from(alpha, (v) => v / 255), 1.2);
   const g = new Float32Array(W * H);
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
@@ -398,15 +400,43 @@ async function shadowGrey(buf) {
     }
   }
   const soft = await blurGrey(g, 1);
-  const face = faceMask(0.5, 0.36, 0.22, 0.22);
+  const face = faceMask(0.5, 0.3, 0.24, 0.24);
   for (let i = 0; i < face.length; i++) face[i] *= 1 - m[i];
   return { g: soft, face };
+}
+
+/** Every era's shadows: public/portraits/_shadow-<era>-<sex>-<n>.webp. */
+async function paintShadows() {
+  let n = 0;
+  for (const [era, sexes] of Object.entries(SHADOW_ERAS)) {
+    for (const [sex, looks] of Object.entries(sexes)) {
+      for (const [i, body] of looks.entries()) {
+        const { g, face } = await shadowGrey(shadowSvg(body, W, H, n + 3));
+        writeFileSync(path.join(OUT, `_shadow-${era}-${sex}-${i}.webp`), await paint(g, face));
+        n++;
+      }
+    }
+  }
+  console.log(`shadows: ${n}`);
 }
 
 // --- the run ---
 
 async function main() {
   const args = process.argv.slice(2);
+  if (args.includes("--author")) {
+    // The developer, painted like the game's people: the about page, the app's loading screen, the site's footer.
+    const source = path.join(ROOT, "public/about/artem-okhten.webp");
+    const g = await greyFrom(readFileSync(source), [0.1, 0, 0.8]);
+    writeFileSync(path.join(ROOT, "public/about/artem-okhten-oil.webp"), await paint(g, faceMask(0.5, 0.46, 0.24, 0.22), { width: 384, height: 480, quality: 74 }));
+    console.log("painted public/about/artem-okhten-oil.webp");
+    return;
+  }
+  if (args.includes("--shadows")) {
+    mkdirSync(OUT, { recursive: true });
+    await paintShadows();
+    return;
+  }
   const people = JSON.parse(readFileSync(PEOPLE, "utf8"));
   if (args.includes("--index")) {
     // Only the engine's index and the credits, from people.json and what is painted: after an edit to names or aliases.
@@ -421,19 +451,12 @@ async function main() {
   const creditsFile = path.join(OUT, "credits.json");
   const credits = existsSync(creditsFile) ? JSON.parse(readFileSync(creditsFile, "utf8")) : {};
 
-  // The two shadows, always.
-  const shadowInfo = await commons(Object.values(SHADOWS));
-  for (const [gender, title] of Object.entries(SHADOWS)) {
-    const info = shadowInfo.get(title);
-    const buf = await fetchFile(info.url, path.join(CACHE, `_shadow-${gender}.png`));
-    const { g, face } = await shadowGrey(buf);
-    writeFileSync(path.join(OUT, `_shadow-${gender}.webp`), await paint(g, face));
-    credits[`_shadow-${gender}`] = { name: `Shadow (${gender})`, source: info.page, file: info.file, author: info.author, licence: freeLicence(info) ?? info.licence, licenceUrl: info.licenceUrl, changes: "placed against a lit wall and painted in oil" };
-  }
+  // The shadows, always: drawn here, so they have no source to credit.
+  await paintShadows();
 
   const todo = people.filter((p) => p.qid && (!only.size || only.has(p.id)));
   const wd = await wikidata(todo.map((p) => p.qid));
-  const files = [...new Set(todo.map((p) => wd.get(p.qid)?.image ?? p.image).filter(Boolean).map((f) => `File:${f}`))];
+  const files = [...new Set(todo.map((p) => p.photo ?? wd.get(p.qid)?.image ?? p.image).filter(Boolean).map((f) => `File:${f}`))];
   const info = await commons(files);
 
   let painted = 0;
@@ -441,8 +464,8 @@ async function main() {
   for (const p of todo) {
     const fromWd = wd.get(p.qid) ?? {};
     if (!p.gender && fromWd.gender) p.gender = fromWd.gender;
-    // Wikidata's picture now, or the one people.json noted when the person was added.
-    const image = fromWd.image ?? p.image;
+    // A picture chosen by hand (photo: the right year, say), else Wikidata's now, else the one noted when the person was added.
+    const image = p.photo ?? fromWd.image ?? p.image;
     const meta = image ? info.get(`File:${image}`) : undefined;
     const licence = meta ? freeLicence(meta) : null;
     const target = path.join(OUT, `${p.id}.webp`);
@@ -467,7 +490,8 @@ async function main() {
         licence,
         licenceName: meta.licence,
         licenceUrl: meta.licenceUrl,
-        changes: "cropped to head and shoulders, toned and painted in oil",
+        // group: the only free picture shows others too; the portrait is cut to this person alone.
+        changes: p.group ? "cut from a group photograph to this person's head and shoulders, toned and painted in oil" : "cropped to head and shoulders, toned and painted in oil",
       };
       p.portrait = true;
       painted++;
@@ -489,15 +513,16 @@ async function main() {
 /**
  * Credits and files kept in step: someone renamed or dropped from people.json,
  * or marked noPortrait, loses their file and credit, and a file nobody credits
- * goes. Returns the credits, sorted.
+ * goes, unless it is one of today's shadows. Returns the credits, sorted.
  */
 function prune(credits, people) {
   const keep = new Set(people.filter((p) => !p.noPortrait).map((p) => p.id));
   const out = {};
   for (const [id, c] of Object.entries(credits).sort(([a], [b]) => a.localeCompare(b))) {
-    if ((id.startsWith("_shadow-") || keep.has(id)) && existsSync(path.join(OUT, `${id}.webp`))) out[id] = c;
+    if (keep.has(id) && existsSync(path.join(OUT, `${id}.webp`))) out[id] = c;
   }
-  for (const file of readdirSync(OUT).filter((f) => f.endsWith(".webp"))) if (!out[file.slice(0, -5)]) unlinkSync(path.join(OUT, file));
+  const shadows = new Set(Object.entries(SHADOW_ERAS).flatMap(([era, sexes]) => Object.entries(sexes).flatMap(([sex, looks]) => looks.map((_, i) => `_shadow-${era}-${sex}-${i}`))));
+  for (const file of readdirSync(OUT).filter((f) => f.endsWith(".webp"))) if (!out[file.slice(0, -5)] && !shadows.has(file.slice(0, -5))) unlinkSync(path.join(OUT, file));
   return out;
 }
 

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { yearOf } from "./calendar";
 import { nationalAccounts, STEP_YEARS } from "./economy";
+import { armsEfficiency, techYear } from "./researchEffects";
 import type { ResourceType } from "./resources";
 import { WEAPON_KINDS, type AppliedChange, type Arsenal, type ArmsStock, type GameState, type MapRegion, type ScenarioId, type WeaponKind } from "./types";
 
@@ -40,22 +41,17 @@ export function baseLevel(kind: WeaponKind, year: number): number {
   return LEVEL_YEARS[kind].filter((y) => y <= year).length;
 }
 
-/** The highest level of a kind the player's research has brought ("gen:tanks:3"). */
-export function researchedLevel(state: Pick<GameState, "research">, kind: WeaponKind): number {
-  let level = 0;
-  for (const d of state.research?.done ?? []) {
-    const [prefix, k, n] = d.id.split(":");
-    if (prefix === "gen" && k === kind) level = Math.max(level, Number(n) || 0);
-  }
-  return level;
-}
-
-/** The level a country builds a kind at in a year: history's, a level less for a poor army, the player's research ahead of it. */
-export function buildLevel(state: Pick<GameState, "player" | "research">, tag: string, kind: WeaponKind, year: number, rich = true): number {
-  const base = baseLevel(kind, year);
-  const own = tag === state.player ? researchedLevel(state, kind) : 0;
-  if (own > base) return own;
-  return base === 0 ? 0 : Math.max(1, base - (rich ? 0 : 1));
+/**
+ * The level a country builds a kind at in a year: history's, a level less
+ * for a poor army. The player builds at the year its military research has
+ * reached instead — ahead of history, or behind it when neglected — and a
+ * lead in research is not lost to a poor army's penalty.
+ */
+export function buildLevel(state: Pick<GameState, "player" | "research" | "date">, tag: string, kind: WeaponKind, year: number, rich = true): number {
+  const own = tag === state.player && state.research?.tech ? Math.floor(techYear(state, "military")) : year;
+  const base = baseLevel(kind, own);
+  if (base === 0) return 0;
+  return own > year ? base : Math.max(1, base - (rich ? 0 : 1));
 }
 
 /** What a unit costs, millions of dollars of the day, with its upkeep and ammunition; rifles per thousand. Straight lines between the years. */
@@ -396,10 +392,10 @@ export const armsField = z
       .default([]),
     // The kinds a directive or order told the player's industry to build first.
     focus: z.array(z.enum(WEAPON_KINDS)).max(2).optional().catch(undefined),
-    // Research projects a directive or order started or stopped.
+    // Shifts of the research money a directive or order made: a direction and percentage points (engine/research.ts bounds them).
     research: z
-      .array(z.object({ project: z.string().trim().min(1).max(60), action: z.enum(["start", "stop"]).catch("start") }))
-      .max(3)
+      .array(z.object({ direction: z.string().trim().min(1).max(30), shift: z.number() }))
+      .max(2)
       .catch([])
       .default([]),
   })
@@ -444,14 +440,16 @@ export function production(
   state: Pick<GameState, "countries" | "player" | "research" | "date" | "politics" | "wars">,
   tag: string,
   years: number,
-  options: { shortages?: ResourceType[]; coastal?: boolean; researchSpend?: number; rich?: boolean } = {},
+  options: { shortages?: ResourceType[]; coastal?: boolean; rich?: boolean } = {},
 ): Partial<Record<WeaponKind, { n: number; level: number }>> {
   const c = state.countries[tag];
   const e = c?.economy;
   if (!e || !c.arsenal) return {};
   const year = yearOf(state.date);
   const atWar = enemiesOf(state).has(tag);
-  const yearly = Math.max(0, Math.min(e.budget.army * (atWar ? PROCUREMENT.war : PROCUREMENT.peace), e.gdp * MAX_ARMS_SHARE) - (options.researchSpend ?? 0));
+  const money = Math.min(e.budget.army * (atWar ? PROCUREMENT.war : PROCUREMENT.peace), e.gdp * MAX_ARMS_SHARE);
+  // The player's industrial research makes its factories more (or less) efficient than history's (engine/researchEffects.ts).
+  const yearly = tag === state.player ? money * armsEfficiency(state) : money;
   if (!yearly) return {};
   // A planned economy pays its factories in its own money: weapons cost it less in dollars.
   const planned = tag === state.player ? state.politics?.laws?.economy === "planned" : c.domestic?.regime === "party";
@@ -511,9 +509,7 @@ function add(arsenal: Arsenal, kind: WeaponKind, n: number, level: number): void
  * Moves every country's weapons through one turn: new ones are built,
  * old ones retire, wars wear them down — by the game master's word where
  * it gave one, else by the engine's own rule — and captured ones change
- * hands. Countries without weapons get them first. `researchSpend` is the
- * player's military research this turn, $bn a year, taken from its arms
- * money. Mutates `next`.
+ * hands. Countries without weapons get them first. Mutates `next`.
  */
 export function advanceArsenals(
   next: GameState,
@@ -522,7 +518,6 @@ export function advanceArsenals(
   years: number,
   map: Record<string, MapRegion> | null,
   applied: AppliedChange[],
-  researchSpend = 0,
   deliveries: Delivery[] = [],
 ): void {
   const seeded = seedArsenals(next, map);
@@ -540,7 +535,6 @@ export function advanceArsenals(
     const made = production(next, tag, years, {
       shortages: accounts?.get(tag)?.shortages,
       coastal: coast ? coast.has(tag) : undefined,
-      researchSpend: tag === next.player ? researchSpend : 0,
       rich: wealth(tag) >= 0.6,
     });
     const expected = before.countries[tag]?.arsenal ? expectedLosses(before, tag, years) : {};
@@ -654,7 +648,7 @@ export function setFocus<T extends Pick<GameState, "countries" | "player" | "res
   return { ...state, countries: { ...state.countries, [state.player]: { ...country, arsenal } }, updatedAt: now.toISOString() };
 }
 
-/** What the player's army buys a year now, $bn, before research takes its share. */
+/** What the player's army spends on new weapons a year now, $bn. */
 export function procurement(state: Pick<GameState, "countries" | "player" | "wars">): { yearly: number; atWar: boolean } {
   const e = state.countries[state.player]?.economy;
   const atWar = enemiesOf(state).has(state.player);

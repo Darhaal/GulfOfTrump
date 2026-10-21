@@ -6,7 +6,6 @@ import ChatScroll from "@/components/ui/ChatScroll";
 import { ui } from "@/components/ui/classes";
 import Dictation from "@/components/voice/Dictation";
 import SpeakButton from "@/components/voice/SpeakButton";
-import { MAX_ORDERS } from "@/constants/app";
 import { ADVISOR_TITLES, ADVISORS, MAX_DIRECTIVES, OPERATION_MINISTRIES, type AdvisorId } from "@/engine/advisors";
 import { formatDate } from "@/engine/calendar";
 import { ADVISOR_POST, officialAt, type Candidate } from "@/engine/government";
@@ -14,7 +13,7 @@ import { agendaOf } from "@/engine/interests";
 import { reportsDue } from "@/engine/reports";
 import AppointmentDialog, { Pips, Traits } from "./AppointmentDialog";
 import LeaderCard from "./LeaderCard";
-import Portrait from "./Portrait";
+import Portrait, { ARCH } from "./Portrait";
 import MinistryPeople from "./MinistryPeople";
 import { OFFICIAL_POSTS, type Directive, type DirectiveStatus, type GameState, type MinisterStance, type Official, type OfficialPost, type Operation } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
@@ -47,7 +46,6 @@ interface CabinetPanelProps {
   onChange: (next: GameState) => void;
   disabled: boolean;
   onAsk: (advisor: AdvisorId, question: string, context?: string) => Promise<boolean>;
-  onAddOrder: (order: string) => void;
   onDirectives: (directives: Directive[]) => void;
   /** Ask the game master who the people of the government are. */
   onSetup: () => void;
@@ -57,11 +55,11 @@ interface CabinetPanelProps {
   prefill?: { advisor: AdvisorId; question: string };
   /** The ministers' reports on the last turn still being written, or failed. */
   reporting: Partial<Record<AdvisorId, ReportStatus>>;
-  /** Ask a minister again for a report on the last turn that has not come; missing when it cannot be asked now. */
+  /** Ask a minister for their view of the last turn: one that has not come, or a quiet one's; missing when it cannot be asked now. */
   onRequestReport?: (ministry: AdvisorId) => void;
 }
 
-/** A minister's report on the last turn while it is being written, or after it failed to come. */
+/** A minister's view of the last turn while it is being given, or after it failed to come. */
 export interface ReportStatus {
   turn: number;
   status: "writing" | "failed";
@@ -99,49 +97,21 @@ export function DirectiveList({ directives }: { directives: DirectiveStatus[] })
   );
 }
 
-/** Orders a minister suggests, each one click from the turn's orders. */
-function OrderSuggestions({ orders, draft, full, disabled, onAddOrder }: { orders: string[]; draft: string[]; full: boolean; disabled: boolean; onAddOrder: (order: string) => void }) {
-  const { t } = useI18n();
-  return (
-    <div className="mt-2.5 grid gap-1.5">
-      <div className="text-2xs font-black uppercase tracking-widest text-muted">{t("cabinet.suggested")}</div>
-      {orders.map((order) => {
-        const added = draft.includes(order);
-        return (
-          <div key={order} className="flex items-start gap-2 rounded-lg bg-page px-2.5 py-1.5">
-            <span className="min-w-0 flex-1 text-xs font-semibold text-ink">{order}</span>
-            <button
-              type="button"
-              disabled={added || full || disabled}
-              onClick={() => onAddOrder(order)}
-              title={added ? t("cabinet.added") : t("cabinet.addOrder")}
-              aria-label={added ? t("cabinet.added") : t("cabinet.addOrder")}
-              className="grid h-6 w-6 shrink-0 place-items-center rounded-md border border-line bg-surface text-muted transition-colors hover:text-accent disabled:opacity-60"
-            >
-              {added ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Plus className="h-3.5 w-3.5" />}
-            </button>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 type View = "talk" | "tasks" | "people";
 
 const SECRECY_TONE: Record<Operation["secrecy"], string> = { open: "bg-page text-muted", covert: "bg-amber-50 text-amber-700", deniable: "bg-red-50 text-red-700" };
 
 /**
- * The cabinet: five ministries. Talk to a minister (answers in character,
- * suggested orders one click away) and give the ministry standing
+ * The cabinet: five ministries. Talk to a minister (answers and advice in
+ * character; the orders stay the player's own) and give the ministry standing
  * directives. The general staff, the interior ministry and intelligence plan
  * special operations in the conversation — a coup or protests abroad,
  * sabotage, a raid — and the operation they draft starts once approved.
- * After every turn each minister with something to report writes it in
- * their own window, as it comes; each shows their interests and how they
- * took the last turn.
+ * After every turn the ministers with most to say give their view, a
+ * paragraph each, as it comes; a quiet one can be asked. Each shows their
+ * interests and how they took the last turn.
  */
-export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, onAddOrder, onDirectives, onSetup, onFind, onAppoint, prefill, reporting, onRequestReport, onSetupDeputies, onAskDeputy, onChange }: CabinetPanelProps) {
+export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, onDirectives, onSetup, onFind, onAppoint, prefill, reporting, onRequestReport, onSetupDeputies, onAskDeputy, onChange }: CabinetPanelProps) {
   const { t, text, locale } = useI18n();
   const [section, setSection] = useState<"ministers" | "people">("ministers");
   const [replacing, setReplacing] = useState<OfficialPost | null>(null);
@@ -153,7 +123,6 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
   const personOf = (id: AdvisorId) => officialAt(state, ADVISOR_POST[id]);
   const person = personOf(advisor);
   const title = person?.name ?? text(ADVISOR_TITLES[advisor]);
-  const full = state.draft.length >= MAX_ORDERS;
   const directives = state.directives ?? [];
   const mine = directives.filter((d) => d.ministry === advisor);
   const directivesFull = directives.length >= MAX_DIRECTIVES;
@@ -161,6 +130,8 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
   // The last turn's report this minister still owes, and the brief it will be written from.
   const last = state.chronicle.at(-1);
   const owed = last && reportsDue(last).includes(advisor) ? last.briefs?.find((b) => b.ministry === advisor) : undefined;
+  // A quiet minister of the last turn, who gives their view only when asked.
+  const quiet = last?.briefs?.find((b) => b.ministry === advisor && b.quiet && !(last.reports ?? []).some((r) => r.ministry === advisor));
   const writing = reporting[advisor]?.status === "writing" ? reporting[advisor] : undefined;
   const canPlan = OPERATION_MINISTRIES.includes(advisor);
 
@@ -209,7 +180,7 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
             return (
               <li key={post} className="grid gap-1.5 rounded-xl border border-line bg-surface p-3">
                 <div className="flex items-start gap-2">
-                  {o ? <Portrait portrait={o.portrait} gender={o.gender} name={o.name} size="sm" /> : <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted" />}
+                  {o ? <Portrait portrait={o.portrait} gender={o.gender} name={o.name} size="md" /> : <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted" />}
                   <div className="min-w-0 flex-1">
                     <div className="text-2xs font-black uppercase tracking-wider text-muted">{o?.title ?? t(`post.${post}` as MessageKey)}</div>
                     <div className="text-sm font-black text-ink">{o?.name ?? t("gov.vacant")}</div>
@@ -291,7 +262,7 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
         </button>
       )}
 
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-4 gap-2">
         {ADVISORS.map((id) => {
           const Icon = MINISTRY_ICONS[id];
           const on = id === advisor;
@@ -307,17 +278,17 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
               className="group flex min-w-0 flex-col items-center gap-1"
             >
               <span
-                className={`relative grid h-10 w-10 place-items-center rounded-full text-sm font-black text-white transition-all ${on ? "ring-2 ring-ink ring-offset-2 ring-offset-page" : "opacity-75 group-hover:opacity-100"}`}
+                className={`relative grid h-20 w-16 place-items-center ${ARCH} text-sm font-black text-white transition-all ${on ? "ring-2 ring-ink ring-offset-2 ring-offset-page" : "opacity-80 group-hover:opacity-100"}`}
                 style={{ background: avatarColor(p?.name ?? id) }}
               >
-                {p ? <Portrait portrait={p.portrait} gender={p.gender} name={p.name} size="avatar" /> : <Icon className="h-4.5 w-4.5" />}
+                {p ? <Portrait portrait={p.portrait} gender={p.gender} name={p.name} size="card" /> : <Icon className="h-5 w-5" />}
                 <span className="absolute -bottom-1 -right-1 grid h-4.5 w-4.5 place-items-center rounded-full border border-line bg-surface text-muted">
                   <Icon className="h-2.5 w-2.5" />
                 </span>
                 {count > 0 && <span className="absolute -top-1 -right-1 min-w-4 rounded-full bg-accent px-1 text-center text-[9px] font-black leading-4 text-on-ink">{count}</span>}
                 {reporting[id]?.status === "writing" && <span className="absolute -top-1 -left-1 h-3 w-3 animate-pulse rounded-full border-2 border-page bg-accent" aria-hidden />}
               </span>
-              <span className={`w-full truncate text-center text-[10px] font-bold ${on ? "text-ink" : "text-muted"}`}>{p ? surname(p.name) : t(`post.${ADVISOR_POST[id]}` as MessageKey)}</span>
+              <span className={`w-full truncate text-center text-2xs font-bold ${on ? "text-ink" : "text-muted"}`}>{p ? surname(p.name) : t(`post.${ADVISOR_POST[id]}` as MessageKey)}</span>
             </button>
           );
         })}
@@ -378,20 +349,39 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
           <DirectiveList directives={owed.directives} />
         </section>
       ) : (
-        report?.report && (
-          <section className="rounded-2xl bg-page p-3.5">
-            <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-              <span className={ui.label}>{t("cabinet.report", { date: formatDate(report.date, locale) })}</span>
-              <span className="flex items-center gap-2">
-                {report.report.stance && <StanceChip stance={report.report.stance} />}
-                <SpeakButton id={`cabinet-report-${advisor}-${report.date}`} text={report.report.text} className="-my-1" />
-              </span>
+        <>
+          {quiet && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line px-3.5 py-2.5">
+              {writing ? (
+                <p className="flex items-center gap-2 text-xs font-medium text-muted">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  {t("cabinet.report.writing", { title })}
+                </p>
+              ) : (
+                <>
+                  <p className="min-w-0 flex-1 text-xs font-medium text-muted">{t("cabinet.report.quiet")}</p>
+                  <button type="button" disabled={!onRequestReport} onClick={() => onRequestReport?.(advisor)} className={`${ui.secondary} shrink-0 px-3 py-1.5 text-2xs`}>
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    {t("cabinet.report.request")}
+                  </button>
+                </>
+              )}
             </div>
-            <p className="text-sm font-medium leading-relaxed text-ink">{report.report.text}</p>
-            <DirectiveList directives={report.report.directives} />
-            {report.report.orders && report.report.orders.length > 0 && <OrderSuggestions orders={report.report.orders} draft={state.draft} full={full} disabled={disabled} onAddOrder={onAddOrder} />}
-          </section>
-        )
+          )}
+          {report?.report && (
+            <section className="rounded-2xl bg-page p-3.5">
+              <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                <span className={ui.label}>{t("cabinet.report", { date: formatDate(report.date, locale) })}</span>
+                <span className="flex items-center gap-2">
+                  {report.report.stance && <StanceChip stance={report.report.stance} />}
+                  <SpeakButton id={`cabinet-report-${advisor}-${report.date}`} text={report.report.text} className="-my-1" />
+                </span>
+              </div>
+              <blockquote className="text-sm font-medium leading-relaxed text-ink">{t("report.quote", { text: report.report.text })}</blockquote>
+              <DirectiveList directives={report.report.directives} />
+            </section>
+          )}
+        </>
       )}
 
       <div className="grid grid-cols-3 gap-1 rounded-xl bg-page p-1">
@@ -437,7 +427,6 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
                   {m.from !== "player" && <SpeakButton id={`cabinet-${advisor}-${i}`} text={m.text} className="-my-1 ml-auto" />}
                 </div>
                 <p className="whitespace-pre-wrap break-words font-medium leading-relaxed">{m.text}</p>
-                {m.orders && m.orders.length > 0 && <OrderSuggestions orders={m.orders} draft={state.draft} full={full} disabled={disabled} onAddOrder={onAddOrder} />}
                 {m.operation && (
                   <div className="mt-2.5 rounded-xl border border-line bg-page p-2.5">
                     <div className="flex items-start justify-between gap-2">
@@ -527,7 +516,6 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
           onSetup={onSetupDeputies}
           onAsk={onAskDeputy}
           onChange={onChange}
-          renderOrders={(orders) => <OrderSuggestions orders={orders} draft={state.draft} full={full} disabled={disabled} onAddOrder={onAddOrder} />}
         />
       )}
 

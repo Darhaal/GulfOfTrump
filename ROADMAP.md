@@ -126,6 +126,14 @@ portraits, and on deputies who can plot against their chiefs.
    player plays can become the country's leader, and the game turns back
    into governing.
 
+**Phase 1 is in:** the leader or the opposition at the start; after a coup,
+a revolution or a lost election, the choice to stay with the country or go
+into opposition or underground; the movement's strength, the state's hand
+by the dice, and its rise to power by election, revolution, coup or a call
+into government; a panel of its own. Next: ministers and generals as roles,
+exile with a host government, resignation and death as falls, and the
+movement's own contacts abroad as letters.
+
 ## Later
 
 - **Fog of war, deeper.** Intelligence reports with their reliability,

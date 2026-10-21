@@ -189,7 +189,7 @@ export interface Person {
   id: string;
   name: string;
   gender: Gender;
-  /** Their portrait in public/portraits; without one, the shadow of their sex. */
+  /** Their portrait in public/portraits; without one, a shadow of their sex and era. */
   portrait?: string;
 }
 
@@ -325,7 +325,11 @@ export interface Arsenal {
   nuclear?: boolean;
 }
 
-/** One research project of the player's government (engine/research.ts). */
+/** Where the player's government directs its research (engine/research.ts). */
+export const RESEARCH_DIRECTIONS = ["military", "industry", "agriculture", "medicine", "science", "communications", "strategic"] as const;
+export type ResearchDirection = (typeof RESEARCH_DIRECTIONS)[number];
+
+/** A research project of the old kind, kept only to read a save from before research directions (migration step 16). */
 export interface ResearchProject {
   id: string;
   /** 0–1. */
@@ -335,10 +339,25 @@ export interface ResearchProject {
   on: boolean;
 }
 
-/** The player's research: what is under way and what is done. */
+/**
+ * The player's research: how its money is split between the directions,
+ * the year of technology each has reached (ahead of the calendar, or behind
+ * it), the bomb programme of a country without the bomb, and the
+ * breakthroughs made in this game.
+ */
 export interface Research {
-  active: ResearchProject[];
+  /** % of the research money by direction; they add up to 100. */
+  shares: Record<ResearchDirection, number>;
+  /** The split that keeps history's pace: the game's own at its start. */
+  base?: Record<ResearchDirection, number>;
+  /** The year of technology each direction has reached: the calendar's when research keeps pace with history. */
+  tech: Record<ResearchDirection, number>;
+  /** 0–1: the bomb programme of a country that has no bomb yet. */
+  bomb?: number;
+  /** Breakthroughs made in this game, with their dates. */
   done: { id: string; date: string }[];
+  /** A save from before research directions: the projects it had under way (migration step 16 reads them). */
+  active?: ResearchProject[];
 }
 
 export const REGIME_KINDS = ["democracy", "limited", "party", "autocracy", "military"] as const;
@@ -517,11 +536,70 @@ export interface Appointment {
 export interface Defeat {
   date: string;
   turn: number;
-  how: "coup" | "revolution" | "uprising" | "deposed";
+  /** "election": the government's party lost a vote and with it the government. */
+  how: "coup" | "revolution" | "uprising" | "deposed" | "election";
   by: string;
   note: string;
-  /** The player chose to play on as the new government. */
+  /** The leader who fell, the person the player may stay with (into opposition). */
+  fallen?: Person & { title?: string };
+  /** The party that governed until the fall. */
+  party?: string;
+  /** The player chose to play on: as the new government, or as the fallen leader in opposition. */
   continued?: boolean;
+}
+
+/** Who the player is: the country's leader, or (later) a minister or a general, or the leader of the opposition. */
+export const ROLE_KINDS = ["leader", "opposition"] as const;
+
+/** How an opposition comes to power. */
+export const RISE_HOWS = ["election", "revolution", "coup", "appointed"] as const;
+export type RiseHow = (typeof RISE_HOWS)[number];
+
+/** What the state's dice do to an opposition in a turn: the next rung of the ladder. */
+export type Repression = "harassed" | "banned" | "arrested" | "exiled";
+export type RoleKind = (typeof ROLE_KINDS)[number];
+
+/** A legal party; a movement underground at home; or one abroad, in exile. */
+export const MOVEMENT_KINDS = ["party", "underground", "exile"] as const;
+export type MovementKind = (typeof MOVEMENT_KINDS)[number];
+
+/** Free to act; watched and hounded; banned; its leader under arrest. */
+export const MOVEMENT_STATUSES = ["free", "harassed", "banned", "arrested"] as const;
+export type MovementStatus = (typeof MOVEMENT_STATUSES)[number];
+
+/** The scores of a movement the engine keeps, 0–100 unless said otherwise. */
+export const MOVEMENT_SCORES = ["money", "press", "insiders", "army", "street"] as const;
+export type MovementScore = (typeof MOVEMENT_SCORES)[number];
+
+/** The player's opposition party or movement (engine/role.ts). */
+export interface Movement {
+  /** Its name, once the player or the game master has given one. */
+  name?: string;
+  kind: MovementKind;
+  status: MovementStatus;
+  /** Popular support, % of the country. */
+  support: number;
+  /** Members and activists, thousands. */
+  members: number;
+  /** Money; reach in the press; friends inside the government; friends in the army; the crowds it can bring out. */
+  money: number;
+  press: number;
+  insiders: number;
+  army: number;
+  street: number;
+}
+
+/** The player's place in the game (engine/role.ts). */
+export interface PlayerRole {
+  kind: RoleKind;
+  /** Who the player is. For a leader, missing means whoever leads the country now. */
+  person?: Person & { title?: string };
+  /** The opposition's movement. */
+  movement?: Movement;
+  /** Since when the player has held this role. */
+  since: string;
+  /** Chosen at the start; left with after the fall of their government; or won by taking power. */
+  how?: "start" | "fell" | "rose";
 }
 
 /**
@@ -714,21 +792,21 @@ export interface DirectiveStatus {
   text?: string;
 }
 
-/** A ministry's report after a turn, written by its minister once the turn is played. */
+/** A minister's view of a turn, one paragraph in their own voice, given once the turn is played. */
 export interface MinistryReport {
   ministry: AdvisorId;
   text: string;
+  /** Who gave it: the minister then in office; missing in reports from before views. */
+  by?: string;
   directives: DirectiveStatus[];
   /** How the minister takes the turn; missing in reports from before ministers had interests. */
   stance?: MinisterStance;
-  /** Orders the minister suggests for the next turn. */
-  orders?: string[];
 }
 
 /**
  * What a ministry has to report on after a turn, as the turn's game master
  * settled it: the matter, and what became of each directive. The minister
- * writes the report from it afterwards (engine/reports.ts).
+ * gives their view from it afterwards (engine/reports.ts).
  */
 export interface MinistryBrief {
   ministry: AdvisorId;
@@ -737,6 +815,8 @@ export interface MinistryBrief {
   directives: DirectiveStatus[];
   /** The government asked this minister something during the turn. */
   asked?: boolean;
+  /** Others had more to say: this minister gives no view unless the government asks (engine/reports.ts). */
+  quiet?: boolean;
 }
 
 /** The player's invitation to found a bloc, waiting for the invited governments' answers. */
@@ -815,6 +895,9 @@ export type AppliedChange =
   | { kind: "return"; country: string }
   | { kind: "protest"; title: string; change: Protest["stage"] | "new" | "dispersed" | "conceded" | "faded" | "won" }
   | { kind: "overthrown"; how: Defeat["how"]; by: string }
+  | { kind: "rise"; how: RiseHow; name: string }
+  | { kind: "repression"; event: Repression }
+  | { kind: "movement"; change: "named" | "released"; name: string }
   | { kind: "population"; country: string; deaths: number; refugees: number; to?: string; cause: string }
   | { kind: "sanction"; by: string; against: string; change: "partial" | "full" | "lifted" }
   | { kind: "deal"; partner: string; good: TradeGood; side: "sell" | "buy"; value: number; change: "signed" | "rejected" | "broken" | "ended"; note?: string }
@@ -825,7 +908,8 @@ export type AppliedChange =
   | { kind: "budget"; country: string }
   | { kind: "plan"; plan: string; type: PlanKind; by: string; target?: string; stage: PlanStage }
   | { kind: "plan-end"; plan: string; type: PlanKind; by: string; target?: string; how: "failed" | "faded"; why: PlanEnd }
-  | { kind: "research"; project: string; change: "started" | "stopped" | "done" | "setback" }
+  // A breakthrough ("done", `ahead`: years before history), a direction's setback, lucky turn or share shifted (`shift` points); "started" and "stopped" are old projects in old saves.
+  | { kind: "research"; project: string; change: "started" | "stopped" | "done" | "setback" | "lucky" | "focus"; shift?: number; ahead?: number }
   | { kind: "captured"; by: string; from: string; arms: WeaponKind; n: number }
   | { kind: "official"; post: OfficialPost; title: string; name: string; change: "appointed" | "resigned" | "dismissed" | "died" | "arrested" | "fled" }
   | { kind: "intrigue"; post: OfficialPost; deputy: string; target: string; goal: IntrigueGoal; event: "done" | "exposed" };
@@ -957,6 +1041,8 @@ export interface GameState {
   fog?: boolean;
   /** The player's research projects (engine/research.ts). */
   research?: Research;
+  /** Who the player is: the country's leader (when missing) or the leader of its opposition (engine/role.ts). */
+  role?: PlayerRole;
 }
 
 /** What a save list shows without loading the whole state. */

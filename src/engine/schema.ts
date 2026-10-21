@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ADVISORS } from "./advisors";
 import { BLOC_KINDS } from "./foreign";
-import { AIM_KINDS, DEED_KINDS, EVENT_KINDS, GAME_MODES, INTRIGUE_EVENTS, INTRIGUE_GOALS, INTRIGUE_PRICES, INTRIGUE_STAGES, LOCALES, MINISTER_STANCES, OFFICIAL_POSTS, PLAN_CAUSES, PLAN_ENDS, PLAN_KINDS, PLAN_STAGES, PROTEST_STAGES, REGIME_KINDS, WEAPON_KINDS, type GameState } from "./types";
+import { AIM_KINDS, DEED_KINDS, EVENT_KINDS, GAME_MODES, INTRIGUE_EVENTS, INTRIGUE_GOALS, INTRIGUE_PRICES, INTRIGUE_STAGES, LOCALES, MINISTER_STANCES, MOVEMENT_KINDS, MOVEMENT_STATUSES, OFFICIAL_POSTS, PLAN_CAUSES, PLAN_ENDS, PLAN_KINDS, PLAN_STAGES, PROTEST_STAGES, REGIME_KINDS, ROLE_KINDS, WEAPON_KINDS, type GameState } from "./types";
 
 /**
  * Shape check for a state that arrives from outside — a request body or a
@@ -36,6 +36,8 @@ const arsenal = z.object({
 const directiveStatus = z.object({ id: z.string(), status: z.enum(["progress", "done", "failed"]), note: z.string(), text: z.string().optional() });
 const figures = z.object({ gdp: z.number(), debt: z.number(), reserves: z.number(), troops: z.number(), balance: z.number(), people: z.number().optional() });
 const gender = z.enum(["male", "female"]);
+/** Someone the game names as a person (engine/people.ts), with the title they hold if any. */
+const personShape = z.object({ id: z.string(), name: z.string(), gender, portrait: z.string().optional(), title: z.string().optional() });
 const rulers = z.object({
   line: z.string(),
   people: z.array(z.object({ id: z.string(), name: z.string(), gender, portrait: z.string().optional() })),
@@ -76,9 +78,37 @@ export const GameStateSchema = z.object({
   title: z.string().max(120).optional(),
   mode: z.enum(GAME_MODES).optional(),
   fog: z.boolean().optional(),
+  // Who the player is: the leader, or the leader of the opposition (engine/role.ts).
+  role: z
+    .object({
+      kind: z.enum(ROLE_KINDS),
+      person: personShape.optional(),
+      movement: z
+        .object({
+          name: z.string().optional(),
+          kind: z.enum(MOVEMENT_KINDS),
+          status: z.enum(MOVEMENT_STATUSES),
+          support: z.number(),
+          members: z.number(),
+          money: z.number(),
+          press: z.number(),
+          insiders: z.number(),
+          army: z.number(),
+          street: z.number(),
+        })
+        .optional(),
+      since: z.string(),
+      how: z.enum(["start", "fell", "rose"]).optional(),
+    })
+    .optional(),
   research: z
     .object({
-      active: z.array(z.object({ id: z.string(), progress: z.number(), since: z.string(), on: z.boolean() })),
+      // Directions (migration step 16); a save from before them has only projects.
+      shares: z.record(z.string(), z.number()).optional(),
+      base: z.record(z.string(), z.number()).optional(),
+      tech: z.record(z.string(), z.number()).optional(),
+      bomb: z.number().optional(),
+      active: z.array(z.object({ id: z.string(), progress: z.number(), since: z.string(), on: z.boolean() })).optional(),
       done: z.array(z.object({ id: z.string(), date: z.string() })),
     })
     .optional(),
@@ -166,7 +196,6 @@ export const GameStateSchema = z.object({
             text: z.string(),
             directives: z.array(directiveStatus),
             stance: z.enum(MINISTER_STANCES).optional(),
-            orders: z.array(z.string()).optional(),
           }),
         )
         .optional(),
@@ -194,7 +223,6 @@ export const GameStateSchema = z.object({
           text: z.string(),
           date: z.string(),
           turn: z.number(),
-          orders: z.array(z.string()).optional(),
           operation: z
             .object({ name: z.string(), target: z.string(), goal: z.string(), means: z.string(), timing: z.string(), secrecy: z.enum(["open", "covert", "deniable"]) })
             .optional(),
@@ -353,7 +381,7 @@ export const GameStateSchema = z.object({
     )
     .optional(),
   deputyAdvice: z
-    .record(z.string(), z.array(z.object({ from: z.enum(["player", "advisor"]), text: z.string(), date: z.string(), turn: z.number(), orders: z.array(z.string()).optional() })))
+    .record(z.string(), z.array(z.object({ from: z.enum(["player", "advisor"]), text: z.string(), date: z.string(), turn: z.number() })))
     .optional(),
   intrigues: z
     .array(
@@ -423,9 +451,11 @@ export const GameStateSchema = z.object({
     .object({
       date: z.string(),
       turn: z.number(),
-      how: z.enum(["coup", "revolution", "uprising", "deposed"]),
+      how: z.enum(["coup", "revolution", "uprising", "deposed", "election"]),
       by: z.string(),
       note: z.string(),
+      fallen: personShape.optional(),
+      party: z.string().optional(),
       continued: z.boolean().optional(),
     })
     .optional(),

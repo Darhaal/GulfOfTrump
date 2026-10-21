@@ -3577,6 +3577,15 @@
    "General Charles Andre Joseph Marie de Gaulle",
    "Шарль Андре Жозеф Мари де Голль",
    "де Голль, Шарль"
+  ],
+  "crop": [
+   0.215,
+   0.0,
+   0.55
+  ],
+  "face": [
+   0.5,
+   0.4
   ]
  },
  {
@@ -5546,29 +5555,6 @@
   "image": "Eljas Erkko.jpeg"
  },
  {
-  "id": "elliott-broidy",
-  "qid": "Q18631289",
-  "name": {
-   "en": "Elliott Broidy",
-   "ru": "Эллиотт Б. Бройди"
-  },
-  "gender": "male",
-  "born": 1957,
-  "dates": [
-   "2022"
-  ],
-  "countries": [
-   "usa"
-  ],
-  "posts": [
-   "finance"
-  ],
-  "aliases": [
-   "Бройди, Эллиотт",
-   "Эллиотт Бройди"
-  ]
- },
- {
   "id": "elpidio-quirino",
   "qid": "Q319943",
   "name": {
@@ -6081,7 +6067,11 @@
    "finance"
   ],
   "aliases": [],
-  "noPortrait": true
+  "photo": "Evaldas Gustas by Augustas Didzgalvis (cropped).jpg",
+  "face": [
+   0.52,
+   0.42
+  ]
  },
  {
   "id": "evgeny-primakov",
@@ -6995,7 +6985,16 @@
   "gender": "male",
   "born": 1880,
   "died": 1959,
-  "image": "General George C. Marshall (4616939916).jpg"
+  "image": "General George C. Marshall (4616939916).jpg",
+  "crop": [
+   0.24,
+   0.0,
+   0.5
+  ],
+  "face": [
+   0.5,
+   0.36
+  ]
  },
  {
   "id": "george-osborne",
@@ -9988,6 +9987,11 @@
   "aliases": [
    "Lewis John Edwards",
    "Rt. Hon. Lewis John Edwards"
+  ],
+  "photo": "John Edwards in 1949.jpg",
+  "face": [
+   0.5,
+   0.35
   ]
  },
  {
@@ -10628,7 +10632,12 @@
   "posts": [
    "military"
   ],
-  "aliases": []
+  "aliases": [],
+  "photo": "Juozas Olekas.jpg",
+  "face": [
+   0.45,
+   0.4
+  ]
  },
  {
   "id": "jurgen-christian-mertens",
@@ -10647,7 +10656,13 @@
   "posts": [
    "foreign"
   ],
-  "aliases": []
+  "aliases": [],
+  "photo": "Jurguen Mertens presenta copia de cartas credenciales (cropped).jpg",
+  "group": true,
+  "face": [
+   0.55,
+   0.3
+  ]
  },
  {
   "id": "jury-sieliviorstaw",
@@ -11343,6 +11358,16 @@
    "Kyrylo Yevhenovych Shevchenko",
    "Кирилл Шевченко",
    "Кирило Шевченко"
+  ],
+  "photo": "Foto KShevchenko 2017.jpg",
+  "crop": [
+   0.39,
+   0.0,
+   0.28
+  ],
+  "face": [
+   0.5,
+   0.35
   ]
  },
  {
@@ -11573,6 +11598,16 @@
   "aliases": [
    "Валенса, Лех",
    "Валенса, Лешек Михал"
+  ],
+  "photo": "Lech Wałęsa 1990.jpg",
+  "crop": [
+   0.15,
+   0.0,
+   0.7
+  ],
+  "face": [
+   0.54,
+   0.38
   ]
  },
  {
@@ -12508,6 +12543,16 @@
   "aliases": [
    "Lo Jui-ch’ing",
    "Ruiqing Luo"
+  ],
+  "photo": "1965-11 1965 罗瑞卿.jpg",
+  "crop": [
+   0.03,
+   0.05,
+   0.6
+  ],
+  "face": [
+   0.5,
+   0.43
   ]
  },
  {
@@ -14156,6 +14201,15 @@
   ],
   "aliases": [
    "President Moon"
+  ],
+  "crop": [
+   0.225,
+   0.0,
+   0.75
+  ],
+  "face": [
+   0.5,
+   0.42
   ]
  },
  {
@@ -14259,7 +14313,16 @@
    "Беннет, Нафтали",
    "Нафтали Беннет"
   ],
-  "noPortrait": true
+  "photo": "Naftali Bennett official portrait (cropped).jpg",
+  "crop": [
+   0.0,
+   0.0,
+   0.93
+  ],
+  "face": [
+   0.5,
+   0.38
+  ]
  },
  {
   "id": "narendra-modi",
@@ -14544,13 +14607,13 @@
  },
  {
   "id": "nguyen-khanh",
-  "qid": "Q10799217",
+  "qid": "Q504362",
   "name": {
    "en": "Nguyễn Khánh"
   },
   "gender": "male",
-  "born": 1928,
-  "died": 2023,
+  "born": 1927,
+  "died": 2013,
   "dates": [
    "1964"
   ],
@@ -14567,6 +14630,11 @@
    "Nguyen Khanh",
    "Нгуен Кхань",
    "Нгуєн Кхань"
+  ],
+  "photo": "Nguyễn Khánh 1964.jpg",
+  "face": [
+   0.5,
+   0.36
   ]
  },
  {
@@ -18503,7 +18571,16 @@
   "born": 1914,
   "died": 2004,
   "image": "Subandrio 1963.jpg",
-  "noPortrait": true
+  "photo": "Subandrio 1964.jpg",
+  "crop": [
+   0.075,
+   0.0,
+   0.75
+  ],
+  "face": [
+   0.5,
+   0.37
+  ]
  },
  {
   "id": "sukarno",
@@ -18896,6 +18973,15 @@
    "Бетман-Гольвег, Теобальд фон",
    "Бетман-Гольвеґ Теобальд фон",
    "Теобальд Теодор Фридрих Альфред фон Бетман-Гольвег"
+  ],
+  "crop": [
+   0.31,
+   0.02,
+   0.45
+  ],
+  "face": [
+   0.5,
+   0.41
   ]
  },
  {
@@ -21683,7 +21769,12 @@
   "posts": [
    "foreign"
   ],
-  "aliases": []
+  "aliases": [],
+  "photo": "LimByeongJik1948.jpg",
+  "face": [
+   0.5,
+   0.38
+  ]
  },
  {
   "id": "yoweri-museveni",

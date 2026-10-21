@@ -1,7 +1,7 @@
 "use client";
 
 import { Handshake, Loader2, Send, Users, X } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import ChatScroll from "@/components/ui/ChatScroll";
 import { ui } from "@/components/ui/classes";
 import Dictation from "@/components/voice/Dictation";
@@ -27,13 +27,11 @@ interface MinistryPeopleProps {
   onAsk: (advisor: AdvisorId, deputy: string, question: string) => Promise<boolean>;
   /** A plot sounded out, agreed or called off: the engine's new state, to save. */
   onChange: (next: GameState) => void;
-  /** The cabinet's own "add as an order" buttons under a deputy's suggestions. */
-  renderOrders: (orders: string[]) => ReactNode;
 }
 
-/** A person's round portrait: their own in oil, or the shadow of their sex (engine/people.ts). */
+/** A person's portrait: their own in oil, or a shadow of their sex and era (engine/people.ts). */
 function Avatar({ person, on }: { person: Pick<Official, "name" | "gender" | "portrait">; on?: boolean }) {
-  return <Portrait portrait={person.portrait} gender={person.gender} name={person.name} size="sm" className={on ? "ring-2 ring-ink ring-offset-2 ring-offset-page" : ""} />;
+  return <Portrait portrait={person.portrait} gender={person.gender} name={person.name} size="md" className={on ? "ring-2 ring-ink ring-offset-2 ring-offset-page" : ""} />;
 }
 
 const STAGE_TONE: Record<Intrigue["stage"], string> = { active: "text-accent", done: "text-emerald-700", exposed: "text-red-600", dropped: "text-muted" };
@@ -44,7 +42,7 @@ const STAGE_TONE: Record<Intrigue["stage"], string> = { active: "text-accent", d
  * (engine/deputies.ts). Talking and naming need the game master; sounding a
  * deputy out, agreeing a price and calling a plot off are the engine's.
  */
-export default function MinistryPeople({ state, advisor, disabled, anyBusy, onSetup, onAsk, onChange, renderOrders }: MinistryPeopleProps) {
+export default function MinistryPeople({ state, advisor, disabled, anyBusy, onSetup, onAsk, onChange }: MinistryPeopleProps) {
   const { t, text } = useI18n();
   const post = ADVISOR_POST[advisor];
   const chief = officialAt(state, post);
@@ -156,7 +154,6 @@ export default function MinistryPeople({ state, advisor, disabled, anyBusy, onSe
                   {m.from !== "player" && <SpeakButton id={`deputy-${d.id}-${i}`} text={m.text} className="-my-1 ml-auto" />}
                 </div>
                 <p className="whitespace-pre-wrap break-words font-medium leading-relaxed">{m.text}</p>
-                {m.orders && m.orders.length > 0 && renderOrders(m.orders)}
               </div>
             ))}
             {talking && (

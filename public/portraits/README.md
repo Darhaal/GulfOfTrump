@@ -15,9 +15,13 @@ The leaders and ministers of the game, painted in oil by `npm run portraits`
   256×320 WebP.
 - **Who made them:** `credits.json` gives each portrait's source file, its
   author, its licence and the change made; the About page lists them.
-- **No photograph:** `_shadow-male.webp` and `_shadow-female.webp`, painted the
-  same way from Wikimedia's public-domain placeholder busts ("Black - replace
-  this image male/female.svg").
+- **No photograph:** a shadow, `_shadow-<era>-<sex>-<n>.webp`: a dark bust
+  drawn for the game (`scripts/portraits/shadows.mjs`) and painted the same
+  way. Each era (1914, the forties, the fifties to seventies, the nineties,
+  today) has its own hair, beards, hats, caps, collars and shoulders, several
+  looks to each sex; a stranger gets one fixed by their name. The shadows are
+  the game's own work, under its MIT licence; `npm run portraits -- --shadows`
+  paints them again.
 
 ## Licences
 

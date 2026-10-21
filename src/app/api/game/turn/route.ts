@@ -1,5 +1,6 @@
 import { OutcomeSchema, sanitizeOutcome } from "@/engine/outcome";
 import { buildTurnPrompt, TURN_INSTRUCTIONS } from "@/engine/prompts";
+import { roleOf } from "@/engine/role";
 import { getScenario } from "@/engine/scenarios";
 import { wantsDemo } from "@/server/demo";
 import { rejectNonLocal } from "@/server/guard";
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
         model,
         demo,
         locale,
-        instructions: TURN_INSTRUCTIONS(locale, state.mode),
+        instructions: TURN_INSTRUCTIONS(locale, state.mode, roleOf(state).kind),
         input: [{ role: "user", content: buildTurnPrompt(state, orders, index) }],
         signal,
         onDelta: (delta) => progress((chars += delta.length)),

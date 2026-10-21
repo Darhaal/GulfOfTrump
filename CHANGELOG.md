@@ -11,6 +11,220 @@ included.
 
 ## [Unreleased]
 
+## [1.0.4-beta] — 2026-10-21
+
+Fronts that move, ministers who think, and faces of their time. Since
+1.0.3-beta:
+
+- fronts move by the balance of strength when the game master leaves them
+  alone, the living world's wars included;
+- ministers give one paragraph of their own view after a turn, three at
+  most, and advise in words: the orders are the player's own;
+- 46 shadows drawn for the game dress strangers for their era; larger
+  portraits framed like little mirrors; the ruler leads, not a ceremonial
+  head of state;
+- research by directions instead of projects;
+- play a person: lead the opposition, and play on after losing power;
+- a loading screen with the era's quotes, updates you can see, the map
+  zooms to 64×, and a sitemap for the demo site.
+
+### Fixed
+- **Fronts no longer stand still.** Every front moved only when the game
+  master wrote it into the turn, and it seldom did for wars far from the
+  player: in twelve quiet months of each start date not one front moved,
+  and the wars the living world starts (Austria-Hungary on Serbia, the
+  Soviet Union on Poland and Finland, Russia on Ukraine in 2014) never got
+  a front at all; in the offline demo nothing ever moved. Now the engine
+  moves every front the turn's answer leaves alone, by the balance of
+  strength where it runs: soldiers and heavy weapons, spread along every
+  front a country fights on. The stronger side gains ground and breaks into
+  provinces next to its own; in an even fight the defender holds; mountains,
+  forests, marshes, rivers and a lack of railways slow the attacker; a war
+  with no fighting yet sees its attacker probe the line. The game master's
+  own moves come first: where it moved a war's front, the rest only drifts.
+  Nothing moves in a war under a truce or one the turn ends. The game master
+  sees each war's strength, and the provinces the front runs through are
+  listed first, so a long front's limit never hides one.
+- **An attacker the game master leaves with almost nothing of a province is
+  driven out of it.** A share under 5% was ignored, and the front stayed
+  where it was.
+- **The ruler, not a ceremonial head of state, leads the country.** North
+  Korea in 1950 showed Kim Du-bong, the Presidium's chairman, as its leader;
+  it is Kim Il-sung, whom the leader line names. When the cabinet's top posts
+  change, the one who ruled stays first in the line, or whoever takes their
+  post: a new president leads, a new ceremonial head under a ruling premier
+  does not. Feminine titles ("Президентка") are read as titles.
+- **Dialogs are no longer cut off by the header.** The quit dialog opened
+  inside the blurred header and showed only its bottom; every dialog is now
+  drawn over the whole window.
+- **Larger portraits, framed like little mirrors** (an oval arch on top):
+  the leader at the top of the cabinet, the ministers
+  as portrait tiles, the government list, a country's rulers, diplomacy, the
+  opposition and the fall of a government.
+
+### Added
+- **People without a photograph look like their era, and not all alike.**
+  The one borrowed placeholder bust gives way to 46 shadows drawn for the
+  game and painted in oil: beards, stiff collars, plumed hats and the Kaiser's
+  officers in 1914; padded shoulders, homburgs and peaked caps in 1939; crew
+  cuts and the marshals' big caps in the fifties and sixties; full heads of
+  hair and shoulder pads in the nineties; short cuts, trimmed beards and long
+  hair today. A stranger keeps the one their name gives them; the era follows
+  the game's year.
+- **The map zooms closer**, to 64× instead of 24×: labels, towns and fronts
+  keep their size on screen.
+- **The loading screen scales up on big monitors**, to 1.6× at 1920 px.
+- **A loading screen worth waiting on.** The app starts on the emblem, a
+  bar that follows the real start (the port, the server, the wait for it,
+  opening the game — paced by how long the last start took) and quotes of
+  the game's eras with their speakers' oil portraits: 37 lines from Grey's
+  lamps going out in 1914 to Zelensky's "we are all here" in 2022, each with
+  its source, none repeated until all have been shown. The same quotes keep
+  the player company while a turn is being written.
+- **Updates you can see.** The app checks at start and every four hours,
+  shows the download with its percent, then "Update ready — Restart now or
+  Later" (later installs on quit), and on the first start of a new version
+  says what it came from with a link to what's new. Settings has the
+  version, a "Check for updates" button and the result. Every step goes to
+  `logs/updater.log`. The Microsoft Store copy says the Store updates it.
+- **The developer, painted in oil** like the game's leaders, on the about
+  page, the app's loading screen and the site's footer.
+- **A sitemap and robots.txt for the demo site**, so Google can find its
+  front page, the eight dates, about and privacy. A copy of the game on
+  someone's own computer still asks search engines to stay away.
+- **Eighteen more portraits.** The portraits now also take photographs
+  under the open licences of the Indian and Korean governments and of the
+  European Parliament, the Free Art License, or with no known copyright
+  restrictions: de Gaulle, Modi, Shastri, Vajpayee, Manmohan Singh, Kim
+  Dae-jung, Moon Jae-in, Park Geun-hye, Zhu Rongji, Iohannis, Jospin,
+  Bethmann-Hollweg, George Marshall and others. A photograph chosen by hand
+  (`photo` in people.json) comes before Wikidata's: Wałęsa is painted as he
+  looked in 1990, not decades later.
+- **Ten more portraits**, found beyond Wikidata in Commons categories,
+  archives and other Wikipedias: Naftali Bennett, General Nguyễn Khánh (the
+  data had confused him with a namesake), Subandrio, Luo Ruiqing, Yim
+  Byeong-jik, Kyrylo Shevchenko and others; Jürgen Mertens is cut from a
+  group photograph, and his credit says so.
+- **Play a person: the opposition** ([src/engine/role.ts](src/engine/role.ts)).
+  On the pick screen the player chooses who they are: the country's leader,
+  as before, or its opposition — a legal party where votes can change the
+  government, a movement underground where they cannot — with their own
+  name and the movement's, or names the game master gives them.
+  - In opposition the player does not govern. The game master plays the
+    government like any other, and the orders are the movement's: rallies,
+    the press, coalitions, friends in the government and the army, help
+    from abroad, strikes, elections. The sanitizer keeps them off the state:
+    no ministries' reports, contracts, bills, arms priorities or research.
+  - The engine keeps the movement: support, members, money, press, friends
+    in the government and in the army, the street. Each turn it moves only
+    within the turn's reach, and the state's hand falls by the game's dice
+    — hounding, a ban, the leader's arrest, exile — at a risk the regime,
+    its laws and police, and the movement's own noise and friends decide.
+  - Power is taken by an election (a legal party with a quarter of the
+    country), a revolution (the street when the country boils over), a coup
+    (friends in the army) or a call into government (friends inside). The
+    engine checks the strength before it lets the game master say so; then
+    the player's person leads the country, with their portrait, the
+    movement's party rules, and the game turns back into governing.
+- **Losing power is not the end.** A government that falls — by a coup, a
+  revolution, or now also by losing an election (its party out of the
+  government) — offers two ways on: stay with the country and play its next
+  government, or stay with the leader who fell, into opposition after a lost
+  vote or underground after a coup. A coup or a revolution makes the regime
+  harsher for the movement until the game master describes the new one.
+- **An interface for the opposition**: a panel with the person and the
+  movement, its strength, the risk of repression, actions that add an order,
+  and how close each road to power is; the header shows the player's person
+  and the movement's standing. The cabinet, acts of state and letters to
+  governments are hidden, and the economy, army, research and foreign
+  panels can be read but not changed. Saves begin to keep the player's role
+  by migration step 15; older games are the leader's, as they were.
+
+### Fixed
+- **A click in the app's first moment no longer turns off its updates.**
+  Leaving the front page before it had finished loading stopped the start
+  short of the update check, and a failed check said nothing anywhere.
+### Changed
+- **Ministers give their view, not a report**
+  ([src/engine/reports.ts](src/engine/reports.ts)). After a turn a minister
+  speaks one paragraph of 2–4 sentences in the first person — what they
+  think of the period, in their own voice: a real historical minister as
+  they really spoke, anyone else from their character, party, interests and
+  loyalty. Only the three with most to say speak on their own (a question
+  the government put to them, a task done or failed, news, work under way);
+  the others stay quiet, their tasks still shown, and can be asked in the
+  cabinet. A view runs to 700 characters at most and is cut at its last
+  whole sentence rather than asked for again. The turn report and the
+  cabinet show each view as a quote beside the minister's portrait. A turn now asks for three views at most instead
+  of one report per ministry with anything to say, each from a shorter
+  digest of the period: fewer requests and far fewer words on the player's
+  plan.
+- **Ministers and deputies advise; the orders are the player's.** No more
+  ready-made orders under a minister's answer, view or a deputy's word,
+  added to the turn with a click. They think a question through — what the
+  government is after, what each course costs, what the other side will do,
+  what could go wrong — weigh the options, say which they favour and may
+  sketch a course or an operation, but the decision and its wording come
+  from the player. Special operations are still proposed for approval.
+- **The ministry's deputies are under "Ministry"** (Министерство,
+  Міністерство), not "People".
+- **Research by directions instead of projects**
+  ([src/engine/research.ts](src/engine/research.ts),
+  [src/engine/researchEffects.ts](src/engine/researchEffects.ts)). The
+  research money is split in percent between seven directions: military
+  technology, industry and energy, agriculture, medicine and health, science
+  and education, communications and computing, and strategic programmes
+  (the bomb, rockets, space).
+  - The money is the same as before, with no new budget line: a fifth of
+    the army budget and three tenths of industry's. It no longer comes out
+    of the money for new weapons.
+  - Each direction has reached a year of technology. At the game's starting
+    split and its era's usual money it keeps history's pace. More of the
+    money, a bigger budget, an able science minister, and science and
+    education ahead of the world take it ahead. Neglect leaves it behind,
+    where the world's published work still reaches it. The game's dice
+    bring setbacks and lucky turns. Strategic programmes also need a big
+    economy.
+  - **Effects are continuous and modest.**
+    - The military direction raises every kind of weapon the player builds
+      to the level of the year it has reached, ahead of history or behind
+      it, and opens drones early.
+    - Industry adds growth and makes arms production more efficient.
+    - Agriculture raises the harvest in the food provision.
+    - Medicine raises the medicine provision and the population's growth.
+    - Communications adds a little growth and knowledge of other countries
+      under the fog of war.
+    - Science and education speed up every other direction.
+  - **Named breakthroughs** come when a direction passes the year history
+    made them, so heavy investment brings them early and neglect late. There
+    are 79 of them, from tanks and blood banks in 1915–17 to drone swarms and
+    gene therapy around 2030; examples are radar, jet engines, antibiotics,
+    transistors and computers, the green revolution, satellites, the
+    internet, drones and precision munitions. Each is announced in the
+    chronicle with how far ahead of history or behind it the country is,
+    and with what the breakthrough brings.
+  - **The bomb comes from an atomic programme.** The programme runs once
+    nuclear fission is known and strategic programmes get at least 15% of
+    the money, and a bigger economy runs it faster. A country that built
+    the bomb within a generation of the start date begins with its
+    programme funded.
+  - **The science panel** shows the money and the pace, and the science
+    minister's word on the split. For each direction it has a share stepper
+    (the split always adds up to 100%) and the year of technology reached.
+    It also shows the progress to the next breakthrough, when it is
+    expected against history, and what the direction gives now. Then come
+    the atomic programme and the breakthroughs made, with their dates.
+  - **The game master** sees the split and the recent breakthroughs in a
+    line or two. A directive to the science minister may shift the split by
+    up to 15 points, within bounds, as `arms.research`. The stand-in game
+    master answers such a directive by putting more into the direction
+    furthest behind.
+  - **Migration step 16** gives an old save the default split. Each
+    direction goes as far ahead as the save's projects took it: a finished
+    project that is still ahead of history counts up to its year, and an
+    unfinished one by its progress. An unfinished bomb becomes the atomic
+    programme. Finished projects are kept as breakthroughs.
+
 ## [1.0.3-beta] — 2026-10-20
 
 A living world, and people in it. Since 1.0.2-beta:

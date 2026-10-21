@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Briefcase, Clapperboard, Coins, Crosshair, Download, Eye, EyeOff, FlaskConical, Flag as ReportIcon, Globe, Image as ImageIcon, Landmark, Loader2, MapPin, MessageSquare, PanelLeftClose, Play, Scale, ScrollText, Swords, TriangleAlert, Users } from "lucide-react";
+import { Briefcase, Clapperboard, Coins, Crosshair, Download, Eye, EyeOff, Flag as ReportIcon, FlaskConical, Globe, Image as ImageIcon, Landmark, Loader2, MapPin, Megaphone, MessageSquare, PanelLeftClose, Play, Scale, ScrollText, Swords, TriangleAlert, Users } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import Flag from "@/components/Flag";
@@ -17,7 +17,7 @@ import { addAdvice, type AdvisorId } from "@/engine/advisors";
 import { countryCrises } from "@/engine/crises";
 import { nationalAccounts, seedEconomies, setBudget } from "@/engine/economy";
 import { setFocus as setArmsFocus } from "@/engine/arsenal";
-import { startResearch, stopResearch } from "@/engine/research";
+import { setShares } from "@/engine/research";
 import { setSanction } from "@/engine/trade";
 import { cancelDeal, declineOffer, proposeDeal, signOffer } from "@/engine/deals";
 import EconomyCenter from "./EconomyCenter";
@@ -29,6 +29,7 @@ import { proclaim } from "@/engine/identity";
 import { addLegal, proposeBill, withdrawBill } from "@/engine/acts";
 import { isMigrated, migrateSave, refreshSave } from "@/engine/migrations";
 import { peopleByOwner, provinceName } from "@/engine/provinces";
+import { intoOpposition, isOpposition, withCountry } from "@/engine/role";
 import { getScenario } from "@/engine/scenarios";
 import { peopleScale } from "@/engine/setup";
 import type { ChronicleEntry, GameState, OfficialPost, Summit, TimeStep } from "@/engine/types";
@@ -47,8 +48,10 @@ import { readNewTurn } from "@/lib/voice/speaker";
 import VoiceLayer from "@/components/voice/VoiceLayer";
 import { useGameMaster } from "@/lib/gameMaster";
 import GameMasterChoice, { GameMasterOffer } from "@/components/GameMasterChoice";
+import { PortraitYear } from "./Portrait";
 import CountryDetails from "./CountryDetails";
 import LeaderButton from "./LeaderButton";
+import OppositionPanel from "./OppositionPanel";
 import DefeatDialog from "./DefeatDialog";
 import CabinetPanel, { type ReportStatus } from "./CabinetPanel";
 import DiplomacyPanel from "./DiplomacyPanel";
@@ -61,13 +64,14 @@ import SummitDialog from "./SummitDialog";
 import OrdersPanel from "./OrdersPanel";
 import ProvinceDetails from "./ProvinceDetails";
 import ResourceBar from "./ResourceBar";
+import TurnQuote from "./TurnQuote";
 import SharePicture from "./SharePicture";
 import Timelapse from "./Timelapse";
 import TurnReport from "./TurnReport";
 import WorldNews from "./WorldNews";
 
 /** Panels that open on the left, from the rail; the right side shows the selection. */
-type LeftPanel = "orders" | "chronicle" | "cabinet" | "politics" | "state" | "foreign" | "economy" | "army" | "science";
+type LeftPanel = "orders" | "opposition" | "chronicle" | "cabinet" | "politics" | "state" | "foreign" | "economy" | "army" | "science";
 type RightTab = "country" | "diplomacy";
 
 interface Busy {
@@ -133,7 +137,7 @@ export default function GameClient({ id }: { id: string }) {
   const [live, setLive] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // The ministers' reports on the last turn, written in the background after it (engine/reports.ts).
+  // The ministers' views of the last turn, given in the background after it (engine/reports.ts).
   const [reporting, setReporting] = useState<Partial<Record<AdvisorId, ReportStatus>>>({});
   // Reports that have arrived: every update keeps them, so an answer begun before one arrived cannot drop it.
   const arrived = useRef(new Map<string, MinisterReport>());
@@ -212,7 +216,7 @@ export default function GameClient({ id }: { id: string }) {
 
 
   /**
-   * The ministers write their reports on a turn one after another, in the
+   * The ministers give their views of a turn one after another, in the
    * background: the game goes on meanwhile, and each report lands in its
    * minister's window as it comes. One that fails can be asked for again.
    */
@@ -520,8 +524,11 @@ export default function GameClient({ id }: { id: string }) {
   const exile = player.exile ?? (ownedRegions(state, state.player) === 0 && !player.dormant ? { since: state.date } : undefined);
   const lost = Boolean(state.defeat && !state.defeat.continued);
   const selectedCountry = selected ? state.countries[selected] : null;
-  const leftTabs: { id: LeftPanel; label: string; icon: typeof ScrollText }[] = [
+  // A player in opposition does not govern: no cabinet or acts of state, and the state's panels are only to look at (engine/role.ts).
+  const opposition = isOpposition(state);
+  const allTabs: { id: LeftPanel; label: string; icon: typeof ScrollText }[] = [
     { id: "orders", label: t("game.tab.orders"), icon: ScrollText },
+    { id: "opposition", label: t("game.tab.opposition"), icon: Megaphone },
     { id: "chronicle", label: t("game.tab.chronicle"), icon: Swords },
     { id: "cabinet", label: t("game.tab.cabinet"), icon: Briefcase },
     { id: "politics", label: t("game.tab.politics"), icon: Landmark },
@@ -531,10 +538,15 @@ export default function GameClient({ id }: { id: string }) {
     { id: "army", label: t("game.tab.army"), icon: Crosshair },
     { id: "science", label: t("game.tab.science"), icon: FlaskConical },
   ];
-  const rightTabs: { id: RightTab; label: string; icon: typeof ScrollText }[] = [
+  const leftTabs = allTabs.filter((tab) => (opposition ? tab.id !== "cabinet" && tab.id !== "state" : tab.id !== "opposition"));
+  // A panel the role no longer has (the opposition's after taking power, the cabinet after a fall) gives way to the orders.
+  const leftNow: LeftPanel | null = left && !leftTabs.some((tab) => tab.id === left) ? "orders" : left;
+  const allRight: { id: RightTab; label: string; icon: typeof ScrollText }[] = [
     { id: "country", label: t("game.tab.country"), icon: Users },
     { id: "diplomacy", label: t("game.tab.diplomacy"), icon: MessageSquare },
   ];
+  // Letters to governments speak for the state: not an opposition's.
+  const rightTabs = allRight.filter((tab) => !opposition || tab.id !== "diplomacy");
 
   const endTurnButton = (className: string) => (
     <button type="button" data-tour="end-turn" onClick={aiReady ? endTurn : () => setChoosingMaster(true)} disabled={Boolean(busy) || lost || !status} className={`${ui.primary} ${className}`}>
@@ -543,7 +555,7 @@ export default function GameClient({ id }: { id: string }) {
     </button>
   );
 
-  return (
+  const screen = (
     <div className="flex h-dvh flex-col overflow-hidden">
       <AppHeader
         back="/"
@@ -558,6 +570,7 @@ export default function GameClient({ id }: { id: string }) {
                 setSelectedProvince(null);
                 setRight("country");
               }}
+              onOpposition={() => setLeft("opposition")}
             />
           </span>
         }
@@ -609,16 +622,16 @@ export default function GameClient({ id }: { id: string }) {
           ))}
         </nav>
 
-        {left && (
+        {leftNow && (
           <aside className="order-3 flex min-h-0 flex-1 flex-col bg-page lg:order-none lg:w-[360px] lg:flex-none lg:border-r lg:border-line xl:w-[380px]">
             <div className="hidden items-center justify-between border-b border-line bg-surface px-4 py-2.5 lg:flex">
-              <span className={ui.label}>{leftTabs.find((x) => x.id === left)?.label}</span>
+              <span className={ui.label}>{leftTabs.find((x) => x.id === leftNow)?.label}</span>
               <button type="button" onClick={() => setLeft(null)} title={t("panel.close")} aria-label={t("panel.close")} className="rounded-lg p-1 text-muted hover:bg-page hover:text-ink">
                 <PanelLeftClose className="h-4 w-4" />
               </button>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-4">
-            {left === "orders" && (
+            {leftNow === "orders" && (
               <OrdersPanel
                 orders={state.draft}
                 standing={state.standing ?? []}
@@ -631,7 +644,7 @@ export default function GameClient({ id }: { id: string }) {
               />
             )}
 
-            {left === "chronicle" && state.chronicle.length > 0 && (
+            {leftNow === "chronicle" && state.chronicle.length > 0 && (
               <div className="mb-3 grid grid-cols-2 gap-1 rounded-xl bg-page p-1">
                 {(["ours", "world"] as const).map((view) => (
                   <button
@@ -647,7 +660,7 @@ export default function GameClient({ id }: { id: string }) {
               </div>
             )}
 
-            {left === "chronicle" && chronicleView === "world" && state.chronicle.length > 0 && (
+            {leftNow === "chronicle" && chronicleView === "world" && state.chronicle.length > 0 && (
               <WorldNews
                 state={state}
                 index={map?.index ?? null}
@@ -663,7 +676,7 @@ export default function GameClient({ id }: { id: string }) {
               />
             )}
 
-            {left === "chronicle" &&
+            {leftNow === "chronicle" &&
               (chronicleView === "ours" || state.chronicle.length === 0) &&
               (state.chronicle.length === 0 ? (
                 <p className="rounded-xl border-2 border-dashed border-line px-4 py-8 text-center text-xs font-medium text-muted">{t("game.chronicle.empty")}</p>
@@ -741,7 +754,17 @@ export default function GameClient({ id }: { id: string }) {
                 </div>
               ))}
 
-            {left === "cabinet" && (
+            {leftNow === "opposition" && opposition && (
+              <OppositionPanel
+                state={state}
+                disabled={Boolean(busy) || lost}
+                onOrder={(order) => {
+                  if (state.draft.includes(order) || state.draft.length + (state.standing?.length ?? 0) >= MAX_TURN_ORDERS) return;
+                  update({ ...state, draft: [...state.draft, order], updatedAt: new Date().toISOString() });
+                }}
+              />
+            )}
+            {leftNow === "cabinet" && !opposition && (
               <CabinetPanel
                 key={consult?.n ?? 0}
                 prefill={consult ?? undefined}
@@ -749,7 +772,6 @@ export default function GameClient({ id }: { id: string }) {
                 busy={busy?.kind === "advice" && busy.advisor ? { chars: busy.chars, advisor: busy.advisor } : null}
                 disabled={!aiReady}
                 onAsk={ask}
-                onAddOrder={(order) => update({ ...state, draft: [...state.draft, order], updatedAt: new Date().toISOString() })}
                 onDirectives={(directives) => update({ ...state, directives, updatedAt: new Date().toISOString() })}
                 anyBusy={busy ? { kind: busy.kind, chars: busy.chars, advisor: busy.advisor, deputy: busy.deputy } : null}
                 onSetup={() => void setupGovernment(["officials"])}
@@ -762,7 +784,7 @@ export default function GameClient({ id }: { id: string }) {
                 onRequestReport={lost || !aiReady ? undefined : (ministry) => void writeReports(state.chronicle.at(-1)?.turn ?? 0, [ministry])}
               />
             )}
-            {left === "politics" && (
+            {leftNow === "politics" && (
               <PoliticsPanel
                 state={state}
                 busy={busy?.kind === "politics" ? busy : null}
@@ -770,6 +792,7 @@ export default function GameClient({ id }: { id: string }) {
                 onLoad={() => void setupGovernment(["politics"])}
                 regionName={(id) => (map?.index.regions[id] ? provinceName(map.index.regions[id], locale) : id)}
                 onConsult={(advisor, question) => {
+                  if (opposition) return;
                   setConsult((c) => ({ advisor, question, n: (c?.n ?? 0) + 1 }));
                   setLeft("cabinet");
                 }}
@@ -779,7 +802,7 @@ export default function GameClient({ id }: { id: string }) {
                 }}
               />
             )}
-            {left === "state" && (
+            {leftNow === "state" && !opposition && (
               <StatePanel
                 state={state}
                 regions={map?.index.regions ?? null}
@@ -792,12 +815,12 @@ export default function GameClient({ id }: { id: string }) {
                 onWithdraw={(id) => update(withdrawBill(state, id), true)}
               />
             )}
-            {left === "economy" && (
+            {leftNow === "economy" && (
               <EconomyCenter
                 state={state}
                 accounts={accounts?.get(state.player)}
                 regions={map?.index.regions ?? null}
-                disabled={Boolean(busy)}
+                disabled={Boolean(busy) || opposition}
                 onBudget={(budget) => update(setBudget(state, budget), true)}
                 onSanction={(against, scope) => update(setSanction(state, against, scope), true)}
                 onSign={(offer) => map && update(signOffer(state, offer.id, map.index.regions), true)}
@@ -810,34 +833,35 @@ export default function GameClient({ id }: { id: string }) {
                 }}
               />
             )}
-            {left === "army" && (
+            {leftNow === "army" && (
               <ArmyPanel
                 state={state}
                 accounts={accounts?.get(state.player)}
-                disabled={Boolean(busy) || lost}
+                disabled={Boolean(busy) || lost || opposition}
                 onFocus={(kinds) => update(setArmsFocus(state, kinds), true)}
                 onConsult={() => {
+                  if (opposition) return;
                   setConsult((c) => ({ advisor: "military", question: t("arms.question"), n: (c?.n ?? 0) + 1 }));
                   setLeft("cabinet");
                 }}
               />
             )}
-            {left === "science" && (
+            {leftNow === "science" && (
               <SciencePanel
                 state={state}
-                disabled={Boolean(busy) || lost}
-                onStart={(id) => update({ ...startResearch(state, id), updatedAt: new Date().toISOString() }, true)}
-                onStop={(id) => update({ ...stopResearch(state, id), updatedAt: new Date().toISOString() }, true)}
+                disabled={Boolean(busy) || lost || opposition}
+                onShares={(shares) => update({ ...setShares(state, shares), updatedAt: new Date().toISOString() }, true)}
                 onConsult={() => {
+                  if (opposition) return;
                   setConsult((c) => ({ advisor: "science", question: t("research.question"), n: (c?.n ?? 0) + 1 }));
                   setLeft("cabinet");
                 }}
               />
             )}
-            {left === "foreign" && (
+            {leftNow === "foreign" && (
               <ForeignPanel
                 state={state}
-                disabled={Boolean(busy)}
+                disabled={Boolean(busy) || opposition}
                 onPropose={(proposal) => update({ ...state, proposals: [...(state.proposals ?? []), proposal], updatedAt: new Date().toISOString() })}
                 onWithdraw={(id) => update({ ...state, proposals: (state.proposals ?? []).filter((p) => p.id !== id), updatedAt: new Date().toISOString() })}
                 onSchedule={(summit) => update({ ...state, summits: [...(state.summits ?? []), summit], updatedAt: new Date().toISOString() })}
@@ -910,7 +934,7 @@ export default function GameClient({ id }: { id: string }) {
 
           {busy?.kind === "turn" && (
             <div className="absolute inset-0 z-30 grid place-items-center bg-scrim/40 backdrop-blur-[2px] animate-in fade-in">
-              <div className={`${ui.card} w-[min(92%,22rem)] p-6 text-center shadow-2xl`}>
+              <div className={`${ui.card} w-[min(92%,26rem)] p-6 text-center shadow-2xl`}>
                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-accent" />
                 <div className="mt-4 text-lg font-black text-ink">{t("game.resolving")}</div>
                 <div className="mt-1 text-xs font-medium text-muted tabular-nums">
@@ -923,6 +947,7 @@ export default function GameClient({ id }: { id: string }) {
                 <button type="button" onClick={() => busy.controller.abort()} className={`${ui.secondary} mt-5 px-4 py-2 text-xs`}>
                   {t("game.cancel")}
                 </button>
+                <TurnQuote />
               </div>
             </div>
           )}
@@ -981,7 +1006,7 @@ export default function GameClient({ id }: { id: string }) {
                 <div className="mt-1 font-medium">{t("game.exileNote")}</div>
               </div>
             )}
-            {right === "diplomacy" && (
+            {right === "diplomacy" && !opposition && (
               <DiplomacyPanel
                 state={state}
                 target={diplomacyTarget}
@@ -1021,7 +1046,7 @@ export default function GameClient({ id }: { id: string }) {
                 player={state.player}
                 view={fogView}
                 footer={
-                  selectedCountry.tag !== state.player && (
+                  selectedCountry.tag !== state.player && !opposition && (
                     <button
                       type="button"
                       onClick={() => {
@@ -1065,6 +1090,7 @@ export default function GameClient({ id }: { id: string }) {
         <Tour
           scenario={state.scenarioId}
           country={text(player.name)}
+          opposition={opposition}
           orders={state.draft}
           onAddOrder={(order) => {
             if (state.draft.includes(order) || state.draft.length + (state.standing?.length ?? 0) >= MAX_TURN_ORDERS) return;
@@ -1079,7 +1105,11 @@ export default function GameClient({ id }: { id: string }) {
 
       <DefeatDialog
         state={state}
-        onContinue={() => state.defeat && update({ ...state, defeat: { ...state.defeat, continued: true }, updatedAt: new Date().toISOString() }, true)}
+        onContinue={() => update(withCountry(state), true)}
+        onOpposition={() => {
+          update(intoOpposition(state), true);
+          setLeft("opposition");
+        }}
       />
 
       <Dialog
@@ -1139,5 +1169,7 @@ export default function GameClient({ id }: { id: string }) {
       {timelapse && map && <Timelapse state={state} topology={map.topology} onClose={() => setTimelapse(false)} />}
     </div>
   );
+  // People without a portrait dress for the game's year.
+  return <PortraitYear.Provider value={yearOf(state.date)}>{screen}</PortraitYear.Provider>;
 }
 
