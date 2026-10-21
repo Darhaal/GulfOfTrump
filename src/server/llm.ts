@@ -1,6 +1,7 @@
 import "server-only";
 import type { z } from "zod";
 import { extractJson, withoutNulls } from "@/engine/json";
+import type { Locale } from "@/engine/types";
 import { accessToken } from "./chatgpt/oauth";
 import { listModels, streamText, type InputMessage, type ModelInfo } from "./chatgpt/responses";
 import { AiError } from "./errors";
@@ -13,13 +14,17 @@ export interface CompletionRequest {
   input: InputMessage[];
   signal?: AbortSignal;
   onDelta?: (delta: string) => void;
+  /** The player chose the offline demo (server/demo.ts): the stand-in answers and no token is read. */
+  demo?: boolean;
+  /** The interface language, for the stand-in's texts. */
+  locale?: Locale;
 }
 
 const MODEL_CACHE_MS = 10 * 60_000;
 const modelCache = ((globalThis as { __gotModels?: { at: number; models: ModelInfo[] } }).__gotModels ??= { at: 0, models: [] });
 
 export async function availableModels(): Promise<ModelInfo[]> {
-  if (isMockEnabled()) return [{ slug: "mock", displayName: "Offline mock" }];
+  if (isMockEnabled()) return [{ slug: "mock", displayName: "Demo" }];
   if (modelCache.models.length && Date.now() - modelCache.at < MODEL_CACHE_MS) return modelCache.models;
   const models = await listModels(await accessToken());
   modelCache.models = models;
@@ -28,7 +33,7 @@ export async function availableModels(): Promise<ModelInfo[]> {
 }
 
 export async function complete(request: CompletionRequest): Promise<string> {
-  if (isMockEnabled()) return mockComplete(request.instructions, request.input, request.onDelta);
+  if (request.demo || isMockEnabled()) return mockComplete(request.instructions, request.input, request.onDelta, request.locale);
   const token = await accessToken();
   let model = request.model;
   if (!model) {

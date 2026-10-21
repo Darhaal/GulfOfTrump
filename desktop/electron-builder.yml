@@ -7,6 +7,7 @@ directories:
   buildResources: build
 files:
   - main.cjs
+  - preload.cjs
   - package.json
   - build/icon.png
 # The game's server stays outside the archive: Node.js needs real files.

@@ -15,7 +15,7 @@ export interface PrivacyContent {
 
 const en: PrivacyContent = {
   title: "Privacy",
-  updated: "Last updated 19 October 2026.",
+  updated: "Last updated 20 October 2026.",
   intro:
     "Gulf of Trump is made by Artem Okhten. The game has no servers of its own that collect data about you: no advertising, no analytics, no tracking. What follows is everything the game sends anywhere, and why.",
   sections: [
@@ -37,6 +37,13 @@ const en: PrivacyContent = {
       title: "Updates",
       body: [
         "The Windows app downloaded from GitHub checks the project's GitHub releases for a new version; GitHub sees that request. The Microsoft Store copy is updated by the Store.",
+      ],
+    },
+    {
+      title: "Voice",
+      body: [
+        "Reading aloud uses the voices of your system or browser. The voices that come with Windows work on your computer; the online voices of Microsoft Edge and Google Chrome send the text being read to Microsoft or Google.",
+        "Voice input in the Windows app works on your computer: the speech model (Whisper, about 100 MB) is downloaded once, when you agree, from jsDelivr and Hugging Face, and after that your voice never leaves the computer. In a browser that recognises speech itself (Chrome, Edge, Safari) the recording goes to the browser maker's service — Google, Microsoft or Apple — under its own policy. The microphone is on only while its button is lit.",
       ],
     },
     {
@@ -64,7 +71,7 @@ const en: PrivacyContent = {
 
 const ru: PrivacyContent = {
   title: "Конфиденциальность",
-  updated: "Обновлено 19 октября 2026 года.",
+  updated: "Обновлено 20 октября 2026 года.",
   intro:
     "Gulf of Trump делает Артем Охтень. У игры нет собственных серверов, которые собирают данные о вас: ни рекламы, ни аналитики, ни слежки. Ниже — всё, что игра куда-либо отправляет, и зачем.",
   sections: [
@@ -86,6 +93,13 @@ const ru: PrivacyContent = {
       title: "Обновления",
       body: [
         "Приложение для Windows, скачанное с GitHub, проверяет релизы проекта на GitHub; GitHub видит этот запрос. Копию из Microsoft Store обновляет Store.",
+      ],
+    },
+    {
+      title: "Голос",
+      body: [
+        "Чтение вслух использует голоса вашей системы или браузера. Голоса, встроенные в Windows, работают на вашем компьютере; онлайн-голоса Microsoft Edge и Google Chrome отправляют читаемый текст в Microsoft или Google.",
+        "Голосовой ввод в приложении для Windows работает на вашем компьютере: модель распознавания (Whisper, около 100 МБ) скачивается один раз, с вашего согласия, с jsDelivr и Hugging Face, и после этого ваш голос не покидает компьютер. В браузере, который сам распознаёт речь (Chrome, Edge, Safari), запись уходит в сервис его производителя — Google, Microsoft или Apple — по его собственным правилам. Микрофон включён, только пока горит его кнопка.",
       ],
     },
     {
@@ -113,7 +127,7 @@ const ru: PrivacyContent = {
 
 const uk: PrivacyContent = {
   title: "Конфіденційність",
-  updated: "Оновлено 19 жовтня 2026 року.",
+  updated: "Оновлено 20 жовтня 2026 року.",
   intro:
     "Gulf of Trump робить Артем Охтень. Гра не має власних серверів, які збирають дані про вас: ні реклами, ні аналітики, ні стеження. Нижче — усе, що гра кудись надсилає, і навіщо.",
   sections: [
@@ -135,6 +149,13 @@ const uk: PrivacyContent = {
       title: "Оновлення",
       body: [
         "Застосунок для Windows, завантажений з GitHub, перевіряє релізи проєкту на GitHub; GitHub бачить цей запит. Копію з Microsoft Store оновлює Store.",
+      ],
+    },
+    {
+      title: "Голос",
+      body: [
+        "Читання вголос використовує голоси вашої системи або браузера. Голоси, вбудовані у Windows, працюють на вашому комп'ютері; онлайн-голоси Microsoft Edge і Google Chrome надсилають текст, що читається, до Microsoft або Google.",
+        "Голосове введення в застосунку для Windows працює на вашому комп'ютері: модель розпізнавання (Whisper, близько 100 МБ) завантажується один раз, з вашої згоди, з jsDelivr і Hugging Face, і після цього ваш голос не залишає комп'ютер. У браузері, який сам розпізнає мову (Chrome, Edge, Safari), запис іде до сервісу його виробника — Google, Microsoft або Apple — за його власними правилами. Мікрофон увімкнено, лише поки світиться його кнопка.",
       ],
     },
     {

@@ -1,6 +1,8 @@
 import { z } from "zod";
 import type { AdvisorId } from "./advisors";
-import type { AppliedChange, GameState, Official, OfficialPost } from "./types";
+import { dealInterests, interestsLine } from "./interests";
+import { dressOfficial, samePerson, syncRulers } from "./people";
+import type { AppliedChange, Gender, GameState, Official, OfficialPost } from "./types";
 import { OFFICIAL_POSTS } from "./types";
 
 /**
@@ -26,6 +28,7 @@ const person = z.object({
   loyalty: score,
   faction: shortText.optional(),
   bio: z.string().trim().max(500).optional(),
+  gender: z.enum(["male", "female"]).optional().catch(undefined),
 });
 
 /** The government as the game master first describes it. */
@@ -66,6 +69,7 @@ export const ADVISOR_POST: Record<AdvisorId, OfficialPost> = {
   foreign: "foreign",
   interior: "interior",
   intelligence: "intelligence",
+  science: "science",
 };
 
 const clampScore = (v: number) => Math.min(5, Math.max(1, Math.round(v)));
@@ -81,14 +85,59 @@ function official(raw: z.infer<typeof person> & { post: OfficialPost; title: str
     loyalty: clampScore(raw.loyalty),
     ...(raw.faction ? { faction: raw.faction } : {}),
     ...(raw.bio ? { bio: raw.bio } : {}),
+    ...(raw.gender ? { gender: raw.gender } : {}),
     since,
+  };
+}
+
+const yearOf = (date: string) => Number(date.slice(0, 4));
+
+/** The posts that lead: whoever holds them is the country's leader line. */
+const LEADING: OfficialPost[] = ["head", "government"];
+
+/**
+ * After a change at the top, the player's leader line is the cabinet's:
+ * "President X; Prime Minister Y", read again into people.
+ */
+function retitlePlayer(state: GameState): GameState {
+  const top = LEADING.flatMap((post) => state.officials?.filter((o) => o.post === post) ?? []);
+  const player = state.countries[state.player];
+  if (!top.length || !player) return state;
+  const line = top.map((o) => `${o.title} ${o.name}`).join("; ");
+  if (player.leader === line) return state;
+  const next = { ...state, countries: { ...state.countries, [state.player]: { ...player, leader: line } } };
+  syncRulers(next);
+  return next;
+}
+
+/** The cabinet with someone on a post: whoever held it leaves, and so does the newcomer's old post — one person, one post. */
+function seat(officials: Official[] | undefined, taken: Official): Official[] {
+  return [...(officials ?? []).filter((o) => o.post !== taken.post && !samePerson(o.name, taken.name)), taken].sort((a, b) => OFFICIAL_POSTS.indexOf(a.post) - OFFICIAL_POSTS.indexOf(b.post));
+}
+
+/**
+ * A deputy named to a post — even the top one — leaves the deputies and comes
+ * as who they are: their sex, their portrait, their traits if the naming gave
+ * none. `deputies` is the list without them, when one was taken.
+ */
+function fromDeputies(state: Pick<GameState, "deputies">, taken: Official): { taken: Official; deputies?: GameState["deputies"] } {
+  const deputy = state.deputies?.find((d) => samePerson(d.name, taken.name));
+  if (!deputy) return { taken };
+  return {
+    taken: {
+      ...taken,
+      ...(deputy.gender ? { gender: deputy.gender } : {}),
+      ...(deputy.portrait ? { portrait: deputy.portrait } : {}),
+      ...(taken.traits.length ? {} : { traits: deputy.traits }),
+    },
+    deputies: state.deputies!.filter((d) => d !== deputy),
   };
 }
 
 /** The government as first described, one person per post, in the order of OFFICIAL_POSTS. */
 export function startOfficials(raw: z.infer<typeof OfficialsSetupSchema>, date: string): Official[] {
   const byPost = new Map<OfficialPost, Official>();
-  for (const o of raw.officials) if (!byPost.has(o.post)) byPost.set(o.post, official(o, date));
+  for (const o of raw.officials) if (!byPost.has(o.post)) byPost.set(o.post, dressOfficial(official(o, date), yearOf(date)));
   return OFFICIAL_POSTS.flatMap((p) => (byPost.has(p) ? [byPost.get(p)!] : []));
 }
 
@@ -99,7 +148,7 @@ export const officialAt = (state: Pick<GameState, "officials">, post: OfficialPo
  * change waits in `personnel` for the next turn, whose game master judges
  * what it does (and whom it angers).
  */
-export function appoint(state: GameState, post: OfficialPost, person: Omit<Official, "post" | "since" | "title"> & { title?: string }, note = "", now = new Date()): GameState {
+export function appoint(state: GameState, post: OfficialPost, person: Omit<Official, "post" | "since" | "title"> & { title?: string; gender?: Gender }, note = "", now = new Date()): GameState {
   const before = officialAt(state, post);
   const title = person.title || before?.title || post;
   const next: Official = {
@@ -112,15 +161,21 @@ export function appoint(state: GameState, post: OfficialPost, person: Omit<Offic
     loyalty: clampScore(person.loyalty),
     ...(person.faction ? { faction: person.faction } : {}),
     ...(person.bio ? { bio: person.bio } : {}),
+    ...(person.gender ? { gender: person.gender } : {}),
     since: state.date,
   };
-  const officials = [...(state.officials ?? []).filter((o) => o.post !== post), next].sort((a, b) => OFFICIAL_POSTS.indexOf(a.post) - OFFICIAL_POSTS.indexOf(b.post));
-  return {
+  const interests = dealInterests(state, next);
+  if (interests) next.interests = interests;
+  const { taken, deputies } = fromDeputies(state, dressOfficial(next, yearOf(state.date)));
+  const officials = seat(state.officials, taken);
+  const appointed: GameState = {
     ...state,
     officials,
+    ...(deputies ? { deputies } : {}),
     personnel: [...(state.personnel ?? []), { date: state.date, post, title, ...(before ? { from: before.name } : {}), to: next.name, ...(note ? { note } : {}) }],
     updatedAt: now.toISOString(),
   };
+  return LEADING.includes(post) ? retitlePlayer(appointed) : appointed;
 }
 
 /** A turn's changes to the government: someone leaves a post, someone takes it. */
@@ -138,10 +193,16 @@ export function applyOfficials(next: GameState, changes: z.infer<typeof official
         competence: clampScore(c.competence ?? 3),
         loyalty: clampScore(c.loyalty ?? 3),
         ...(c.faction ? { faction: c.faction } : {}),
+        ...(c.gender ? { gender: c.gender } : {}),
         since: ctx.to,
       };
-      next.officials = [...(next.officials ?? []).filter((o) => o.post !== c.post), taken].sort((a, b) => OFFICIAL_POSTS.indexOf(a.post) - OFFICIAL_POSTS.indexOf(b.post));
+      const interests = dealInterests(next, taken);
+      if (interests) taken.interests = interests;
+      const seated = fromDeputies(next, dressOfficial(taken, yearOf(ctx.to)));
+      next.officials = seat(next.officials, seated.taken);
+      if (seated.deputies) next.deputies = seated.deputies;
       applied.push({ kind: "official", post: c.post, title: taken.title, name: c.name, change: "appointed" });
+      if (LEADING.includes(c.post)) Object.assign(next, { countries: retitlePlayer(next).countries });
     } else if (before && before.name === c.name) {
       // The post stays empty until someone is named; the cabinet falls back to a deputy.
       next.officials = (next.officials ?? []).filter((o) => o.post !== c.post);
@@ -150,12 +211,19 @@ export function applyOfficials(next: GameState, changes: z.infer<typeof official
   }
 }
 
+const MOOD_EN = { loyal: "content", uneasy: "uneasy, warned the government", opposed: "objected to the government's course", resigning: "threatened to resign" } as const;
+
 /** The government as the model reads it, and the player's appointments since the last turn. */
 export function describeOfficials(state: Pick<GameState, "officials" | "personnel">): string[] {
   const lines: string[] = [];
   if (state.officials?.length) {
     lines.push("", "THE PLAYER'S GOVERNMENT (post | title | name | traits | manner | competence 1-5 | loyalty 1-5 | faction):");
-    for (const o of state.officials) lines.push(`- ${o.post} | ${o.title} | ${o.name} | ${o.traits.join(", ") || "-"} | ${o.manner || "-"} | ${o.competence} | ${o.loyalty} | ${o.faction ?? "-"}`);
+    for (const o of state.officials) {
+      lines.push(`- ${o.post} | ${o.title} | ${o.name} | ${o.traits.join(", ") || "-"} | ${o.manner || "-"} | ${o.competence} | ${o.loyalty} | ${o.faction ?? "-"}`);
+      const interests = interestsLine(o);
+      if (interests) lines.push(`    interests: ${interests}`);
+      if (o.mood && o.mood.stance !== "loyal") lines.push(`    after the last turn: ${MOOD_EN[o.mood.stance]}${o.mood.grievance ? ` — ${o.mood.grievance}` : ""}`);
+    }
   }
   if (state.personnel?.length) {
     lines.push("", "APPOINTMENTS BY THE GOVERNMENT SINCE THE LAST TURN (they have happened; judge what they bring):");

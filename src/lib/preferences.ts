@@ -15,12 +15,30 @@ interface Preferences {
   locale: Locale;
   theme: Theme;
   model: string;
+  /** Reading aloud: "off" hides the speaker buttons. */
+  speech: string;
+  /** The voice picked in Settings (its voiceURI), or "" for the best one. */
+  voice: string;
+  /** Speaking rate, "" for normal. */
+  rate: string;
+  /** "on" reads each new turn aloud as it arrives. */
+  readTurns: string;
+  /** Voice input: "off" hides the microphone buttons. */
+  mic: string;
+  /** "1" when the player chose the offline demo game master (lib/gameMaster.ts). */
+  demo: string;
 }
 
 const KEYS: Record<keyof Preferences, string> = {
   locale: "got_locale",
   theme: "got_theme",
   model: "got_model",
+  speech: "got_speech",
+  voice: "got_voice",
+  rate: "got_rate",
+  readTurns: "got_read_turns",
+  mic: "got_mic",
+  demo: "got_demo",
 };
 
 function browserLocale(): Locale {
@@ -34,7 +52,7 @@ function browserLocale(): Locale {
   return "en";
 }
 
-const DEFAULTS = (): Preferences => ({ locale: browserLocale(), theme: "system", model: "" });
+const DEFAULTS = (): Preferences => ({ locale: browserLocale(), theme: "system", model: "", speech: "", voice: "", rate: "", readTurns: "", mic: "", demo: "" });
 
 function read<K extends keyof Preferences>(key: K): Preferences[K] {
   try {
@@ -42,6 +60,7 @@ function read<K extends keyof Preferences>(key: K): Preferences[K] {
     if (value === null) return DEFAULTS()[key];
     if (key === "locale" && !LOCALES.includes(value as Locale)) return DEFAULTS()[key];
     if (key === "theme" && !["system", "light", "dark"].includes(value)) return DEFAULTS()[key];
+    if (key === "demo" && value !== "1") return DEFAULTS()[key];
     return value as Preferences[K];
   } catch {
     return DEFAULTS()[key];
@@ -75,6 +94,14 @@ export function setPreference<K extends keyof Preferences>(key: K, value: Prefer
 
 /** Values set while storage is unavailable, so the choice holds for the session. */
 const memory: Partial<Preferences> = {};
+
+/** A preference outside React, for code that runs on an event (a turn arriving). */
+export function getPreference<K extends keyof Preferences>(key: K): Preferences[K] {
+  return (memory[key] as Preferences[K] | undefined) ?? read(key);
+}
+
+/** The current value outside React, for code that runs on a click or a request. */
+export const readPreference = <K extends keyof Preferences>(key: K): Preferences[K] => (memory[key] as Preferences[K] | undefined) ?? read(key);
 
 export function usePreference<K extends keyof Preferences>(key: K): [Preferences[K], (value: Preferences[K]) => void] {
   const value = useSyncExternalStore(

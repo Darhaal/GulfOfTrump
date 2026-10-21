@@ -1,4 +1,5 @@
 import { type Accounts, balance } from "./economy";
+import { provisionOf, worstProvision } from "./provision";
 import { governmentSeats, loyaltyOf } from "./politics";
 import { ownProtests } from "./unrest";
 import { PILLARS } from "./types";
@@ -22,6 +23,7 @@ export const CRISIS_KINDS = [
   "recession",
   "reserves",
   "shortage",
+  "provision",
   "manpower",
   "sanctions",
   "occupation",
@@ -65,7 +67,7 @@ export function interestRate(e: Pick<Economy, "debt" | "gdp" | "reserves" | "inf
 export const interestOf = (e: Pick<Economy, "debt" | "gdp" | "reserves" | "inflation">, era: ScenarioId) => round((e.debt * interestRate(e, era)) / 100, 2);
 
 /** Above the first number a warning, above the second a crisis (below, for the falling ones). */
-const LIMITS: Record<Exclude<CrisisKind, "shortage" | "street" | "minority" | "army" | "police" | "security" | "elites">, [number, number]> = {
+const LIMITS: Record<Exclude<CrisisKind, "shortage" | "provision" | "street" | "minority" | "army" | "police" | "security" | "elites">, [number, number]> = {
   debt: [90, 150],
   deficit: [6, 12],
   inflation: [15, 50],
@@ -121,6 +123,15 @@ export function countryCrises(state: GameState, tag: string, ctx: { accounts?: A
   } else if (reserves <= LIMITS.reserves[1]) out.push({ kind: "reserves", level: "critical", value: round(reserves) });
   else if (reserves <= LIMITS.reserves[0]) out.push({ kind: "reserves", level: "warning", value: round(reserves) });
   if (ctx.accounts?.shortages.length) out.push({ kind: "shortage", level: "critical", value: ctx.accounts.shortages.length, detail: ctx.accounts.shortages.join(", ") });
+  // The people going short of food, fuel, goods, homes or medicine (engine/provision.ts).
+  if (ctx.map) {
+    const supply = provisionOf(state, tag, ctx.map);
+    if (supply) {
+      const worst = worstProvision(supply);
+      const critical = supply.overall < 70 || worst.level < 50;
+      if (critical || supply.overall < 85 || worst.level < 70) out.push({ kind: "provision", level: critical ? "critical" : "warning", value: worst.level, detail: worst.kind });
+    }
+  }
   if (ctx.accounts && ctx.accounts.mobilisable > 0) up("manpower", (e.troops / ctx.accounts.mobilisable) * 100);
   up("sanctions", e.tradeCut * 100);
   if (ctx.map) up("occupation", occupiedShare(state, tag, ctx.map));
@@ -165,7 +176,7 @@ export function crisisLimits(before: Economy, accounts: Accounts | undefined, er
 
 /** How restless the people are bound to be with these crises, whatever the game master says: a floor under unrest. */
 export function unrestFloor(crises: Crisis[]): number {
-  const hardship: CrisisKind[] = ["inflation", "unemployment", "recession", "shortage", "occupation", "debt", "reserves"];
+  const hardship: CrisisKind[] = ["inflation", "unemployment", "recession", "shortage", "provision", "occupation", "debt", "reserves"];
   let floor = 0;
   for (const c of crises) if (hardship.includes(c.kind)) floor += c.level === "critical" ? 12 : 5;
   return Math.min(85, floor);
@@ -189,6 +200,8 @@ export function describeCrisis(c: Crisis, era: ScenarioId, e?: Economy): string 
       return `${lvl}: reserves down to ${c.value}% of GDP — imports and the currency at risk`;
     case "shortage":
       return `${lvl}: shortage of ${c.detail} — industry and the army go without`;
+    case "provision":
+      return `${lvl}: the people go short of ${c.detail} (${c.value}% of need) — queues, rationing and anger`;
     case "manpower":
       return `${lvl}: ${c.value}% of those who can be called up are already in uniform`;
     case "sanctions":

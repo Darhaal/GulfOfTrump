@@ -1,6 +1,6 @@
 # Gulf of Trump
 
-![Version](https://img.shields.io/badge/version-1.0.2--beta-blue.svg) ![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Node](https://img.shields.io/badge/node-%E2%89%A522.12-339933.svg)
+![Version](https://img.shields.io/badge/version-1.0.3--beta-blue.svg) ![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Node](https://img.shields.io/badge/node-%E2%89%A522.12-339933.svg)
 
 An alternate-history grand strategy game where a language model is the game
 master. Pick a turning point of the 20th or 21st century, pick any country,
@@ -23,10 +23,10 @@ front of every turn.
 
 | | | |
 |---|---|---|
-| ![Ministers of the day, with character, ability and loyalty](public/screens/1950/cabinet.jpg) | ![The House of Representatives seat by seat](public/screens/1950/parliament.jpg) | ![A budget in dollars of 1950](public/screens/1950/economy.jpg) |
-| **Ministers of the day** answer from what they know on that date | **Politics at home:** parties, elections, laws that need votes | **An economy that keeps its books**, in money of the day |
-| ![Wars, blocs and the UN of 1950](public/screens/1950/foreign.jpg) | ![Acts of state: rename, recolour, rewrite a law](public/screens/1950/state.jpg) | ![Resources, transport, people and terrain over Korea](public/screens/1950/modes.jpg) |
-| **Wars, blocs and the UN** of the date, with their terms | **Acts of state:** rename the country or a city, rewrite a law | **Six maps** of about 2,700 provinces |
+| ![The Secretary of Defense, his interests and his report after the turn](public/screens/1950/cabinet.jpg) | ![The House of Representatives seat by seat](public/screens/1950/parliament.jpg) | ![A budget in dollars of 1950](public/screens/1950/economy.jpg) |
+| **Ministers of the day** with interests of their own, who report after each turn | **Politics at home:** parties, elections, laws that need votes | **An economy that keeps its books**, in money of the day |
+| ![China under fog of war: its figures as Washington estimates them](public/screens/1950/foreign.jpg) | ![Acts of state: a law drafted for Congress](public/screens/1950/state.jpg) | ![Resources, transport, people and terrain over Korea](public/screens/1950/modes.jpg) |
+| **Other countries as you know them:** wars, blocs and, under fog of war, estimates | **Acts of state:** rename the country or a city, rewrite a law | **Six maps** of about 2,700 provinces |
 
 Any turn can be shared as a picture, and the whole game replayed as a
 timelapse video of its borders:

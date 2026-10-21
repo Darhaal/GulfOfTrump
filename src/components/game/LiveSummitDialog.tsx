@@ -6,6 +6,8 @@ import Flag from "@/components/Flag";
 import ChatScroll from "@/components/ui/ChatScroll";
 import Dialog from "@/components/ui/Dialog";
 import { ui } from "@/components/ui/classes";
+import Dictation from "@/components/voice/Dictation";
+import SpeakButton from "@/components/voice/SpeakButton";
 import { ADVISOR_TITLES, ADVISORS, type AdvisorId } from "@/engine/advisors";
 import { formatDate } from "@/engine/calendar";
 import { ADVISOR_POST, officialAt } from "@/engine/government";
@@ -90,8 +92,9 @@ export default function LiveSummitDialog({ state, summit, busy, disabled, onSpea
                   <div key={i} className={`flex gap-2 ${mine ? "flex-row-reverse" : ""}`}>
                     <Flag tag={l.country} scenario={state.scenarioId} color={state.countries[l.country]?.color} className="mt-1" />
                     <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${mine ? "rounded-tr-md bg-ink text-on-ink" : "rounded-tl-md border border-line bg-surface text-ink"}`}>
-                      <div className={`mb-0.5 text-2xs font-black uppercase tracking-widest ${mine ? "text-on-ink/60" : "text-muted"}`}>
+                      <div className={`mb-0.5 flex items-center gap-2 text-2xs font-black uppercase tracking-widest ${mine ? "text-on-ink/60" : "text-muted"}`}>
                         {mine ? t("diplomacy.you") : [l.speaker, name(l.country)].filter(Boolean).join(" · ")}
+                        {!mine && <SpeakButton id={`summit-${i}`} text={l.text} className="-my-1 ml-auto" />}
                       </div>
                       <p className="whitespace-pre-wrap font-medium leading-relaxed">{l.text}</p>
                     </div>
@@ -126,19 +129,21 @@ export default function LiveSummitDialog({ state, summit, busy, disabled, onSpea
               </section>
             ) : (
               <>
-                <textarea
-                  value={line}
-                  onChange={(e) => setLine(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                      e.preventDefault();
-                      void speak();
-                    }
-                  }}
-                  rows={3}
-                  placeholder={t("live.placeholder")}
-                  className={`${ui.input} resize-none`}
-                />
+                <Dictation id="summit" set={setLine} disabled={disabled || Boolean(busy)}>
+                  <textarea
+                    value={line}
+                    onChange={(e) => setLine(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                        e.preventDefault();
+                        void speak();
+                      }
+                    }}
+                    rows={3}
+                    placeholder={t("live.placeholder")}
+                    className={`${ui.input} resize-none`}
+                  />
+                </Dictation>
                 <div className="flex flex-wrap gap-2">
                   <button type="button" disabled={disabled || Boolean(busy) || !line.trim()} onClick={() => void speak()} className={`${ui.primary} flex-1 px-4 py-2.5 text-xs`}>
                     <Mic className="h-4 w-4" />
@@ -178,19 +183,21 @@ export default function LiveSummitDialog({ state, summit, busy, disabled, onSpea
                 </div>
               )}
             </ChatScroll>
-            <textarea
-              value={whisper}
-              onChange={(e) => setWhisper(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                  e.preventDefault();
-                  void ask();
-                }
-              }}
-              rows={2}
-              placeholder={t("live.whisperPlaceholder")}
-              className={`${ui.input} resize-none py-2 text-xs`}
-            />
+            <Dictation id="summit-adviser" set={setWhisper} disabled={disabled || Boolean(busy)}>
+              <textarea
+                value={whisper}
+                onChange={(e) => setWhisper(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    void ask();
+                  }
+                }}
+                rows={2}
+                placeholder={t("live.whisperPlaceholder")}
+                className={`${ui.input} resize-none py-2 text-xs`}
+              />
+            </Dictation>
             <button type="button" disabled={disabled || Boolean(busy) || !whisper.trim()} onClick={() => void ask()} className={`${ui.secondary} px-3 py-2 text-xs`}>
               {t("live.ask")}
             </button>

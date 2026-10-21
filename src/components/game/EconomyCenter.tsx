@@ -1,16 +1,19 @@
 "use client";
 
-import { ArrowDownLeft, ArrowUpRight, Ban, Check, FileSignature, Handshake, Landmark, Plus, Ship, TrendingDown, TrendingUp, X } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Ban, Check, FileSignature, Gem, Handshake, Landmark, Plus, Scale, Ship, TrendingDown, TrendingUp, Users, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import Flag from "@/components/Flag";
 import { ui } from "@/components/ui/classes";
 import { formatDate } from "@/engine/calendar";
+import { interestOf, interestRate } from "@/engine/crises";
 import { capacity, dealsLeft, MAX_NEW_DEALS, TRADE_GOODS, type TradeOffer, tradeOffers, tradePosition, UNITS, volumeOf } from "@/engine/deals";
 import type { Accounts, WorldScale } from "@/engine/economy";
 import { sanctionCuts, tradeBooks } from "@/engine/trade";
 import type { Budget, GameState, MapRegion, Sanction, TradeDeal, TradeGood } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
+import ProvisionPanel from "./ProvisionPanel";
+import ResourceLedger from "./ResourceLedger";
 
 const LINES = ["revenue", "army", "industry", "social", "other"] as const;
 const QUICK = ["war", "nationalise", "invest", "rationing", "bonds", "devalue", "austerity"] as const;
@@ -29,14 +32,16 @@ interface EconomyCenterProps {
   onCancel: (id: string) => void;
 }
 
-type Tab = "budget" | "trade" | "deals";
+type Tab = "budget" | "trade" | "deals" | "resources" | "supply";
 
 /**
- * The economy in hand, in three tabs: the budget the government sets itself
- * (it takes effect at once; the next turn judges what it does) with the big
- * economic decisions as orders; who the country trades with and the
- * sanctions it imposes and suffers; and the trade deals — the market's
- * offers to sign, the deals in force, the player's own proposals.
+ * The economy in hand, in five tabs: the debt, the interest and the reserves
+ * with the budget the government sets itself (it takes effect at once; the
+ * next turn judges what it does) and the big economic decisions as orders;
+ * who the country trades with and the sanctions it imposes and suffers; the
+ * trade deals — the market's offers to sign, the deals in force, the
+ * player's own proposals; the strategic resources; and how well the people
+ * are supplied.
  */
 export default function EconomyCenter({ state, accounts, regions, disabled, onBudget, onSanction, onOrder, onSign, onDecline, onPropose, onCancel }: EconomyCenterProps) {
   const { t, text, money, locale } = useI18n();
@@ -85,21 +90,78 @@ export default function EconomyCenter({ state, accounts, regions, disabled, onBu
     <div className="flex flex-col gap-4">
       {ordered && <p className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">{t("politics.ordered")}: {ordered}</p>}
 
-      <div className="grid grid-cols-3 gap-1 rounded-xl bg-page p-1">
+      <div className="grid grid-cols-5 gap-0.5 rounded-xl bg-page p-1">
         {(
           [
             ["budget", Landmark, 0],
             ["trade", Ship, 0],
             ["deals", Handshake, offers.length],
+            ["resources", Gem, 0],
+            ["supply", Users, 0],
           ] as const
         ).map(([id, Icon, badge]) => (
-          <button key={id} type="button" onClick={() => setTab(id)} aria-pressed={tab === id} className={`${ui.segment} ${tab === id ? ui.segmentOn : ui.segmentOff} relative flex items-center justify-center gap-1.5`}>
-            <Icon className="h-3.5 w-3.5" />
-            {t(`econ.tab.${id}` as MessageKey)}
-            {badge ? <span className="min-w-4 rounded-full bg-accent px-1 text-center text-[9px] font-black leading-4 text-on-ink">{badge}</span> : null}
+          <button
+            key={id}
+            type="button"
+            onClick={() => setTab(id)}
+            aria-pressed={tab === id}
+            title={t(`econ.tab.${id}` as MessageKey)}
+            // Five tabs in a narrow panel: the recipe's padding and type size give way, so the names fit.
+            className={`${ui.segment} ${tab === id ? ui.segmentOn : ui.segmentOff} relative flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5! text-2xs! tracking-tight`}
+          >
+            <Icon className="h-3.5 w-3.5 shrink-0" />
+            <span className="max-w-full truncate">{t(`econ.tab.${id}` as MessageKey)}</span>
+            {badge ? <span className="absolute right-0.5 top-0.5 min-w-4 rounded-full bg-accent px-1 text-center text-[9px] font-black leading-4 text-on-ink">{badge}</span> : null}
           </button>
         ))}
       </div>
+
+      {tab === "resources" && accounts && (
+        <section className="grid gap-2">
+          <div className={`${ui.label} flex items-center gap-1.5`}>
+            <Gem className="h-3.5 w-3.5" />
+            {t("bar.resources")}
+          </div>
+          <p className="text-2xs font-bold leading-snug text-muted">{t("bar.res.made")}</p>
+          <ResourceLedger accounts={accounts} economy={economy} />
+        </section>
+      )}
+
+      {tab === "supply" && <ProvisionPanel state={state} regions={regions} />}
+
+      {tab === "budget" && (
+      <section className="rounded-xl bg-page p-3">
+        <div className={`${ui.label} mb-2 flex items-center gap-1.5`}>
+          <Scale className="h-3.5 w-3.5" />
+          {t("econ.overview")}
+        </div>
+        <dl className="grid gap-1 text-xs">
+          <div className="flex items-baseline justify-between gap-2">
+            <dt className="font-bold text-muted">{t("econ.debtLine")}</dt>
+            <dd className="font-black tabular-nums text-ink">
+              {money(economy.debt)} · {share(economy.debt)}
+            </dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-2">
+            <dt className="font-bold text-muted">{t("econ.interest")}</dt>
+            <dd className="font-black tabular-nums text-ink">
+              {money(interestOf(economy, state.scenarioId))} · {interestRate(economy, state.scenarioId)}%
+            </dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-2">
+            <dt className="font-bold text-muted">{t("econ.reservesLine")}</dt>
+            <dd className="font-black tabular-nums text-ink">
+              {money(economy.reserves)} · {share(economy.reserves)}
+            </dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-2">
+            <dt className="font-bold text-muted">{t("econ.pricesLine")}</dt>
+            <dd className="font-black tabular-nums text-ink">{t("econ.pricesValue", { inflation: economy.inflation, jobless: economy.unemployment })}</dd>
+          </div>
+        </dl>
+        <p className="mt-1.5 text-2xs font-medium leading-snug text-muted">{t("econ.booksNote")}</p>
+      </section>
+      )}
 
       {tab === "budget" && (
       <section className="rounded-xl bg-page p-3">

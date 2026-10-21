@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AllianceSeed, AppliedChange, GameState, Summit, SummitLine, Text } from "./types";
+import type { AllianceSeed, AppliedChange, GameState, Summit, SummitLine, Text, War } from "./types";
 
 /**
  * Foreign policy beyond war and peace: truces with an end date, blocs of
@@ -175,6 +175,25 @@ export function applyForeign(
   next.alliances = next.alliances.filter((a) => !(a.until && a.until < ctx.to));
   for (const s of next.summits ?? []) if (s.status === "planned" && s.date < ctx.to && !held.includes(s.id)) s.status = "missed";
   return held;
+}
+
+/**
+ * A war ends: it leaves the list, and occupied land and contested provinces
+ * between its sides go back to their owners unless the treaty annexed them,
+ * which the turn reports as annex transfers.
+ */
+export function endWar(next: GameState, war: War, applied: AppliedChange[]): void {
+  next.wars = next.wars.filter((w) => w.id !== war.id);
+  applied.push({ kind: "peace", war: war.id, name: war.name, sides: [...war.attackers, ...war.defenders] });
+  const sides = new Set([...war.attackers, ...war.defenders]);
+  for (const region of Object.values(next.regions)) {
+    if (region.controller !== region.owner && sides.has(region.controller) && sides.has(region.owner)) region.controller = region.owner;
+    if (region.contested && sides.has(region.contested) && sides.has(region.controller)) {
+      delete region.contested;
+      delete region.held;
+      delete region.taken;
+    }
+  }
 }
 
 /** How a war's truce, a bloc and a summit read in the prompt. */

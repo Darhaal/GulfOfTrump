@@ -3,7 +3,7 @@
 // Signing in with ChatGPT opens the system browser and returns to the server's
 // loopback listener, as OpenAI's guide for open-source apps describes; the
 // tokens stay on this computer, in ~/.gulf-of-trump.
-const { app, BrowserWindow, dialog, Menu, shell } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, Menu, shell } = require("electron");
 const { spawn } = require("node:child_process");
 const fs = require("node:fs");
 const http = require("node:http");
@@ -60,6 +60,23 @@ let quitting = false;
 const serverDir = () => (app.isPackaged ? path.join(process.resourcesPath, "server") : path.join(__dirname, "server"));
 const logDir = () => path.join(app.getPath("userData"), "logs");
 
+/** The window as the player left it: full screen unless they chose a window. */
+const windowFile = () => path.join(app.getPath("userData"), "window.json");
+function fullScreenWanted() {
+  try {
+    return JSON.parse(fs.readFileSync(windowFile(), "utf8")).fullScreen !== false;
+  } catch {
+    return true;
+  }
+}
+function rememberFullScreen(on) {
+  try {
+    fs.writeFileSync(windowFile(), JSON.stringify({ fullScreen: on }));
+  } catch {
+    // Not remembered: the next start is full screen again.
+  }
+}
+
 function portFree(port) {
   return new Promise((resolve) => {
     const probe = net.createServer();
@@ -109,6 +126,20 @@ const openOutside = (url) => {
   if (/^https?:\/\//.test(url)) void shell.openExternal(url);
 };
 
+/**
+ * What the game's own page may use: the microphone for voice input (sound,
+ * never the camera), the clipboard for a shared picture, full screen. Any
+ * other page, and anything else, is refused.
+ */
+function guardPermissions() {
+  const { session } = require("electron");
+  const ALLOWED = new Set(["media", "clipboard-sanitized-write", "fullscreen"]);
+  const allowed = (permission, url, media) => ALLOWED.has(permission) && isGame(url ?? "") && (permission !== "media" || (media.length > 0 && media.every((m) => m === "audio")));
+  session.defaultSession.setPermissionRequestHandler((_contents, permission, callback, details) => callback(allowed(permission, details.requestingUrl, details.mediaTypes ?? [])));
+  // A check (listing devices, permissions.query) grants nothing by itself; it only must not say yes to the camera.
+  session.defaultSession.setPermissionCheckHandler((_contents, permission, origin, details) => allowed(permission, details?.requestingUrl || origin, details?.mediaType === "video" ? ["video"] : ["audio"]));
+}
+
 function createWindow() {
   window = new BrowserWindow({
     width: 1440,
@@ -118,8 +149,21 @@ function createWindow() {
     title: "Gulf of Trump",
     backgroundColor: "#F8FAFC",
     icon: path.join(__dirname, "build", "icon.png"),
-    webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false },
+    fullscreen: fullScreenWanted(),
+    webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false, preload: path.join(__dirname, "preload.cjs") },
   });
+  // F11 switches between full screen and a window, as in a browser; the choice holds for the next start.
+  window.webContents.on("before-input-event", (event, input) => {
+    if (input.type !== "keyDown" || input.key !== "F11") return;
+    event.preventDefault();
+    window?.setFullScreen(!window.isFullScreen());
+  });
+  for (const [name, on] of [["enter-full-screen", true], ["leave-full-screen", false]]) {
+    window.on(name, () => {
+      rememberFullScreen(on);
+      window?.webContents.send("window:full-screen", on);
+    });
+  }
   // Everything outside the game — ChatGPT's sign-in, GitHub, the docs — opens in the system browser.
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (!isGame(url)) openOutside(url);
@@ -168,8 +212,22 @@ function checkForUpdates() {
   }
 }
 
+/** What the game's page may ask (preload.cjs) — only the game's own page. */
+function answerThePage() {
+  const fromGame = (event) => isGame(event.senderFrame?.url ?? "");
+  ipcMain.handle("window:is-full-screen", (event) => fromGame(event) && !!window?.isFullScreen());
+  ipcMain.handle("window:set-full-screen", (event, on) => {
+    if (fromGame(event)) window?.setFullScreen(on === true);
+    return !!window?.isFullScreen();
+  });
+  ipcMain.handle("app:quit", (event) => {
+    if (fromGame(event)) app.quit();
+  });
+}
+
 async function main() {
   Menu.setApplicationMenu(null);
+  answerThePage();
   app.setAppUserModelId("com.okhten.gulfoftrump");
   createWindow();
   if (!(await portFree(PORT))) {
@@ -202,5 +260,8 @@ if (!app.requestSingleInstanceLock()) {
     server?.kill();
   });
   app.on("window-all-closed", () => app.quit());
-  app.whenReady().then(main);
+  app.whenReady().then(() => {
+    guardPermissions();
+    return main();
+  });
 }

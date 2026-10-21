@@ -72,8 +72,9 @@ export const STRAIT_KM = 400;
  * holds, fights in or borders) through the country's own land and across
  * straits. Overseas possessions — Greenland for Denmark, the Indies for the
  * Netherlands — stay out. With no foothold at all (a landing), it starts from
- * the country's province nearest to the occupier. Returns null when the map
- * has no province centres to measure with.
+ * the country's province nearest to the occupier that a landing can reach
+ * (see withinReach), and takes nothing when none can be. Returns null when
+ * the map has no province centres to measure with.
  */
 export function reachableProvinces(state: Pick<GameState, "regions">, index: MapIndex, country: string, occupier: string): string[] | null {
   const own = Object.keys(state.regions).filter((id) => state.regions[id].owner === country);
@@ -85,9 +86,12 @@ export function reachableProvinces(state: Pick<GameState, "regions">, index: Map
   if (!seeds.length) {
     const bases = Object.keys(state.regions).filter((id) => heldBy(id) && at(id));
     if (!bases.length) return null;
-    let best = own[0];
+    const side = new Set([occupier]);
+    const landings = own.filter((id) => withinReach(state, index, id, side));
+    if (!landings.length) return [];
+    let best = landings[0];
     let bestKm = Infinity;
-    for (const id of own) {
+    for (const id of landings) {
       for (const base of bases) {
         const km = distanceKm(at(id)!, at(base)!);
         if (km < bestKm) {
@@ -112,6 +116,40 @@ export function reachableProvinces(state: Pick<GameState, "regions">, index: Map
     }
   }
   return own.filter((id) => reached.has(id));
+}
+
+/** How far a landing may cross from a coast its side holds, coast to coast: a sea, not an ocean. */
+export const LANDING_KM = 2000;
+
+/** About how far apart two provinces' coasts lie: centre to centre, less the radius of a circle of each one's area. */
+function coastGapKm(a: MapRegion, b: MapRegion): number {
+  const radius = (p: MapRegion) => Math.sqrt(Math.max(0, p.area) / Math.PI);
+  return Math.max(0, distanceKm(a.at!, b.at!) - radius(a) - radius(b));
+}
+
+/**
+ * Whether troops of a side (a country with its co-belligerents and allies)
+ * can get to one province this period: they hold or fight in it or a
+ * province next to it; they stand across a strait from it (STRAIT_KM, as for
+ * a whole country); or it lies on a coast within LANDING_KM of a coast they
+ * hold — Luzon from Taiwan. A province the map gives
+ * no centre for is taken as reachable: there is nothing to measure.
+ */
+export function withinReach(state: Pick<GameState, "regions">, index: MapIndex, id: string, side: ReadonlySet<string>): boolean {
+  const stands = (r: string) => {
+    const region = state.regions[r];
+    return Boolean(region) && (side.has(region.controller) || (region.contested !== undefined && side.has(region.contested)));
+  };
+  if (stands(id) || (index.neighbors[id] ?? []).some(stands)) return true;
+  const target = index.regions[id];
+  if (!target?.at) return true;
+  for (const base of Object.keys(state.regions)) {
+    const from = index.regions[base];
+    if (!from?.at || !stands(base)) continue;
+    if (distanceKm(target.at, from.at) <= STRAIT_KM) return true;
+    if (target.coastal && from.coastal && coastGapKm(target, from) <= LANDING_KM) return true;
+  }
+  return false;
 }
 
 /** "340k", "1.2M", "38M" — thousands of people, short. */

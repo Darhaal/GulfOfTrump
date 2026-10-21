@@ -3,6 +3,8 @@
 
 # testing
 /coverage
+/smoke-failure.png
+/screens-failure.png
 
 # next.js
 /.next/

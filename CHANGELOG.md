@@ -11,6 +11,415 @@ included.
 
 ## [Unreleased]
 
+## [1.0.3-beta] — 2026-10-20
+
+A living world, and people in it. Since 1.0.2-beta:
+
+- the countries that matter have aims, relations, memory and plans that
+  grow over several turns — a war, a bloc, a peace — whether you act or
+  not; a game is free history or historical, chosen at the start;
+- fog of war: other countries' figures are what your government knows;
+- leaders and ministers are people with oil portraits and interests of
+  their own; ministers report after the turn, have deputies, and deputies
+  can be turned against their chiefs; anyone can rise to lead;
+- an army of tanks, aircraft, guns, ships, air defence and drones, and
+  research with a minister of science;
+- an economy whose books hold over fifty turns, and the people's provision;
+- reading aloud and voice input; the app opens full screen; an offline
+  demo game master in every copy, no account needed;
+- resources on 1950, 1964 and 1999 follow real output; Turkey has its
+  borders in 1914 and 1939.
+
+### Added
+- **Leaders and ministers have faces.** Every leader of the eight start dates
+  and the key ministers of the main countries are painted in oil from
+  photographs Wikimedia Commons gives a free licence (public domain, CC0,
+  CC BY, CC BY-SA, OGL), living leaders too; whoever has no free photograph,
+  and anyone the game brings in later, gets a shadow of their sex
+  ([public/portraits](public/portraits), [scripts/portraits.mjs](scripts/portraits.mjs),
+  `npm run portraits`). Each portrait keeps its photograph's licence, apart
+  from the MIT code, and the About page lists every photographer.
+  - The player's leader sits in the game's header (a click opens the
+    country's card) and at the top of the cabinet; foreign leaders appear in
+    the country card, the diplomacy panel and on the pick screen; ministers'
+    portraits replace their initials.
+  - **Anyone can lead.** A leader is a person now, read from the leader line
+    ([src/engine/people.ts](src/engine/people.ts)): a name the portrait data
+    knows, in English, Russian or Ukrainian, brings its portrait; anyone else
+    comes with the shadow of the sex the game master gives, or a guess fixed
+    for the name with women as rare as they were in power that year. A
+    minister named head of state or of government leaves their old post and
+    becomes the country's leader line; so does a deputy, who leaves the
+    ministry's deputies with their portrait. Under a king who reigns the prime
+    minister leads; in 1914 the ruling emperors still did.
+  - Deputies have portraits too, or the shadow of their sex, in the
+    ministry's people as in the cabinet.
+  - Older saves read their leaders and dress their ministers by migration
+    step 13, and again on every load, since an older build drops them.
+- **Countries with intentions.** The governments that matter — the
+  strongest, the largest economies, and any at war or planning — keep a
+  foreign course, moved by the engine every turn with no model call
+  ([src/engine/relations.ts](src/engine/relations.ts),
+  [src/engine/intentions.ts](src/engine/intentions.ts)):
+  - an appetite for force and how far it looks abroad; aims: land to win
+    back, designs on a neighbour, countries it protects;
+  - ties to the countries that matter to it: trust, tension, the threat it
+    sees (strength, distance, hostility) and trade;
+  - a memory of who attacked it, came to its aid, stood aside, left its
+    bloc, sanctioned or paid it — the player's deeds included;
+  - plans that take several turns — a war, entering a war, founding or
+    joining a bloc, leaving one, seeking peace — growing from an incident
+    through tension and a secret decision to preparation and action. A plan
+    can fade (a compromise) or fail (allies refuse, protests at home, the
+    other side is too strong, a new government). The dice are seeded, so a
+    reload rolls nothing again.
+- **Relations and alliances that answer each other.** A country attacked
+  calls its allies and protectors to the war; one that enters calls its
+  own, and every country facing a new enemy calls its friends. An ally that
+  stands aside is remembered.
+- **Politics that steer policy.** A lost election swings a government's
+  appetite for force, a coup hardens it; a new government judges the plans
+  it inherited, may seek peace or leave a bloc. Crises, war-weariness and a
+  weak government turn a country inward.
+- **The game master follows the plans.** It is told the stage each plan
+  reaches; a war, a war entry or a military alliance or pact among other
+  governments happens only when a plan reaches action, and one the answer
+  leaves out the engine carries out itself. The player's own wars and
+  alliances, secessions, and governments that agreed with the player that
+  turn are free. Diplomats speak with their government's secret course in
+  mind; the military, foreign and intelligence ministers see others' moves
+  in the open.
+- **Two modes, chosen when a game is created.** Free: from the start date
+  the world goes its own way. Historical: the date's later history is
+  planned for its date (Barbarossa, Pearl Harbor, Kargil…) and stays a
+  strong tendency until the player's actions change the world. Both seed
+  the crises under way on the start date and each government's claims
+  ([src/engine/scenarios/intentions.ts](src/engine/scenarios/intentions.ts)).
+- **The world's news follows plans**: an item opens on the story of its
+  plan — the incident, the tension, the preparation, the war. Entering a
+  war and joining a bloc are news too.
+- **The country panel shows a foreign course**: appetite, aims, plans in
+  the open with their stage, relations and what it remembers; on your own
+  country, the plans aimed at you and how the powers see you.
+- **An offline demo in every copy of the game.** Without a ChatGPT account
+  the game no longer stops at the first turn: "End turn" and the game master
+  chip in the header ask who plays the world — sign in with ChatGPT, or play
+  the demo — and Settings → Game master has the same switch, remembered on
+  this computer. In the demo a simple offline game master answers every
+  turn, minister, letter, law, candidate and meeting
+  ([src/server/mock.ts](src/server/mock.ts)); the chip reads "Demo" and a
+  thin banner says so. Nothing reaches ChatGPT: each request carries the
+  choice, every route reads it right after its local-only check
+  ([src/server/demo.ts](src/server/demo.ts)), and no token is read. Signing
+  in with ChatGPT turns the demo off. The Microsoft Store's testers asked
+  for this (policy 10.3.1): they could not test without an account.
+- **The people's provision.** How well people are supplied with food,
+  energy and fuel, everyday goods, housing and medicine, each as a share of
+  what they need and with what holds it up or pulls it down
+  ([src/engine/provision.ts](src/engine/provision.ts)). The engine reads it
+  off what the game already keeps:
+  - food from the harvest of the land the country holds, and imports while
+    they come in and can be paid for (and the player's grain contracts);
+  - energy from its own coal, gas and oil, imports, and the stores while
+    they last;
+  - goods from what the army leaves, prices, imports, metals and the
+    economy's growth;
+  - housing and medicine from the war and the occupation and from what
+    the budget spends on the people.
+  At peace on any start date nobody is short; a war at home, a blockade, a
+  war economy or austerity shows. Below 85% it is a warning and below 70% a
+  crisis that keeps the player's people restless. Governments abroad lose
+  support for it, and the game master is told it in a line.
+- **The economy panel has five tabs:** the budget now opens with the debt,
+  the interest it costs, the reserves, prices and jobs, and how they are
+  linked; then trade, deals, the strategic resources and the people's
+  provision.
+- **Weapons, counted.** Every country has rifles, artillery, tanks, combat
+  aircraft, warships, air defence and drones, each with a technology level
+  from 1 (the Great War) to 6 (today)
+  ([src/engine/arsenal.ts](src/engine/arsenal.ts)):
+  - each kind only from the year it existed: no tanks before 1916, no
+    drones before 1982;
+  - the main powers of each start date begin with the counts of the day
+    (Germany's 3,200 tanks in 1939, the 242 T-34s of North Korea in 1950,
+    Russia's 3,300 and Ukraine's 900 tanks in 2022), the rest by their army
+    and what it spends on each soldier;
+  - the army budget buys new ones every month, a third of it in peace and
+    half at war, at the prices of the day, slowed by a shortage of iron,
+    coal, oil or bauxite; old ones retire, 3% a year;
+  - a war wears them down by the fighting on the country's fronts and the
+    balance of strength; the game master may report what a battle really
+    cost and what was captured, within a turn of the hardest fighting;
+  - arms bought by contract and arms given in kind arrive as weapons, the
+    latter out of the giver's stores;
+  - the game master sees each side's arms and the strength of each side in
+    every war, and battles should reflect them.
+- **Research, and a science minister.** A short list of projects: the next
+  level of each kind of weapon before history brings it, rockets, the bomb,
+  satellites, and civil ones (antibiotics, computers, the green revolution,
+  automation, the internet, biotechnology, AI) that lift growth while the
+  world catches up. The further ahead of history, the longer and dearer.
+  Military research is paid from the army budget, civil from industry's;
+  the science minister's competence sets the pace and the dice bring
+  setbacks ([src/engine/research.ts](src/engine/research.ts)). The
+  minister sits in the cabinet with interests of their own, answers
+  questions, takes directives and reports after the turn; a directive can
+  start or stop a project or tell industry what to build first.
+- **Army and Science panels** in the game: the arsenal with its levels,
+  what was built, received and lost last turn, two kinds to build first,
+  the strength in each war; the projects under way and on offer, their
+  funding, cost and time left. Older saves get weapons and an empty
+  research list by migration step 12; the science post stays vacant until
+  someone is appointed.
+- **Deputies, and plots against their chiefs.** A ministry has one to three
+  deputies besides its minister — a "People" tab in the minister's window
+  ([src/engine/deputies.ts](src/engine/deputies.ts)):
+  - the game master names them the first time the player asks after a
+    ministry's people (one short request, never in the turn); the game's
+    dice deal what the model is not trusted with — their ambition, their
+    causes and how they stand with their own chief;
+  - a deputy can be spoken to in private: they talk more frankly than their
+    minister about how the ministry really works, and the minister never
+    hears of it;
+  - the government can sound a deputy out against their chief — to push
+    the minister out, take the post, gather evidence or undermine a
+    directive. The dice answer for the deputy, weighted by their ambition,
+    their grudge or loyalty to their chief and to the leader: they join,
+    name a price (the post, money, the leader's protection), decline, or
+    tell their chief, who then knows the government tried;
+  - a plot grows every turn and may leak, both by the dice before the turn
+    is written; the game master is told how it fell and the engine applies
+    it: the chief dismissed (and the deputy promoted if they were promised
+    the post), the chief brought into line by evidence, the directive
+    undone — or, exposed, an angrier, less loyal minister and a deputy
+    thrown out or made an enemy;
+  - a minister knows only what has leaked; the turn's game master sees the
+    deputies and can name one to a post that falls empty;
+  - older saves get empty lists by migration step 14.
+- **The desktop app opens full screen.** F11 or Settings → Window switches
+  to a window and back, and the next start remembers it. The header has a
+  Quit button in the app, since a full-screen window has none.
+- **Fog of war.** Other countries are shown as the player's government
+  knows them ([src/engine/fog.ts](src/engine/fog.ts)):
+  - how much it knows of a country is a score: free elections publish more
+    than one-party states and juntas; an alliance, a pact or a small
+    organisation shared with it, a shared border, letters from its
+    government, an intelligence task or operation aimed at it and an able
+    head of intelligence raise it; a war and sanctions lower it. The
+    country card says how well it is known and why;
+  - its GDP, growth, debt and soldiers are estimates: "≈" for a country
+    known well, a range the truth lies in for the rest, wider the less is
+    known, armies wider still. They hold still all turn and move with the
+    next turn's reports;
+  - what governments hide is a rumour or unknown: support and stability
+    below a score of 35; the risk of a coup is a rumour from 35 and known
+    with its figure from 60;
+  - the game master and the ministers still see the truth, with a short
+    note of what the player's government knows and how big its
+    intelligence puts the enemy's armies, so the narrative does not let
+    out what the government cannot know;
+  - on for a new game (a box on the pick screen turns it off); a game begun
+    before it keeps the true figures (migration step 8). The eye in the
+    game's header turns it on and off.
+- **Ministers have interests of their own.** Each cabinet minister pushes
+  two causes of their portfolio (a balanced budget, a professional army,
+  keeping out of other people's wars…), has an ambition from 1 to 5 and
+  owes the post to a party in government. The game's dice deal them when
+  someone takes a post, the same in a copy of the game; older saves get
+  them by migration step 9 ([src/engine/interests.ts](src/engine/interests.ts)).
+  They show in the minister's window and colour every answer and report:
+  where the government tramples their causes they warn, object or — if
+  their loyalty is 3 or less — threaten to resign. Their mood after the
+  last report goes to the next turn's game master, who decides whether
+  they follow through.
+- **Reading aloud.** A speaker beside the turn's story, each ministry's
+  report, ministers' and governments' answers, the speakers at a summit and
+  each turn of the world's news reads them with the system's voices
+  (`speechSynthesis`); pressed again, it stops. Settings → Voice: on or off,
+  the voice, the speed, and reading each new turn as it arrives (off by
+  default). Markdown, links and emoji are not read out; long text goes in
+  sentence-sized pieces, since Chrome's online voices stop after about
+  fifteen seconds. Where Windows has no Ukrainian voice, a Russian one reads
+  Ukrainian, and the game says so once.
+- **Voice input.** A microphone in the corner of the orders box, the
+  questions to ministers and the state, their directives, letters, a
+  summit's speech and the adviser beside it, bloc terms and agendas, and an
+  appointment's wishes. On the site in Chrome, Edge and Safari it uses the
+  browser's own speech service. The desktop app cannot: its Chromium has
+  the API but no service behind it. There, and in browsers without it,
+  Whisper (base, multilingual) recognises speech on the computer itself,
+  after a one-time download of about 100 MB the player agrees to first
+  (`public/voice/whisper-worker.js`). Its code comes from fixed versions on
+  jsDelivr and is refused unless its SHA-384 matches; the model comes from
+  a fixed revision. A browser whose service fails moves to Whisper too.
+  Settings can turn the microphone off or delete the model. Sign in with
+  ChatGPT cannot be used for this: OpenAI's preview limits leave the
+  transcription API out.
+- **The desktop app grants the game's page only what it uses:** the
+  microphone (sound, never the camera), the clipboard and full screen;
+  other pages and other permissions are refused.
+
+### Changed
+- Save migration step 10 gives older saves the courses, the historical mode
+  (what the game master was told before) and the date's plans still to come.
+- Turn prompts gain a dozen lines at most for the plans that matter.
+- **The demo site can be found.** It no longer asks search engines to stay
+  away, and it carries Google Search Console's verification tag; a copy of
+  the game on someone's own computer still does.
+- **The offline game master speaks plainly**, in the interface language:
+  no "[mock]" marks or developer wording, a quiet period with a verdict for
+  every order, a cabinet headed by the country's own leader, and parties and
+  ministers with ordinary names. A rally about prices no longer grows into
+  an uprising turn after turn. The site's demo gets the same texts.
+- **The Store's keywords** are seven and name no other product (policy
+  10.1.3): strategy, alternative history, grand strategy, geopolitics,
+  sandbox, AI, history.
+- **The screenshots show today's game, and can be taken again.** The ten
+  pictures of the 1950 game on the demo's front page and in the README, and
+  the Store's eight, are retaken from the game as it is now: no "Details"
+  toggle, ministers with interests and a report after the turn, China under
+  fog of war (its figures as Washington estimates them, a coup risk with no
+  reliable information). The demo's front page shows the turn's chronicle
+  beside the title, where a visitor sees it first. `scripts/screens.mjs`
+  takes them all against a production build with the offline game master;
+  the save it opens, `scripts/screens/1950-usa.json`, is played through the
+  engine by `scripts/screens/make-save.ts` — the government and politics as
+  the setup call starts them, every turn and minister's report through its
+  schema and sanitizer — so it stays a save the game itself could have made.
+  The three older pictures nothing used are gone.
+- **Ministers report after the turn, each in their own window.** The turn's
+  game master no longer writes the ministries' reports. It says in a few
+  English words what each ministry has to report on and what became of its
+  directives (`ministries`); the engine closes what is done or failed and
+  keeps a brief per ministry in the chronicle. Once the turn is applied,
+  every minister with directives, a question from the government during the
+  turn, or news in their field writes their report in a request of their
+  own, one after another in the background, from the settled turn, their
+  portfolio and their interests. Each lands in the minister's window in the
+  cabinet and in the turn's report as it comes; one that fails, or was
+  still being written when the game closed, can be asked for again. The
+  main answer gets shorter, so the turn comes back sooner; the report
+  requests carry a short digest of the country and the period instead of
+  the whole world, and every request of a turn begins with the same text,
+  so the service can reuse it
+  ([src/engine/reports.ts](src/engine/reports.ts),
+  [src/app/api/game/report/route.ts](src/app/api/game/report/route.ts)).
+  A report changes only what its sanitizer lets through: its text, the
+  orders the minister suggests (one click to add) and the minister's mood.
+- **No notes for developers on the player's screens.** Settings no longer
+  says the sign-in needs `npm run dev` or why Claude is not offered, and the
+  site's "Play for real" shows the download and the code, not the commands
+  to build it.
+
+### Fixed
+- **A province's change in people counts from the start of the game.** On
+  1950 and 1964, drawn on the 1994 map, the card compared today's people
+  with the map's 1994 figure, so Liaoning showed "−52% since the start"
+  on the first turn; it now compares with the people it began with.
+- **The economy keeps its books over a long game.** Fifty quiet turns
+  exposed what drifted with no cause; the engine now moves each figure by
+  what causes it ([src/engine/economy.ts](src/engine/economy.ts)):
+  - reserves: the trade in strategic resources still moves them, and the
+    rest of the economy pulls them back towards the era's normal holdings,
+    so Japan or Germany no longer ran dry in peace (and then paid crisis
+    rates on their debt) while Saudi Arabia piled up reserves worth half its
+    GDP;
+  - inflation drifts back to a calm level unless a deficit, cut imports or a
+    shortage hold it up: Indonesia's 110% of 1964 or Turkey's 70% of 2022 no
+    longer last forever, and the printing of a deficit still keeps prices
+    rising;
+  - unemployment follows growth against the trend, and soldiers called up
+    leave the workforce;
+  - a call-up costs money: half of the army's budget follows the number of
+    soldiers unless the game master sets the budget itself;
+  - a blockade the game master reported fades once the country is at peace,
+    never below the sanctions in force; before, a cut stayed for good;
+  - sanctions also take away the exports the sanctioning countries bought
+    (half of them sold elsewhere at a discount), and both lost exports and
+    imports gone without slow growth;
+  - governments abroad keep their books like most did: a deficit that does
+    not raise their debt against GDP runs on, the rest is closed over a few
+    years; a war is paid for first. The player's budget stays the player's;
+  - money is kept to six significant figures: a small country's monthly
+    growth used to be lost to rounding, so its GDP and budget froze;
+  - a buyer short of reserves borrows what a trade deal costs instead of
+    paying nothing.
+  A campaign test plays three dates fifty turns each, a call-up, a blockade
+  and sanctions, and checks the books stay within sane bounds
+  ([tests/campaign-economy.test.ts](tests/campaign-economy.test.ts)).
+- **Turkey has its borders in 1939 and 1914.** The 1938 map's source drew
+  Turkey within the Sèvres lines of 1920: in 1939 its east was Soviet, the
+  south-east from Hatay to Malatya French, and Smyrna Greek. Turkey now holds
+  all its present land, Hatay included (it joined in June 1939), and Iran its
+  part of Azerbaijan. In 1914 Constantinople and Eastern Thrace were
+  Bulgarian; they are Ottoman again, as after the Second Balkan War.
+- **The resources list scrolls.** A country with many resources ran the
+  list off the screen; it now scrolls inside its drop-down. The "Details"
+  toggle beside it is gone: the full accounts are on the player's own
+  country card.
+- **Resources on the three newer dates follow real output.** 1950, 1964 and
+  1999 had only points drawn between the older dates, so in 1999 Qatar
+  produced 135 bcm of gas instead of 20, Norway 243 instead of 48 and
+  Bolivia 63 instead of 3, and Indonesia's tin in 1964 was five times too
+  much. The curves now have checkpoints on these dates from the output of
+  the year before, for the main producers of every resource; the older
+  dates keep their figures. Where the leader went above 10 points (South
+  Africa's gold in 1964, uranium in Katanga in 1950 and Saskatchewan in
+  1999), the whole resource is scaled on that date, so the shares stay and
+  10 is still the leading region.
+- **Armies need a war and a way there.** An occupation or a contest the game
+  master writes now needs a war between the side taking the land and its
+  holder (one started or joined in the same answer counts); otherwise the
+  engine drops it, for one province or a whole country. One province must
+  also be within reach of that side, its co-belligerents or its allies: land
+  they hold or fight in next to it, a strait, or a landing on a coast within
+  2,000 km of a coast they hold — Normandy and Inchon stay possible, Hawaii
+  from Tokyo does not; a movement with no land may still rise inside a
+  province. Occupying a whole country with no foothold in it lands only
+  where such a landing could. Annexing by treaty still goes anywhere
+  ([src/engine/outcome.ts](src/engine/outcome.ts),
+  [src/engine/provinces.ts](src/engine/provinces.ts)).
+- **Land lost is counted in people.** Coup risk, support and stability
+  abroad weigh each lost province by the people in it, so losing the
+  capital shakes a government more than losing an empty province
+  ([src/engine/abroad.ts](src/engine/abroad.ts)).
+- **Election dates that decide the government.** Where the table had a
+  vote that could not change the government, or a date that was not due,
+  it now has the one that could:
+  - France 1939: 1942, as the decrees of July 1939 extended the Chamber;
+  - Chile 1939: the presidential election of 1944, every six years;
+  - Colombia 1991 and Georgia 1999: the presidential elections of 1994 and
+    2000;
+  - Portugal 1914 votes every three years;
+  - Iran 1999: the presidential election of 2001; Azerbaijan 1999: the
+    presidential election of 2003; Moldova 2022: the parliamentary
+    election of 2025, not the presidential one;
+  - Turkey 2014: the general election of June 2015, not the presidential
+    vote of 2014; Fiji 2014 holds its election of September 2014 and no
+    longer stays a junta for good; Portugal 2022: autumn 2026, when the
+    legislature elected in the snap vote of 2022 was due to end;
+  - terms of the day: Chile's president six years from 1994, Turkey's
+    parliament five in 1999, Latvia's Saeima three, Austria's parliament
+    five from 2014;
+  - real dates for Peru, Japan and Finland in 1939, and for Chile and
+    Costa Rica in 1914.
+- **Taiwan under the Kuomintang** is a one-party state in 1950 and 1964:
+  the party holds the army, so a coup is all but ruled out.
+- **A year between coups, whatever the turn.** The pause after an attempt
+  is measured by the calendar, so leap years no longer shorten it, and
+  monthly, quarterly and yearly turns give the same number of coups.
+- **No coup risk where no coup can happen**: the country panel and the
+  game master's list of shaky governments leave out countries with no
+  land, movements without territory and governments abroad.
+- **New leaders are asked for until they are named.** A government that
+  fell keeps being listed for the game master until it names a leader,
+  however the turn fell.
+- **Countries born in play** get the kind of government the game master
+  gives them; when it gives none, the description is read in Russian and
+  Ukrainian too, not only in English.
+- **A copy of a game keeps its dice.** A copy made to try another course
+  no longer rerolls the world's elections and coups.
+
 ## [1.0.2-beta] — 2026-10-20
 
 The world moves on its own. Since 1.0.1-beta:

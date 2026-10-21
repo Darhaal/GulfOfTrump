@@ -1,5 +1,6 @@
 import { SummitCloseSchema, SummitTalkSchema } from "@/engine/foreign";
 import { buildSummitPrompt, SUMMIT_CLOSE_INSTRUCTIONS, SUMMIT_TALK_INSTRUCTIONS } from "@/engine/prompts";
+import { wantsDemo } from "@/server/demo";
 import { rejectNonLocal } from "@/server/guard";
 import { completeJson } from "@/server/llm";
 import { badRequest, MAX_MESSAGE_CHARS, readGameRequest } from "@/server/requests";
@@ -17,6 +18,7 @@ export const maxDuration = 300;
 export async function POST(request: Request) {
   const rejected = rejectNonLocal(request);
   if (rejected) return rejected;
+  const demo = wantsDemo(request);
   const parsed = await readGameRequest(request);
   if (parsed instanceof Response) return parsed;
   const { state, locale, model, body } = parsed;
@@ -31,13 +33,13 @@ export async function POST(request: Request) {
     const onDelta = (delta: string) => progress((chars += delta.length));
     if (finish) {
       const result = await completeJson(
-        { model, instructions: SUMMIT_CLOSE_INSTRUCTIONS(locale), input: [{ role: "user", content: buildSummitPrompt(state, summit) }], signal, onDelta },
+        { model, demo, locale, instructions: SUMMIT_CLOSE_INSTRUCTIONS(locale), input: [{ role: "user", content: buildSummitPrompt(state, summit) }], signal, onDelta },
         SummitCloseSchema,
       );
       return { outcome: result.outcome, agreements: result.agreements };
     }
     const reply = await completeJson(
-      { model, instructions: SUMMIT_TALK_INSTRUCTIONS(locale), input: [{ role: "user", content: buildSummitPrompt(state, summit, line) }], signal, onDelta },
+      { model, demo, locale, instructions: SUMMIT_TALK_INSTRUCTIONS(locale), input: [{ role: "user", content: buildSummitPrompt(state, summit, line) }], signal, onDelta },
       SummitTalkSchema,
     );
     return { lines: reply.lines.filter((l) => l.country !== state.player && state.countries[l.country]) };

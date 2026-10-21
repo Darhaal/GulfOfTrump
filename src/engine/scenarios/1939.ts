@@ -135,12 +135,18 @@ Real history for reference: Britain and France declare war on 3 September; the U
     "co-archipelago-of-saint-andrews": "colombia",
     "my-perlis": "uk",
     "kp-rason": "japan",
+    // A sliver of Iranian Azerbaijan that the same Sèvres-era layer gives to the USSR.
+    "ir-west-azerbaijan-p2": "iran",
   },
   // The Solomon Islands and Kuwait were British protectorates; the source
   // draws the first with the New Hebrides and Australia, the second with Iraq.
+  // It also draws Turkey within the Sèvres lines of 1920 — the east Soviet,
+  // the south-east French, Smyrna Greek — while the Treaty of Lausanne gave
+  // it its present land, and Hatay joined in June 1939.
   modernOwners: {
     SLB: "uk",
     KWT: "uk",
+    TUR: "turkey",
   },
   countries: {
     germany: {

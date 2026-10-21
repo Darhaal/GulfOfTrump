@@ -1,26 +1,31 @@
 import { z } from "zod";
 import { applyAbroad, castAbroad } from "./abroad";
+import { advanceArsenals, armsField, sanitizeArms } from "./arsenal";
+import { applyIntrigues, castIntrigues } from "./deputies";
 import { countryColor, isHexColor } from "./colors";
 import { addStep } from "./calendar";
 import { countryCrises, unrestFloor } from "./crises";
 import { advanceEconomies, followLand, limitChange, nationalAccounts, seedEconomies, snapshot, STEP_YEARS } from "./economy";
-import { applyForeign, BLOC_KINDS, foreignFields, sanitizeForeign } from "./foreign";
+import { applyForeign, BLOC_KINDS, endWar, foreignFields, sanitizeForeign } from "./foreign";
+import { advanceIntentions, carryOutPlans, castPlans, planGate } from "./intentions";
+import { syncRulers } from "./people";
 import { applyPolitics, politicsField } from "./politics";
-import { reportsField } from "./advisors";
+import { briefsFor, ministriesField, sanitizeMinistries } from "./reports";
 import { applyOfficials, officialsField } from "./government";
 import { growPopulation, losePopulation, peopleOf, populationField } from "./population";
-import { applySanctions, sanctionCuts, sanctionsField } from "./trade";
+import { applySanctions, sanctionCuts, sanctionExportCuts, sanctionsField } from "./trade";
 import { applyDeals, dealsField, settleDeals } from "./deals";
 import { applyFunds, fundsField, keepFunds } from "./funds";
 import { applyProclamation } from "./identity";
+import { advanceResearch, applyResearchWords, sanitizeResearch } from "./research";
 import { applyBills, billsField } from "./acts";
 import { adjustTaken, carry, matchTown, townShare } from "./towns";
-import { reachableProvinces } from "./provinces";
+import { reachableProvinces, withinReach } from "./provinces";
 import { applyOverthrow, applyProtests, overthrowField, protestsField, updateExile } from "./unrest";
 import { bordersBefore } from "./history";
 import { withoutNulls } from "./json";
 import { slug } from "./text";
-import { EVENT_KINDS } from "./types";
+import { EVENT_KINDS, REGIME_KINDS } from "./types";
 import type { AppliedChange, ChronicleEntry, GameState, MapIndex, MapRegion, OrderVerdict, RegionState, War } from "./types";
 
 /**
@@ -80,6 +85,8 @@ const OutcomeFields = z.object({
         color: z.string().optional(),
         leader: shortText.optional(),
         government: shortText.optional(),
+        // How it is governed (engine/abroad.ts); read from "government" when left out.
+        regime: z.enum(REGIME_KINDS).optional().catch(undefined),
       }),
     )
     .max(8)
@@ -108,7 +115,7 @@ const OutcomeFields = z.object({
   alliancesJoined: z.array(z.object({ alliance: shortText.min(1), country: tag })).max(12).default([]),
   alliancesLeft: z.array(z.object({ alliance: shortText.min(1), country: tag })).max(12).default([]),
   // Elections and coups abroad can bring many new leaders in a long turn (engine/abroad.ts).
-  leaders: z.array(z.object({ country: tag, leader: shortText.min(1), government: shortText.optional() })).max(48).default([]),
+  leaders: z.array(z.object({ country: tag, leader: shortText.min(1), government: shortText.optional(), gender: z.enum(["male", "female"]).optional().catch(undefined) })).max(48).default([]),
   // New levels and rates for economies this period changed; the engine limits them.
   economy: z
     .array(
@@ -131,7 +138,7 @@ const OutcomeFields = z.object({
     .default([]),
   ...foreignFields,
   politics: politicsField,
-  reports: reportsField,
+  ministries: ministriesField,
   population: populationField,
   officials: officialsField,
   sanctions: sanctionsField,
@@ -140,6 +147,7 @@ const OutcomeFields = z.object({
   bills: billsField,
   protests: protestsField,
   overthrow: overthrowField,
+  arms: armsField,
   // Where the player's government goes when it loses all its land.
   exileHost: tag.optional().catch(undefined),
 });
@@ -277,18 +285,58 @@ function frontTowns(state: GameState, index: MapIndex | undefined, t: Transfer, 
   t.rest = towns.map((x) => x.n).filter((n) => !t.taken!.includes(n));
 }
 
+interface Sides {
+  attackers: string[];
+  defenders: string[];
+}
+
+/**
+ * Who can stage the troops of `country` against `enemy` once the answer
+ * lands: itself, everyone on its side of a war against `enemy` (counting wars
+ * that start or gain members in the same answer), and its military allies.
+ * Empty when the two are not at war.
+ */
+function sideAgainst(wars: Sides[], blocs: string[][], country: string, enemy: string): Set<string> {
+  const side = new Set<string>();
+  for (const w of wars) {
+    if (w.attackers.includes(country) && w.defenders.includes(enemy)) w.attackers.forEach((t) => side.add(t));
+    if (w.defenders.includes(country) && w.attackers.includes(enemy)) w.defenders.forEach((t) => side.add(t));
+  }
+  if (side.size) for (const members of blocs) if (members.includes(country)) members.forEach((t) => side.add(t));
+  return side;
+}
+
 /**
  * Turns the model's transfers into one entry per province: an id is taken
  * as is; a name is looked up (preferring a province the recipient does not
  * hold yet); a whole country expands to every province it owns — for an
  * occupation or a contest, only those the recipient can reach from where it
  * stands (see reachableProvinces), and not those it already holds.
+ * An occupation or a contest needs a war with the province's holder; one
+ * province alone must also be within reach of the recipient's side (see
+ * withinReach), unless the recipient holds no land at all: a rising comes
+ * from within. Annexing and liberating by treaty go anywhere.
  */
-function expandTransfers(state: GameState, raw: RawOutcome["transfers"], index: MapIndex | undefined, exists: (t: string) => boolean) {
+function expandTransfers(
+  state: GameState,
+  raw: RawOutcome["transfers"],
+  index: MapIndex | undefined,
+  exists: (t: string) => boolean,
+  sides: (country: string, enemy: string) => Set<string>,
+) {
   const byName = namesIndex(index);
   const out: Transfer[] = [];
   let dropped = 0;
   const seen = new Set<string>();
+  const atWar = (id: string, to: string) => sides(to, state.regions[id].controller).size > 0;
+  const landless = (tag: string) => !Object.values(state.regions).some((r) => r.controller === tag || r.contested === tag);
+  // The holder fighting in its own province needs neither.
+  const canTake = (id: string, to: string) => {
+    const holder = state.regions[id].controller;
+    if (holder === to) return true;
+    const side = sides(to, holder);
+    return side.size > 0 && (!index || landless(to) || withinReach(state, index, id, side));
+  };
   const push = (region: string, to: string, mode: Transfer["mode"], share?: number, towns?: string[]) => {
     if (seen.has(region)) return;
     seen.add(region);
@@ -301,21 +349,21 @@ function expandTransfers(state: GameState, raw: RawOutcome["transfers"], index: 
       dropped += 1;
       continue;
     }
+    const military = t.mode === "occupy" || t.mode === "contest";
     if (t.region) {
       let id: string | undefined = state.regions[t.region] ? t.region : undefined;
       if (!id) {
         const candidates = (byName.get(t.region.trim().toLowerCase()) ?? []).filter((r) => state.regions[r]);
         id = candidates.find((r) => state.regions[r].controller !== t.to) ?? candidates[0];
       }
-      if (id) push(id, t.to, t.mode, t.share, t.towns);
+      if (id && (!military || canTake(id, t.to))) push(id, t.to, t.mode, t.share, t.towns);
       else dropped += 1;
       continue;
     }
     if (t.country && state.countries[t.country]) {
-      const military = t.mode === "occupy" || t.mode === "contest";
       const reach = military && index ? reachableProvinces(state, index, t.country, t.to) : null;
       const ids = (reach ?? Object.keys(state.regions).filter((id) => state.regions[id].owner === t.country)).filter(
-        (id) => !military || state.regions[id].controller !== t.to,
+        (id) => !military || (state.regions[id].controller !== t.to && atWar(id, t.to)),
       );
       if (!ids.length) dropped += 1;
       ids.forEach((id) => push(id, t.to, t.mode));
@@ -351,24 +399,48 @@ export function sanitizeOutcome(
     raw.newCountries.map((c) => ({ ...c, tag: slug(c.tag) })),
     (c) => c.tag.length > 0 && !state.countries[c.tag],
   ).filter((c, i, list) => list.findIndex((o) => o.tag === c.tag) === i);
-  const exists = (t: string) => Boolean(state.countries[t]) || newCountries.some((c) => c.tag === t);
+  const isNew = (t: string) => newCountries.some((c) => c.tag === t);
+  const exists = (t: string) => Boolean(state.countries[t]) || isNew(t);
   const knownTags = (tags: string[]) => [...new Set(tags.filter(exists))];
+  // Wars and military blocs among other governments come only from the plans that reach action (engine/intentions.ts).
+  const gate = planGate(state, isNew);
 
-  const expanded = expandTransfers(state, raw.transfers, options.index, exists);
+  const warsStarted = keep(
+    raw.warsStarted.map((w) => {
+      const known = { attackers: knownTags(w.attackers), defenders: knownTags(w.defenders) };
+      return { ...w, ...(gate.war(known) ?? { attackers: [], defenders: [] }) };
+    }),
+    (w) => w.attackers.length > 0 && w.defenders.length > 0 && !w.attackers.some((a) => w.defenders.includes(a)),
+  );
+  const warsJoined = keep(raw.warsJoined, (j) => {
+    const war = matchByName(state.wars, j.war);
+    return exists(j.country) && Boolean(war) && gate.join(j.country, war!, j.side);
+  });
+  const alliancesFormed = keep(
+    raw.alliancesFormed.map((a) => ({ ...a, members: gate.bloc(knownTags(a.members), a.kind) ?? [] })),
+    (a) => a.members.length >= 2,
+  );
+  const alliancesJoined = keep(raw.alliancesJoined, (j) => {
+    const bloc = matchByName(state.alliances, j.alliance);
+    return exists(j.country) && Boolean(bloc) && gate.accession(j.country, bloc!);
+  });
+
+  // The wars and military alliances as they stand once this answer lands, for what troops may take.
+  const wars = new Map<string, Sides>(state.wars.map((w) => [w.id, { attackers: [...w.attackers], defenders: [...w.defenders] }]));
+  for (const j of warsJoined) wars.get(matchByName(state.wars, j.war)!.id)![j.side].push(j.country);
+  const militaryBloc = (a: { kind?: string }) => (a.kind ?? "alliance") === "alliance";
+  const blocs = new Map<string, string[]>(state.alliances.filter(militaryBloc).map((a) => [a.id, [...a.members]]));
+  for (const j of alliancesJoined) blocs.get(matchByName(state.alliances, j.alliance)!.id)?.push(j.country);
+  const sides = (country: string, enemy: string) =>
+    sideAgainst([...wars.values(), ...warsStarted], [...blocs.values(), ...alliancesFormed.filter(militaryBloc).map((a) => a.members)], country, enemy);
+
+  const expanded = expandTransfers(state, raw.transfers, options.index, exists, sides);
   dropped += expanded.dropped;
   const orderCount = options.orders?.length ?? 12;
   const verdicts = raw.orders
     .filter((v) => v.n >= 1 && v.n <= orderCount)
     .filter((v, i, list) => list.findIndex((o) => o.n === v.n) === i)
     .sort((a, b) => a.n - b.n);
-  const warsStarted = keep(
-    raw.warsStarted.map((w) => ({ ...w, attackers: knownTags(w.attackers), defenders: knownTags(w.defenders) })),
-    (w) => w.attackers.length > 0 && w.defenders.length > 0 && !w.attackers.some((a) => w.defenders.includes(a)),
-  );
-  const alliancesFormed = keep(
-    raw.alliancesFormed.map((a) => ({ ...a, members: knownTags(a.members) })),
-    (a) => a.members.length >= 2,
-  );
 
   return {
     headline: raw.headline,
@@ -378,10 +450,10 @@ export function sanitizeOutcome(
     verdicts,
     newCountries,
     warsStarted,
-    warsJoined: keep(raw.warsJoined, (j) => exists(j.country) && Boolean(matchByName(state.wars, j.war))),
+    warsJoined,
     warsEnded: keep(raw.warsEnded, (e) => Boolean(matchByName(state.wars, e.war))),
     alliancesFormed,
-    alliancesJoined: keep(raw.alliancesJoined, (j) => exists(j.country) && Boolean(matchByName(state.alliances, j.alliance))),
+    alliancesJoined,
     alliancesLeft: keep(raw.alliancesLeft, (l) => exists(l.country) && Boolean(matchByName(state.alliances, l.alliance))),
     leaders: keep(raw.leaders, (l) => exists(l.country)),
     ...(() => {
@@ -391,10 +463,8 @@ export function sanitizeOutcome(
     })(),
     // The player's politics, limited when applied (engine/politics.ts).
     politics: raw.politics,
-    // One report per ministry, about directives that exist.
-    reports: raw.reports
-      .filter((r, i, list) => list.findIndex((o) => o.ministry === r.ministry) === i)
-      .map((r) => ({ ...r, directives: r.directives.filter((d) => (state.directives ?? []).some((x) => x.id === d.id && x.ministry === r.ministry)) })),
+    // One word per ministry, about directives that exist; the ministers write their reports after the turn.
+    ministries: sanitizeMinistries(state, raw.ministries),
     population: keep(raw.population, (p) => exists(p.country)).map((p) => (p.to && !exists(p.to) ? { ...p, to: undefined } : p)),
     // Places of protests as province ids: an id the state knows, or a province's name.
     protests: raw.protests.map((p) => ({
@@ -411,6 +481,12 @@ export function sanitizeOutcome(
     bills: keep(raw.bills, (b) => Boolean(state.bills?.some((x) => x.id === b.bill && x.status === "proposed"))),
     exileHost: raw.exileHost && exists(raw.exileHost) ? raw.exileHost : undefined,
     // One change per country, limited against its economy now; new countries start from their land.
+    // Weapons lost and captured only by countries at war, within a turn of the hardest fighting; the player's priorities and research by what exists (engine/arsenal.ts, research.ts).
+    arms: (() => {
+      const fighting = new Set<string>([...state.wars.filter((w) => !w.truce), ...warsStarted].flatMap((w) => [...w.attackers, ...w.defenders]));
+      for (const j of warsJoined) fighting.add(j.country);
+      return { ...sanitizeArms(state, raw.arms, fighting), research: sanitizeResearch(state, raw.arms.research) };
+    })(),
     economy: keep(raw.economy, (c) => Boolean(state.countries[c.country]?.economy))
       .filter((c, i, list) => list.findIndex((o) => o.country === c.country) === i)
       .map((c) => limitChange(c, state.countries[c.country].economy!)),
@@ -436,8 +512,11 @@ export function applyOutcome(
   const applied: AppliedChange[] = [];
   const years = STEP_YEARS[state.step];
   const peopleBefore = peopleOf(state, regions, state.player);
-  // The elections and coups abroad were decided before the turn was written (engine/abroad.ts).
-  const abroad = castAbroad(state);
+  // The elections and coups abroad, and how other governments' plans move, were decided before the turn was written (engine/abroad.ts, engine/intentions.ts).
+  const abroad = castAbroad(state, regions);
+  const plans = castPlans(state);
+  // So were the government's own plots in its ministries (engine/deputies.ts).
+  const intrigues = castIntrigues(state);
 
   // People grow before the borders move; GDP then follows the land and the
   // losses measured from here, so natural growth does not count twice.
@@ -527,26 +606,14 @@ export function applyOutcome(
     const war = matchByName(next.wars, j.war);
     if (!war || war.attackers.includes(j.country) || war.defenders.includes(j.country)) continue;
     war[j.side].push(j.country);
+    applied.push({ kind: "enter", war: war.id, name: war.name, country: j.country, side: j.side });
   }
 
+  // Peace returns occupied land to its owner unless the treaty annexed it,
+  // which the model reports as an annex transfer in the same turn.
   for (const e of outcome.warsEnded) {
     const war = matchByName(next.wars, e.war);
-    if (!war) continue;
-    next.wars = next.wars.filter((w) => w.id !== war.id);
-    applied.push({ kind: "peace", war: war.id, name: war.name, sides: [...war.attackers, ...war.defenders] });
-    // Peace returns occupied land to its owner unless the treaty annexed it,
-    // which the model reports as an annex transfer in the same turn.
-    const sides = new Set([...war.attackers, ...war.defenders]);
-    for (const region of Object.values(next.regions)) {
-      if (region.controller !== region.owner && sides.has(region.controller) && sides.has(region.owner)) {
-        region.controller = region.owner;
-      }
-      if (region.contested && sides.has(region.contested) && sides.has(region.controller)) {
-        delete region.contested;
-        delete region.held;
-        delete region.taken;
-      }
-    }
+    if (war) endWar(next, war, applied);
   }
 
   // A war is over once a whole side has been annexed: nobody is left to fight
@@ -585,7 +652,9 @@ export function applyOutcome(
 
   for (const j of outcome.alliancesJoined) {
     const alliance = matchByName(next.alliances, j.alliance);
-    if (alliance && !alliance.members.includes(j.country)) alliance.members.push(j.country);
+    if (!alliance || alliance.members.includes(j.country)) continue;
+    alliance.members.push(j.country);
+    applied.push({ kind: "accession", alliance: alliance.id, name: alliance.name, country: j.country });
   }
 
   for (const l of outcome.alliancesLeft) {
@@ -600,6 +669,8 @@ export function applyOutcome(
     if (a.members.length < 2 && was && was.members.length >= 2) applied.push({ kind: "alliance-ended", alliance: a.id, name: a.name, members: [...was.members] });
   }
   next.alliances = next.alliances.filter((a) => a.members.length >= 2);
+  // Plans at action are carried out: what the answer did counts, what it left out the engine does.
+  if (next.plans) carryOutPlans(next, plans, { turn: state.turn, from }, applied);
 
   // Who has a new leader this turn, and of those who replaced one in office (rather than filling a name a fall left empty).
   const named = new Set<string>();
@@ -629,6 +700,7 @@ export function applyOutcome(
   for (const p of state.personnel ?? []) applied.push({ kind: "official", post: p.post, title: p.title, name: p.to, change: "appointed" });
   delete next.personnel;
   applyOfficials(next, outcome.officials, { to }, applied);
+  applyIntrigues(next, intrigues, { turn: state.turn, to, seed: state.seed ?? state.id }, applied);
   applySanctions(next, outcome.sanctions, { to }, applied);
   // The player's proclamations take effect as the turn ends; bills get their verdicts.
   applyProclamation(next, state.proclamation, applied);
@@ -639,24 +711,35 @@ export function applyOutcome(
   if (state.budgetSet) applied.push({ kind: "budget", country: state.player });
   delete next.budgetSet;
   if (regions) losePopulation(next.regions, regions, outcome.population, years, applied);
-  // Ministries report; what is done or failed leaves the list of directives.
-  const reports = outcome.reports.map((r) => ({
-    ...r,
-    directives: r.directives.map((d) => ({ ...d, text: next.directives?.find((x) => x.id === d.id)?.text })),
-  }));
-  const closed = new Set(reports.flatMap((r) => r.directives.filter((d) => d.status !== "progress").map((d) => d.id)));
+  // Each ministry's brief for the report its minister writes after the turn; what is done or failed leaves the list of directives.
+  const briefs = briefsFor(state, outcome.ministries);
+  const closed = new Set(briefs.flatMap((b) => b.directives.filter((d) => d.status !== "progress").map((d) => d.id)));
   if (next.directives) next.directives = next.directives.filter((d) => !closed.has(d.id));
 
   // Economies move after the borders do, so production follows who holds the land.
   if (regions) next = seedEconomies(next, regions);
-  const economies = advanceEconomies(next, outcome.economy, years, regions, regions ? sanctionCuts(next, regions) : new Map());
+  const economies = advanceEconomies(next, outcome.economy, years, regions, regions ? sanctionCuts(next, regions) : new Map(), regions ? sanctionExportCuts(next, regions) : new Map());
   // GDP and taxes follow land and people gained or lost (economy.ts).
   if (regions && grown) followLand(grown, next.regions, regions, state.scenarioId, economies, (tag) => Boolean(state.countries[tag]?.economy));
   // Deals in force pay out and deliver over the turn.
   settleDeals(next, economies, years, regions);
   for (const [tag, economy] of Object.entries(economies)) next.countries[tag].economy = economy;
+  // Research runs on the period's budget; its military part comes out of the arms money. Then weapons are built, retired and lost.
+  applyResearchWords(next, outcome.arms.research, applied);
+  const researchSpend = advanceResearch(next, years, applied);
+  // Arms given in kind come out of the giver's stores; arms bought by contract are newly made for the buyer.
+  const deliveries = [
+    ...outcome.funds.filter((f) => f.kind === "arms").map((f) => ({ from: f.from, to: f.to, money: f.amount, fromStock: Boolean(state.countries[f.from]) })),
+    ...(state.deals ?? [])
+      .filter((d) => d.status === "active" && d.good === "arms")
+      .map((d) => ({ from: d.side === "buy" ? d.partner : state.player, to: d.side === "buy" ? state.player : d.partner, money: d.value * years, fromStock: false })),
+  ];
+  advanceArsenals(next, state, outcome.arms, years, regions, applied, researchSpend, deliveries);
   // Politics abroad follow the economies and the war; then the dice land.
-  applyAbroad(next, abroad, { to, years, named, replaced }, applied);
+  const regimes = new Map(outcome.newCountries.flatMap((c) => (c.regime ? [[c.tag, c.regime] as const] : [])));
+  applyAbroad(next, abroad, { to, years, named, replaced, map: regions, regimes }, applied);
+  // Courses and plans follow: what the turn taught each government, new governments' courses, new plans.
+  advanceIntentions(state, next, { turn: state.turn, from, to, years, regions, events: outcome.events }, applied);
   const before = state.countries[state.player]?.economy;
   const after = next.countries[state.player]?.economy;
   const borders = bordersBefore(state.regions, next.regions);
@@ -675,7 +758,7 @@ export function applyOutcome(
       ? { economy: { before: { ...snapshot(before), ...(regions ? { people: Math.round(peopleBefore) } : {}) }, after: { ...snapshot(after), ...(regions ? { people: Math.round(peopleOf(next, regions, state.player)) } : {}) } } }
       : {}),
     ...(held.length ? { summits: held } : {}),
-    ...(reports.length ? { reports } : {}),
+    ...(briefs.length ? { briefs } : {}),
     ...(Object.keys(borders).length ? { borders } : {}),
   };
   next.chronicle.push(entry);
@@ -683,6 +766,8 @@ export function applyOutcome(
   next.turn = state.turn + 1;
   next.draft = [];
   next.updatedAt = now.toISOString();
+  // Every leader line that changed is read again into people, with the sex the game master gave a new leader.
+  syncRulers(next, new Map(outcome.leaders.flatMap((l) => (l.gender ? [[l.country, l.gender] as const] : []))));
   return next;
 }
 

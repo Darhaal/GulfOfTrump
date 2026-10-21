@@ -1,6 +1,7 @@
 import { OutcomeSchema, sanitizeOutcome } from "@/engine/outcome";
 import { buildTurnPrompt, TURN_INSTRUCTIONS } from "@/engine/prompts";
 import { getScenario } from "@/engine/scenarios";
+import { wantsDemo } from "@/server/demo";
 import { rejectNonLocal } from "@/server/guard";
 import { completeJson } from "@/server/llm";
 import { loadMapIndex } from "@/server/maps";
@@ -19,6 +20,7 @@ export const maxDuration = 600;
 export async function POST(request: Request) {
   const rejected = rejectNonLocal(request);
   if (rejected) return rejected;
+  const demo = wantsDemo(request);
   const parsed = await readGameRequest(request);
   if (parsed instanceof Response) return parsed;
   const { state, locale, model, body } = parsed;
@@ -31,7 +33,9 @@ export async function POST(request: Request) {
     const raw = await completeJson(
       {
         model,
-        instructions: TURN_INSTRUCTIONS(locale),
+        demo,
+        locale,
+        instructions: TURN_INSTRUCTIONS(locale, state.mode),
         input: [{ role: "user", content: buildTurnPrompt(state, orders, index) }],
         signal,
         onDelta: (delta) => progress((chars += delta.length)),

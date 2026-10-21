@@ -4,6 +4,7 @@ import { CalendarPlus, Handshake, Mic, Search, Swords, Users, X } from "lucide-r
 import { useMemo, useState } from "react";
 import Flag from "@/components/Flag";
 import { ui } from "@/components/ui/classes";
+import Dictation from "@/components/voice/Dictation";
 import { addStep, formatDate } from "@/engine/calendar";
 import { BLOC_KINDS, canHoldNow, type BlocKind } from "@/engine/foreign";
 import type { GameState, Proposal, Summit } from "@/engine/types";
@@ -324,7 +325,9 @@ export default function ForeignPanel({ state, disabled, onPropose, onWithdraw, o
           <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder={t("foreign.blocNamePlaceholder")} aria-label={t("foreign.blocName")} className={`${ui.input} py-2.5`} />
           <div className={ui.label}>{t("foreign.invite")}</div>
           <CountryPicker state={state} picked={picked} onChange={setPicked} />
-          <textarea value={terms} onChange={(e) => setTerms(e.target.value)} maxLength={300} rows={2} placeholder={t("foreign.termsPlaceholder")} aria-label={t("foreign.terms")} className={`${ui.input} resize-none`} />
+          <Dictation id="bloc-terms" set={setTerms} max={300}>
+            <textarea value={terms} onChange={(e) => setTerms(e.target.value)} maxLength={300} rows={2} placeholder={t("foreign.termsPlaceholder")} aria-label={t("foreign.terms")} className={`${ui.input} resize-none`} />
+          </Dictation>
           <p className="text-2xs font-medium text-muted">{t("foreign.sent")}</p>
           <div className="flex gap-2">
             <button type="button" onClick={reset} className={`${ui.secondary} flex-1 px-3 py-2.5 text-xs`}>
@@ -355,7 +358,9 @@ export default function ForeignPanel({ state, disabled, onPropose, onWithdraw, o
           </div>
           <div className={ui.label}>{t("foreign.participants")}</div>
           <CountryPicker state={state} picked={picked} onChange={setPicked} />
-          <textarea value={terms} onChange={(e) => setTerms(e.target.value)} maxLength={300} rows={2} placeholder={t("foreign.agenda")} aria-label={t("foreign.agenda")} className={`${ui.input} resize-none`} />
+          <Dictation id="summit-agenda" set={setTerms} max={300}>
+            <textarea value={terms} onChange={(e) => setTerms(e.target.value)} maxLength={300} rows={2} placeholder={t("foreign.agenda")} aria-label={t("foreign.agenda")} className={`${ui.input} resize-none`} />
+          </Dictation>
           <div className="flex gap-2">
             <button type="button" onClick={reset} className={`${ui.secondary} flex-1 px-3 py-2.5 text-xs`}>
               {t("foreign.cancel")}

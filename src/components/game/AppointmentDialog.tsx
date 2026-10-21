@@ -5,6 +5,7 @@ import { useState } from "react";
 import ChatScroll from "@/components/ui/ChatScroll";
 import Dialog from "@/components/ui/Dialog";
 import { ui } from "@/components/ui/classes";
+import Dictation from "@/components/voice/Dictation";
 import { ADVISOR_TITLES, ADVISORS, type AdvisorId } from "@/engine/advisors";
 import { ADVISOR_POST, officialAt, type Candidate } from "@/engine/government";
 import type { GameState, Official, OfficialPost } from "@/engine/types";
@@ -117,7 +118,9 @@ export default function AppointmentDialog({ state, post, busy, disabled, onClose
           </section>
 
           <section className="grid gap-2">
-            <textarea value={wishes} onChange={(e) => setWishes(e.target.value)} rows={2} placeholder={t("appoint.wishes")} className={`${ui.input} resize-none py-2`} />
+            <Dictation id="appoint-wishes" set={setWishes}>
+              <textarea value={wishes} onChange={(e) => setWishes(e.target.value)} rows={2} placeholder={t("appoint.wishes")} className={`${ui.input} resize-none py-2`} />
+            </Dictation>
             <button
               type="button"
               disabled={disabled || Boolean(busy)}

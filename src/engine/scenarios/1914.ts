@@ -123,6 +123,12 @@ Real history for reference: Austria's ultimatum to Serbia on 23 July; war declar
     "tr-kars": "russia",
     "tr-ardahan": "russia",
     "tr-artvin": "russia",
+    // Eastern Thrace, Constantinople and Adrianople were Ottoman again after
+    // the Second Balkan War (1913); the source keeps them Bulgarian.
+    "tr-istanbul": "ottoman",
+    "tr-edirne": "ottoman",
+    "tr-k-rklareli": "ottoman",
+    "tr-tekirdag": "ottoman",
     "id-riau-islands": "netherlands",
     "pt-madeira": "portugal",
     "pt-azores": "portugal",

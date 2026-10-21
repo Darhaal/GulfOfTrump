@@ -1,6 +1,6 @@
 "use client";
 
-import { Banknote, ChevronDown, ChevronUp, Gem, Percent, PiggyBank, Scale, Shield, TrendingUp, TriangleAlert, type LucideIcon } from "lucide-react";
+import { Banknote, ChevronDown, Gem, Percent, PiggyBank, Scale, Shield, TrendingUp, TriangleAlert, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { RESOURCE_COLORS } from "@/components/map/colors";
 import { type Crisis, interestRate } from "@/engine/crises";
@@ -8,7 +8,6 @@ import { balance, type Accounts } from "@/engine/economy";
 import type { Economy, ScenarioId } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
-import EconomyPanel from "./EconomyPanel";
 import ResourceLedger, { ledgerTypes, resourceState, STATE_TONE } from "./ResourceLedger";
 
 /**
@@ -16,7 +15,8 @@ import ResourceLedger, { ledgerTypes, resourceState, STATE_TONE } from "./Resour
  * the budget, debt, reserves, prices and the army in one row (the mouse
  * wheel scrolls it when the screen is narrow), then the strategic resources
  * folded into one chip — how many the country has enough of, imports or
- * lacks — that drops down into the list. "More" unfolds the full accounts.
+ * lacks — that drops down into the list. The full accounts are on the
+ * player's own country card.
  */
 /** The country's crises behind one chip: how many, the worst in red, and what each leads to. */
 function CrisisChip({ crises, economy, era }: { crises: Crisis[]; economy: Economy; era: ScenarioId }) {
@@ -42,7 +42,9 @@ function CrisisChip({ crises, economy, era }: { crises: Crisis[]; economy: Econo
       ? (c.detail ?? "").split(", ").map((r) => t(`resource.${r}` as MessageKey)).join(", ")
       : c.kind === "street"
         ? t(`politics.protest.${c.detail ?? "riot"}` as MessageKey)
-        : num(c.value);
+        : c.kind === "provision"
+          ? `${t(`supply.${c.detail ?? "food"}` as MessageKey).toLowerCase()} ${num(c.value)}%`
+          : num(c.value);
   return (
     <div ref={box} className="relative shrink-0">
       <button
@@ -86,15 +88,11 @@ export default function ResourceBar({
   accounts,
   crises = [],
   era,
-  open,
-  onToggle,
 }: {
   economy: Economy;
   accounts?: Accounts;
   crises?: Crisis[];
   era: ScenarioId;
-  open: boolean;
-  onToggle: () => void;
 }) {
   const { t, money, people, locale } = useI18n();
   const [shelf, setShelf] = useState(false);
@@ -181,32 +179,17 @@ export default function ResourceBar({
               <ChevronDown className={`h-3 w-3 text-muted transition-transform ${shelf ? "rotate-180" : ""}`} />
             </button>
             {shelf && (
-              <div className="absolute right-0 top-full z-40 mt-1.5 w-[min(380px,calc(100vw-24px))] rounded-xl border border-line bg-surface p-3 shadow-lg shadow-shade/10">
-                <div className="mb-2 flex items-baseline justify-between">
-                  <span className="text-2xs font-black uppercase tracking-widest text-muted">{t("bar.resources")}</span>
-                  <span className="text-2xs font-bold text-muted">{t("bar.res.made")}</span>
+              <div className="absolute right-0 top-full z-40 mt-1.5 max-h-[min(72vh,640px)] w-[min(380px,calc(100vw-24px))] overflow-y-auto overscroll-contain rounded-xl border border-line bg-surface p-3 shadow-lg shadow-shade/10">
+                <div className="mb-3">
+                  <div className="text-2xs font-black uppercase tracking-widest text-muted">{t("bar.resources")}</div>
+                  <div className="mt-0.5 text-2xs font-bold leading-snug text-muted">{t("bar.res.made")}</div>
                 </div>
                 <ResourceLedger accounts={accounts!} economy={economy} />
               </div>
             )}
           </div>
         )}
-
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-expanded={open}
-          className="flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-2xs font-black uppercase tracking-wider text-muted transition-colors hover:bg-page hover:text-ink"
-        >
-          <span className="max-sm:hidden">{t(open ? "bar.less" : "bar.more")}</span>
-          {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-        </button>
       </div>
-      {open && (
-        <div className="absolute inset-x-0 top-full max-h-[70vh] overflow-y-auto border-b border-line bg-surface/95 p-3 shadow-lg shadow-shade/10 backdrop-blur">
-          <EconomyPanel economy={economy} accounts={accounts} detailed columns />
-        </div>
-      )}
     </div>
   );
 }

@@ -3,9 +3,13 @@
 import type { ActDraft } from "@/engine/acts";
 import type { AdviceReply, AdvisorId } from "@/engine/advisors";
 import type { Candidate } from "@/engine/government";
+import type { DeputyDraft } from "@/engine/deputies";
 import type { DiplomacyReply } from "@/engine/diplomacy";
 import type { Outcome } from "@/engine/outcome";
+import type { MinisterReport } from "@/engine/reports";
 import type { GameState, Locale, Official, OfficialPost, Politics, SummitLine } from "@/engine/types";
+import { DEMO_HEADER } from "@/constants/app";
+import { readPreference } from "./preferences";
 
 export class ApiError extends Error {
   constructor(
@@ -34,8 +38,14 @@ async function json<T>(response: Response): Promise<T> {
   return body as T;
 }
 
+/** Every game request says whether the player chose the offline demo (server/demo.ts). */
 const post = (url: string, body: unknown, signal?: AbortSignal) =>
-  fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal });
+  fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json", ...(readPreference("demo") === "1" ? { [DEMO_HEADER]: "1" } : {}) },
+    body: JSON.stringify(body),
+    signal,
+  });
 
 export const getAiStatus = () => fetch("/api/ai/status", { cache: "no-store" }).then((r) => json<AiStatus>(r));
 export const connectAi = () => post("/api/ai/connect", {}).then((r) => json<{ authUrl: string }>(r));
@@ -123,11 +133,31 @@ export function askAdvisor(
   state: GameState,
   advisor: AdvisorId,
   question: string,
-  options: { locale: Locale; model?: string; signal?: AbortSignal; onProgress: (chars: number) => void; context?: string },
+  options: { locale: Locale; model?: string; signal?: AbortSignal; onProgress: (chars: number) => void; context?: string; deputy?: string },
 ) {
   return stream<{ reply: AdviceReply }>(
     "/api/game/advisor",
-    { state: trimForServer(state), advisor, question, context: options.context, locale: options.locale, model: options.model || undefined },
+    { state: trimForServer(state), advisor, question, context: options.context, deputy: options.deputy, locale: options.locale, model: options.model || undefined },
+    options.onProgress,
+    options.signal,
+  );
+}
+
+/** A ministry's deputies as the game master names them; the engine deals the rest (startDeputies). */
+export function setupDeputies(state: GameState, ministry: AdvisorId, options: { locale: Locale; model?: string; signal?: AbortSignal; onProgress: (chars: number) => void }) {
+  return stream<{ deputies: DeputyDraft[] }>(
+    "/api/game/deputies",
+    { state: trimForServer(state), ministry, locale: options.locale, model: options.model || undefined },
+    options.onProgress,
+    options.signal,
+  );
+}
+
+/** A minister's report on a turn already played; null when the ministry had nothing to report on. */
+export function requestReport(state: GameState, ministry: AdvisorId, turn: number, options: { locale: Locale; model?: string; signal?: AbortSignal; onProgress: (chars: number) => void }) {
+  return stream<{ report: MinisterReport | null }>(
+    "/api/game/report",
+    { state: trimForServer(state), ministry, turn, locale: options.locale, model: options.model || undefined },
     options.onProgress,
     options.signal,
   );

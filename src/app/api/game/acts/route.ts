@@ -2,6 +2,7 @@ import { ActReplySchema, keepActs, LEGAL_HISTORY } from "@/engine/acts";
 import { buildLegalPrompt, LEGAL_INSTRUCTIONS } from "@/engine/prompts";
 import { getScenario } from "@/engine/scenarios";
 import { en } from "@/engine/text";
+import { wantsDemo } from "@/server/demo";
 import { rejectNonLocal } from "@/server/guard";
 import { completeJson } from "@/server/llm";
 import { loadMapIndex } from "@/server/maps";
@@ -19,6 +20,7 @@ const MAX_CITIES = 120;
 export async function POST(request: Request) {
   const rejected = rejectNonLocal(request);
   if (rejected) return rejected;
+  const demo = wantsDemo(request);
   const parsed = await readGameRequest(request);
   if (parsed instanceof Response) return parsed;
   const { state, locale, model, body } = parsed;
@@ -42,6 +44,8 @@ export async function POST(request: Request) {
     const reply = await completeJson(
       {
         model,
+        demo,
+        locale,
         instructions: LEGAL_INSTRUCTIONS(locale, state),
         input: [
           { role: "user", content: buildLegalPrompt(state, index, cities) },

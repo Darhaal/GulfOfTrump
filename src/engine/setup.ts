@@ -1,12 +1,16 @@
 import { seedDomestic } from "./abroad";
+import { withRulers } from "./people";
+import { seedIntentions } from "./intentions";
+import { seedArsenals } from "./arsenal";
 import { countryColor } from "./colors";
 import { seedEconomies } from "./economy";
 import { SAVE_MIGRATION } from "./migrations";
 import { startingOwner } from "./provinces";
 import { startingPolitics } from "./politics";
+import { startingResearch } from "./research";
 import { countryName } from "./names";
 import { same, titleCase, tr } from "./text";
-import type { CountryState, GameState, Locale, MapRegion, RegionState, Scenario } from "./types";
+import type { CountryState, GameMode, GameState, Locale, MapRegion, RegionState, Scenario } from "./types";
 
 const roundPeople = (v: number) => (v >= 100 ? Math.round(v) : Math.round(v * 10) / 10);
 
@@ -14,7 +18,7 @@ const roundPeople = (v: number) => (v >= 100 ? Math.round(v) : Math.round(v * 10
  * How many times the map's people a province has on the start date, by its
  * modern country: null when the map counts them for the scenario's own date.
  */
-function peopleScale(scenario: Scenario, mapRegions: MapRegion[]): ((adm0: string) => number) | null {
+export function peopleScale(scenario: Scenario, mapRegions: MapRegion[]): ((adm0: string) => number) | null {
   const people = scenario.people;
   if (!people) return null;
   const onMap = new Map<string, number>();
@@ -75,17 +79,27 @@ export function newGameId(): string {
   });
 }
 
-export function createGame(scenario: Scenario, mapRegions: MapRegion[], player: string, now = new Date(), locale: Locale = "en"): GameState {
+/** What the player chooses for a new game besides the country. */
+export interface GameOptions {
+  /** Fog of war (engine/fog.ts); on unless the player turns it off. */
+  fog?: boolean;
+  /** Free or historical history (engine/intentions.ts); free unless the player picks historical. */
+  mode?: GameMode;
+}
+
+export function createGame(scenario: Scenario, mapRegions: MapRegion[], player: string, now = new Date(), locale: Locale = "en", options: GameOptions = {}): GameState {
   const { regions, countries } = startingWorld(scenario, mapRegions);
   if (!countries[player]) throw new Error(`Unknown country: ${player}`);
   const known = (tags: string[]) => tags.filter((t) => countries[t]);
   const stamp = now.toISOString();
   const byId = Object.fromEntries(mapRegions.map((r) => [r.id, r]));
+  const id = newGameId();
   const game = seedEconomies({
     schema: 2,
     // A new game is in today's shape: no migration is for it.
     migration: SAVE_MIGRATION,
-    id: newGameId(),
+    id,
+    seed: id,
     createdAt: stamp,
     updatedAt: stamp,
     scenarioId: scenario.id,
@@ -100,6 +114,7 @@ export function createGame(scenario: Scenario, mapRegions: MapRegion[], player: 
     chronicle: [],
     diplomacy: {},
     draft: [],
+    fog: options.fog ?? true,
     politics: { ...startingPolitics(scenario.countries[player]?.stats?.stability), ...(scenario.loyalty?.[player] ? { loyalty: scenario.loyalty[player] } : {}) },
     ...(scenario.protests?.length
       ? {
@@ -121,8 +136,9 @@ export function createGame(scenario: Scenario, mapRegions: MapRegion[], player: 
         }
       : {}),
   } satisfies GameState, byId);
-  // Every other country's politics in brief (engine/abroad.ts).
-  return seedDomestic(game, scenario);
+  // Every other country's politics in brief (engine/abroad.ts), the courses and plans of those that matter (engine/intentions.ts),
+  // every country's weapons and the player's research (arsenal.ts, research.ts), and the people each leader line names (people.ts).
+  return withRulers(seedArsenals({ ...seedIntentions(seedDomestic(game, scenario), scenario, { map: byId, mode: options.mode ?? "free" }), research: startingResearch() }, byId));
 }
 
 /** The members of a world body: every country in the game but those left out (the scenario lists them, republics without a seat among them). */

@@ -128,8 +128,27 @@ function hash(key: string): number {
   return ((h >>> 0) % 10000) / 10000;
 }
 
+/** A country's grain: what its land grows and what its people eat, in the same units, and the world price of a unit in $bn. */
+export interface GrainBook {
+  harvest: number;
+  need: number;
+  price: number;
+}
+
 /** Each country's surplus (+) or lack (−) of grain, $bn a year: harvest against mouths to feed. */
 export function grainBalances(state: Pick<GameState, "countries" | "regions" | "scenarioId">, map: Record<string, MapRegion>): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const [tag, g] of grainBooks(state, map)) out.set(tag, round((g.harvest - g.need) * g.price));
+  return out;
+}
+
+/**
+ * Every country's harvest and the grain its people eat. A province grows by
+ * its area, fertility and terrain, more where farmers are richer, for
+ * whoever holds it; people eat by their number, more where they are richer.
+ * The world eats what it grows.
+ */
+export function grainBooks(state: Pick<GameState, "countries" | "regions" | "scenarioId">, map: Record<string, MapRegion>): Map<string, GrainBook> {
   const people = new Map<string, number>();
   for (const [id, r] of Object.entries(state.regions)) {
     const p = map[id];
@@ -159,10 +178,10 @@ export function grainBalances(state: Pick<GameState, "countries" | "regions" | "
   let worldGdp = 0;
   for (const c of Object.values(state.countries)) worldGdp += c.economy?.gdp ?? 0;
   const price = worldHarvest > 0 ? (worldGdp * GRAIN_MARKET[state.scenarioId]) / worldHarvest : 0;
-  const out = new Map<string, number>();
+  const out = new Map<string, GrainBook>();
   for (const tag of Object.keys(state.countries)) {
     const need = worldAppetite > 0 ? (worldHarvest * (appetite.get(tag) ?? 0)) / worldAppetite : 0;
-    out.set(tag, round(((harvest.get(tag) ?? 0) - need) * price));
+    out.set(tag, { harvest: harvest.get(tag) ?? 0, need, price });
   }
   return out;
 }
@@ -464,7 +483,13 @@ export function settleDeals(state: Pick<GameState, "deals" | "player" | "countri
     const buyer = d.side === "sell" ? d.partner : state.player;
     const money = d.value * (1 + d.premium / 100) * span * RESERVE_SHARE;
     if (economies[seller]) economies[seller].reserves = round(economies[seller].reserves + money);
-    if (economies[buyer]) economies[buyer].reserves = round(Math.max(0, economies[buyer].reserves - money));
+    // A buyer pays from its reserves and borrows what they cannot cover.
+    const payer = economies[buyer];
+    if (payer) {
+      const paid = Math.min(payer.reserves, money);
+      payer.reserves = round(payer.reserves - paid);
+      payer.debt = round(payer.debt + (money - paid));
+    }
     const type: ResourceType | null = d.good === "metals" ? "iron" : d.good === "oil" || d.good === "gas" || d.good === "coal" || d.good === "uranium" ? d.good : null;
     const store = economies[buyer];
     const lack = accounts?.get(buyer)?.trade[type ?? "oil"] ?? 0;

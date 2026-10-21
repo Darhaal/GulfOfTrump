@@ -15,6 +15,13 @@ Electron's Node.js, at `http://127.0.0.1:41914`, and shows it in a window. The
 port is fixed because the saves live in the browser storage of that origin.
 Links outside the game open in the system browser.
 
+The window opens full screen. F11 or Settings → Window switches to a window
+and back, and the next start opens the way the player left it
+(`%APPDATA%\Gulf of Trump\window.json`). A full-screen window has no close
+button, so the header has a Quit button in the app. The page reaches the
+window only through `preload.cjs`: whether it is full screen, switching it,
+and quitting — and only the game's own page.
+
 The server's log is in `%APPDATA%\Gulf of Trump\logs\server.log`; attach it to
 a bug report.
 

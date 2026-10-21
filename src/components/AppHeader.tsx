@@ -5,7 +5,9 @@ import { ArrowLeft, Info, Settings } from "lucide-react";
 import type { ReactNode } from "react";
 import { useI18n } from "@/i18n/useI18n";
 import { isDemo } from "@/constants/app";
+import { usePreference } from "@/lib/preferences";
 import AiStatusChip from "./AiStatusChip";
+import QuitButton from "./QuitButton";
 import { ui } from "./ui/classes";
 
 interface AppHeaderProps {
@@ -18,6 +20,7 @@ interface AppHeaderProps {
 /** The sticky header of every screen: back button, title, actions, AI status, settings. */
 export default function AppHeader({ title, subtitle, back, actions }: AppHeaderProps) {
   const { t } = useI18n();
+  const [demoChosen] = usePreference("demo");
   return (
     <header className="sticky top-0 z-30 w-full bg-page/90 backdrop-blur-xl border-b border-line shadow-sm">
       <div className="mx-auto flex h-16 max-w-[1600px] items-center gap-3 px-4">
@@ -38,12 +41,22 @@ export default function AppHeader({ title, subtitle, back, actions }: AppHeaderP
         <Link href="/settings" className={ui.iconButton} aria-label={t("nav.settings")} title={t("nav.settings")}>
           <Settings className="h-5 w-5 text-muted group-hover:text-accent" />
         </Link>
+        <QuitButton />
       </div>
       {isDemo() && (
         <div className="border-t border-line bg-accent/10 px-4 py-1.5 text-center text-2xs font-bold text-ink">
           {t("demo.banner")}{" "}
           <Link href="/#real" className="whitespace-nowrap text-accent underline-offset-2 hover:underline">
             {t("demo.how")}
+          </Link>
+        </div>
+      )}
+      {/* The player chose the offline demo in this app (lib/gameMaster.ts). */}
+      {!isDemo() && demoChosen === "1" && (
+        <div className="border-t border-line bg-accent/10 px-4 py-1.5 text-center text-2xs font-bold text-ink">
+          {t("demo.local")}{" "}
+          <Link href="/settings" className="whitespace-nowrap text-accent underline-offset-2 hover:underline">
+            {t("demo.signIn")}
           </Link>
         </div>
       )}

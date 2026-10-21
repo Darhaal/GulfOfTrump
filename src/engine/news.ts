@@ -84,20 +84,30 @@ function placeChange(c: AppliedChange, ctx: Lookup): Placed | null {
     case "new-country":
       return { section: "politics", countries: [c.country], topics: [] };
     case "war":
+      return { section: "war", countries: ctx.sides(c.war), topics: [`war:${c.war}`, ...(c.plan ? [`plan:${c.plan}`] : [])] };
     case "peace":
     case "truce":
     case "truce-ended":
       return { section: "war", countries: ctx.sides(c.war), topics: [`war:${c.war}`] };
+    case "enter":
+      return { section: "war", countries: [c.country], topics: [`war:${c.war}`, ...(c.plan ? [`plan:${c.plan}`] : [])] };
+    case "plan":
+    case "plan-end":
+      // A plan's own thread: incident, tension, preparation, then the war or bloc it led to.
+      return { section: c.type === "war" || c.type === "join" ? "war" : "diplomacy", countries: [c.by, ...(c.target ? [c.target] : [])], topics: [`plan:${c.plan}`] };
     case "contest":
     case "repel":
       return { section: "war", countries: [c.by, c.holder], topics: [] };
     case "alliance":
     case "alliance-ended": {
       const members = ctx.members(c.alliance);
-      return { section: "diplomacy", countries: members, topics: [`bloc:${c.alliance}`], stories: members.length <= STORY_MEMBERS };
+      const plan = c.kind === "alliance" && c.plan ? [`plan:${c.plan}`] : [];
+      return { section: "diplomacy", countries: members, topics: [`bloc:${c.alliance}`, ...plan], stories: members.length <= STORY_MEMBERS };
     }
     case "leave":
       return { section: "diplomacy", countries: [c.country], topics: [`bloc:${c.alliance}`] };
+    case "accession":
+      return { section: "diplomacy", countries: [c.country], topics: [`bloc:${c.alliance}`, ...(c.plan ? [`plan:${c.plan}`] : [])] };
     case "summit-planned":
       return { section: "diplomacy", countries: ctx.participants(c.summit), topics: [] };
     case "invitation":
@@ -138,7 +148,8 @@ export function worldNews(state: Pick<GameState, "chronicle" | "wars" | "allianc
     for (const c of entry.applied) {
       if ((c.kind === "war" || c.kind === "peace") && c.sides) add(recordedSides, c.war, c.sides);
       if ((c.kind === "alliance" || c.kind === "alliance-ended") && c.members) add(recordedMembers, c.alliance, c.members);
-      if (c.kind === "leave") add(recordedMembers, c.alliance, [c.country]);
+      if (c.kind === "leave" || c.kind === "accession") add(recordedMembers, c.alliance, [c.country]);
+      if (c.kind === "enter") add(recordedSides, c.war, [c.country]);
     }
   }
   const everyone = Object.keys(state.countries);

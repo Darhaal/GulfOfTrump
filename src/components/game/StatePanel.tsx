@@ -5,6 +5,8 @@ import { type ReactNode, useMemo, useState } from "react";
 import { cityNameIn, foundedBy, type CityRecord } from "@/components/map/cities";
 import ChatScroll from "@/components/ui/ChatScroll";
 import { ui } from "@/components/ui/classes";
+import Dictation from "@/components/voice/Dictation";
+import SpeakButton from "@/components/voice/SpeakButton";
 import type { ActDraft } from "@/engine/acts";
 import { ADVISOR_TITLES } from "@/engine/advisors";
 import { formatDate } from "@/engine/calendar";
@@ -295,6 +297,7 @@ export default function StatePanel({ state, regions, busy, askDisabled, locked, 
                 <div className={`mb-1 flex items-center gap-2 text-2xs font-black uppercase tracking-widest ${m.from === "player" ? "text-on-ink/60" : "text-muted"}`}>
                   {m.from === "player" ? t("diplomacy.you") : title}
                   <span className="font-medium normal-case tracking-normal tabular-nums">{m.date}</span>
+                  {m.from !== "player" && <SpeakButton id={`state-${i}`} text={m.text} className="-my-1 ml-auto" />}
                 </div>
                 <p className="whitespace-pre-wrap break-words font-medium leading-relaxed">{m.text}</p>
                 {m.drafts && m.drafts.length > 0 && <div className="mt-2.5 grid gap-1.5">{m.drafts.map((d, j) => draftCard(d, `${i}-${j}`))}</div>}
@@ -308,21 +311,23 @@ export default function StatePanel({ state, regions, busy, askDisabled, locked, 
             )}
           </ChatScroll>
           <div>
-            <textarea
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                  e.preventDefault();
-                  void ask();
-                }
-              }}
-              rows={3}
-              maxLength={2000}
-              disabled={askDisabled}
-              placeholder={t("state.placeholder")}
-              className={`${ui.input} resize-none`}
-            />
+            <Dictation id="state" set={setQuestion} max={2000} disabled={askDisabled}>
+              <textarea
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    void ask();
+                  }
+                }}
+                rows={3}
+                maxLength={2000}
+                disabled={askDisabled}
+                placeholder={t("state.placeholder")}
+                className={`${ui.input} resize-none`}
+              />
+            </Dictation>
             <div className="mt-2 flex items-center justify-between gap-2">
               <span className="text-2xs font-medium text-muted">{t("state.note")}</span>
               <button type="button" onClick={() => void ask()} disabled={askDisabled || Boolean(busy) || !question.trim()} className={`${ui.primary} shrink-0 px-4 py-2 text-xs`}>

@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   const rejected = rejectNonLocal(request);
   if (rejected) return rejected;
   if (isMockEnabled()) {
-    return Response.json({ provider: "mock", status: "connected", sharing: true, identity: { name: "Offline mock" } });
+    return Response.json({ provider: "mock", status: "connected", sharing: true });
   }
   return Response.json(await connectionStatus(), { headers: { "cache-control": "no-store" } });
 }

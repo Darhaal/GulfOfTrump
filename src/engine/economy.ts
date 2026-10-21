@@ -18,6 +18,12 @@ import { unitsPerPoint } from "./units";
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const round = (value: number, digits = 1) => Math.round(value * 10 ** digits) / 10 ** digits;
+/**
+ * Money in $bn kept to six significant figures: a fixed number of decimals
+ * froze small economies, whose monthly growth was smaller than the last digit,
+ * and gave the small states of 1914 no social budget at all.
+ */
+export const money = (value: number) => (value === 0 || !Number.isFinite(value) ? 0 : Number(value.toPrecision(6)));
 
 /** Years in one turn. */
 export const STEP_YEARS: Record<TimeStep, number> = { week: 7 / 365, month: 1 / 12, quarter: 0.25, half: 0.5, year: 1 };
@@ -457,8 +463,14 @@ export function provinceIncome(region: Pick<MapRegion, "inc" | "adm0">, era: Sce
   return ERAS[era].perCapita(region.inc ?? 3000);
 }
 
+/** The share of GDP a government of the era spent on its people, in a rich country or a poor one. */
+export const socialNorm = (era: ScenarioId, rich: boolean) => ERAS[era].social[rich ? 0 : 1];
+
+/** Today's (2019) income per person above which a country counts as rich, as the starting budget judges it. */
+export const RICH_INCOME = 20000;
+
 /** Total spending a year. */
-export const spending = (e: Economy) => e.budget.army + e.budget.industry + e.budget.social + e.budget.other;
+export const spending =(e: Economy) => e.budget.army + e.budget.industry + e.budget.social + e.budget.other;
 /** Revenue minus spending: negative is a deficit. */
 export const balance = (e: Economy) => e.budget.revenue - spending(e);
 
@@ -476,7 +488,7 @@ export function startingEconomy(provinces: MapRegion[], era: ScenarioId, seed: E
   }
   gdp = seed.gdp ?? Math.max(0.05, gdp);
   // Rich countries tax and spend more on their people.
-  const rich = people > 0 && richness / people >= 20000;
+  const rich = people > 0 && richness / people >= RICH_INCOME;
   const revenue = gdp * (seed.revenue ?? e.revenue[rich ? 0 : 1]);
   const army = gdp * (seed.army ?? e.army);
   const social = gdp * e.social[rich ? 0 : 1];
@@ -484,13 +496,13 @@ export function startingEconomy(provinces: MapRegion[], era: ScenarioId, seed: E
   // The rest of the budget runs a small deficit, as most governments did.
   const other = Math.max(revenue * 0.15, revenue * 1.03 - army - social - industry);
   return {
-    gdp: round(gdp, 2),
+    gdp: money(gdp),
     growth: seed.growth ?? e.trend,
     inflation: seed.inflation ?? e.inflation,
     unemployment: seed.unemployment ?? e.unemployment,
-    budget: { revenue: round(revenue, 2), army: round(army, 2), industry: round(industry, 2), social: round(social, 2), other: round(other, 2) },
-    debt: round(gdp * (seed.debt ?? e.debt), 2),
-    reserves: round(gdp * e.reserves, 2),
+    budget: { revenue: money(revenue), army: money(army), industry: money(industry), social: money(social), other: money(other) },
+    debt: money(gdp * (seed.debt ?? e.debt)),
+    reserves: money(gdp * e.reserves),
     troops: Math.round(seed.troops ?? people * e.troops),
     tradeCut: 0,
     stocks: {},
@@ -565,8 +577,8 @@ export function followLand(
     if (!e || !existed(tag) || Math.abs(d) < e.gdp * 0.002) continue;
     const gdp = Math.max(0.05, e.gdp + d);
     const ratio = gdp / e.gdp;
-    e.gdp = round(gdp, 2);
-    e.budget.revenue = round(e.budget.revenue * ratio, 2);
+    e.gdp = money(gdp);
+    e.budget.revenue = money(e.budget.revenue * ratio);
   }
 }
 
@@ -900,20 +912,52 @@ export function limitChange(change: EconomyChange, current: Economy): EconomyCha
   return out;
 }
 
+/** Share of a budget's army line that pays, feeds and equips the soldiers, so it follows their number. */
+const PAY_SHARE = 0.5;
+/** Of the people, the share who work or look for work: soldiers called up leave it. */
+const WORKFORCE = 0.45;
+/** Of a deficit and interest, the share of GDP a government abroad lets run before it trims, unless its debt is past 90% of GDP. */
+const TOLERATED_DEFICIT = 0.03;
+/** Prices settle back to no more than this once nothing pushes them, % a year: a date's surge (2022's) does not last forever. */
+const CALM_INFLATION = 4;
+
+/** In a war that is not under a truce. */
+function fighting(state: Partial<Pick<GameState, "wars" | "date">>, tag: string): boolean {
+  return (state.wars ?? []).some((w) => (w.attackers.includes(tag) || w.defenders.includes(tag)) && !(w.truce && state.date && w.truce.until > state.date));
+}
+
 /**
- * Moves every economy forward by one turn of `years`: proposed changes land
- * (troops limited by who is left to call up), GDP grows with real growth and
- * prices, an untouched budget keeps its share of GDP, deficits add to debt,
- * trade moves reserves, and a country whose imports are cut lives off its
- * stores. Pure; returns the new economies by country.
+ * Moves every economy forward by one turn of `years`. The model's changes
+ * land first (troops limited by who is left to call up); what it leaves
+ * alone, the engine moves by cause:
+ * - growth drifts back towards the era's trend, less what sanctions and
+ *   cut-off imports take; a crisis caps it whatever the model says;
+ * - inflation drifts back towards the era's norm, held up by a deficit, cut
+ *   imports and a shortage, and kept rising while a deficit is printed;
+ * - unemployment follows growth against the trend, and falls as men are
+ *   called up;
+ * - a bigger army costs more: half its budget follows the number of soldiers;
+ * - a blockade the model reported fades once the country is at peace, never
+ *   below the sanctions in force;
+ * - GDP grows with real growth and the dollar, an untouched budget keeps its
+ *   share of GDP, and a government abroad with a deficit it cannot carry
+ *   trims spending and raises taxes;
+ * - a deficit and the interest on the debt add to the debt; the trade in
+ *   strategic resources moves the reserves, and the rest of the economy pulls
+ *   them back towards the era's normal holdings (less so when trade is cut);
+ *   what the reserves cannot cover is borrowed;
+ * - a country whose imports are cut lives off its stores.
+ * Pure; returns the new economies by country.
  */
 export function advanceEconomies(
-  state: Pick<GameState, "countries" | "regions" | "scenarioId" | "date">,
+  state: Pick<GameState, "countries" | "regions" | "scenarioId" | "date"> & Partial<Pick<GameState, "player" | "wars" | "politics">>,
   changes: EconomyChange[],
   years: number,
   regions: Record<string, MapRegion> | null,
   /** Imports cut off by sanctions (engine/trade.ts), on top of what the model reports. */
   cuts: Map<string, number> = new Map(),
+  /** Share of exports sanctions take away (engine/trade.ts). */
+  exportCuts: Map<string, number> = new Map(),
 ): Record<string, Economy> {
   const era = ERAS[state.scenarioId];
   const accounts = regions ? nationalAccounts(state, regions) : null;
@@ -925,18 +969,34 @@ export function advanceEconomies(
     const change = byCountry.get(tag) ?? { country: tag };
     const e: Economy = structuredClone(before);
     const a = accounts?.get(tag);
+    const atWar = fighting(state, tag);
+    const gdpBefore = Math.max(0.01, before.gdp);
 
-    // Growth drifts back towards the era's trend unless the model says otherwise.
-    e.growth = change.growth ?? round(e.growth + (era.trend - e.growth) * Math.min(1, years) * 0.5);
-    if (change.inflation !== undefined) e.inflation = change.inflation;
-    if (change.unemployment !== undefined) e.unemployment = change.unemployment;
-    if (change.tradeCut !== undefined) e.tradeCut = change.tradeCut;
-    e.tradeCut = Math.max(e.tradeCut, cuts.get(tag) ?? 0);
+    // A blockade or war cut the model reported lasts while the country fights, then fades by half a year; sanctions in force stay.
+    const carried = change.tradeCut ?? (atWar ? before.tradeCut : before.tradeCut * 0.5 ** years);
+    e.tradeCut = Math.max(carried < 0.02 ? 0 : round(carried, 2), cuts.get(tag) ?? 0);
+
+    // What sanctions and cut imports take from the economy each year: exports lost (half of them sold elsewhere at a discount) and imports gone without.
+    const exportCut = exportCuts.get(tag) ?? 0;
+    const lostExports = a ? a.exports * exportCut * 0.5 : 0;
+    const goneWithout = a && e.tradeCut < 1 ? (a.imports * e.tradeCut) / (1 - e.tradeCut) : 0;
+    const drag = Math.min(10, ((lostExports + goneWithout) / gdpBefore) * 100);
+
+    // Growth drifts back towards the era's trend, less the drag, unless the model says otherwise.
+    e.growth = change.growth ?? round(e.growth + (era.trend - drag - e.growth) * Math.min(1, years) * 0.5);
 
     // Crises bite whatever the game master says: no growth through a shortage, hyperinflation or a debt crisis,
     // and prices that cannot fall while the deficit is printed.
     const limits = crisisLimits(before, a, state.scenarioId);
     if (limits.growthCap !== undefined) e.growth = Math.min(e.growth, limits.growthCap);
+
+    // Prices drift back towards the era's norm, held up by a deficit beyond what lenders fund quietly, cut imports and a shortage.
+    if (change.inflation !== undefined) e.inflation = change.inflation;
+    else {
+      const deficit = ((-balance(before) + interestOf(before, state.scenarioId)) / gdpBefore) * 100;
+      const pressure = Math.max(0, deficit - 4) + e.tradeCut * 15 + (a?.shortages.length && e.tradeCut > 0 ? 10 : 0);
+      e.inflation = round(before.inflation + (Math.min(era.inflation, CALM_INFLATION) + pressure - before.inflation) * Math.min(1, years * 0.5));
+    }
     if (limits.printing) e.inflation = Math.max(e.inflation, round(before.inflation + 8 * years));
 
     // In dollars, a country's own inflation is offset by its currency falling;
@@ -944,25 +1004,56 @@ export function advanceEconomies(
     const nominal = Math.max(0.05, (1 + e.growth / 100) * (1 + era.dollar / 100)) ** years;
     const gdp = before.gdp * nominal;
     for (const key of ["revenue", "army", "industry", "social", "other"] as const) {
-      e.budget[key] = round(change[key] ?? before.budget[key] * nominal, 2);
+      e.budget[key] = money(change[key] ?? before.budget[key] * nominal);
     }
-    e.gdp = round(gdp, 2);
-
-    // The books: a deficit and the interest on the debt are borrowed, trade and loans move the reserves;
-    // what the reserves cannot cover is borrowed too.
-    const borrow = change.borrow ?? 0;
-    e.debt = round(Math.max(0, before.debt - balance(e) * years + interestOf(before, state.scenarioId) * years + borrow), 2);
-    const trade = a ? (a.exports - a.imports) * years * 0.2 : 0;
-    const reserves = before.reserves + trade + borrow;
-    if (reserves < 0) e.debt = round(e.debt - reserves, 2);
-    e.reserves = round(Math.max(0, reserves), 2);
+    e.gdp = money(gdp);
 
     // Soldiers: no more than are left to call up, a third of them a month at most.
     if (change.troops !== undefined) {
       const room = a ? Math.max(0, a.mobilisable - before.troops) : Infinity;
       const pace = a ? a.mobilisable * Math.min(1, years * 4) : Infinity;
       e.troops = Math.max(0, before.troops + Math.min(change.troops, room, pace));
+      // More soldiers cost more: their pay and kit follow their number unless the model set the army's budget itself.
+      if (change.army === undefined && before.troops > 0) e.budget.army = money(Math.max(0, e.budget.army * (1 + PAY_SHARE * (e.troops / before.troops - 1))));
     }
+
+    // Jobs follow growth against the trend (a point of unemployment for every two and a half of growth lost),
+    // and the called-up leave the workforce.
+    if (change.unemployment !== undefined) e.unemployment = change.unemployment;
+    else {
+      const workforce = (a?.population ?? 0) * WORKFORCE;
+      const drafted = workforce > 0 ? (Math.max(0, e.troops - before.troops) / workforce) * 100 : 0;
+      e.unemployment = round(clamp(before.unemployment - 0.4 * (e.growth - era.trend) * years - drafted, 0, 60));
+    }
+
+    // A government abroad that the model leaves alone keeps its books like most did: it lets run a deficit that does not raise
+    // its debt against GDP (and a small one besides while the debt is moderate), and closes the rest a quarter a year, half by
+    // trimming spending and half by taxes; past 90% of GDP it aims a point lower and moves twice as fast. A war is paid for first.
+    const untouched = (["revenue", "army", "industry", "social", "other"] as const).every((k) => change[k] === undefined);
+    if (tag !== state.player && untouched && !atWar) {
+      const ratio = before.debt / gdpBefore;
+      const heavy = ratio > 0.9;
+      const steady = Math.max(0, ((1 + e.growth / 100) * (1 + era.dollar / 100) - 1) * ratio);
+      const allowed = heavy ? Math.max(0, steady - 0.01) : Math.max(TOLERATED_DEFICIT, steady);
+      const excess = -balance(e) + interestOf(before, state.scenarioId) - allowed * e.gdp;
+      if (excess > 0) {
+        const fix = excess * Math.min(1, years * (heavy ? 0.5 : 0.25));
+        e.budget.other = money(Math.max(e.budget.revenue * 0.1, e.budget.other - fix / 2));
+        e.budget.revenue = money(Math.min(e.gdp * 0.5, e.budget.revenue + fix / 2));
+      }
+    }
+
+    // The books: a deficit and the interest on the debt are borrowed, trade and loans move the reserves;
+    // what the reserves cannot cover is borrowed too.
+    const borrow = change.borrow ?? 0;
+    e.debt = money(Math.max(0, before.debt - balance(e) * years + interestOf(before, state.scenarioId) * years + borrow));
+    const trade = a ? (a.exports - lostExports - a.imports) * years * 0.2 : 0;
+    // The rest of the current account and the flows of capital pull the reserves back towards what the era's states held,
+    // so a country that buys its oil does not run dry in peace, nor one that sells it pile up gold forever.
+    const pull = (gdpBefore * era.reserves - before.reserves) * Math.min(1, years * 0.25) * (1 - e.tradeCut);
+    const reserves = before.reserves + trade + pull + borrow;
+    if (reserves < 0) e.debt = money(e.debt - reserves);
+    e.reserves = money(Math.max(0, reserves));
 
     // Stores, in months of need: cut-off imports eat them, a surplus refills them.
     if (a) {

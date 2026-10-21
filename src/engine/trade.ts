@@ -147,6 +147,49 @@ export function tradeBooks(state: Pick<GameState, "countries" | "regions" | "war
 }
 
 /**
+ * Where each listed country's exports go, as shares of all it sells abroad,
+ * by the same gravity as tradeBooks but only for the rows asked for: how
+ * much a government depends on each market, cheaply enough to ask every turn.
+ */
+export function exportShares(state: Pick<GameState, "countries" | "regions" | "wars" | "alliances" | "sanctions">, tags: Iterable<string>, at: Map<string, Point>): Map<string, Map<string, number>> {
+  const others = Object.keys(state.countries).filter((t) => (state.countries[t].economy?.gdp ?? 0) > 0 && at.has(t));
+  const out = new Map<string, Map<string, number>>();
+  for (const i of tags) {
+    if (!at.has(i)) continue;
+    // The friction of this row, read once from the wars, sanctions and blocs i is part of (as friction() does pair by pair).
+    const war = new Map<string, number>();
+    for (const w of state.wars) {
+      const side = w.attackers.includes(i) ? w.defenders : w.defenders.includes(i) ? w.attackers : null;
+      for (const j of side ?? []) if (!war.has(j)) war.set(j, w.truce ? 0.2 : 0);
+    }
+    const cap = new Map<string, number>();
+    for (const s of state.sanctions ?? []) {
+      const j = s.by === i ? s.against : s.against === i ? s.by : null;
+      if (j) cap.set(j, Math.min(cap.get(j) ?? 1, s.scope === "full" ? 0.05 : 0.5));
+    }
+    const ease = new Map<string, number>();
+    for (const bloc of state.alliances) {
+      if (bloc.members.length >= WORLD_BODY || !bloc.members.includes(i)) continue;
+      const x = bloc.kind === "trade" ? 1.8 : bloc.kind === "organization" ? 1.3 : 1.15;
+      for (const j of bloc.members) if (j !== i) ease.set(j, (ease.get(j) ?? 1) * x);
+    }
+    const row = new Map<string, number>();
+    let total = 0;
+    for (const j of others) {
+      if (i === j) continue;
+      const f = war.get(j) ?? (cap.get(j) ?? 1) * (ease.get(j) ?? 1);
+      const w = (state.countries[j].economy!.gdp ** 0.8 * f) / Math.max(300, distanceKm(at.get(i)!, at.get(j)!)) ** DISTANCE;
+      if (w <= 0) continue;
+      row.set(j, w);
+      total += w;
+    }
+    for (const [j, w] of row) row.set(j, total > 0 ? w / total : 0);
+    out.set(i, row);
+  }
+  return out;
+}
+
+/**
  * The share of each country's imports cut off by sanctions: what came from
  * those who sanction it, all of it under full sanctions and half under
  * partial ones, judged on trade as it would be without the sanctions.
@@ -163,6 +206,30 @@ export function sanctionCuts(state: Pick<GameState, "countries" | "regions" | "w
     for (const s of sanctions.filter((x) => x.against === target)) {
       const p = book.from.find((x) => x.tag === s.by);
       if (p) cut += (p.value / book.imports) * (s.scope === "full" ? 1 : 0.5);
+    }
+    out.set(target, Math.min(0.9, Math.round(cut * 100) / 100));
+  }
+  return out;
+}
+
+/**
+ * Share of each sanctioned country's exports that its sanctioners stop
+ * buying: all of their purchases under full sanctions and half under partial
+ * ones, judged on trade as it would be without the sanctions. Where the goods
+ * find other buyers is the economy's to judge (engine/economy.ts).
+ */
+export function sanctionExportCuts(state: Pick<GameState, "countries" | "regions" | "wars" | "alliances" | "sanctions" | "scenarioId">, map: Record<string, MapRegion>): Map<string, number> {
+  const out = new Map<string, number>();
+  const sanctions = state.sanctions ?? [];
+  if (!sanctions.length) return out;
+  const free = tradeBooks({ ...state, sanctions: [] }, map);
+  for (const target of new Set(sanctions.map((s) => s.against))) {
+    const book = free.get(target);
+    if (!book || book.exports <= 0) continue;
+    let cut = 0;
+    for (const s of sanctions.filter((x) => x.against === target)) {
+      const p = book.toward.find((x) => x.tag === s.by);
+      if (p) cut += (p.value / book.exports) * (s.scope === "full" ? 1 : 0.5);
     }
     out.set(target, Math.min(0.9, Math.round(cut * 100) / 100));
   }

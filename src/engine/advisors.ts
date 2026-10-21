@@ -2,13 +2,14 @@ import { z } from "zod";
 import type { Directive, GameState, Localized, Operation } from "./types";
 
 /**
- * The cabinet: the leader's chief of staff and five ministries the player governs through. Each minister can
+ * The cabinet: the leader's chief of staff and six ministries the player governs through. Each minister can
  * be questioned between turns (answers in character, may suggest orders,
  * changes nothing), given standing directives — special operations planned
- * in detail among them — and reports on them after every turn. The turn's
- * game master sees the directives, not the conversations.
+ * in detail among them — and reports on them after every turn, in a request
+ * of its own once the turn is played (engine/reports.ts). The turn's game
+ * master sees the directives, not the conversations.
  */
-export const ADVISORS = ["chief", "military", "finance", "foreign", "interior", "intelligence"] as const;
+export const ADVISORS = ["chief", "military", "finance", "foreign", "interior", "intelligence", "science"] as const;
 export type AdvisorId = (typeof ADVISORS)[number];
 
 export const ADVISOR_TITLES: Record<AdvisorId, Localized> = {
@@ -18,6 +19,7 @@ export const ADVISOR_TITLES: Record<AdvisorId, Localized> = {
   foreign: { ru: "Министр иностранных дел", uk: "Міністр закордонних справ", en: "Foreign Minister" },
   interior: { ru: "Министр внутренних дел", uk: "Міністр внутрішніх справ", en: "Minister of the Interior" },
   intelligence: { ru: "Глава разведки", uk: "Голова розвідки", en: "Head of Intelligence" },
+  science: { ru: "Министр науки", uk: "Міністр науки", en: "Minister of Science" },
 };
 
 /** Who each minister is, for the model. */
@@ -34,6 +36,8 @@ export const ADVISOR_PERSONAS: Record<AdvisorId, string> = {
     "the minister of the interior: the police and security at home, public order, the parties and the opposition, elections, the press, propaganda and censorship. Watchful; counts protesters, informers and votes.",
   intelligence:
     "the head of intelligence: what other governments are planning in secret, their weak points, unrest, agents and propaganda. Terse; speaks in estimates and probabilities.",
+  science:
+    "the minister of science and research: the laboratories, the universities and the academy, the research projects under way (RESEARCH below) and what the scientists can deliver and when — new weapons, industry, medicine, harvests. Precise; speaks in years, budgets and what is physically possible, and fights for money for the scientists.",
 };
 
 export interface AdviceMessage {
@@ -95,21 +99,6 @@ export const MAX_DIRECTIVES = 12;
 
 /** A ministry's report on one directive. */
 export const DIRECTIVE_STATUSES = ["progress", "done", "failed"] as const;
-
-/** The turn's ministry reports (merged into OutcomeSchema as `reports`). */
-export const reportsField = z
-  .array(
-    z.object({
-      ministry: z.enum(ADVISORS),
-      text: z.string().trim().min(1).max(2000),
-      directives: z
-        .array(z.object({ id: z.string().trim().min(1), status: z.enum(DIRECTIVE_STATUSES).catch("progress"), note: z.string().trim().max(400).default("") }))
-        .max(12)
-        .default([]),
-    }),
-  )
-  .max(6)
-  .default([]);
 
 /** A directive in one line for the game master: the task, or the operation in full. */
 export function directiveLine(d: Directive): string {

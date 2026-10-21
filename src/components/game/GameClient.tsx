@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Briefcase, Clapperboard, Coins, Download, Flag as ReportIcon, Globe, Image as ImageIcon, Landmark, Loader2, MapPin, MessageSquare, PanelLeftClose, Play, Scale, ScrollText, Settings, Swords, TriangleAlert, Users } from "lucide-react";
+import { Briefcase, Clapperboard, Coins, Crosshair, Download, Eye, EyeOff, FlaskConical, Flag as ReportIcon, Globe, Image as ImageIcon, Landmark, Loader2, MapPin, MessageSquare, PanelLeftClose, Play, Scale, ScrollText, Swords, TriangleAlert, Users } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import Flag from "@/components/Flag";
@@ -11,13 +11,18 @@ import Dialog from "@/components/ui/Dialog";
 import { ui } from "@/components/ui/classes";
 import { addStep, formatDate, yearOf } from "@/engine/calendar";
 import { CONTENT_REPORT_URL, MAX_ORDERS as MAX_TURN_ORDERS } from "@/constants/app";
-import { coupRiskIn } from "@/engine/abroad";
+import { coupRiskIn, lostShares } from "@/engine/abroad";
+import { borderingPlayer, fogOn, foreignView } from "@/engine/fog";
 import { addAdvice, type AdvisorId } from "@/engine/advisors";
 import { countryCrises } from "@/engine/crises";
 import { nationalAccounts, seedEconomies, setBudget } from "@/engine/economy";
+import { setFocus as setArmsFocus } from "@/engine/arsenal";
+import { startResearch, stopResearch } from "@/engine/research";
 import { setSanction } from "@/engine/trade";
 import { cancelDeal, declineOffer, proposeDeal, signOffer } from "@/engine/deals";
 import EconomyCenter from "./EconomyCenter";
+import ArmyPanel from "./ArmyPanel";
+import SciencePanel from "./SciencePanel";
 import { addDiplomacyExchange } from "@/engine/diplomacy";
 import { applyOutcome, ownedRegions } from "@/engine/outcome";
 import { proclaim } from "@/engine/identity";
@@ -25,19 +30,27 @@ import { addLegal, proposeBill, withdrawBill } from "@/engine/acts";
 import { isMigrated, migrateSave, refreshSave } from "@/engine/migrations";
 import { peopleByOwner, provinceName } from "@/engine/provinces";
 import { getScenario } from "@/engine/scenarios";
+import { peopleScale } from "@/engine/setup";
 import type { ChronicleEntry, GameState, OfficialPost, Summit, TimeStep } from "@/engine/types";
 import { errorKey, useI18n } from "@/i18n/useI18n";
-import { ApiError, askAdvisor, askChiefOfActs, findCandidates, playTurn, sendDiplomacy, setupPolitics, summitClose, summitTalk } from "@/lib/api";
+import { ApiError, askAdvisor, askChiefOfActs, findCandidates, playTurn, requestReport, sendDiplomacy, setupDeputies, setupPolitics, summitClose, summitTalk } from "@/lib/api";
+import { seedInterests } from "@/engine/interests";
+import { applyMinisterReport, reportsDue, type MinisterReport } from "@/engine/reports";
 import LiveSummitDialog from "./LiveSummitDialog";
-import { appoint, type Candidate } from "@/engine/government";
+import { ADVISOR_POST, appoint, type Candidate } from "@/engine/government";
+import { addDeputyAdvice, startDeputies } from "@/engine/deputies";
 import { useMap } from "@/lib/maps";
 import { usePreference } from "@/lib/preferences";
 import { chronicleMarkdown, downloadFile } from "@/lib/exports";
 import { loadSave, writeSave } from "@/lib/saves";
-import { useAiStatus } from "@/lib/useAiStatus";
+import { readNewTurn } from "@/lib/voice/speaker";
+import VoiceLayer from "@/components/voice/VoiceLayer";
+import { useGameMaster } from "@/lib/gameMaster";
+import GameMasterChoice, { GameMasterOffer } from "@/components/GameMasterChoice";
 import CountryDetails from "./CountryDetails";
+import LeaderButton from "./LeaderButton";
 import DefeatDialog from "./DefeatDialog";
-import CabinetPanel from "./CabinetPanel";
+import CabinetPanel, { type ReportStatus } from "./CabinetPanel";
 import DiplomacyPanel from "./DiplomacyPanel";
 import ForeignPanel from "./ForeignPanel";
 import { closeSummit, conveneSummit, speakAtSummit } from "@/engine/foreign";
@@ -54,13 +67,15 @@ import TurnReport from "./TurnReport";
 import WorldNews from "./WorldNews";
 
 /** Panels that open on the left, from the rail; the right side shows the selection. */
-type LeftPanel = "orders" | "chronicle" | "cabinet" | "politics" | "state" | "foreign" | "economy";
+type LeftPanel = "orders" | "chronicle" | "cabinet" | "politics" | "state" | "foreign" | "economy" | "army" | "science";
 type RightTab = "country" | "diplomacy";
 
 interface Busy {
-  kind: "turn" | "diplomacy" | "advice" | "acts" | "politics" | "candidates" | "summit";
-  /** The minister being asked, for "advice". */
+  kind: "turn" | "diplomacy" | "advice" | "acts" | "politics" | "candidates" | "summit" | "deputies" | "deputy";
+  /** The minister being asked, for "advice"; the ministry, for "deputies" and "deputy". */
   advisor?: AdvisorId;
+  /** The deputy being spoken to in private, for "deputy". */
+  deputy?: string;
   chars: number;
   startedAt: number;
   controller: AbortController;
@@ -84,12 +99,13 @@ function Elapsed({ since }: { since: number }) {
 export default function GameClient({ id }: { id: string }) {
   const { t, text, locale } = useI18n();
   const [model] = usePreference("model");
-  const { status } = useAiStatus();
+  // ChatGPT, or the offline demo the player chose (lib/gameMaster.ts).
+  const { status, ready: aiReady } = useGameMaster();
+  const [choosingMaster, setChoosingMaster] = useState(false);
   const [state, setState] = useState<GameState | null>(null);
   const [missing, setMissing] = useState(false);
   const [left, setLeft] = useState<LeftPanel | null>("orders");
   const [right, setRight] = useState<RightTab>("country");
-  const [barOpen, setBarOpen] = useState(false);
   // Summits held in the last turn open one by one before its report; any summit can be reread.
   const [summitQueue, setSummitQueue] = useState<string[]>([]);
   const [rereading, setRereading] = useState<Summit | null>(null);
@@ -117,6 +133,17 @@ export default function GameClient({ id }: { id: string }) {
   const [live, setLive] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The ministers' reports on the last turn, written in the background after it (engine/reports.ts).
+  const [reporting, setReporting] = useState<Partial<Record<AdvisorId, ReportStatus>>>({});
+  // Reports that have arrived: every update keeps them, so an answer begun before one arrived cannot drop it.
+  const arrived = useRef(new Map<string, MinisterReport>());
+  const latest = useRef<GameState | null>(null);
+  const reportsRun = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    latest.current = state;
+  }, [state]);
+  useEffect(() => () => reportsRun.current?.abort(), []);
 
   useEffect(() => {
     let alive = true;
@@ -137,6 +164,8 @@ export default function GameClient({ id }: { id: string }) {
 
   const scenario = state ? getScenario(state.scenarioId) : null;
   const { map } = useMap(scenario?.map ?? null);
+  // The people a province had when the game began: a map drawn for a later year is scaled to the start date (engine/setup.ts).
+  const startScale = useMemo(() => (scenario && map ? peopleScale(scenario, Object.values(map.index.regions)) : null), [scenario, map]);
 
   // The migrations that need the map run once it is here; a country still without an economy gets one.
   useEffect(() => {
@@ -166,8 +195,10 @@ export default function GameClient({ id }: { id: string }) {
   );
 
   const update = (next: GameState, immediate = false) => {
-    setState(next);
-    void persist(next, immediate);
+    const merged = [...arrived.current.values()].reduce((s, report) => applyMinisterReport(s, report), next);
+    latest.current = merged;
+    setState(merged);
+    void persist(merged, immediate);
   };
 
   const explain = (error: unknown) => {
@@ -179,7 +210,43 @@ export default function GameClient({ id }: { id: string }) {
     return t("error.generic");
   };
 
-  const aiReady = status?.status === "connected" && status.sharing;
+
+  /**
+   * The ministers write their reports on a turn one after another, in the
+   * background: the game goes on meanwhile, and each report lands in its
+   * minister's window as it comes. One that fails can be asked for again.
+   */
+  const writeReports = async (turn: number, ministries: AdvisorId[], fresh = false) => {
+    if (!ministries.length) return;
+    if (fresh) {
+      // A new turn: the reports still owed on the one before are not waited for.
+      reportsRun.current?.abort();
+      reportsRun.current = null;
+      setReporting({});
+    }
+    const run = (reportsRun.current ??= new AbortController());
+    setReporting((r) => ({ ...r, ...Object.fromEntries(ministries.map((m) => [m, { turn, status: "writing", chars: 0 }])) }));
+    for (const ministry of ministries) {
+      const base = latest.current;
+      if (!base || run.signal.aborted) return;
+      try {
+        const { report } = await requestReport(base, ministry, turn, {
+          locale,
+          model,
+          signal: run.signal,
+          onProgress: (chars) => setReporting((r) => (r[ministry] ? { ...r, [ministry]: { ...r[ministry]!, chars } } : r)),
+        });
+        if (report) {
+          arrived.current.set(`${turn}:${ministry}`, report);
+          if (latest.current) update(latest.current, true);
+        }
+        setReporting((r) => Object.fromEntries(Object.entries(r).filter(([m]) => m !== ministry)));
+      } catch {
+        if (run.signal.aborted) return;
+        setReporting((r) => ({ ...r, [ministry]: { turn, status: "failed", chars: 0 } }));
+      }
+    }
+  };
 
   const endTurn = async () => {
     if (!state || busy) return;
@@ -196,10 +263,14 @@ export default function GameClient({ id }: { id: string }) {
         onProgress: (chars) => setBusy((b) => (b ? { ...b, chars } : b)),
       });
       const next = applyOutcome(state, outcome, orders, new Date(), map?.index.regions ?? null);
-      update(next, true);
       const entry = next.chronicle[next.chronicle.length - 1];
+      // Reports written for an earlier try at this turn belong to another outcome.
+      for (const [key, r] of arrived.current) if (r.turn >= entry.turn) arrived.current.delete(key);
+      update(next, true);
       setSummitQueue(entry.summits ?? []);
       setReport(entry);
+      if (!next.defeat || next.defeat.continued) void writeReports(entry.turn, reportsDue(entry), true);
+      readNewTurn(entry, locale);
     } catch (error) {
       const message = explain(error);
       if (message) setNotice(message);
@@ -263,6 +334,42 @@ export default function GameClient({ id }: { id: string }) {
     }
   };
 
+  /** A ministry's deputies, named once by the game master; the dice deal the rest (engine/deputies.ts). */
+  const setupDeputiesFor = async (advisor: AdvisorId) => {
+    if (!state || busy) return;
+    const controller = new AbortController();
+    setNotice(null);
+    setBusy({ kind: "deputies", advisor, chars: 0, startedAt: Date.now(), controller });
+    try {
+      const { deputies } = await setupDeputies(state, advisor, { locale, model, signal: controller.signal, onProgress: (chars) => setBusy((b) => (b ? { ...b, chars } : b)) });
+      update({ ...startDeputies(state, ADVISOR_POST[advisor], { deputies }), updatedAt: new Date().toISOString() }, true);
+    } catch (error) {
+      const text = explain(error);
+      if (text) setNotice(text);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /** A word in private with a deputy, behind their minister's back. */
+  const askDeputy = async (advisor: AdvisorId, deputy: string, question: string) => {
+    if (!state || busy) return false;
+    const controller = new AbortController();
+    setNotice(null);
+    setBusy({ kind: "deputy", advisor, deputy, chars: 0, startedAt: Date.now(), controller });
+    try {
+      const { reply } = await askAdvisor(state, advisor, question, { locale, model, signal: controller.signal, onProgress: (chars) => setBusy((b) => (b ? { ...b, chars } : b)), deputy });
+      update(addDeputyAdvice(state, deputy, question, reply), true);
+      return true;
+    } catch (error) {
+      const text = explain(error);
+      if (text) setNotice(text);
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
   /** A word with the chief of staff about acts of state; the drafts come with the answer. */
   const askActs = async (question: string, cities: CityChoice[]) => {
     if (!state || busy) return false;
@@ -301,7 +408,7 @@ export default function GameClient({ id }: { id: string }) {
         signal: controller.signal,
         onProgress: (chars) => setBusy((b) => (b ? { ...b, chars } : b)),
       });
-      update({ ...state, ...(politics ? { politics } : {}), ...(officials?.length ? { officials } : {}), updatedAt: new Date().toISOString() }, true);
+      update(seedInterests({ ...state, ...(politics ? { politics } : {}), ...(officials?.length ? { officials } : {}), updatedAt: new Date().toISOString() }), true);
     } catch (error) {
       const text = explain(error);
       if (text) setNotice(text);
@@ -377,6 +484,12 @@ export default function GameClient({ id }: { id: string }) {
   const population = useMemo(() => (state ? peopleByOwner(state.regions, map?.index) : new Map<string, number>()), [state, map]);
   const accounts = useMemo(() => (state && map ? nationalAccounts(state, map.index.regions) : null), [state, map]);
   const crises = useMemo(() => (state ? countryCrises(state, state.player, { accounts: accounts?.get(state.player), map: map?.index.regions }) : []), [state, accounts, map]);
+  // Fog of war: the selected foreign country as the player's government knows it this turn.
+  const borders = useMemo(() => (state && fogOn(state) ? borderingPlayer(state, map?.index.neighbors) : undefined), [state, map]);
+  const fogView = useMemo(
+    () => (state && fogOn(state) && selected && selected !== state.player && state.countries[selected] ? foreignView(state, selected, { borders, map: map?.index.regions }) : undefined),
+    [state, selected, borders, map],
+  );
 
   if (missing) {
     return (
@@ -415,6 +528,8 @@ export default function GameClient({ id }: { id: string }) {
     { id: "state", label: t("game.tab.state"), icon: Scale },
     { id: "foreign", label: t("game.tab.foreign"), icon: Globe },
     { id: "economy", label: t("game.tab.economy"), icon: Coins },
+    { id: "army", label: t("game.tab.army"), icon: Crosshair },
+    { id: "science", label: t("game.tab.science"), icon: FlaskConical },
   ];
   const rightTabs: { id: RightTab; label: string; icon: typeof ScrollText }[] = [
     { id: "country", label: t("game.tab.country"), icon: Users },
@@ -422,7 +537,7 @@ export default function GameClient({ id }: { id: string }) {
   ];
 
   const endTurnButton = (className: string) => (
-    <button type="button" data-tour="end-turn" onClick={endTurn} disabled={Boolean(busy) || !aiReady || lost} className={`${ui.primary} ${className}`}>
+    <button type="button" data-tour="end-turn" onClick={aiReady ? endTurn : () => setChoosingMaster(true)} disabled={Boolean(busy) || lost || !status} className={`${ui.primary} ${className}`}>
       {busy?.kind === "turn" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
       {t("game.endTurn")}
     </button>
@@ -436,12 +551,20 @@ export default function GameClient({ id }: { id: string }) {
           <span className="flex items-center gap-2">
             <Flag tag={state.player} scenario={state.scenarioId} color={player.color} />
             <span className="truncate">{state.title || text(player.name)}</span>
+            <LeaderButton
+              state={state}
+              onOpen={() => {
+                setSelected(state.player);
+                setSelectedProvince(null);
+                setRight("country");
+              }}
+            />
           </span>
         }
         subtitle={
           <span className="tabular-nums">
             {state.title ? `${text(player.name)} · ` : ""}
-            {formatDate(state.date, locale)} · {t("game.turn", { n: state.turn })} · {text(scenario.title)}
+            {formatDate(state.date, locale)} · {t("game.turn", { n: state.turn })} · {text(scenario.title)} · {t(state.mode === "historical" ? "game.mode.historical" : "game.mode.free")}
           </span>
         }
         actions={
@@ -450,12 +573,22 @@ export default function GameClient({ id }: { id: string }) {
             <a href={CONTENT_REPORT_URL} target="_blank" rel="noreferrer" className={ui.iconButton} aria-label={t("report.ai")} title={t("report.ai")}>
               <ReportIcon className="h-5 w-5 text-muted group-hover:text-accent" />
             </a>
+            <button
+              type="button"
+              aria-pressed={fogOn(state)}
+              onClick={() => update({ ...state, fog: !fogOn(state), updatedAt: new Date().toISOString() })}
+              className={ui.iconButton}
+              aria-label={t(fogOn(state) ? "fog.turnOff" : "fog.turnOn")}
+              title={t(fogOn(state) ? "fog.turnOff" : "fog.turnOn")}
+            >
+              {fogOn(state) ? <EyeOff className="h-5 w-5 text-muted group-hover:text-accent" /> : <Eye className="h-5 w-5 text-muted group-hover:text-accent" />}
+            </button>
             {endTurnButton("max-md:hidden px-4 py-2.5 text-xs")}
           </>
         }
       />
       {player.economy && (
-        <ResourceBar economy={player.economy} accounts={accounts?.get(state.player)} crises={crises} era={state.scenarioId} open={barOpen} onToggle={() => setBarOpen((v) => !v)} />
+        <ResourceBar economy={player.economy} accounts={accounts?.get(state.player)} crises={crises} era={state.scenarioId} />
       )}
 
       <main className="flex min-h-0 flex-1 flex-col lg:flex-row">
@@ -574,7 +707,7 @@ export default function GameClient({ id }: { id: string }) {
                       <div key={entry.turn} className={`${ui.card} p-4`}>
                         {open ? (
                           <>
-                            <TurnReport entry={entry} state={state} index={map?.index ?? null} compact />
+                            <TurnReport entry={entry} state={state} index={map?.index ?? null} compact reporting={reporting} />
                             <div className="mt-3 flex items-center gap-4">
                               <button type="button" onClick={toggle} className="text-2xs font-black uppercase tracking-wider text-muted hover:text-accent">
                                 {t("game.chronicle.collapse")}
@@ -618,10 +751,15 @@ export default function GameClient({ id }: { id: string }) {
                 onAsk={ask}
                 onAddOrder={(order) => update({ ...state, draft: [...state.draft, order], updatedAt: new Date().toISOString() })}
                 onDirectives={(directives) => update({ ...state, directives, updatedAt: new Date().toISOString() })}
-                anyBusy={busy ? { kind: busy.kind, chars: busy.chars, advisor: busy.advisor } : null}
+                anyBusy={busy ? { kind: busy.kind, chars: busy.chars, advisor: busy.advisor, deputy: busy.deputy } : null}
                 onSetup={() => void setupGovernment(["officials"])}
+                onSetupDeputies={(advisor) => void setupDeputiesFor(advisor)}
+                onAskDeputy={askDeputy}
+                onChange={(next) => update(next, true)}
                 onFind={candidatesFor}
                 onAppoint={(post, person, note) => update(appoint(state, post, person, note), true)}
+                reporting={reporting}
+                onRequestReport={lost || !aiReady ? undefined : (ministry) => void writeReports(state.chronicle.at(-1)?.turn ?? 0, [ministry])}
               />
             )}
             {left === "politics" && (
@@ -669,6 +807,30 @@ export default function GameClient({ id }: { id: string }) {
                 onOrder={(order) => {
                   if (state.draft.includes(order) || state.draft.length + (state.standing?.length ?? 0) >= MAX_TURN_ORDERS) return;
                   update({ ...state, draft: [...state.draft, order], updatedAt: new Date().toISOString() });
+                }}
+              />
+            )}
+            {left === "army" && (
+              <ArmyPanel
+                state={state}
+                accounts={accounts?.get(state.player)}
+                disabled={Boolean(busy) || lost}
+                onFocus={(kinds) => update(setArmsFocus(state, kinds), true)}
+                onConsult={() => {
+                  setConsult((c) => ({ advisor: "military", question: t("arms.question"), n: (c?.n ?? 0) + 1 }));
+                  setLeft("cabinet");
+                }}
+              />
+            )}
+            {left === "science" && (
+              <SciencePanel
+                state={state}
+                disabled={Boolean(busy) || lost}
+                onStart={(id) => update({ ...startResearch(state, id), updatedAt: new Date().toISOString() }, true)}
+                onStop={(id) => update({ ...stopResearch(state, id), updatedAt: new Date().toISOString() }, true)}
+                onConsult={() => {
+                  setConsult((c) => ({ advisor: "science", question: t("research.question"), n: (c?.n ?? 0) + 1 }));
+                  setLeft("cabinet");
                 }}
               />
             )}
@@ -741,12 +903,10 @@ export default function GameClient({ id }: { id: string }) {
           {!aiReady && status && (
             <div className="absolute inset-x-3 bottom-3 z-20 flex flex-wrap items-center gap-3 rounded-2xl border border-amber-500/40 bg-surface/95 p-3 shadow-lg backdrop-blur sm:right-auto">
               <span className="text-sm font-bold text-ink">{t("game.needAi")}</span>
-              <Link href="/settings" className={`${ui.primary} px-3 py-2 text-xs`}>
-                <Settings className="h-4 w-4" />
-                {t("game.openSettings")}
-              </Link>
+              <GameMasterOffer compact />
             </div>
           )}
+          <GameMasterChoice open={choosingMaster} onClose={() => setChoosingMaster(false)} onDemo={() => void endTurn()} />
 
           {busy?.kind === "turn" && (
             <div className="absolute inset-0 z-30 grid place-items-center bg-scrim/40 backdrop-blur-[2px] animate-in fade-in">
@@ -834,7 +994,13 @@ export default function GameClient({ id }: { id: string }) {
 
             {right === "country" && selectedProvince && map?.index.regions[selectedProvince] && state.regions[selectedProvince] && (
               <div className="mb-4">
-                <ProvinceDetails province={map.index.regions[selectedProvince]} region={state.regions[selectedProvince]} countries={state.countries} year={yearOf(state.date)} />
+                <ProvinceDetails
+                  province={map.index.regions[selectedProvince]}
+                  region={state.regions[selectedProvince]}
+                  countries={state.countries}
+                  year={yearOf(state.date)}
+                  start={startScale && map.index.regions[selectedProvince].pop !== undefined ? map.index.regions[selectedProvince].pop! * startScale(map.index.regions[selectedProvince].adm0) : undefined}
+                />
               </div>
             )}
 
@@ -850,7 +1016,10 @@ export default function GameClient({ id }: { id: string }) {
                 alliances={state.alliances}
                 countries={state.countries}
                 isPlayer={selectedCountry.tag === state.player}
-                coupRisk={selectedCountry.domestic ? coupRiskIn(state, selectedCountry.tag) : undefined}
+                coupRisk={selectedCountry.domestic && !selectedCountry.dormant && (counts.get(selectedCountry.tag) ?? 0) > 0 ? coupRiskIn(state, selectedCountry.tag, lostShares(state, map?.index.regions)) : undefined}
+                plans={state.plans ?? []}
+                player={state.player}
+                view={fogView}
                 footer={
                   selectedCountry.tag !== state.player && (
                     <button
@@ -906,6 +1075,8 @@ export default function GameClient({ id }: { id: string }) {
         />
       )}
 
+      <VoiceLayer />
+
       <DefeatDialog
         state={state}
         onContinue={() => state.defeat && update({ ...state, defeat: { ...state.defeat, continued: true }, updatedAt: new Date().toISOString() }, true)}
@@ -960,7 +1131,8 @@ export default function GameClient({ id }: { id: string }) {
           </div>
         }
       >
-        {report && <TurnReport entry={report} state={state} index={map?.index ?? null} />}
+        {/* The entry as it stands now: the ministers' reports come in while it is open. */}
+        {report && <TurnReport entry={state.chronicle.find((e) => e.turn === report.turn) ?? report} state={state} index={map?.index ?? null} reporting={reporting} />}
       </Dialog>
 
       {picture && map && <SharePicture key={picture.turn} state={state} entry={picture} topology={map.topology} onClose={() => setPicture(null)} />}

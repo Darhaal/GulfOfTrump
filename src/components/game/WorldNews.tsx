@@ -3,6 +3,7 @@
 import { ChevronRight, Handshake, Landmark, Newspaper, Swords, TrendingUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ui } from "@/components/ui/classes";
+import SpeakButton from "@/components/voice/SpeakButton";
 import { formatDate } from "@/engine/calendar";
 import { NEWS_SECTIONS, newsThread, worldNews, type NewsItem, type NewsSection } from "@/engine/news";
 import { regionLabel } from "@/engine/provinces";
@@ -10,7 +11,7 @@ import { getScenario } from "@/engine/scenarios";
 import type { GameState, Locale, MapIndex } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
-import { describeChange } from "./changes";
+import { describeChange, planWho } from "./changes";
 
 const SECTION_ICON: Record<NewsSection, typeof Newspaper> = {
   war: Swords,
@@ -75,12 +76,17 @@ export default function WorldNews({ state, index, onCountry }: { state: GameStat
       const bloc = state.alliances.find((a) => a.id === id);
       if (bloc) return text(bloc.name);
     }
+    if (kind === "plan") {
+      const plan = state.plans?.find((p) => p.id === id);
+      if (plan) return planWho(plan, name, t);
+    }
     // A war or bloc that is over keeps its name in the changes that told of it.
     for (const item of news) {
       if (item.type !== "change") continue;
       const c = item.change;
       if (kind === "war" && (c.kind === "war" || c.kind === "peace" || c.kind === "truce" || c.kind === "truce-ended") && c.war === id) return text(c.name);
-      if (kind === "bloc" && (c.kind === "alliance" || c.kind === "alliance-ended" || c.kind === "leave") && c.alliance === id) return text(c.name);
+      if (kind === "bloc" && (c.kind === "alliance" || c.kind === "alliance-ended" || c.kind === "leave" || c.kind === "accession") && c.alliance === id) return text(c.name);
+      if (kind === "plan" && (c.kind === "plan" || c.kind === "plan-end") && c.plan === id) return planWho(c, name, t);
     }
     return id;
   };
@@ -116,8 +122,16 @@ export default function WorldNews({ state, index, onCountry }: { state: GameStat
         const kept = all.filter(routine);
         return (
           <section key={turn} className={`${ui.card} p-3`}>
-            <div className={`${ui.label} mb-2 tabular-nums`}>
-              {t("game.turn", { n: turn })} · {t("game.period", { from: date(all[0].from), to: date(all[0].to) })}
+            <div className={`${ui.label} mb-2 flex items-center justify-between gap-2 tabular-nums`}>
+              <span>
+                {t("game.turn", { n: turn })} · {t("game.period", { from: date(all[0].from), to: date(all[0].to) })}
+              </span>
+              <SpeakButton
+                id={`news-${turn}`}
+                text={() => items.map((item) => [lineOf(item), item.type === "event" ? (item.event.body ?? "") : ""].filter(Boolean).join("\n")).join("\n")}
+                label="voice.readNews"
+                className="-my-1"
+              />
             </div>
             <ul className="grid gap-1.5">
               {items.map((item) => {

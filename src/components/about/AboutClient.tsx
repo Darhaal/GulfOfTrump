@@ -3,6 +3,7 @@
 import { Check, CodeXml, ExternalLink, Globe2, Landmark, Mail, Map, Save, TrendingUp, Users } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 import { ui } from "@/components/ui/classes";
+import PortraitCredits from "./PortraitCredits";
 import { APP_NAME, APP_VERSION, REPO_URL } from "@/constants/app";
 import { ABOUT, AUTHOR_EMAIL, AUTHOR_LINKS } from "@/i18n/about";
 import { useI18n } from "@/i18n/useI18n";
@@ -92,6 +93,8 @@ export default function AboutClient() {
             </ul>
           </section>
         </div>
+
+        <PortraitCredits />
 
         <section className={`${ui.card} flex flex-wrap items-center gap-4 p-5 md:p-6`}>
           <div className="min-w-0 flex-1">

@@ -74,7 +74,7 @@ try {
     await button("Add order").click();
     await button(/^End turn$/).first().click();
     await dialog().getByText("Turn report").waitFor();
-    await dialog().getByText("[mock]").first().waitFor();
+    await dialog().getByText("This is the demo", { exact: false }).first().waitFor();
     await dialog().locator("button", { hasText: "Back to the map" }).click();
   });
 

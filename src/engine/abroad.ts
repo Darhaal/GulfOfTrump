@@ -2,9 +2,11 @@ import { addStep } from "./calendar";
 import { countryCrises } from "./crises";
 import { fixed, happens } from "./dice";
 import { STEP_YEARS } from "./economy";
+import { peopleIn } from "./population";
+import { provisionBooks, provisionOf } from "./provision";
 import { REGIMES } from "./scenarios/regimes";
 import { en } from "./text";
-import type { AppliedChange, CountryState, Domestic, Economy, GameState, RegimeKind, Scenario, ScenarioId } from "./types";
+import type { AppliedChange, CountryState, Domestic, Economy, GameState, MapRegion, RegimeKind, Scenario, ScenarioId } from "./types";
 
 /**
  * Politics in every country the player does not play, kept by the engine
@@ -29,7 +31,7 @@ export function addYears(date: string, years: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-const yearsBetween = (from: string, to: string) => (Date.parse(to) - Date.parse(from)) / (365.25 * 86400000);
+export const yearsBetween = (from: string, to: string) => (Date.parse(to) - Date.parse(from)) / (365.25 * 86400000);
 
 /** Each date's table read once into tag -> kind. */
 const KINDS = new Map<ScenarioId, Map<string, RegimeKind>>();
@@ -44,14 +46,23 @@ function kindsOn(era: ScenarioId): Map<string, RegimeKind> {
   return kinds;
 }
 
-/** How a country that appears in play is governed, read from the words the game master gave it. */
+/**
+ * How a country that appears in play is governed, read from the words the
+ * game master gave it, in any of the game's languages (it writes them in the
+ * player's). Used when its answer names no kind of government.
+ */
 export function regimeFromText(government: string | undefined): RegimeKind {
   const g = (government ?? "").toLowerCase();
-  if (/junta|military|martial law|army/.test(g)) return "military";
-  if (/one-party|communis|people's|socialist/.test(g)) return "party";
-  if (/dictator|totalitarian|absolute|fascis|theocra|emirate|caliphate|sultanate|insurgen|resistance|protectorate|occupation|puppet|satellite/.test(g)) return "autocracy";
-  if (/islamic|provisional|transitional|revolutionary|authoritarian|guided|dominant|council/.test(g)) return "limited";
-  if (/parliament|democra|federal|presidential|constitutional|republic|commonwealth|dominion/.test(g)) return "democracy";
+  if (/junta|military|martial law|army|хунт|военн|військов|воєнн/.test(g)) return "military";
+  if (/one-party|communis|people's|socialist|однопарти|однопартій|коммунист|комуніст|социалист|соціаліст|народн/.test(g)) return "party";
+  if (
+    /dictator|totalitarian|absolute|fascis|theocra|emirate|caliphate|sultanate|insurgen|resistance|protectorate|occupation|puppet|satellite|диктат|тоталит|тоталіт|абсолют|фашист|теократ|эмират|емірат|халифат|халіфат|султан|повстан|сопротивл|опір|протекторат|оккупац|окупац|марионет|маріонет|сателлит|сателіт/.test(
+      g,
+    )
+  )
+    return "autocracy";
+  if (/islamic|provisional|transitional|revolutionary|authoritarian|guided|dominant|council|исламск|ісламськ|временн|тимчасов|переходн|перехідн|революц|авторитар/.test(g)) return "limited";
+  if (/parliament|democra|federal|presidential|constitutional|republic|commonwealth|dominion|парламент|демократ|федерат|федерал|президент|конституц|республик|республік|содружеств|співдружн|доминион|домініон/.test(g)) return "democracy";
   return "limited";
 }
 
@@ -88,9 +99,9 @@ export function startingDomestic(scenario: Pick<Scenario, "id" | "startDate" | "
   return schedule(d, scenario.id, tag, scenario.startDate, addYears(after, -1 / 365.25));
 }
 
-/** A country that appears in play: its kind of government from its description, an election within its term. */
-export function newDomestic(country: Pick<CountryState, "tag" | "government">, era: ScenarioId, date: string): Domestic {
-  const regime = regimeFromText(en(country.government));
+/** A country that appears in play: its kind of government as the game master gave it (or read from its description), an election within its term. */
+export function newDomestic(country: Pick<CountryState, "tag" | "government">, era: ScenarioId, date: string, kind?: RegimeKind): Domestic {
+  const regime = kind ?? regimeFromText(en(country.government));
   const d = fresh(regime, 40, 55);
   if (regime !== "democracy" && regime !== "limited") return d;
   return { ...d, term: TERM[regime], nextElection: addYears(date, Math.max(0.5, fixed(`${era}:${country.tag}:new`) * TERM[regime])) };
@@ -124,7 +135,7 @@ export interface CoupContext {
   era: ScenarioId;
   economy?: Economy;
   atWar: boolean;
-  /** Share of the country's own provinces held by others, 0–1. */
+  /** Share of the country's own people in provinces held by others, 0–1 (lostShares). */
   lost: number;
 }
 
@@ -156,27 +167,40 @@ export function keepChance(d: Pick<Domestic, "regime" | "support">): number {
   return d.support >= 25 ? 0.95 : 0.75;
 }
 
-/** Share of each country's own provinces held by others, 0–1. */
-export function lostShares(state: Pick<GameState, "regions">): Map<string, number> {
-  const own = new Map<string, number>();
-  const lost = new Map<string, number>();
-  for (const r of Object.values(state.regions)) {
-    own.set(r.owner, (own.get(r.owner) ?? 0) + 1);
-    if (r.controller !== r.owner) lost.set(r.owner, (lost.get(r.owner) ?? 0) + 1);
+/**
+ * Share of each country's own people living in its provinces held by others,
+ * 0–1: losing the capital weighs more than losing a desert. A country whose
+ * provinces have no people on record counts its provinces instead. The map
+ * gives a province's people until the game has moved them; the server and
+ * the browser pass the same map, so the dice they cast agree.
+ */
+export function lostShares(state: Pick<GameState, "regions">, map?: Record<string, MapRegion> | null): Map<string, number> {
+  const own = new Map<string, { people: number; lostPeople: number; provinces: number; lostProvinces: number }>();
+  for (const [id, r] of Object.entries(state.regions)) {
+    const tally = own.get(r.owner) ?? { people: 0, lostPeople: 0, provinces: 0, lostProvinces: 0 };
+    const people = peopleIn(r, map?.[id]);
+    tally.people += people;
+    tally.provinces += 1;
+    if (r.controller !== r.owner) {
+      tally.lostPeople += people;
+      tally.lostProvinces += 1;
+    }
+    own.set(r.owner, tally);
   }
   const out = new Map<string, number>();
-  for (const [tag, n] of own) out.set(tag, (lost.get(tag) ?? 0) / n);
+  for (const [tag, n] of own) out.set(tag, n.people > 0 ? n.lostPeople / n.people : n.lostProvinces / n.provinces);
   return out;
 }
 
 /** The wars a country fights now, outside any truce. */
-const warsOf = (state: Pick<GameState, "wars" | "date">, tag: string) =>
+export const warsOf = (state: Pick<GameState, "wars" | "date">, tag: string) =>
   state.wars.filter((w) => (w.attackers.includes(tag) || w.defenders.includes(tag)) && !(w.truce && w.truce.until > state.date));
 
-/** The coup risk of one country in a state, % a year. */
+/** The coup risk of one country in a state, % a year; none where no coup can happen (no land, a movement without territory, a government abroad). */
 export function coupRiskIn(state: Pick<GameState, "countries" | "regions" | "wars" | "date" | "scenarioId">, tag: string, lost = lostShares(state)): number {
   const c = state.countries[tag];
-  if (!c?.domestic) return 0;
+  // lostShares has every country that owns a province, and only those.
+  if (!c?.domestic || c.dormant || c.exile || !lost.has(tag)) return 0;
   return coupRisk(c.domestic, { era: state.scenarioId, economy: c.economy, atWar: warsOf(state, tag).length > 0, lost: lost.get(tag) ?? 0 });
 }
 
@@ -184,25 +208,27 @@ export type AbroadEvent = { kind: "election"; country: string; date: string; kep
 
 /**
  * The dice for the coming turn, cast from the state before it: elections
- * that fall in the period, and coups by their risk. The same state casts the
- * same dice, on the server that writes the prompt and in the browser that
- * applies the answer.
+ * that fall in the period, and coups by their risk. The same state and map
+ * cast the same dice, on the server that writes the prompt and in the
+ * browser that applies the answer.
  */
-export function castAbroad(state: GameState): AbroadEvent[] {
+export function castAbroad(state: GameState, map?: Record<string, MapRegion> | null): AbroadEvent[] {
+  // A copy of a game keeps the game's dice (lib/saves.ts duplicateSave).
+  const game = state.seed ?? state.id;
   const to = addStep(state.date, state.step);
   const years = STEP_YEARS[state.step];
-  const lost = lostShares(state);
+  const lost = lostShares(state, map);
   const owners = new Set(Object.values(state.regions).map((r) => r.owner));
   const out: AbroadEvent[] = [];
   for (const [tag, c] of Object.entries(state.countries)) {
     const d = c.domestic;
     // A country conquered outright holds no vote and has no army to rise; one that never had land (a Soviet republic in 1991) still votes.
     if (!d || tag === state.player || c.exile || (!c.dormant && !owners.has(tag))) continue;
-    // A year passes between one attempt on a government and the next, whatever the length of a turn.
-    if (!c.dormant && !(d.lastCoup && yearsBetween(d.lastCoup, to) < 1)) {
+    // A calendar year passes between one attempt on a government and the next, whatever the length of a turn.
+    if (!c.dormant && !(d.lastCoup && to < addStep(d.lastCoup, "year"))) {
       const risk = coupRiskIn(state, tag, lost) / 100;
-      if (happens(1 - (1 - risk) ** years, state.id, state.turn, `coup:${tag}`)) {
-        const succeeded = happens(coupSuccess(d), state.id, state.turn, `coup-success:${tag}`);
+      if (happens(1 - (1 - risk) ** years, game, state.turn, `coup:${tag}`)) {
+        const succeeded = happens(coupSuccess(d), game, state.turn, `coup-success:${tag}`);
         out.push({ kind: "coup", country: tag, succeeded });
         if (succeeded) continue;
       }
@@ -210,7 +236,7 @@ export function castAbroad(state: GameState): AbroadEvent[] {
     if (d.nextElection && d.nextElection <= to) {
       // An election that fell while the country could not hold it (all its land lost) is held now.
       const date = d.nextElection < state.date ? state.date : d.nextElection;
-      out.push({ kind: "election", country: tag, date, kept: happens(keepChance(d), state.id, state.turn, `election:${tag}`) });
+      out.push({ kind: "election", country: tag, date, kept: happens(keepChance(d), game, state.turn, `election:${tag}`) });
     }
   }
   return out;
@@ -222,7 +248,7 @@ export function castAbroad(state: GameState): AbroadEvent[] {
  * a war rallies people at first and tires them after, and years in office
  * tire them of any government.
  */
-function supportTarget(c: CountryState, ctx: { lost: number; warYears: number | null; tenure: number }): number {
+function supportTarget(c: CountryState, ctx: { lost: number; warYears: number | null; tenure: number; provision?: number }): number {
   const e = c.economy;
   let t = 50;
   if (e) {
@@ -231,6 +257,8 @@ function supportTarget(c: CountryState, ctx: { lost: number; warYears: number | 
     t -= 1.2 * clamp(e.unemployment - 6, 0, 25);
     t -= 10 * e.tradeCut;
   }
+  // People short of food, fuel or medicine blame the government (engine/provision.ts).
+  if (ctx.provision !== undefined) t -= 0.3 * clamp(90 - ctx.provision, 0, 60);
   t -= 50 * ctx.lost;
   if (ctx.warYears !== null) t += clamp(6 - 5 * ctx.warYears, -15, 6);
   t -= Math.min(12, 2.5 * ctx.tenure);
@@ -253,6 +281,10 @@ interface AbroadContext {
   named: Set<string>;
   /** Of those, the ones whose leader was in office: a new government, not a name filled in after a fall. */
   replaced: Set<string>;
+  /** The map's provinces, for the people in land lost. */
+  map?: Record<string, MapRegion> | null;
+  /** The kind of government the game master gave the countries it created this turn. */
+  regimes?: Map<string, RegimeKind>;
 }
 
 /**
@@ -266,14 +298,15 @@ export function applyAbroad(next: GameState, events: AbroadEvent[], ctx: AbroadC
   // Support moves half way to where it heads in half a year; stability, slower, in two years.
   const pace = 1 - 0.5 ** (ctx.years / 0.5);
   const slow = 1 - 0.5 ** (ctx.years / 2);
-  const lost = lostShares(next);
+  const lost = lostShares(next, ctx.map);
+  const books = ctx.map ? provisionBooks(next, ctx.map) : null;
   const start = next.chronicle[0]?.from ?? next.date;
   // Countries born this turn get politics from their description; any other without them waits for the date's table on load.
   const born = new Set(applied.flatMap((a) => (a.kind === "new-country" ? [a.country] : [])));
   for (const [tag, c] of Object.entries(next.countries)) {
     if (tag === next.player) continue;
     if (!c.domestic) {
-      if (born.has(tag)) c.domestic = newDomestic(c, next.scenarioId, ctx.to);
+      if (born.has(tag)) c.domestic = newDomestic(c, next.scenarioId, ctx.to, ctx.regimes?.get(tag));
       continue;
     }
     const d = { ...c.domestic };
@@ -282,7 +315,8 @@ export function applyAbroad(next: GameState, events: AbroadEvent[], ctx: AbroadC
     const share = lost.get(tag) ?? 0;
     // A government of the start date has been in office some years already.
     const tenure = d.changed ? yearsBetween(d.changed.date, ctx.to) : yearsBetween(start, ctx.to) + fixed(`tenure:${next.scenarioId}:${tag}`) * 4;
-    d.support = fine(d.support + (supportTarget(c, { lost: share, warYears, tenure }) - d.support) * pace);
+    const provision = ctx.map && books ? provisionOf(next, tag, ctx.map, books)?.overall : undefined;
+    d.support = fine(d.support + (supportTarget(c, { lost: share, warYears, tenure, provision }) - d.support) * pace);
     d.stability = fine(d.stability + (stabilityTarget(next, tag, d, share) - d.stability) * slow);
     // A leader the game master put in office outside an election or a coup: a new government, given a little goodwill.
     if (ctx.replaced.has(tag) && !events.some((e) => e.country === tag)) {
@@ -327,8 +361,8 @@ export function applyAbroad(next: GameState, events: AbroadEvent[], ctx: AbroadC
 }
 
 /** The countries a turn should be told about: what the dice decided, and the shakiest governments that matter. */
-export function describeAbroad(state: GameState, name: (tag: string) => string): string[] {
-  const events = castAbroad(state);
+export function describeAbroad(state: GameState, name: (tag: string) => string, map?: Record<string, MapRegion> | null): string[] {
+  const events = castAbroad(state, map);
   const lines: string[] = [];
   if (events.length) {
     const who = (e: AbroadEvent) => `${name(e.country)} [${e.country}]`;
@@ -339,11 +373,13 @@ export function describeAbroad(state: GameState, name: (tag: string) => string):
     if (votes(false).length) lines.push(`- governments that LOSE national elections: ${votes(false).join("; ")}`);
     if (votes(true).length) lines.push(`- governments that keep power at national elections: ${votes(true).join("; ")}`);
   }
-  // Governments that fell last turn and still have no named leader.
-  const since = state.chronicle.at(-1)?.from ?? state.date;
-  const unnamed = Object.values(state.countries).filter((c) => c.tag !== state.player && !c.leader && c.domestic?.changed && c.domestic.changed.date >= since);
+  // Governments that fell and still have no named leader, asked for until they get one, while they still govern somewhere.
+  const owners = new Set(Object.values(state.regions).map((r) => r.owner));
+  const unnamed = Object.values(state.countries).filter(
+    (c) => c.tag !== state.player && !c.leader && c.domestic?.changed && c.domestic.changed.how !== "leader" && !c.exile && (c.dormant || owners.has(c.tag)),
+  );
   if (unnamed.length) lines.push(`NEW GOVERNMENTS WITHOUT A NAMED LEADER (name them in leaders): ${unnamed.map((c) => `${name(c.tag)} [${c.tag}]`).join(", ")}`);
-  const lost = lostShares(state);
+  const lost = lostShares(state, map);
   const shaky = Object.values(state.countries)
     .filter((c) => c.tag !== state.player && c.domestic && !c.dormant && c.economy)
     .map((c) => ({ c, risk: coupRiskIn(state, c.tag, lost) }))

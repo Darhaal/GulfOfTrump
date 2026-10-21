@@ -1,5 +1,5 @@
 export const APP_NAME = "Gulf of Trump";
-export const APP_VERSION = "1.0.2";
+export const APP_VERSION = "1.0.3";
 export const APP_STAGE = "beta";
 export const REPO_URL = "https://github.com/Darhaal/GulfOfTrump";
 export const ISSUES_URL = `${REPO_URL}/issues/new/choose`;
@@ -14,6 +14,13 @@ export const CONTENT_REPORT_URL = `${REPO_URL}/issues/new?template=content.yml`;
  * in; the browser gets it inlined at build.
  */
 export const isDemo = () => process.env.NEXT_PUBLIC_GOT_DEMO === "1" || process.env.VERCEL === "1" || Boolean(process.env.NEXT_PUBLIC_VERCEL_ENV);
+
+/**
+ * The header a browser sends when its player chose the offline demo
+ * (Settings → Game master): the server answers that request from the
+ * stand-in game master and never touches the ChatGPT sign-in.
+ */
+export const DEMO_HEADER = "x-got-demo";
 
 /** The desktop app (Electron) shows the game in its own window; sign-in then opens the system browser. */
 export const isDesktopApp = () => typeof navigator !== "undefined" && /\bElectron\//.test(navigator.userAgent);

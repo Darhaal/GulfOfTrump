@@ -3,6 +3,7 @@
 import { Hourglass, Pin, PinOff, Plus, Repeat, X } from "lucide-react";
 import { useState } from "react";
 import { ui } from "@/components/ui/classes";
+import Dictation from "@/components/voice/Dictation";
 import { MAX_ORDERS } from "@/constants/app";
 import { TIME_STEPS } from "@/engine/calendar";
 import type { TimeStep } from "@/engine/types";
@@ -64,21 +65,23 @@ export default function OrdersPanel({ orders, standing, previous, step, disabled
       </div>
 
       <div>
-        <textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              add();
-            }
-          }}
-          rows={3}
-          maxLength={1000}
-          disabled={disabled || full}
-          placeholder={t("game.orders.placeholder")}
-          className={`${ui.input} resize-none`}
-        />
+        <Dictation id="orders" set={setDraft} max={1000} disabled={disabled || full}>
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                add();
+              }
+            }}
+            rows={3}
+            maxLength={1000}
+            disabled={disabled || full}
+            placeholder={t("game.orders.placeholder")}
+            className={`${ui.input} resize-none`}
+          />
+        </Dictation>
         <div className="mt-2 flex items-center justify-between gap-2">
           <span className="text-2xs font-medium text-muted">{full ? t("game.orders.limit", { n: MAX_ORDERS }) : t("game.orders.hint")}</span>
           <button type="button" onClick={add} disabled={disabled || full || !draft.trim()} className={`${ui.secondary} shrink-0 px-3 py-2 text-xs`}>

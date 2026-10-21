@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CodeXml, Flag, GraduationCap, ExternalLink, Info, Loader2, LogIn, LogOut, ShieldCheck, Sparkles, Unplug } from "lucide-react";
+import { CodeXml, Flag, Gamepad2, GraduationCap, ExternalLink, Info, Loader2, LogIn, LogOut, ShieldCheck, Sparkles, Unplug } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import AppHeader from "@/components/AppHeader";
 import GoogleMark from "@/components/GoogleMark";
@@ -11,10 +11,12 @@ import { APP_VERSION, CHATGPT_USAGE_URL, CONTENT_REPORT_URL, REPO_URL, isDemo, i
 import { LOCALES, type Locale } from "@/engine/types";
 import { errorKey, useI18n } from "@/i18n/useI18n";
 import { ApiError, connectAi, disconnectAi, getModels } from "@/lib/api";
+import { useDesktopWindow } from "@/lib/desktop";
 import { usePreference, type Theme } from "@/lib/preferences";
 import { displayName, isCloudEnabled, signInWithGoogle, signOut, useUser } from "@/lib/supabase";
-import { useAiStatus } from "@/lib/useAiStatus";
+import { useGameMaster } from "@/lib/gameMaster";
 import { replayTour } from "@/components/game/Tour";
+import VoiceSettings from "./VoiceSettings";
 
 const LANGUAGE_NAMES: Record<Locale, string> = { ru: "Русский", uk: "Українська", en: "English" };
 
@@ -29,9 +31,11 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 export default function SettingsClient() {
   const { t, locale, setLocale } = useI18n();
+  const { desktop, fullScreen } = useDesktopWindow();
   const [theme, setTheme] = usePreference("theme");
   const [model, setModel] = usePreference("model");
-  const { status, refresh } = useAiStatus();
+  const gameMaster = useGameMaster();
+  const { status, refresh } = gameMaster;
   const { user } = useUser();
   const params = useSearchParams();
   const [models, setModels] = useState<{ slug: string; displayName: string }[] | null>(null);
@@ -144,6 +148,23 @@ export default function SettingsClient() {
             </div>
 
             {status?.provider === "mock" && <p className="rounded-xl bg-amber-50 p-3 text-xs font-bold text-amber-700">{isDemo() ? t("demo.banner") : t("ai.mock")}</p>}
+            {gameMaster.canChoose && status !== null && (
+              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-page p-3">
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-black text-ink">{t("demo.try")}</div>
+                  <p className="mt-0.5 text-xs font-medium leading-relaxed text-muted">{gameMaster.demo ? t("demo.on") : t("demo.tryBody")}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => gameMaster.setDemo(!gameMaster.demo)}
+                  aria-pressed={gameMaster.demo}
+                  className={`${gameMaster.demo ? ui.secondary : ui.primary} px-4 py-2.5 text-xs`}
+                >
+                  <Gamepad2 className="h-4 w-4" />
+                  {gameMaster.demo ? t("demo.stop") : t("demo.play")}
+                </button>
+              </div>
+            )}
             {status?.status === "connecting" && <p className="text-xs font-bold text-ink">{t("ai.connecting")}</p>}
             {status?.status === "reauth_required" && <p className="rounded-xl bg-amber-50 p-3 text-xs font-bold text-amber-700">{t("ai.reauth")}</p>}
             {connected && !status?.sharing && <p className="rounded-xl bg-amber-50 p-3 text-xs font-bold text-amber-700">{t("ai.noSharing")}</p>}
@@ -166,8 +187,6 @@ export default function SettingsClient() {
 
             <div className="grid gap-1.5 text-xs font-medium text-muted">
               <p>{t("ai.planNote")}</p>
-              <p>{t("ai.localNote")}</p>
-              <p>{t("ai.claudeLater")}</p>
               <a href={CHATGPT_USAGE_URL} target="_blank" rel="noreferrer" className="inline-flex w-fit items-center gap-1 font-bold text-ink hover:text-accent">
                 {t("ai.usage")}
                 <ExternalLink className="h-3 w-3" />
@@ -216,6 +235,10 @@ export default function SettingsClient() {
           </div>
         </Section>
 
+        <Section title={t("settings.voice")}>
+          <VoiceSettings />
+        </Section>
+
         <Section title={t("settings.theme")}>
           <div className="flex flex-wrap gap-1 rounded-xl bg-page p-1">
             {(["system", "light", "dark"] as Theme[]).map((th) => (
@@ -225,6 +248,19 @@ export default function SettingsClient() {
             ))}
           </div>
         </Section>
+
+        {desktop && fullScreen !== null && (
+          <Section title={t("settings.window")}>
+            <div className="flex flex-wrap gap-1 rounded-xl bg-page p-1">
+              {[true, false].map((on) => (
+                <button key={String(on)} type="button" onClick={() => void desktop.setFullScreen(on)} className={`${ui.segment} flex-1 ${on === fullScreen ? `${ui.segmentOn} bg-surface shadow-sm` : ui.segmentOff}`}>
+                  {t(on ? "settings.window.full" : "settings.window.windowed")}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs font-medium text-muted">{t("settings.window.hint")}</p>
+          </Section>
+        )}
 
         <Section title={t("settings.about")}>
           <p className="text-sm font-medium leading-relaxed text-ink">{t("settings.aboutText")}</p>

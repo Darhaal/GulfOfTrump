@@ -1,15 +1,18 @@
 "use client";
 
-import { Banknote, Check, CircleDashed, Flag, Handshake, Landmark, Newspaper, ScrollText, Shield, Swords, TrendingUp, TriangleAlert, X } from "lucide-react";
+import { Banknote, Check, CircleDashed, Flag, Handshake, Landmark, Loader2, Newspaper, ScrollText, Shield, Swords, TrendingUp, TriangleAlert, X } from "lucide-react";
 import { useState } from "react";
 import { ui } from "@/components/ui/classes";
+import SpeakButton from "@/components/voice/SpeakButton";
 import { formatDate } from "@/engine/calendar";
+import { turnSpeechId } from "@/lib/voice/speaker";
+import { turnSpeech } from "@/lib/voice/text";
 import { regionLabel } from "@/engine/provinces";
 import type { ChronicleEntry, EventKind, GameState, MapIndex, Verdict } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
-import { ADVISOR_TITLES } from "@/engine/advisors";
-import { MINISTRY_ICONS } from "./CabinetPanel";
+import { ADVISOR_TITLES, type AdvisorId } from "@/engine/advisors";
+import { DirectiveList, MINISTRY_ICONS, StanceChip, type ReportStatus } from "./CabinetPanel";
 import { describeChange, groupTerritory, isNotableStats, sortChanges } from "./changes";
 
 const KIND_ICON: Record<EventKind, typeof Newspaper> = {
@@ -37,13 +40,20 @@ export default function TurnReport({
   state,
   index,
   compact,
+  reporting,
 }: {
   entry: ChronicleEntry;
   state: GameState;
   index: MapIndex | null;
   compact?: boolean;
+  /** The ministers' reports on the last turn still being written. */
+  reporting?: Partial<Record<AdvisorId, ReportStatus>>;
 }) {
   const { t, text, locale, money, people } = useI18n();
+  // Reports come after the turn; the ministries still owing one show what became of their directives meanwhile.
+  const reports = entry.reports ?? [];
+  const owed = (entry.briefs ?? []).filter((b) => !reports.some((r) => r.ministry === b.ministry));
+  const latestTurn = state.chronicle.at(-1)?.turn === entry.turn;
   const economy = entry.economy;
   const economyLines = economy
     ? [
@@ -79,7 +89,10 @@ export default function TurnReport({
         <div className={`${ui.label} tabular-nums`}>
           {t("game.turn", { n: entry.turn })} · {t("game.period", { from: formatDate(entry.from, locale), to: formatDate(entry.to, locale) })}
         </div>
-        <h3 className={`mt-1.5 font-black leading-tight tracking-tight text-ink ${compact ? "text-lg" : "text-2xl"}`}>{entry.headline}</h3>
+        <div className="mt-1.5 flex items-start gap-2">
+          <h3 className={`min-w-0 flex-1 font-black leading-tight tracking-tight text-ink ${compact ? "text-lg" : "text-2xl"}`}>{entry.headline}</h3>
+          <SpeakButton id={turnSpeechId(entry.turn)} text={() => turnSpeech(entry)} label="voice.readTurn" className="mt-0.5" />
+        </div>
       </div>
 
       <div className="space-y-3 text-sm font-medium leading-relaxed text-ink/90">
@@ -158,37 +171,42 @@ export default function TurnReport({
         </section>
       )}
 
-      {entry.reports && entry.reports.length > 0 && (
+      {(reports.length > 0 || owed.length > 0) && (
         <section>
           <div className={`${ui.label} mb-2 flex items-center gap-1.5`}>
             <ScrollText className="h-3.5 w-3.5" />
             {t("report.ministries")}
           </div>
           <div className="grid gap-2">
-            {entry.reports.map((r) => {
+            {reports.map((r) => {
               const Icon = MINISTRY_ICONS[r.ministry];
               return (
                 <details key={r.ministry} open={!compact} className="group rounded-xl bg-page px-3 py-2">
                   <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-black text-ink">
                     <Icon className="h-3.5 w-3.5 text-muted" />
-                    {text(ADVISOR_TITLES[r.ministry])}
+                    <span className="min-w-0 flex-1">{text(ADVISOR_TITLES[r.ministry])}</span>
+                    {r.stance && r.stance !== "loyal" && <StanceChip stance={r.stance} />}
+                    <SpeakButton id={`report-${entry.turn}-${r.ministry}`} text={r.text} className="-my-1" />
                   </summary>
                   <p className="mt-1.5 text-sm font-medium leading-relaxed text-ink/90">{r.text}</p>
-                  {r.directives.length > 0 && (
-                    <ul className="mt-1.5 grid gap-1">
-                      {r.directives.map((d) => (
-                        <li key={d.id} className="text-xs font-medium text-muted">
-                          <span
-                            className={`mr-1.5 rounded px-1.5 py-0.5 text-2xs font-black uppercase tracking-wider ${d.status === "done" ? "bg-emerald-50 text-emerald-700" : d.status === "failed" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"}`}
-                          >
-                            {t(`cabinet.status.${d.status}` as MessageKey)}
-                          </span>
-                          {d.text ? `${d.text} — ` : ""}
-                          {d.note}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  <DirectiveList directives={r.directives} />
+                </details>
+              );
+            })}
+            {owed.map((b) => {
+              const Icon = MINISTRY_ICONS[b.ministry];
+              const writing = latestTurn && reporting?.[b.ministry]?.status === "writing";
+              return (
+                <details key={b.ministry} open={!compact} className="group rounded-xl bg-page px-3 py-2">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-black text-ink">
+                    <Icon className="h-3.5 w-3.5 text-muted" />
+                    {text(ADVISOR_TITLES[b.ministry])}
+                  </summary>
+                  <p className="mt-1.5 flex items-center gap-2 text-xs font-medium text-muted">
+                    {writing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    {writing ? t("report.writing") : t("report.missing")}
+                  </p>
+                  <DirectiveList directives={b.directives} />
                 </details>
               );
             })}

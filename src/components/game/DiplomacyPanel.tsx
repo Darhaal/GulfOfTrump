@@ -5,10 +5,14 @@ import { useMemo, useState } from "react";
 import Flag from "@/components/Flag";
 import ChatScroll from "@/components/ui/ChatScroll";
 import { ui } from "@/components/ui/classes";
+import Dictation from "@/components/voice/Dictation";
+import SpeakButton from "@/components/voice/SpeakButton";
 import type { GameState, Stance } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
 import { leaderName } from "@/i18n/leaders";
+import { leaderOf, personName } from "@/engine/people";
+import Portrait from "./Portrait";
 
 interface DiplomacyPanelProps {
   state: GameState;
@@ -41,6 +45,7 @@ export default function DiplomacyPanel({ state, target, busy, disabled, onTarget
 
   const thread = target ? (state.diplomacy[target] ?? []) : [];
   const them = target ? state.countries[target] : null;
+  const theirLeader = target ? leaderOf(state, target) : undefined;
 
   const send = async () => {
     if (!target || !message.trim()) return;
@@ -69,10 +74,11 @@ export default function DiplomacyPanel({ state, target, busy, disabled, onTarget
         <>
           <div className="flex items-center gap-2.5">
             <Flag tag={them.tag} scenario={state.scenarioId} color={them.color} size="lg" />
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-black text-ink">{text(them.name)}</div>
               {them.leader && <div className="truncate text-xs font-medium text-muted">{leaderName(them.leader, locale)}</div>}
             </div>
+            {theirLeader && <Portrait portrait={theirLeader.portrait} gender={theirLeader.gender} name={personName(theirLeader, locale)} size="sm" />}
           </div>
 
           <ChatScroll watch={`${target}-${thread.length}-${Boolean(busy)}`}>
@@ -87,6 +93,7 @@ export default function DiplomacyPanel({ state, target, busy, disabled, onTarget
                 <div className={`mb-1 flex items-center gap-2 text-2xs font-black uppercase tracking-widest ${m.from === "player" ? "text-on-ink/60" : "text-muted"}`}>
                   {m.from === "player" ? t("diplomacy.you") : text(them.name)}
                   <span className="font-medium normal-case tracking-normal tabular-nums">{m.date}</span>
+                  {m.from !== "player" && <SpeakButton id={`letter-${target}-${i}`} text={m.text} className="-my-1 ml-auto" />}
                 </div>
                 <p className="whitespace-pre-wrap break-words font-medium leading-relaxed">{m.text}</p>
                 {m.stance && (
@@ -105,21 +112,23 @@ export default function DiplomacyPanel({ state, target, busy, disabled, onTarget
           </ChatScroll>
 
           <div>
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                  e.preventDefault();
-                  void send();
-                }
-              }}
-              rows={3}
-              maxLength={2000}
-              disabled={disabled || Boolean(busy)}
-              placeholder={t("diplomacy.placeholder", { country: text(them.name) })}
-              className={`${ui.input} resize-none`}
-            />
+            <Dictation id={`letter-${target}`} set={setMessage} max={2000} disabled={disabled || Boolean(busy)}>
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    void send();
+                  }
+                }}
+                rows={3}
+                maxLength={2000}
+                disabled={disabled || Boolean(busy)}
+                placeholder={t("diplomacy.placeholder", { country: text(them.name) })}
+                className={`${ui.input} resize-none`}
+              />
+            </Dictation>
             <div className="mt-2 flex items-center justify-between gap-2">
               <span className="text-2xs font-medium text-muted">{t("diplomacy.note")}</span>
               <button type="button" onClick={send} disabled={disabled || Boolean(busy) || !message.trim()} className={`${ui.primary} shrink-0 px-4 py-2 text-xs`}>

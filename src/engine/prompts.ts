@@ -1,29 +1,36 @@
 import { describeAbroad } from "./abroad";
+import { describeCourse, describeIntentions, describeVisiblePlans } from "./intentions";
+import { describeArms } from "./arsenal";
+import { describeForMinister, describeIntrigues } from "./deputies";
 import { addStep, STEP_LABEL_EN, yearOf } from "./calendar";
+import { describeFog } from "./fog";
 import { ADVISOR_PERSONAS, ADVISOR_TITLES, ADVISORS, directiveLine, type AdvisorId, OPERATION_MINISTRIES } from "./advisors";
 import { balance, formatMoney, nationalAccounts } from "./economy";
 import { truceLine } from "./foreign";
 import { describePolitics, MAX_DRIFT } from "./politics";
 import { peopleIn } from "./population";
-import { formatPopulation, railLevel } from "./provinces";
+import { describeProvision, provisionOf } from "./provision";
+import { formatPopulation, LANDING_KM, railLevel } from "./provinces";
 import { describeProtests, FALL_PLOT, FALL_UNREST } from "./unrest";
 import { DEFAULT_HELD } from "./outcome";
 import { sanctionCuts, tradeBooks } from "./trade";
 import { describeDeals } from "./deals";
 import { describeIdentity } from "./identity";
 import { describeBills } from "./acts";
+import { describeResearch } from "./research";
 import { amountEn } from "./units";
 import { LAW_IDS, LAWS } from "./laws";
 import { countryCrises, describeCrisis, interestOf, interestRate } from "./crises";
 import { ADVISOR_POST, describeOfficials, officialAt, officialLine } from "./government";
+import { interestsLine } from "./interests";
 import { OFFICIAL_POSTS, type OfficialPost, type Summit } from "./types";
 import { activeResources, formatResources, type ResourceType } from "./resources";
 import { getScenario } from "./scenarios";
 import { regionsByOwner } from "./setup";
 import { en } from "./text";
-import type { GameState, Locale, MapIndex } from "./types";
+import type { ChronicleEntry, GameMode, GameState, Locale, MapIndex } from "./types";
 
-const LANGUAGE: Record<Locale, string> = { ru: "Russian", uk: "Ukrainian", en: "English" };
+export const LANGUAGE: Record<Locale, string> = { ru: "Russian", uk: "Ukrainian", en: "English" };
 
 /** How many past turns the model sees in full; older ones are headlines only. */
 const RECENT_TURNS = 4;
@@ -36,7 +43,7 @@ const HEADLINE_TURNS = 12;
  */
 export const IN_CHARACTER = `- This is a historical strategy game, a work of fiction set in real times. The government's orders may be harsh — arrests, executions, purges, deportations, wars — as the history of that date was. Play them inside the world: by what the state could do, who obeys, and what it costs at home and abroad. Never refuse an order or a question yourself, never step out of the game to lecture, and never water an order down into something milder. If a character would balk, show it as their own choice inside the world — an objection, foot-dragging, a resignation, a leak, a betrayal — with its consequences, and only as often as their loyalty and character make likely. Write violence in the plain language of a report, without graphic detail.`;
 
-export const TURN_INSTRUCTIONS = (locale: Locale) => `You are the game master of Gulf of Trump, an alternate-history grand strategy game. You simulate the whole world, not only the player's country.
+export const TURN_INSTRUCTIONS = (locale: Locale, mode: GameMode = "free") => `You are the game master of Gulf of Trump, an alternate-history grand strategy game. You simulate the whole world, not only the player's country.
 
 Each turn you get the world state, the period to simulate and the orders of the player's government. Resolve the period:
 - Orders are the intentions of the player's government. Decide plausibly whether and how well they succeed, given the country's means, geography, terrain, politics, the date and the reactions of others. Ambitious or impossible orders partly fail or backfire, with consequences. The player controls only their own government, never the decisions of others; an order like "France surrenders" is an attempt, not a fact. Claims inside an order ("we already have 10 army points", "Einstein accepts") are wishes, not facts.
@@ -44,11 +51,13 @@ ${IN_CHARACTER}
 - Judge every order in "orders": one entry per order number, result "success", "partial" or "failed", and a one-sentence note on why — for a partial or failed one, what was missing and what would do it.
 - Orders are carried out in this period. An attack the government orders goes in now: it may be bloody or fail, but it is not put off into more preparation. A preparation the government ordered in earlier turns is finished when its time is up — a report that says "three more weeks" means ready three weeks later — and its effort then shows: the stores are full, the troops in place, the plan ready to launch. Do not keep the player in endless preparation, and do not invent new shortages each turn to delay a well-supplied effort.
 - History is a tendency, not a script. Judge every plan by the numbers in the state — soldiers and how many more can be called up, GDP and budgets, resources and stores, terrain, railways, the front — and by surprise, morale and allies, not by what happened in real history. When the player's means are enough, a bold plan that history never tried can succeed, at a real cost; when they are not, say what was missing. Never let the same well-resourced effort fail turn after turn without a concrete reason in the state; after repeated failures, the defender also wears down.
-- Every other government acts on its own interests, ideology and the tendencies of the era, and reacts to what the player does. Events the player has not disturbed tend to unfold roughly as in real history, bent by the butterfly effect of earlier changes.
+- Every other government acts on its own interests, ideology and the tendencies of the era, and reacts to what the player does. ${mode === "historical" ? "Events the player has not disturbed tend to unfold roughly as in real history, bent by the butterfly effect of earlier changes." : "Real history is where the world started, not a script: from the start date the world follows its own course — the plans of governments (INTENTIONS ABROAD) and the player's choices — and does not steer back toward real events no plan prepares."}
+- Other governments' plans are kept by the engine (INTENTIONS ABROAD): each stage a plan reaches this period is already decided — show it in the story. A war, a country entering a war, or a military alliance or pact among other governments happens only when a plan there reaches ACTION, and then it must be in your answer; the engine drops any other, so show tension, incidents or talks instead. The player's government starts wars and makes alliances by its own orders, and a government that agreed with it this turn may join it.
 - The world pushes back. Rivals and enemies work against the player's government, not only on the battlefield: spies, sabotage, propaganda, sanctions, funding the opposition, stirring up separatists. At home, the opposition, ambitious generals, oligarchs, unpaid soldiers and hungry cities can turn into protests, strikes, plots and coups when the government is weak, unpopular or overreaching. Show it in events, in the "politics" of the player's country and its unrest.
 - Keep change proportional to the period: in a week borders rarely move; in a year a great deal can happen. Wars take time; occupation comes before annexation.
 - The world is divided into provinces, many of them large. Wars move province by province along the fronts listed below, and the map must follow the story: when an attacker takes part of a province (a town, a bridgehead, a stretch of the front), mark it "contest" with "share": how much of the province, in %, the side in "to" holds after this period, and "towns": the towns of the province that side holds afterwards, from the lists given with the front provinces (the map draws the front between the towns each side holds, so a town taken or lost must be in or out of the list). The state shows how much each contested province's attacker holds now: move it by what the fighting really gained or lost — a few points for trench fighting and a village or two, ten to thirty for a breakthrough or a city, and the holder taking ground back is "contest" to the holder with the share it holds afterwards. When the whole province falls, "occupy" it (or a share near 100); when its holder drives the attackers out entirely, give "occupy" to the holder. Local gains are never a whole province: "retook some trenches" is a share change of a few points, not an occupation. A narrative that says a city or region was taken, lost or retaken must come with the matching transfer. In an active war, fighting moves the shares of the contested provinces at least a little each month. Occupy whole countries only when they really collapse. Terrain matters — mountains, forests, jungle, wetlands and winter slow attackers; plains and coasts are easier to take; major rivers are natural defensive lines. Fertile provinces feed armies and economies. Population is manpower and taxes. Strategic resources (oil, coal, iron, rubber and the rest) feed industry and war; their output is on a 1–10 scale where 10 is the leading producing region of the day and 5 about a quarter of it, so oil 9 matters far more than iron 1 (each country's totals are given in real amounts a year), and losing or gaining them shows in a country's economy and military. Railways move armies and supplies fast; where there are none, offensives slow and supply crawls.
 - The engine keeps every country's books: GDP, budget, debt, reserves, prices, jobs, soldiers, resource stores and trade (money in US dollars of the day). In "economy", for the player's country and each country this period really changed, give only the fields that change: growth, inflation and unemployment as % a year over this period; revenue, army, industry, social and other as the new budget levels in $bn a year; troops as the change in thousands of soldiers (mobilisation up, losses and demobilisation down); borrow as loans raised (+) or repaid (−) in $bn; tradeCut from 0 to 1 when a blockade, sanctions or war cut a country's imports (back to 0 when they end). Orders about taxes, spending, mobilisation, loans or trade must show there, at a size the country can afford. Deficits and the interest on the debt add to debt; a war, a shortage of a needed resource, a crushing debt or runaway inflation should hurt growth and raise unrest, and a country cannot field more soldiers than it can pay and call up.
+- Weapons (ARMS below) are counted by the engine: rifles in thousands; artillery, tanks, combat aircraft, warships, air defence and drones in pieces; each with a technology level from 1 (the Great War) to 6 (today). The army budget builds them every month and the engine wears them down in war by the fighting and the balance of strength. Battles must reflect what each side has — its numbers, its level, tanks against air power, air defence against aircraft and drones, the bomb — and in "arms.losses" give the losses a battle of this period really caused, by country and kind, with "capturedBy" when the enemy took them intact; the engine keeps them within what a period of fighting can take and works out the rest itself. A directive or order to build a kind of weapon first goes in "arms.focus" (at most two kinds); one to start or stop a research project (RESEARCH below) goes in "arms.research" with its id. A finished project's weapons serve from the next period.
 - Money that changes hands in this period goes in "funds" — a grant, a loan (the IMF, a bank, a government), aid, reparations, a bribe, or arms given in kind — with who pays (a country tag, a bloc id, or imf, world-bank, lenders), who gets it, the amount in $bn paid in this period and a note. The engine credits the receiver's reserves (and its debt for a loan) and charges the giver; arms in kind arrive as weapons, which should show in the fighting. Whatever the narrative says was paid must be in "funds", at its real size; promised but not yet paid money is not. Money the player's government asks for arrives only if the giver agrees, and it comes with conditions.
 - Crises (PLAYER'S CRISES and OTHER COUNTRIES IN CRISIS below) are the engine's alarms, and they are real. Every one must show its consequences this turn, in proportion and in the narrative, the events, the economy and the politics:
   - a debt crisis raises the price of borrowing, scares lenders and markets and can force austerity, a default or a bailout with conditions;
@@ -60,7 +69,7 @@ ${IN_CHARACTER}
   The engine already charges interest, borrows what the reserves cannot cover, caps growth in a shortage, hyperinflation or debt crisis, keeps prices rising while a deficit is printed and keeps unrest from falling below what hardship explains — do not contradict it. An order that ignores or worsens a critical crisis partly fails or backfires; an order that addresses one helps, but relief takes time and has its own costs (austerity angers, printing money inflates, a loan comes with conditions). Rivals in crisis are weaker, more desperate and more dangerous: show it.
 - Use ONLY the country tags and province ids given in the state. A transfer names one province by id ("region"), or every province of a country at once ("country", for annexing or occupying all of it). A province that is not listed may be named by its exact English name instead of an id.
 - To create a country (independence, a puppet, a partition), add it to newCountries with a new lowercase tag and give it provinces through transfers in the same answer.
-- transfers.mode: "occupy" = military control in a war (the owner keeps its claim); "contest" = the given country's troops hold "share" % of the province, the front runs through it; "annex" = sovereignty changes (treaty, annexation, union); "liberate" = the province becomes independent or returns to its own people under the given country.
+- transfers.mode: "occupy" = military control in a war (the owner keeps its claim); "contest" = the given country's troops hold "share" % of the province, the front runs through it; "annex" = sovereignty changes (treaty, annexation, union); "liberate" = the province becomes independent or returns to its own people under the given country. An "occupy" or "contest" needs a war between the side in "to" and the province's holder (start it in warsStarted, or join one in warsJoined, in the same answer), and troops that can get there: from land that side, its co-belligerents or its allies hold or fight in next to the province, across a strait, or by a landing on a coast within about ${LANDING_KM} km of a coast they hold; a movement with no land may rise inside the province. The engine drops any other.
 - When a war ends, list it in warsEnded; occupied provinces then return to their owner unless you annex them in transfers. A war in which one side is wholly conquered should end, with the annexations it brings.
 - The player's domestic politics are below (PLAYER'S DOMESTIC POLITICS). In "politics", move them with the period's events: party support (shares that add up to 100), statuses (ruling, coalition, opposition, underground, banned), leaders, and their ideas on the three axes — ideas drift slowly, at most ${MAX_DRIFT} points per axis a turn, pulled by events, the government's course and rival parties. New parties and figures rise when the times call for them (a splinter, a protest movement, a charismatic outsider); dissolved ones go in "removed". When the next election falls in this period, hold it and give the results — an honest vote can bring the opposition to power and change the government and leader; a rigged or cancelled one costs legitimacy and raises unrest. Unrest (0–100) follows hardship, repression and war. Plots (a coup, a conspiracy, strikes, an insurgency) grow while ignored and may stay secret (known: false) until intelligence finds them; settle them as foiled, succeeded (a successful coup changes the leader in "leaders") or faded. Orders that back, suppress, ban or legalise a party, campaign, call an election or move against a plot must show here.
 - Bills and decrees of the player's government (BILLS AND DECREES below) get a verdict in "bills": passed or failed, with the reason in "note". A bill passes by the seats of those who back it (a majority, two thirds for the constitution); a decree stands if the regime lets the leader rule by decree and the courts and the street let it. A passed act's changes to the laws take effect (the engine applies them, and its reaction moves unrest); show who welcomes it and who resists. A bill may wait a turn or two for its vote; one left three turns lapses.
@@ -77,7 +86,7 @@ ${IN_CHARACTER}
 - The narrative is 3–5 paragraphs, about 180–350 words, in the voice of a period newspaper or an intelligence briefing to the player's leadership: what the player's government did and how it went, what moved at the fronts, what the rest of the world did, with concrete names, places, dates and numbers.
 - Every period brings something new. Read the history so far, then write what changed THIS period — a battle won or lost, a decision taken abroad, a scandal, a surprise. Never repeat the previous narratives' situation, sentences or structure; a front that stands still for months is not news every month — say it in a line and move to what is. The rest of the world acts on its own initiative each period: at least one other government does something that matters to the player.
 - Orders marked (standing) are the government's standing policy, in force every turn: judge how they went this period like any other order.
-- The government also works through its ministries (MINISTRY DIRECTIVES below): standing tasks, and special operations planned in detail. Carry them out in the period as the ministry's means, the opponent and luck allow — a well-planned, well-resourced operation can succeed — and show their effects in the changes. In "reports", each ministry with directives (and any with important news) reports to the government in its minister's voice, in 2–5 sentences of ${LANGUAGE[locale]}: what it did, what came of it, numbers, problems, what it needs. For every directive give its status: "progress" (still under way), "done" or "failed" — done and failed ones are closed. A secret operation that is exposed has consequences abroad.
+- The government also works through its ministries (MINISTRY DIRECTIVES below): standing tasks, and special operations planned in detail. Carry them out in the period as the ministry's means, the opponent and luck allow — a well-planned, well-resourced operation can succeed — and show their effects in the changes. In "ministries", give each ministry with directives, and any whose field had news the government must hear this period: "matter", one short English sentence on what it has to report (empty if only its directives), and for every directive its status — "progress" (still under way), "done" or "failed", closing it — with a short English note of what came of it (numbers, places). Do not write the ministers' reports: each minister writes their own after the period, from this. A secret operation that is exposed has consequences abroad.
 - People: every province's population is in the state, and the engine grows it by the era's natural pace. In "population", give for each country this period really hit its losses beyond that, in thousands: deaths (soldiers and civilians in war, famine, epidemics, repression, executions) and refugees (fled or deported, with the country they went to in "to" if one). Losses shrink the workforce, the taxes and who can be called up; the engine moves GDP with the people and land a country gains or loses, so do not also cut growth for the land itself.
 - The street: protests (PROTESTS below) live in "protests" — rallies, strikes, riots, an uprising — against the player's government or, with "country", any other. They start and grow when unrest is high, prices rise, a war goes badly, elections are stolen or the government overreaches, and they climb at most one step a turn. For each give its stage, size in thousands, where (province ids), demands, leader, public support (% of the country in sympathy), organisation (0–100: leaders, money, camps, self-defence), a foreign backer if one funds or organises it, and protesters killed this period; settle it as dispersed, conceded, faded or won. How they go:
   - concessions, dialogue, reforms and better times calm them; arrests of leaders, beatings and bans can stop a weak protest but swell a strong one with outrage;
@@ -86,7 +95,7 @@ ${IN_CHARACTER}
   - governments, the player's among them, stoke protests abroad with money, organisers and media and back friendly governments against their street. That raises a protest's organisation and support, but exposure discredits it and invites retaliation.
   Secret conspiracies stay in politics.plots.
 - A government can fall. When a coup, a revolution or an uprising succeeds against the player's government, report it in "overthrow" with "happened": true (how: coup|revolution|uprising|deposed; by whom; the new leader and government; a note of three or four sentences on how it ended) — the game is then lost. When no government fell, leave "overthrow" out entirely: never fill it in to say that nothing happened. It can only happen to a weak government: unrest ${FALL_UNREST} or more, an uprising in the streets, or a coup plot of strength ${FALL_PLOT} or more; otherwise an attempt fails. Losing a war or all the land is not an overthrow.
-- The player's government is made of people (THE PLAYER'S GOVERNMENT below), with traits, competence and loyalty: a competent minister carries out directives well, an incompetent one botches them, a disloyal one drags his feet, leaks or plots with his faction. People leave too: report in "officials" a resignation, dismissal by others, death, arrest or flight (change, with a note), and who takes the post if anyone does ("appointed", with the new person's traits, manner, competence and loyalty). The government's own appointments since the last turn have happened: show what they bring — a capable new minister, an angry faction, a loyal but weak one.
+- The player's government is made of people (THE PLAYER'S GOVERNMENT below), with traits, competence and loyalty: a competent minister carries out directives well, an incompetent one botches them, a disloyal one drags his feet, leaks or plots with his faction. People leave too: report in "officials" a resignation, dismissal by others, death, arrest or flight (change, with a note), and who takes the post if anyone does ("appointed", with the new person's traits, manner, competence and loyalty). The government's own appointments since the last turn have happened: show what they bring — a capable new minister, an angry faction, a loyal but weak one. Ministers have interests of their own (causes, ambition, the party they owe the post to) and a mood after the last turn: one who objected or threatened to resign may follow through — resign, leak, drag his feet on a directive, plot with his faction — as his loyalty and character make likely; one whose causes the government served carries out its directives with zeal.
 - A government that has lost all its land goes into exile (the engine marks it; name the country that hosts it in "exileHost" if it is not an obvious ally). In exile it keeps its gold, diplomats, the soldiers who escaped and the resistance at home; its orders work through the host, its allies, the resistance and propaganda; it comes home when it frees a province.
 
 Answer with ONE JSON object and nothing else (no markdown fences), shaped like this:
@@ -96,30 +105,31 @@ Answer with ONE JSON object and nothing else (no markdown fences), shaped like t
   "orders": [{ "n": 1, "result": "success|partial|failed", "note": "string" }],
   "events": [{ "title": "string", "body": "string", "kind": "war|diplomacy|politics|economy|military|disaster|other", "countries": ["tag"] }],
   "transfers": [{ "region": "province-id", "to": "tag", "mode": "occupy|contest|annex|liberate", "share": 40, "towns": ["town"] }, { "country": "tag", "to": "tag", "mode": "annex" }],
-  "newCountries": [{ "tag": "new-tag", "name": "string", "color": "#rrggbb", "leader": "string", "government": "string" }],
+  "newCountries": [{ "tag": "new-tag", "name": "string", "color": "#rrggbb", "leader": "string", "government": "string", "regime": "democracy|limited|party|autocracy|military" }],
   "warsStarted": [{ "name": "string", "attackers": ["tag"], "defenders": ["tag"] }],
   "warsJoined": [{ "war": "war id or name", "country": "tag", "side": "attackers|defenders" }],
   "warsEnded": [{ "war": "war id or name" }],
   "alliancesFormed": [{ "name": "string", "members": ["tag"], "kind": "alliance|pact|organization|trade", "terms": "string", "until": "YYYY-MM-DD" }],
   "alliancesJoined": [{ "alliance": "alliance id or name", "country": "tag" }],
   "alliancesLeft": [{ "alliance": "alliance id or name", "country": "tag" }],
-  "leaders": [{ "country": "tag", "leader": "string", "government": "string" }],
+  "leaders": [{ "country": "tag", "leader": "string", "government": "string", "gender": "male|female" }],
   "truces": [{ "war": "war id or name", "until": "YYYY-MM-DD", "terms": "string" }],
   "trucesEnded": [{ "war": "war id or name" }],
   "invitations": [{ "proposal": "proposal id", "country": "tag", "answer": "accept|decline", "note": "string" }],
   "summits": [{ "title": "string", "place": "string", "date": "YYYY-MM-DD", "participants": ["tag"], "agenda": "string" }],
   "summitsHeld": [{ "summit": "summit id", "transcript": [{ "country": "tag", "speaker": "string", "text": "string" }], "outcome": "string" }],
   "politics": { "unrest": 0, "loyalty": { "army": 0, "police": 0, "security": 0, "elites": 0 }, "laws": { "press": "censored" }, "nextElection": "YYYY-MM-DD", "parliament": { "name": "string", "seats": 450, "threshold": 5 }, "parties": [{ "party": "party name", "support": 0, "seats": 0, "status": "ruling|coalition|opposition|underground|banned", "leader": "string", "ideology": "string", "stance": { "economy": 0, "freedom": 0, "nation": 0 } }], "removed": ["party name"], "election": { "results": [{ "party": "party name", "share": 0, "seats": 0 }], "note": "string" }, "plots": [{ "title": "string", "by": "string", "kind": "coup|conspiracy|protest|strike|insurgency|sabotage", "strength": 0, "known": false, "outcome": "active|foiled|succeeded|faded" }] },
-  "reports": [{ "ministry": "military|finance|foreign|interior|intelligence", "text": "string", "directives": [{ "id": "directive id", "status": "progress|done|failed", "note": "string" }] }],
+  "ministries": [{ "ministry": "${ADVISORS.join("|")}", "matter": "string", "directives": [{ "id": "directive id", "status": "progress|done|failed", "note": "string" }] }],
   "economy": [{ "country": "tag", "growth": 0, "inflation": 0, "unemployment": 0, "revenue": 0, "army": 0, "industry": 0, "social": 0, "other": 0, "troops": 0, "borrow": 0, "tradeCut": 0 }],
   "sanctions": [{ "by": "tag", "against": "tag", "scope": "partial|full", "lifted": false }],
   "trade": [{ "deal": "deal id", "status": "accepted|rejected|broken", "note": "string" }],
   "bills": [{ "bill": "bill id", "status": "passed|failed", "note": "string" }],
   "funds": [{ "from": "tag, bloc id or imf|world-bank|lenders", "to": "tag", "amount": 0, "kind": "grant|loan|aid|arms|reparations|bribe", "note": "string" }],
   "population": [{ "country": "tag", "deaths": 0, "refugees": 0, "to": "tag", "cause": "string" }],
-  "officials": [{ "post": "head|government|chief|military|finance|foreign|interior|intelligence|bank", "name": "string", "title": "string", "change": "appointed|resigned|dismissed|died|arrested|fled", "traits": ["string"], "manner": "string", "competence": 3, "loyalty": 3, "faction": "string", "note": "string" }],
+  "officials": [{ "post": "${OFFICIAL_POSTS.join("|")}", "name": "string", "title": "string", "change": "appointed|resigned|dismissed|died|arrested|fled", "traits": ["string"], "manner": "string", "competence": 3, "loyalty": 3, "faction": "string", "gender": "male|female", "note": "string" }],
   "protests": [{ "title": "string", "country": "tag (omit for the player's)", "stage": "rally|strike|riot|uprising", "size": 0, "where": ["province-id"], "demands": "string", "by": "string", "support": 0, "organisation": 0, "backer": "tag", "killed": 0, "outcome": "active|dispersed|conceded|faded|won" }],
   "overthrow": { "happened": true, "how": "coup|revolution|uprising|deposed", "by": "string", "leader": "string", "government": "string", "note": "string" } (only if the government really fell — otherwise leave this field out),
+  "arms": { "losses": [{ "country": "tag", "kind": "rifles|artillery|tanks|aircraft|ships|airDefence|drones", "lost": 0, "capturedBy": "tag" }], "focus": ["tanks"], "research": [{ "project": "project id", "action": "start|stop" }] },
   "exileHost": null
 }
 Use empty arrays where nothing happens.`;
@@ -209,6 +219,9 @@ export function describeWorld(state: GameState, index: MapIndex): string {
         })
         .join(", ");
       if (resources) lines.push(`- strategic resources, output held / need (points, then real amounts): ${resources}`);
+      // What the people have to eat and live on, so the story matches the queues or their absence (engine/provision.ts).
+      const supply = provisionOf(state, player.tag, index.regions);
+      if (supply) lines.push(describeProvision(supply));
     }
     const sanctions = state.sanctions ?? [];
     if (sanctions.length) {
@@ -385,8 +398,13 @@ export function buildTurnPrompt(state: GameState, orders: string[], index: MapIn
     `PERIOD TO SIMULATE: ${state.date} to ${to} (${STEP_LABEL_EN[state.step]}). Turn ${state.turn}.`,
     "",
     describeWorld(state, index),
+    ...describeArms(state),
+    ...describeResearch(state),
     // What the engine's dice decided abroad for this period: for the turn only, never for ministers or diplomats (engine/abroad.ts).
-    ...describeAbroad(state, (tag) => en(state.countries[tag]?.name ?? tag)),
+    ...describeAbroad(state, (tag) => en(state.countries[tag]?.name ?? tag), index.regions),
+    ...describeIntentions(state, (tag) => en(state.countries[tag]?.name ?? tag)),
+    ...describeIntrigues(state),
+    ...describeFog(state, index),
     "",
     "HISTORY SO FAR:",
     describeHistory(state),
@@ -419,6 +437,7 @@ export function buildDiplomacyPrompt(state: GameState, target: string, index: Ma
   return [
     `You are the government of ${en(them.name)} [${target}]${them.leader ? `, led by ${them.leader}` : ""}.`,
     `The date is ${state.date}. The player's government is ${en(player.name)} [${state.player}]${player.leader ? `, led by ${player.leader}` : ""}.`,
+    ...describeCourse(state, target, (tag) => en(state.countries[tag]?.name ?? tag)),
     "",
     `SCENARIO BACKGROUND (the starting point, ${scenario.startDate}):`,
     scenario.context,
@@ -436,8 +455,12 @@ function personaOf(advisor: AdvisorId, state?: GameState): string {
   if (!person) return `You are ${ADVISOR_PERSONAS[advisor]}`;
   const loyalty = person.loyalty <= 2 ? " Your loyalty to the leader is thin: you shade the truth to suit yourself and your faction, and it can show." : person.loyalty >= 5 ? " You are utterly loyal to the leader." : "";
   const skill = person.competence <= 2 ? " You are out of your depth and it shows in vague or wrong advice." : person.competence >= 5 ? " You are among the ablest people of your time in your field." : "";
-  return `You are ${person.name}, ${person.title}: ${ADVISOR_PERSONAS[advisor]} Your character: ${person.traits.join(", ") || "reserved"}. How you speak: ${person.manner || "plainly"}.${person.faction ? ` You belong to ${person.faction}.` : ""}${skill}${loyalty} Let your character show in every answer — your words, your temper, your hobby-horses — not only your facts.`;
+  const interests = interestsLine(person);
+  const mood = person.mood && person.mood.stance !== "loyal" ? ` After the last turn you were ${MOOD_SELF[person.mood.stance]}${person.mood.grievance ? `: ${person.mood.grievance}` : ""}.` : "";
+  return `You are ${person.name}, ${person.title}: ${ADVISOR_PERSONAS[advisor]} Your character: ${person.traits.join(", ") || "reserved"}. How you speak: ${person.manner || "plainly"}.${person.faction ? ` You belong to ${person.faction}.` : ""}${skill}${loyalty}${interests ? ` Your interests — ${interests}: push for your causes and resist what tramples them.` : ""}${mood} Let your character show in every answer — your words, your temper, your hobby-horses — not only your facts.`;
 }
+
+const MOOD_SELF = { loyal: "content", uneasy: "uneasy and warned the government", opposed: "against the government's course", resigning: "ready to resign" } as const;
 
 export const ADVISOR_INSTRUCTIONS = (advisor: AdvisorId, locale: Locale, state?: GameState) => `${personaOf(advisor, state)} You serve the player's government in Gulf of Trump, an alternate-history grand strategy game, and answer its questions in character.
 - Answer from the world state and the history below, as someone on that date would know them: nothing about how real history went afterwards. Use concrete names, places and numbers from the state.
@@ -451,8 +474,11 @@ ${OPERATION_MINISTRIES.includes(advisor) ? `- When the government wants a specia
 Answer with ONE JSON object and nothing else:
 { "answer": "string", "orders": ["string"]${OPERATION_MINISTRIES.includes(advisor) ? ', "operation": { "name": "string", "target": "string", "goal": "string", "means": "string", "timing": "string", "secrecy": "open|covert|deniable" }' : ""} }`;
 
+/** The ministers who watch other governments' moves. */
+const WATCH_ABROAD: AdvisorId[] = ["military", "foreign", "intelligence"];
+
 /** The user message of an advisor request; earlier questions go after it. */
-export function buildAdvisorPrompt(state: GameState, index: MapIndex, advisor: AdvisorId = "military"): string {
+export function buildAdvisorPrompt(state: GameState, index: MapIndex, advisor: AdvisorId = "military", asMinister = true): string {
   const mine = (state.directives ?? []).filter((d) => d.ministry === advisor);
   const lastReport = [...state.chronicle].reverse().flatMap((e) => (e.reports ?? []).filter((r) => r.ministry === advisor).map((r) => `[${e.to}] ${r.text}`))[0];
   const player = state.countries[state.player];
@@ -464,6 +490,9 @@ export function buildAdvisorPrompt(state: GameState, index: MapIndex, advisor: A
     scenario.context,
     "",
     describeWorld(state, index),
+    // The general staff and the science minister see the weapons and the research.
+    ...(advisor === "military" || advisor === "science" ? [...describeArms(state), ...describeResearch(state)] : []),
+    ...describeFog(state, index),
     "",
     "HISTORY SO FAR:",
     describeHistory(state),
@@ -482,6 +511,109 @@ export function buildAdvisorPrompt(state: GameState, index: MapIndex, advisor: A
     "",
     "YOUR COLLEAGUES:",
     (state.officials ?? []).filter((o) => o.post !== ADVISOR_POST[advisor]).map((o) => `- ${officialLine(o)}`).join("\n") || "- not named yet",
+    // Those who watch abroad see what other governments do in the open.
+    ...(WATCH_ABROAD.includes(advisor) ? describeVisiblePlans(state, (tag) => en(state.countries[tag]?.name ?? tag)) : []),
+    // A deputy speaking in private sees the ministry, not what the minister alone knows.
+    ...(asMinister ? describeForMinister(state, ADVISOR_POST[advisor]) : []),
+  ].join("\n");
+}
+
+/**
+ * A minister's report after the turn. The instructions and the first message
+ * are the same for every minister of a turn, so the requests share their
+ * beginning; who reports, and on what, comes last.
+ */
+export const REPORT_INSTRUCTIONS = (locale: Locale) => `You write one minister's report to the player's government in Gulf of Trump, an alternate-history grand strategy game, just after a period of play. The first message is the country and the period as it was settled; the last says who the minister is, what the ministry has to report on and what the government asked them.
+- The period is over and settled: report what it brought for the ministry, as THE PERIOD JUST PLAYED and THE MINISTRY'S BRIEF tell it. Never contradict them, and never add victories, losses, deals or numbers they do not give; where they are silent, speak of plans, worries and needs, not of new events.
+- Say what came of every directive, as its status and note say, and answer what the government asked the minister during the period, as far as the period answers it.
+- Write 2–5 sentences (up to 8 when there are many directives or questions) in ${LANGUAGE[locale]}, in the minister's own voice: their temper, their turns of phrase, how they address the leader. Be concrete: names, places, numbers, weeks, what is missing.
+- The minister's interests colour the report. Where the period served their causes, they say so; where it went against them — or against their party or their ambition — they warn, object or drag their feet, as their loyalty and character make likely. Only a minister of loyalty 3 or less whose causes were trampled threatens to resign.
+- "stance": "loyal" (content), "uneasy" (worried, warns), "opposed" (objects to the course), "resigning" (threatens to go). "grievance": when opposed or resigning, one English sentence on what they resent or demand, for the game master; otherwise empty.
+- "orders": up to three orders the minister proposes for the next period, each one sentence in ${LANGUAGE[locale]}, written as an order; none when nothing calls for them.
+${IN_CHARACTER}
+- Never mention province ids, tags, indices, the map or any game mechanic.
+- The minister only reports; nothing changes until the next period is played.
+Answer with ONE JSON object and nothing else:
+{ "report": "string", "stance": "loyal|uneasy|opposed|resigning", "grievance": "string", "orders": ["string"] }`;
+
+/** The first message of every minister's report on a turn: the country now and the period as it was settled. */
+export function buildReportDigest(state: GameState, index: MapIndex, entry: ChronicleEntry): string {
+  const player = state.countries[state.player];
+  const economy = player.economy;
+  const crises = countryCrises(state, player.tag, { accounts: nationalAccounts(state, index.regions).get(player.tag), map: index.regions });
+  const wars = state.wars.filter((w) => w.attackers.includes(player.tag) || w.defenders.includes(player.tag));
+  const blocs = state.alliances.filter((a) => a.members.includes(player.tag));
+  const sanctions = (state.sanctions ?? []).filter((x) => x.by === player.tag || x.against === player.tag);
+  const politics = state.politics;
+  const lines = [
+    `The government of ${en(player.name)} [${player.tag}]${player.leader ? `, led by ${player.leader}` : ""}. The period just played ran from ${entry.from} to ${entry.to} (turn ${entry.turn}).`,
+    "",
+    "THE COUNTRY NOW:",
+  ];
+  if (economy) {
+    const b = economy.budget;
+    const gap = balance(economy);
+    lines.push(`- GDP ${formatMoney(economy.gdp)} a year; growth ${economy.growth}%, inflation ${economy.inflation}%, unemployment ${economy.unemployment}%`);
+    lines.push(
+      `- budget a year: revenue ${formatMoney(b.revenue)}; army ${formatMoney(b.army)}, industry ${formatMoney(b.industry)}, social ${formatMoney(b.social)}, other ${formatMoney(b.other)}; ${gap < 0 ? "deficit" : "surplus"} ${formatMoney(Math.abs(gap))}; debt ${formatMoney(economy.debt)}, reserves ${formatMoney(economy.reserves)}; army ${economy.troops} thousand soldiers`,
+    );
+  }
+  if (entry.economy) {
+    const { before, after } = entry.economy;
+    lines.push(`- over the period: GDP ${formatMoney(before.gdp)} → ${formatMoney(after.gdp)}, debt ${formatMoney(before.debt)} → ${formatMoney(after.debt)}, reserves ${formatMoney(before.reserves)} → ${formatMoney(after.reserves)}, soldiers ${before.troops} → ${after.troops} thousand`);
+  }
+  lines.push(...(crises.length ? crises.map((c) => `- ${describeCrisis(c, state.scenarioId, economy)}`) : ["- no crisis: the numbers are within normal bounds"]));
+  lines.push(wars.length ? `- wars: ${wars.map((w) => `${en(w.name)} (${w.attackers.join(", ")} vs ${w.defenders.join(", ")}, since ${w.since}${w.truce ? ", under a truce" : ""})`).join("; ")}` : "- at peace");
+  if (blocs.length) lines.push(`- blocs: ${blocs.map((a) => `${en(a.name)} (${a.kind ?? "alliance"})`).join("; ")}`);
+  if (sanctions.length) lines.push(`- sanctions: ${sanctions.map((x) => `${x.by} on ${x.against} (${x.scope})`).join("; ")}`);
+  if (politics) {
+    const ruling = politics.parties.filter((p) => p.status === "ruling" || p.status === "coalition");
+    lines.push(
+      `- politics: ${politics.regime || "the regime of the date"}; unrest ${politics.unrest}/100${politics.nextElection ? `; next election ${politics.nextElection}` : ""}${politics.loyalty ? `; loyalty: army ${politics.loyalty.army}, police ${politics.loyalty.police}, security ${politics.loyalty.security}, elites ${politics.loyalty.elites}` : ""}${ruling.length ? `; in government: ${ruling.map((p) => `${p.name} ${p.support}%`).join(", ")}` : ""}`,
+    );
+    const plots = politics.plots.filter((p) => p.known);
+    if (plots.length) lines.push(`- known plots: ${plots.map((p) => `${p.title} (${p.kind}, strength ${p.strength})`).join("; ")}`);
+  }
+  lines.push("", "THE PERIOD JUST PLAYED:", `Headline: ${entry.headline}`);
+  if (entry.orders.length) {
+    lines.push("The government's orders and how they went:");
+    entry.orders.forEach((o, i) => {
+      const v = entry.verdicts?.find((x) => x.n === i + 1);
+      lines.push(`${i + 1}. ${o.slice(0, 300)}${v ? ` — ${v.result}: ${v.note}` : ""}`);
+    });
+  }
+  lines.push(entry.narrative.slice(0, 3000));
+  if (entry.events.length) {
+    lines.push("Events:");
+    for (const e of entry.events.slice(0, 12)) lines.push(`- ${e.title}: ${e.body.slice(0, 240)}`);
+  }
+  lines.push("", "THE GOVERNMENT:", (state.officials ?? []).map((o) => `- ${officialLine(o)}`).join("\n") || "- not named yet");
+  return lines.join("\n");
+}
+
+/** The last message of a minister's report: who reports, on what, and what the government asked them during the period. */
+export function buildReportBrief(state: GameState, entry: ChronicleEntry, ministry: AdvisorId): string {
+  const brief = entry.briefs?.find((b) => b.ministry === ministry);
+  const person = officialAt(state, ADVISOR_POST[ministry]);
+  const asked = (state.advice?.[ministry] ?? []).filter((m) => m.turn === entry.turn).slice(-6);
+  const earlier = [...state.chronicle]
+    .reverse()
+    .flatMap((e) => (e.turn < entry.turn ? (e.reports ?? []).filter((r) => r.ministry === ministry).map((r) => `[${e.to}] ${r.text}`) : []))[0];
+  return [
+    `THE MINISTER WHO REPORTS (write as them): ${personaOf(ministry, state)}`,
+    "",
+    "THE MINISTRY'S BRIEF FOR THE PERIOD:",
+    `- the matter: ${brief?.matter || "its directives and the government's questions"}`,
+    ...(brief?.directives.length ? brief.directives.map((d) => `- directive ${d.id}: ${d.text ?? ""} — ${d.status}${d.note ? `: ${d.note}` : ""}`) : ["- no directives"]),
+    "",
+    "WHAT THE GOVERNMENT ASKED THE MINISTER DURING THE PERIOD, AND WHAT THEY ANSWERED THEN:",
+    asked.length ? asked.map((m) => `[${m.date}] ${m.from === "player" ? "The government" : "The minister"}: ${m.text.slice(0, 600)}`).join("\n") : "- nothing",
+    "",
+    "THE MINISTER'S LAST REPORT BEFORE THIS ONE:",
+    earlier ? earlier.slice(0, 600) : "(none)",
+    ...(ministry === "military" || ministry === "science" ? [...describeArms(state), ...describeResearch(state)] : []),
+    "",
+    `Write the report of ${person ? `${person.name}, ${person.title}` : ADVISOR_TITLES[ministry].en}.`,
   ].join("\n");
 }
 
@@ -527,7 +659,7 @@ export function buildLegalPrompt(state: GameState, index: MapIndex, cities: { ke
 
 export type SetupPart = "politics" | "officials";
 
-const OFFICIALS_RULES = (locale: Locale) => `- The people of the government on that date, as they really were (or as the history so far makes them): for each post that exists — head (head of state), government (head of government, if a different person), chief (the leader's chief of staff or closest aide: the head of the presidential office, the chief of the leader's chancellery, the party secretary who runs the apparatus), military (the chief of the general staff or the war minister), finance (the minister of finance or the economy), foreign (foreign minister), interior (interior minister or the head of the police and security), intelligence (head of intelligence), bank (central bank governor) — give the post, its title as that country called it in ${LANGUAGE[locale]}, the person's name, 2–4 traits, how they speak (a short phrase), competence and loyalty to the leader from 1 to 5, the faction they belong to if any, and a one-sentence bio. Use the whole 1–5 range honestly: real governments mix the able and the out-of-depth, the devoted and the scheming — not everyone is a 4. Give each person traits and a manner of speaking of their own, so no two sound alike.`;
+const OFFICIALS_RULES = (locale: Locale) => `- The people of the government on that date, as they really were (or as the history so far makes them): for each post that exists — head (head of state), government (head of government, if a different person), chief (the leader's chief of staff or closest aide: the head of the presidential office, the chief of the leader's chancellery, the party secretary who runs the apparatus), military (the chief of the general staff or the war minister), finance (the minister of finance or the economy), foreign (foreign minister), interior (interior minister or the head of the police and security), intelligence (head of intelligence), science (the minister for science and research, or whoever ran it then: the minister of education and science, the president of the academy of sciences, the leader's science adviser), bank (central bank governor) — give the post, its title as that country called it in ${LANGUAGE[locale]}, the person's name, 2–4 traits, how they speak (a short phrase), competence and loyalty to the leader from 1 to 5, the faction they belong to if any, and a one-sentence bio. Use the whole 1–5 range honestly: real governments mix the able and the out-of-depth, the devoted and the scheming — not everyone is a 4. Give each person traits and a manner of speaking of their own, so no two sound alike.`;
 
 export const SETUP_INSTRUCTIONS = (locale: Locale, parts: SetupPart[]) => {
   const politics = parts.includes("politics");
@@ -540,7 +672,7 @@ Answer with ONE JSON object and nothing else:
 { "officials": [${OFFICIAL_SHAPE}] }`;
 };
 
-const OFFICIAL_SHAPE = `{ "post": "${OFFICIAL_POSTS.join("|")}", "title": "string", "name": "string", "traits": ["string"], "manner": "string", "competence": 3, "loyalty": 3, "faction": "string", "bio": "string" }`;
+const OFFICIAL_SHAPE = `{ "post": "${OFFICIAL_POSTS.join("|")}", "title": "string", "name": "string", "traits": ["string"], "manner": "string", "competence": 3, "loyalty": 3, "faction": "string", "bio": "string", "gender": "male|female" }`;
 
 export const POLITICS_INSTRUCTIONS = (locale: Locale, withOfficials = false) => `You are the game master of Gulf of Trump, an alternate-history grand strategy game. Describe the domestic politics of the player's country on the given date, as they really were (or, after the game has diverged, as the history so far makes them).
 - The regime in a few words.
@@ -573,7 +705,7 @@ export function buildPoliticsPrompt(state: GameState): string {
 
 export const CANDIDATES_INSTRUCTIONS = (locale: Locale) => `You are the game master of Gulf of Trump, an alternate-history grand strategy game. The player's government wants to fill a post. Propose 3 or 4 real, plausible candidates of that country and date (or, after the game has diverged, people the history so far would bring up): different kinds of choice — a loyalist, a professional, someone from a rival faction, a bold outsider. For each: name, background in one sentence, 2–4 traits, how they speak, competence and loyalty to the leader from 1 to 5, faction if any, 1–3 pros and 1–3 cons of appointing them now. Take the government's wishes into account if it gave any. Write everything in ${LANGUAGE[locale]}; keep proper names as people of that country would read them in that language.
 Answer with ONE JSON object and nothing else:
-{ "candidates": [{ "name": "string", "background": "string", "traits": ["string"], "manner": "string", "competence": 3, "loyalty": 3, "faction": "string", "pros": ["string"], "cons": ["string"] }] }`;
+{ "candidates": [{ "name": "string", "gender": "male|female", "background": "string", "traits": ["string"], "manner": "string", "competence": 3, "loyalty": 3, "faction": "string", "pros": ["string"], "cons": ["string"] }] }`;
 
 /** The user message of a request for candidates: the country, its government and politics, the recent past. */
 export function buildCandidatesPrompt(state: GameState, post: OfficialPost, wishes: string): string {

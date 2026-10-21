@@ -1,10 +1,16 @@
 import { seedDomestic } from "./abroad";
+import { seedArsenals } from "./arsenal";
+import { ensureDeputies } from "./deputies";
 import { recolor } from "./colors";
 import { seedEconomies } from "./economy";
 import { ensureWorldBodies, fillBlocKinds, fillTreaties } from "./foreign";
+import { seedIntentions } from "./intentions";
 import { settleFronts } from "./outcome";
+import { seedInterests } from "./interests";
+import { withPeople } from "./people";
 import { ensurePolitics } from "./politics";
 import { migrateToProvinces } from "./provinces";
+import { startingResearch } from "./research";
 import { dropFalseDefeat } from "./unrest";
 import type { GameState, MapRegion, Scenario } from "./types";
 
@@ -49,6 +55,25 @@ const MIGRATIONS: Migration[] = [
   { n: 5, what: "Provinces instead of one region per country (schema 2).", map: true, run: (s, { scenario, map }) => migrateToProvinces(s, scenario, map.regions) },
   { n: 6, what: "An economy for every country, for a save from before the economy.", map: true, run: (s, { map }) => seedEconomies(s, map.byId) },
   { n: 7, what: "Politics in brief for every country but the player's, with elections already past moved to their next date.", run: (s, { scenario }) => seedDomestic(s, scenario) },
+  {
+    n: 8,
+    what: "Fog of war, off for a game begun before it: its player has seen the true figures and planned by them. The eye in the game's header turns it on.",
+    run: (s) => ({ ...s, fog: s.fog ?? false }),
+  },
+  { n: 9, what: "Interests of their own for the cabinet's ministers, dealt by the game's dice.", run: (s) => seedInterests(s) },
+  {
+    n: 10,
+    what: "Foreign courses for the countries that matter, the historical mode (what the game master was told before), and the date's plans for a save not yet past them.",
+    run: (s, { scenario }) => seedIntentions(s, scenario, { mode: s.mode ?? "historical" }),
+  },
+  {
+    n: 12,
+    what: "Weapons for every country by the counts of its start date, and an empty research list for the player; the science post stays vacant until someone is appointed.",
+    map: true,
+    run: (s, { map }) => seedArsenals({ ...s, research: s.research ?? startingResearch() }, map.byId),
+  },
+  { n: 13, what: "Leaders and ministers as people: who each leader line names, their sex and their portrait.", run: (s) => withPeople(s) },
+  { n: 14, what: "Deputies in the ministries and the government's own plots against their chiefs: empty lists, filled when the player first asks after a ministry's people.", run: (s) => ensureDeputies(s) },
 ];
 
 /** The number of the last step: what a new game starts at. */
@@ -73,11 +98,13 @@ export function isMigrated(state: Pick<GameState, "migration">): boolean {
 /**
  * What the game ships as data, picked up on every load rather than once: the
  * palette (a colour the player chose stays), the world bodies, the terms of
- * treaties and the treaties added to a scenario since the save was made, and
- * the politics of any country that has none.
+ * treaties and the treaties added to a scenario since the save was made, the
+ * politics of any country that has none, and a foreign course for any country
+ * that matters and has none.
  */
 export function refreshSave(state: GameState, scenario: Scenario): GameState {
   const seeds = scenario.alliances;
-  // Politics abroad fill in on every load as well as by step 7: a save an older build wrote back has lost them.
-  return seedDomestic(fillTreaties(ensureWorldBodies(recolor(state), seeds), seeds), scenario);
+  // Politics abroad, the ministers' interests and the courses of the countries that matter fill in on every load as well as by steps 7, 9 and 10: a save an older build wrote back has lost them.
+  // Leader lines are read into people on every load too (step 13), so a portrait added later reaches an old save.
+  return withPeople(seedIntentions(seedInterests(seedDomestic(fillTreaties(ensureWorldBodies(recolor(state), seeds), seeds), scenario)), scenario));
 }

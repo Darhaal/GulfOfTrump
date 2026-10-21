@@ -2,6 +2,7 @@ import type { z } from "zod";
 import { OfficialsSetupSchema, startOfficials } from "@/engine/government";
 import { PoliticsSetupSchema, startPolitics } from "@/engine/politics";
 import { buildPoliticsPrompt, SETUP_INSTRUCTIONS, type SetupPart } from "@/engine/prompts";
+import { wantsDemo } from "@/server/demo";
 import { rejectNonLocal } from "@/server/guard";
 import { completeJson } from "@/server/llm";
 import { readGameRequest } from "@/server/requests";
@@ -19,6 +20,7 @@ export const maxDuration = 300;
 export async function POST(request: Request) {
   const rejected = rejectNonLocal(request);
   if (rejected) return rejected;
+  const demo = wantsDemo(request);
   const parsed = await readGameRequest(request);
   if (parsed instanceof Response) return parsed;
   const { state, locale, model, body } = parsed;
@@ -33,6 +35,8 @@ export async function POST(request: Request) {
     const raw = await completeJson(
       {
         model,
+        demo,
+        locale,
         instructions: SETUP_INSTRUCTIONS(locale, parts),
         input: [{ role: "user", content: buildPoliticsPrompt(state) }],
         signal,

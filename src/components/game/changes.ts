@@ -2,6 +2,7 @@ import type { MessageKey } from "@/i18n/messages";
 import { INSTITUTIONS } from "@/engine/funds";
 import { formatPopulation } from "@/engine/provinces";
 import type { AppliedChange, GameState, Stats, Text } from "@/engine/types";
+import { projectLabel } from "./armsText";
 
 type T = (key: MessageKey, vars?: Record<string, string | number>) => string;
 type TextFn = (value: Text | undefined) => string;
@@ -12,6 +13,11 @@ const STAT_KEY: Record<keyof Stats, MessageKey> = {
   economy: "country.economy",
   military: "country.military",
 };
+
+/** Who a plan is by and aimed at: "Austria-Hungary → Serbia". */
+export function planWho(plan: { by: string; target?: string }, country: (tag: string) => string, t: T): string {
+  return plan.target ? t("plan.pair", { by: country(plan.by), target: country(plan.target) }) : country(plan.by);
+}
 
 /** One applied change as a line of the chronicle, in the interface language; `date` formats a calendar date. */
 export function describeChange(change: AppliedChange, state: GameState, t: T, text: TextFn, region: RegionName, date: (iso: string) => string = (iso) => iso): string {
@@ -45,6 +51,14 @@ export function describeChange(change: AppliedChange, state: GameState, t: T, te
       return t("change.leave", { country: country(change.country), alliance: text(change.name) });
     case "leader":
       return t("change.leader", { country: country(change.country), leader: change.leader });
+    case "enter":
+      return t("change.enter", { country: country(change.country), name: text(change.name) });
+    case "accession":
+      return t("change.accession", { country: country(change.country), name: text(change.name) });
+    case "plan":
+      return t("change.plan", { who: planWho(change, country, t), stage: t(`plan.stage.${change.type}.${change.stage}` as MessageKey) });
+    case "plan-end":
+      return t("change.planEnd", { who: planWho(change, country, t), drop: t(`plan.drop.${change.type}` as MessageKey), why: t(`plan.end.${change.why}` as MessageKey) });
     case "truce":
       return t("change.truce", { name: text(change.name), date: date(change.until) });
     case "truce-ended":
@@ -108,6 +122,12 @@ export function describeChange(change: AppliedChange, state: GameState, t: T, te
     }
     case "official":
       return t(`change.official.${change.change}` as MessageKey, { title: change.title, name: change.name });
+    case "research":
+      return t(`change.research.${change.change}` as MessageKey, { project: projectLabel(change.project, state, t, text) });
+    case "captured":
+      return t("change.captured", { by: country(change.by), from: country(change.from), n: change.n.toLocaleString(), kind: t(`arms.kind.${change.arms}` as MessageKey) });
+    case "intrigue":
+      return t((change.event === "done" ? `change.intrigue.done.${change.goal}` : "change.intrigue.exposed") as MessageKey, { deputy: change.deputy, target: change.target });
     case "population": {
       const parts = [
         change.deaths > 0 ? t("change.population.deaths", { n: formatPopulation(change.deaths) }) : "",
@@ -131,7 +151,7 @@ export function describeChange(change: AppliedChange, state: GameState, t: T, te
 /** Map changes first, then politics, then the numbers. */
 export function sortChanges(changes: AppliedChange[]): AppliedChange[] {
   const rank: Record<AppliedChange["kind"], number> = {
-    overthrown: -2, exile: -1, return: -1, "new-country": 0, war: 1, peace: 2, truce: 3, "truce-ended": 4, annex: 5, liberate: 6, occupy: 7, contest: 8, repel: 9, alliance: 10, invitation: 11, "alliance-ended": 12, leave: 13, "summit-planned": 14, election: 15, coup: 15.2, vote: 15.4, party: 16, protest: 16.5, plot: 17, leader: 18, official: 18.2, sanction: 14.5, deal: 14.6, funds: 14.7, law: 16.8, bill: 16.7, identity: 0.5, budget: 18.3, population: 18.5, stats: 19,
+    overthrown: -2, exile: -1, return: -1, "new-country": 0, war: 1, peace: 2, truce: 3, "truce-ended": 4, annex: 5, liberate: 6, occupy: 7, contest: 8, repel: 9, alliance: 10, invitation: 11, "alliance-ended": 12, leave: 13, "summit-planned": 14, election: 15, coup: 15.2, vote: 15.4, party: 16, protest: 16.5, plot: 17, leader: 18, official: 18.2, enter: 1.5, accession: 10.5, plan: 14.2, "plan-end": 14.3, sanction: 14.5, deal: 14.6, funds: 14.7, law: 16.8, bill: 16.7, identity: 0.5, budget: 18.3, population: 18.5, stats: 19, research: 18.25, captured: 14.8, intrigue: 18.1,
   };
   return [...changes].sort((a, b) => rank[a.kind] - rank[b.kind]);
 }

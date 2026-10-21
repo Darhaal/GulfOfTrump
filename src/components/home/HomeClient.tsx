@@ -44,14 +44,14 @@ const HOW = [
       { name: "economy", width: 760, height: 950 },
       { name: "foreign", width: 760, height: 950 },
       { name: "state", width: 760, height: 950 },
-      { name: "modes", width: 900, height: 1125 },
+      { name: "modes", width: 900, height: 1124 },
     ],
   },
   {
     cols: "md:grid-cols-[minmax(0,1.78fr)_minmax(0,1.37fr)]",
     cards: [
       { name: "picture", width: 1600, height: 900 },
-      { name: "timelapse", width: 1160, height: 847 },
+      { name: "timelapse", width: 996, height: 727 },
     ],
   },
 ] as const;
@@ -132,6 +132,7 @@ export default function HomeClient() {
   const { t, text, locale } = useI18n();
   const ago = useAgo();
   const { user, ready } = useUser();
+  const demo = isDemo();
   const [saves, setSaves] = useState<ListedSave[] | null>(null);
   const [toDelete, setToDelete] = useState<ListedSave | null>(null);
   const [toRename, setToRename] = useState<{ save: ListedSave; name: string } | null>(null);
@@ -227,7 +228,11 @@ export default function HomeClient() {
       />
 
       <main className="mx-auto max-w-6xl px-4 pb-16">
-        <section className="grid gap-6 pt-10 pb-8 md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] md:items-end md:pt-16 md:pb-12 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <section
+          className={`grid gap-6 pt-10 pb-8 md:pt-16 md:pb-12 animate-in fade-in slide-in-from-bottom-2 duration-500 ${
+            demo ? "lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-center lg:gap-10" : "md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] md:items-end"
+          }`}
+        >
           <div>
             <h1 className="text-4xl md:text-7xl font-black tracking-tighter leading-none text-ink">
               {APP_NAME}
@@ -239,15 +244,29 @@ export default function HomeClient() {
                 {t("home.newGame")}
                 <ArrowRight className="h-4 w-4" />
               </a>
-              {isDemo() && (
+              {demo && (
                 <a href="#how" className={`${ui.secondary} px-4 py-2.5 text-sm`}>
                   {t("home.how.title")}
                 </a>
               )}
             </div>
           </div>
+          {demo && (
+            // The game itself, where a visitor sees it first: the turn's chronicle beside the front it moved.
+            <a href="#how" className="group block min-w-0 lg:row-span-2">
+              <figure>
+                <div className={`${ui.card} overflow-hidden shadow-xl shadow-shade/10 transition-all duration-300 group-hover:-translate-y-1 group-hover:border-accent/20`}>
+                  <Image src="/screens/1950/turn.jpg" alt={t("home.how.turn.title")} width={1600} height={1000} unoptimized priority className="h-auto w-full" />
+                </div>
+                <figcaption className="mt-2.5 flex items-center gap-1.5 px-1 text-xs font-bold text-muted transition-colors group-hover:text-accent">
+                  {t("home.hero.caption")}
+                  <ArrowRight className="h-3.5 w-3.5 shrink-0" />
+                </figcaption>
+              </figure>
+            </a>
+          )}
           {last && (
-            <Link href={`/play/${last.id}`} className={`${ui.row} group flex flex-col gap-3 p-5`}>
+            <Link href={`/play/${last.id}`} className={`${ui.row} group flex flex-col gap-3 p-5 ${demo ? "lg:max-w-md" : ""}`}>
               <div className={ui.label}>{t("home.lastGame")}</div>
               <div className="flex items-center gap-3">
                 <Flag tag={last.player} scenario={last.scenarioId} size="xl" />
@@ -299,7 +318,7 @@ export default function HomeClient() {
           </div>
         </section>
 
-        {isDemo() && (
+        {demo && (
           <section id="how" className="mt-14 scroll-mt-20">
             <h2 className={`${ui.label} mb-1`}>{t("home.how.title")}</h2>
             <p className="mb-4 text-sm font-medium text-muted">{t("home.how.lead")}</p>
@@ -329,9 +348,9 @@ export default function HomeClient() {
           </section>
         )}
 
-        {isDemo() && (
-          <section id="real" className={`${ui.card} mt-12 grid scroll-mt-20 gap-6 p-6 md:grid-cols-2 md:p-8`}>
-            <div>
+        {demo && (
+          <section id="real" className={`${ui.card} mt-12 scroll-mt-20 p-6 md:p-8`}>
+            <div className="max-w-2xl">
               <h2 className="text-2xl font-black tracking-tight text-ink">{t("home.real.title")}</h2>
               <p className="mt-2 text-sm font-medium leading-relaxed text-muted">{t("home.real.body")}</p>
               <a href={DOWNLOAD_URL} target="_blank" rel="noreferrer" className={`${ui.primary} mt-5 px-5 py-3 text-sm`}>
@@ -349,13 +368,6 @@ export default function HomeClient() {
                   {t("home.real.report")}
                 </a>
               </div>
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-ink">{t("home.real.needs")}</p>
-              <pre className="mt-2 overflow-x-auto rounded-xl bg-night p-4 text-xs leading-relaxed text-white">
-                <code>{`git clone ${REPO_URL}.git\ncd GulfOfTrump\nnpm install\nnpm run dev`}</code>
-              </pre>
-              <p className="mt-2 text-sm font-medium text-muted">{t("home.real.then")}</p>
             </div>
           </section>
         )}

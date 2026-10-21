@@ -3,10 +3,15 @@
 import { Banknote, Package, Ship, TrendingUp, Users } from "lucide-react";
 import { ui } from "@/components/ui/classes";
 import { balance, spending, type Accounts } from "@/engine/economy";
+import type { ForeignView, KnowledgeLevel } from "@/engine/fog";
 import type { Economy } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
+import { shown } from "./estimate";
 import ResourceLedger from "./ResourceLedger";
+
+/** Another country's figures as the player's government estimates them (engine/fog.ts). */
+export type EconomyEstimates = Pick<ForeignView, "gdp" | "growth" | "debt" | "troops"> & { level: KnowledgeLevel };
 
 /** Budget lines in the order and colour the bar draws them. */
 const LINES = [
@@ -27,6 +32,7 @@ export default function EconomyPanel({
   detailed,
   columns,
   trade = true,
+  estimates,
 }: {
   economy: Economy;
   accounts?: Accounts;
@@ -34,13 +40,23 @@ export default function EconomyPanel({
   columns?: boolean;
   /** Trade and resources; off where a country is only being picked. */
   trade?: boolean;
+  /** Under fog of war, the estimates shown instead of another country's true figures. */
+  estimates?: EconomyEstimates;
 }) {
   const { t, money, people, locale } = useI18n();
   const pct = (n: number) => `${n > 0 ? "+" : ""}${n.toLocaleString(locale, { maximumFractionDigits: 1 })}%`;
   const total = spending(economy);
   const gap = balance(economy);
-  const perCapita = accounts?.population ? (economy.gdp * 1e6) / accounts.population : 0;
-  const debtShare = Math.round((economy.debt / Math.max(0.01, economy.gdp)) * 100);
+  const gdp = estimates?.gdp?.value ?? economy.gdp;
+  const perCapita = accounts?.population ? (gdp * 1e6) / accounts.population : 0;
+  const debtShare = Math.round(((estimates?.debt?.value ?? economy.debt) / Math.max(0.01, gdp)) * 100);
+  // "≈ " before a figure worked out from estimates.
+  const approx = estimates && !estimates.gdp?.exact ? "≈ " : "";
+  const figure = (key: "gdp" | "growth" | "debt" | "troops", format: (n: number) => string) => {
+    const e = estimates?.[key];
+    return e && estimates ? shown(e, estimates.level, format) : format(economy[key]);
+  };
+  const growth = estimates?.growth?.value ?? economy.growth;
   const row = (label: string, value: React.ReactNode, sub?: React.ReactNode) => (
     <div className="flex items-baseline justify-between gap-3 text-xs">
       <span className="font-bold text-muted">{label}</span>
@@ -59,10 +75,10 @@ export default function EconomyPanel({
           {t("economy.title")}
         </div>
         <div className="grid gap-1.5">
-          {row(t("economy.gdp"), money(economy.gdp), <span className={economy.growth < 0 ? "text-red-600" : ""}>{pct(economy.growth)}</span>)}
-          {perCapita > 0 && <div className="-mt-1 text-right text-2xs font-bold text-muted">{t("economy.perCapita", { value: `$${Math.round(perCapita).toLocaleString(locale)}` })}</div>}
-          {row(t("economy.debt"), money(economy.debt), t("economy.debtShare", { n: debtShare }))}
-          {row(t("economy.troops"), t("economy.people", { value: people(economy.troops) }))}
+          {row(t("economy.gdp"), figure("gdp", money), <span className={growth < 0 ? "text-red-600" : ""}>{figure("growth", pct)}</span>)}
+          {perCapita > 0 && <div className="-mt-1 text-right text-2xs font-bold text-muted">{approx}{t("economy.perCapita", { value: `$${Math.round(perCapita).toLocaleString(locale)}` })}</div>}
+          {row(t("economy.debt"), figure("debt", money), `${approx}${t("economy.debtShare", { n: debtShare })}`)}
+          {row(t("economy.troops"), t("economy.people", { value: figure("troops", people) }))}
           {detailed && accounts && (
             <div className="-mt-1 text-right text-2xs font-bold text-muted">
               {t("economy.mobilisable", { value: people(Math.max(0, accounts.mobilisable - economy.troops)) })}

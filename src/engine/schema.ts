@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ADVISORS } from "./advisors";
 import { BLOC_KINDS } from "./foreign";
-import { EVENT_KINDS, LOCALES, OFFICIAL_POSTS, PROTEST_STAGES, REGIME_KINDS, type GameState } from "./types";
+import { AIM_KINDS, DEED_KINDS, EVENT_KINDS, GAME_MODES, INTRIGUE_EVENTS, INTRIGUE_GOALS, INTRIGUE_PRICES, INTRIGUE_STAGES, LOCALES, MINISTER_STANCES, OFFICIAL_POSTS, PLAN_CAUSES, PLAN_ENDS, PLAN_KINDS, PLAN_STAGES, PROTEST_STAGES, REGIME_KINDS, WEAPON_KINDS, type GameState } from "./types";
 
 /**
  * Shape check for a state that arrives from outside — a request body or a
@@ -24,14 +24,64 @@ const economy = z.object({
   tradeCut: z.number(),
   stocks: z.record(z.string(), z.number()),
 });
+const byKind = z.partialRecord(z.enum(WEAPON_KINDS), z.number());
+const arsenal = z.object({
+  stock: z.partialRecord(z.enum(WEAPON_KINDS), z.object({ n: z.number(), level: z.number() })),
+  focus: z.array(z.enum(WEAPON_KINDS)).optional(),
+  made: byKind.optional(),
+  lost: byKind.optional(),
+  got: byKind.optional(),
+  nuclear: z.boolean().optional(),
+});
+const directiveStatus = z.object({ id: z.string(), status: z.enum(["progress", "done", "failed"]), note: z.string(), text: z.string().optional() });
 const figures = z.object({ gdp: z.number(), debt: z.number(), reserves: z.number(), troops: z.number(), balance: z.number(), people: z.number().optional() });
+const gender = z.enum(["male", "female"]);
+const rulers = z.object({
+  line: z.string(),
+  people: z.array(z.object({ id: z.string(), name: z.string(), gender, portrait: z.string().optional() })),
+  lead: z.number(),
+});
+const course = z.object({
+  hawk: z.number(),
+  reach: z.number(),
+  aims: z.array(z.object({ kind: z.enum(AIM_KINDS), target: z.string().optional(), weight: z.number(), seeded: z.boolean().optional() })),
+  ties: z.record(z.string(), z.object({ trust: z.number(), tension: z.number(), threat: z.number(), near: z.number(), trade: z.number().optional() })),
+  memory: z.array(z.object({ by: z.string(), what: z.enum(DEED_KINDS), date, weight: z.number() })),
+  set: z.object({ date, how: z.enum(["start", "election", "coup", "leader"]) }),
+});
+const plan = z.object({
+  id: z.string(),
+  kind: z.enum(PLAN_KINDS),
+  by: z.string(),
+  target: z.string().optional(),
+  partners: z.array(z.string()).optional(),
+  war: z.string().optional(),
+  bloc: z.string().optional(),
+  side: z.enum(["attackers", "defenders"]).optional(),
+  blocKind: z.enum(["alliance", "pact"]).optional(),
+  cause: z.enum(PLAN_CAUSES),
+  stage: z.enum(PLAN_STAGES),
+  since: date,
+  moved: date,
+  due: date.optional(),
+  end: z.object({ date, turn: z.number(), how: z.enum(["done", "failed", "faded"]), why: z.enum(PLAN_ENDS) }).optional(),
+});
 
 export const GameStateSchema = z.object({
   // 1 = one region per country (migrated on load), 2 = provinces.
   schema: z.union([z.literal(1), z.literal(2)]),
   migration: z.number().int().min(0).optional(),
   id: z.string().min(1).max(100),
+  seed: z.string().min(1).max(100).optional(),
   title: z.string().max(120).optional(),
+  mode: z.enum(GAME_MODES).optional(),
+  fog: z.boolean().optional(),
+  research: z
+    .object({
+      active: z.array(z.object({ id: z.string(), progress: z.number(), since: z.string(), on: z.boolean() })),
+      done: z.array(z.object({ id: z.string(), date: z.string() })),
+    })
+    .optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   scenarioId: z.enum(["1914", "1939", "1950", "1964", "1991", "1999", "2014", "2022"]),
@@ -64,6 +114,9 @@ export const GameStateSchema = z.object({
           lastCoup: date.optional(),
         })
         .optional(),
+      rulers: rulers.optional(),
+      course: course.optional(),
+      arsenal: arsenal.optional(),
     }),
   ),
   regions: z.record(z.string(), z.object({ name: text.optional(), owner: z.string(), controller: z.string(), contested: z.string().optional(), held: z.number().optional(), taken: z.array(z.string()).optional(), pop: z.number().optional() })),
@@ -103,12 +156,17 @@ export const GameStateSchema = z.object({
       economy: z.object({ before: figures, after: figures }).optional(),
       borders: z.record(z.string(), z.object({ owner: z.string(), controller: z.string(), contested: z.string().optional(), held: z.number().optional() })).optional(),
       summits: z.array(z.string()).optional(),
+      briefs: z
+        .array(z.object({ ministry: z.enum(ADVISORS), matter: z.string(), directives: z.array(directiveStatus), asked: z.boolean().optional() }))
+        .optional(),
       reports: z
         .array(
           z.object({
             ministry: z.enum(ADVISORS),
             text: z.string(),
-            directives: z.array(z.object({ id: z.string(), status: z.enum(["progress", "done", "failed"]), note: z.string(), text: z.string().optional() })),
+            directives: z.array(directiveStatus),
+            stance: z.enum(MINISTER_STANCES).optional(),
+            orders: z.array(z.string()).optional(),
           }),
         )
         .optional(),
@@ -264,6 +322,55 @@ export const GameStateSchema = z.object({
         faction: z.string().optional(),
         bio: z.string().optional(),
         since: z.string(),
+        interests: z.object({ agenda: z.array(z.string()), ambition: z.number(), party: z.string().optional() }).optional(),
+        mood: z.object({ stance: z.enum(MINISTER_STANCES), grievance: z.string().optional(), turn: z.number() }).optional(),
+        gender: gender.optional(),
+        portrait: z.string().optional(),
+      }),
+    )
+    .optional(),
+  deputies: z
+    .array(
+      z.object({
+        id: z.string(),
+        post: z.enum(OFFICIAL_POSTS),
+        deputyOf: z.enum(OFFICIAL_POSTS),
+        title: z.string(),
+        name: z.string(),
+        traits: z.array(z.string()),
+        manner: z.string(),
+        competence: z.number(),
+        loyalty: z.number(),
+        chiefLoyalty: z.number(),
+        approached: z.number().optional(),
+        gender: gender.optional(),
+        portrait: z.string().optional(),
+        faction: z.string().optional(),
+        bio: z.string().optional(),
+        since: z.string(),
+        interests: z.object({ agenda: z.array(z.string()), ambition: z.number(), party: z.string().optional() }).optional(),
+      }),
+    )
+    .optional(),
+  deputyAdvice: z
+    .record(z.string(), z.array(z.object({ from: z.enum(["player", "advisor"]), text: z.string(), date: z.string(), turn: z.number(), orders: z.array(z.string()).optional() })))
+    .optional(),
+  intrigues: z
+    .array(
+      z.object({
+        id: z.string(),
+        deputy: z.string(),
+        deputyName: z.string(),
+        post: z.enum(OFFICIAL_POSTS),
+        target: z.string(),
+        goal: z.enum(INTRIGUE_GOALS),
+        directive: z.string().optional(),
+        strength: z.number(),
+        risk: z.number(),
+        stage: z.enum(INTRIGUE_STAGES),
+        price: z.enum(INTRIGUE_PRICES).optional(),
+        since: z.string(),
+        last: z.object({ turn: z.number(), event: z.enum(INTRIGUE_EVENTS) }),
       }),
     )
     .optional(),
@@ -311,6 +418,7 @@ export const GameStateSchema = z.object({
     )
     .optional(),
   budgetSet: z.object({ date: z.string(), before: z.object({ revenue: z.number(), army: z.number(), industry: z.number(), social: z.number(), other: z.number() }), after: z.object({ revenue: z.number(), army: z.number(), industry: z.number(), social: z.number(), other: z.number() }) }).optional(),
+  plans: z.array(plan).optional(),
   defeat: z
     .object({
       date: z.string(),

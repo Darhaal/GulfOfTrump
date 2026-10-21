@@ -17,13 +17,17 @@ export default function ProvinceDetails({
   region,
   countries,
   year,
+  start,
 }: {
   province: MapRegion;
   region: RegionState;
   countries: Record<string, CountryState>;
   year: number;
+  /** Its people when the game began; the map's own count when the start date is the map's. */
+  start?: number;
 }) {
   const { t, text, locale, people } = useI18n();
+  const before = start ?? province.pop;
   const resources = activeResources(province, year);
   const owner = countries[region.owner];
   const holder = countries[region.controller];
@@ -88,9 +92,9 @@ export default function ProvinceDetails({
               {people(peopleIn(region, province))}
               <span className="ml-1.5 font-bold text-muted">{t("province.density", { n: Math.round(populationDensity({ pop: peopleIn(region, province), area: province.area })).toLocaleString(locale) })}</span>
               {/* How the province's people changed since the start: war, flight, growth. */}
-              {province.pop > 0 && region?.pop !== undefined && Math.abs(region.pop / province.pop - 1) >= 0.01 && (
-                <span className={`ml-1.5 font-bold ${region.pop < province.pop ? "text-red-600" : "text-emerald-700"}`}>
-                  {t("province.popChange", { n: `${region.pop > province.pop ? "+" : ""}${Math.round((region.pop / province.pop - 1) * 100)}` })}
+              {before !== undefined && before > 0 && region?.pop !== undefined && Math.abs(region.pop / before - 1) >= 0.01 && (
+                <span className={`ml-1.5 font-bold ${region.pop < before ? "text-red-600" : "text-emerald-700"}`}>
+                  {t("province.popChange", { n: `${region.pop > before ? "+" : ""}${Math.round((region.pop / before - 1) * 100)}` })}
                 </span>
               )}
             </span>,

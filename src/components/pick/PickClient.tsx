@@ -14,7 +14,7 @@ import { nationalAccounts, seedEconomies } from "@/engine/economy";
 import { peopleByOwner } from "@/engine/provinces";
 import { createGame, regionsByOwner, startingWorld } from "@/engine/setup";
 import { tr } from "@/engine/text";
-import type { ScenarioId } from "@/engine/types";
+import { GAME_MODES, type GameMode, type ScenarioId } from "@/engine/types";
 import { useI18n } from "@/i18n/useI18n";
 import { useMap } from "@/lib/maps";
 import { writeSave } from "@/lib/saves";
@@ -28,6 +28,8 @@ export default function PickClient({ scenarioId }: { scenarioId: ScenarioId }) {
   const [selected, setSelected] = useState<string | null>(scenario.featured[0] ?? null);
   const [query, setQuery] = useState("");
   const [starting, setStarting] = useState(false);
+  const [mode, setMode] = useState<GameMode>("free");
+  const [fog, setFog] = useState(true);
 
   // The starting world with every country's economy, as a new game will have it.
   const world = useMemo(
@@ -60,7 +62,7 @@ export default function PickClient({ scenarioId }: { scenarioId: ScenarioId }) {
     if (!map || !selected) return;
     setStarting(true);
     try {
-      const state = createGame(scenario, map.regions, selected, new Date(), locale);
+      const state = createGame(scenario, map.regions, selected, new Date(), locale, { fog, mode });
       await writeSave(state);
       router.push(`/play/${state.id}`);
     } catch {
@@ -167,8 +169,28 @@ export default function PickClient({ scenarioId }: { scenarioId: ScenarioId }) {
           <div className={`${ui.card} p-5`}>
             <div className={`${ui.label} mb-2`}>{t("pick.briefing")}</div>
             <p className="text-sm font-medium leading-relaxed text-ink">{text(scenario.briefing)}</p>
+            <div className="mt-4 border-t border-divider pt-4">
+              <div className={`${ui.label} mb-2`}>{t("pick.mode")}</div>
+              <div className="flex flex-wrap gap-1" role="radiogroup" aria-label={t("pick.mode")}>
+                {GAME_MODES.map((m) => (
+                  <button key={m} type="button" role="radio" aria-checked={mode === m} onClick={() => setMode(m)} className={`${ui.segment} ${mode === m ? ui.segmentOn : ui.segmentOff}`}>
+                    {t(`pick.mode.${m}`)}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-xs font-medium text-muted">{t(`pick.mode.${mode}.hint`)}</p>
+            </div>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-divider pt-4">
-              <p className="min-w-0 flex-1 text-xs font-medium text-muted">{t("pick.hint")}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-muted">{t("pick.hint")}</p>
+                <label className="mt-2 flex cursor-pointer items-start gap-2 text-xs">
+                  <input type="checkbox" checked={fog} onChange={(e) => setFog(e.target.checked)} className="mt-0.5 h-3.5 w-3.5 accent-current" />
+                  <span>
+                    <span className="font-bold text-ink">{t("pick.fog")}</span>
+                    <span className="block font-medium text-muted">{t("pick.fogNote")}</span>
+                  </span>
+                </label>
+              </div>
               {country && (
                 <button type="button" onClick={start} disabled={starting || !map} className={`${ui.primary} max-w-full px-5 py-3 text-sm`}>
                   {starting ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Flag className="h-4 w-4 shrink-0" />}
