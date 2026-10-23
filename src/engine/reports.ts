@@ -117,7 +117,7 @@ function allBriefs(state: Pick<GameState, "directives" | "advice" | "turn">, wor
       matter: said?.matter ?? "",
       directives: mine.map((d) => {
         const status = said?.directives.find((x) => x.id === d.id);
-        return { id: d.id, status: status?.status ?? "progress", note: status?.note ?? "", text: d.text };
+        return { id: d.id, status: status?.status ?? "progress", note: status?.note ?? "", text: d.text, ...(d.operation ? { operation: true } : {}) };
       }),
       ...(asked ? { asked: true } : {}),
     };

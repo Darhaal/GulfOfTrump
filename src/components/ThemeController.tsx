@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { usePreference } from "@/lib/preferences";
 import { useI18n } from "@/i18n/useI18n";
 
-const BAR = { light: "#F8FAFC", dark: "#0E1116" } as const;
+const BAR = { light: "#F5F0E6", dark: "#12100D" } as const;
 
 /** Runs in <head> before the first paint, so a dark-theme player never sees a light flash. */
 export const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem('got_theme');var d=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);var l=localStorage.getItem('got_locale');if(l)document.documentElement.lang=l;}catch(e){}})();`;

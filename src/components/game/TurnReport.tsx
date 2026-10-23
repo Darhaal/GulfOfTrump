@@ -14,9 +14,10 @@ import { useI18n } from "@/i18n/useI18n";
 import { ADVISOR_TITLES, type AdvisorId } from "@/engine/advisors";
 import { ADVISOR_POST } from "@/engine/government";
 import { personFor, samePerson } from "@/engine/people";
+import type { TurnStage } from "@/engine/stages";
 import { DirectiveList, MINISTRY_ICONS, StanceChip, type ReportStatus } from "./CabinetPanel";
 import Portrait from "./Portrait";
-import { describeChange, groupTerritory, isNotableStats, sortChanges } from "./changes";
+import { describeChange, groupTerritory, isNotableStats, listedChanges, sortChanges } from "./changes";
 
 const KIND_ICON: Record<EventKind, typeof Newspaper> = {
   war: Swords,
@@ -67,6 +68,28 @@ function MinisterView({ state, entry, report, compact }: { state: GameState; ent
   );
 }
 
+/** A section of a turn still being written: its heading, a quiet line and a shimmer where it will be. */
+function Pending({ icon: Icon, label, note }: { icon: typeof Newspaper; label: string; note: string }) {
+  return (
+    <section aria-busy="true">
+      <div className={`${ui.label} mb-2 flex items-center gap-1.5`}>
+        <Icon className="h-3.5 w-3.5" />
+        {label}
+      </div>
+      <div className="rounded-xl border border-dashed border-line px-3 py-2.5">
+        <p className="flex items-center gap-2 text-xs font-medium text-muted">
+          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+          {note}
+        </p>
+        <div className="mt-2.5 grid gap-1.5" aria-hidden>
+          <div className="h-2 w-11/12 animate-pulse rounded-full bg-page" />
+          <div className="h-2 w-2/3 animate-pulse rounded-full bg-page" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /** How many province names a grouped line spells out before "+N". */
 const NAMES_PER_LINE = 6;
 
@@ -77,6 +100,7 @@ export default function TurnReport({
   index,
   compact,
   reporting,
+  pending,
 }: {
   entry: ChronicleEntry;
   state: GameState;
@@ -84,6 +108,8 @@ export default function TurnReport({
   compact?: boolean;
   /** The ministers' reports on the last turn still being written. */
   reporting?: Partial<Record<AdvisorId, ReportStatus>>;
+  /** A turn not yet applied: the stages still being written (engine/stages.ts); what changed and the economy come with the turn. */
+  pending?: TurnStage[];
 }) {
   const { t, text, locale, money, people } = useI18n();
   // Views come after the turn; the ministers still owing one, and the quiet ones, show what became of their directives meanwhile.
@@ -109,14 +135,14 @@ export default function TurnReport({
   const name = (tag: string) => text(state.countries[tag]?.name ?? tag);
   const region = (id: string) => regionLabel(id, index, locale);
 
-  const sorted = sortChanges(entry.applied);
+  const sorted = sortChanges(listedChanges(entry.applied));
   const { lines, groups } = groupTerritory(sorted);
   const notable = lines.filter((c) => isNotableStats(c, state.player));
   const folded = lines.filter((c) => !isNotableStats(c, state.player));
   const territory = groups.map((g) => {
     const names = g.regions.map(region);
     const shown = names.slice(0, NAMES_PER_LINE).join(", ") + (names.length > NAMES_PER_LINE ? ` +${names.length - NAMES_PER_LINE}` : "");
-    const key: MessageKey = g.kind === "annex" ? "change.annex" : g.kind === "occupy" ? "change.occupy" : "change.liberate";
+    const key: MessageKey = g.kind === "annex" ? "change.annex" : g.kind === "occupy" ? "change.occupy" : g.kind === "behind" ? "change.behind" : "change.liberate";
     return t(key, { region: shown, from: name(g.from), to: name(g.to) });
   });
   const verdictOf = (n: number) => entry.verdicts?.find((v) => v.n === n);
@@ -176,6 +202,8 @@ export default function TurnReport({
           </ol>
         </section>
       )}
+
+      {pending && <Pending icon={Flag} label={t("game.changes")} note={t("report.pending.changes")} />}
 
       {(territory.length > 0 || notable.length > 0 || folded.length > 0) && (
         <section>
@@ -252,6 +280,8 @@ export default function TurnReport({
         </section>
       )}
 
+      {pending && <Pending icon={Banknote} label={t("report.economy")} note={t(pending.includes("home") ? "report.pending.home" : "report.pending.apply")} />}
+
       {economyLines.length > 0 && (
         <section>
           <div className={`${ui.label} mb-2 flex items-center gap-1.5`}>
@@ -267,6 +297,8 @@ export default function TurnReport({
           </ul>
         </section>
       )}
+
+      {pending?.includes("world") && <Pending icon={Newspaper} label={t("game.events")} note={t("report.pending.world")} />}
 
       {entry.events.length > 0 && (
         <section>

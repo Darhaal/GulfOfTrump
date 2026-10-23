@@ -1,23 +1,30 @@
 "use client";
 
-import Link from "next/link";
 import { Gamepad2, Sparkles } from "lucide-react";
 import { useI18n } from "@/i18n/useI18n";
 import { useGameMaster } from "@/lib/gameMaster";
+import { openAppDialog } from "./AppDialogs";
 import Dialog from "./ui/Dialog";
 import { ui } from "./ui/classes";
 
-/** The two ways to get a game master: sign in with ChatGPT (in Settings), or play the offline demo. */
-export function GameMasterOffer({ onDemo, compact }: { onDemo?: () => void; compact?: boolean }) {
+/** The two ways to get a game master: sign in with ChatGPT (Settings, as a popup), or play the offline demo. */
+export function GameMasterOffer({ onDemo, onSignIn, compact }: { onDemo?: () => void; onSignIn?: () => void; compact?: boolean }) {
   const { t } = useI18n();
   const { setDemo } = useGameMaster();
   const size = compact ? "px-3 py-2 text-xs" : "px-4 py-2.5 text-xs";
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Link href="/settings" className={`${ui.primary} ${size}`}>
+      <button
+        type="button"
+        onClick={() => {
+          onSignIn?.();
+          openAppDialog("settings");
+        }}
+        className={`${ui.primary} ${size}`}
+      >
         <Sparkles className="h-4 w-4" />
         {t("ai.signIn")}
-      </Link>
+      </button>
       <button
         type="button"
         onClick={() => {
@@ -46,6 +53,7 @@ export default function GameMasterChoice({ open, onClose, onDemo }: { open: bool
             onClose();
             onDemo?.();
           }}
+          onSignIn={onClose}
         />
       </div>
     </Dialog>

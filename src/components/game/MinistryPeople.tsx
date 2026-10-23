@@ -31,7 +31,7 @@ interface MinistryPeopleProps {
 
 /** A person's portrait: their own in oil, or a shadow of their sex and era (engine/people.ts). */
 function Avatar({ person, on }: { person: Pick<Official, "name" | "gender" | "portrait">; on?: boolean }) {
-  return <Portrait portrait={person.portrait} gender={person.gender} name={person.name} size="md" className={on ? "ring-2 ring-ink ring-offset-2 ring-offset-page" : ""} />;
+  return <Portrait portrait={person.portrait} gender={person.gender} name={person.name} size="md" className={on ? "ring-1 ring-accent/60 ring-offset-2 ring-offset-page" : ""} />;
 }
 
 const STAGE_TONE: Record<Intrigue["stage"], string> = { active: "text-accent", done: "text-emerald-700", exposed: "text-red-600", dropped: "text-muted" };
@@ -63,7 +63,6 @@ export default function MinistryPeople({ state, advisor, disabled, anyBusy, onSe
   if (!deputies.length)
     return (
       <div className="flex flex-col gap-3">
-        <p className="text-xs font-medium text-muted">{t("deputies.intro")}</p>
         <button type="button" onClick={() => onSetup(advisor)} disabled={disabled || busy} className={`${ui.primary} px-4 py-3 text-xs`}>
           {setupBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
           {setupBusy ? t("deputies.loading") : t("deputies.setup")}
@@ -126,7 +125,7 @@ export default function MinistryPeople({ state, advisor, disabled, anyBusy, onSe
           <div className="mt-2 flex flex-wrap items-center gap-1 border-t border-divider pt-2">
             <span className="mr-0.5 text-2xs font-black uppercase tracking-wider text-muted">{t("cabinet.interests")}</span>
             {agendaOf(d).map((a) => (
-              <span key={a.en} className="rounded-md bg-surface px-1.5 py-0.5 text-2xs font-bold text-ink">
+              <span key={a.en} className="rounded-md sheet px-1.5 py-0.5 text-2xs font-bold text-ink">
                 {text(a.label)}
               </span>
             ))}
@@ -147,7 +146,7 @@ export default function MinistryPeople({ state, advisor, disabled, anyBusy, onSe
         <>
           <ChatScroll watch={`${d.id}-${thread.length}-${Boolean(talking)}`}>
             {thread.map((m, i) => (
-              <div key={i} className={`max-w-[92%] rounded-2xl px-3.5 py-2.5 text-sm ${m.from === "player" ? "ml-auto rounded-br-md bg-ink text-on-ink" : "rounded-bl-md border border-line bg-surface text-ink"}`}>
+              <div key={i} className={`max-w-[92%] rounded-2xl px-3.5 py-2.5 text-sm ${m.from === "player" ? "ml-auto rounded-br-md bg-ink text-on-ink" : "rounded-bl-md border border-line sheet text-ink"}`}>
                 <div className={`mb-1 flex items-center gap-2 text-2xs font-black uppercase tracking-widest ${m.from === "player" ? "text-on-ink/60" : "text-muted"}`}>
                   {m.from === "player" ? t("diplomacy.you") : name}
                   <span className="font-medium normal-case tracking-normal tabular-nums">{m.date}</span>
@@ -182,7 +181,7 @@ export default function MinistryPeople({ state, advisor, disabled, anyBusy, onSe
               />
             </Dictation>
             <div className="mt-2 flex items-center justify-between gap-2">
-              <span className="text-2xs font-medium text-muted">{t("deputies.note")}</span>
+              <span />
               <button type="button" onClick={() => void ask()} disabled={disabled || busy || !question.trim()} className={`${ui.primary} shrink-0 px-4 py-2 text-xs`}>
                 <Send className="h-3.5 w-3.5" />
                 {t("cabinet.ask")}
@@ -195,7 +194,7 @@ export default function MinistryPeople({ state, advisor, disabled, anyBusy, onSe
           {going ? (
             <IntrigueCard intrigue={going} onDrop={() => onChange(dropIntrigue(state, going.id))} disabled={busy} />
           ) : (
-            <div className="grid gap-2 rounded-xl border border-line bg-surface p-3">
+            <div className="grid gap-2 rounded-xl border border-line sheet p-3">
               <div className={ui.label}>{t("deputies.goal")}</div>
               <div className="grid grid-cols-2 gap-1 rounded-xl bg-page p-1">
                 {INTRIGUE_GOALS.map((g) => (
@@ -259,7 +258,7 @@ export default function MinistryPeople({ state, advisor, disabled, anyBusy, onSe
             ) : (
               <ul className="grid gap-1.5">
                 {plots.map((i) => (
-                  <li key={i.id} className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-xs">
+                  <li key={i.id} className="flex items-center gap-2 rounded-xl border border-line sheet px-3 py-2 text-xs">
                     <span className="min-w-0 flex-1 truncate font-semibold text-ink">
                       {i.deputyName} · {t(`deputies.goal.${i.goal}` as MessageKey)}
                     </span>
@@ -270,7 +269,6 @@ export default function MinistryPeople({ state, advisor, disabled, anyBusy, onSe
                 ))}
               </ul>
             )}
-            <p className="text-2xs font-medium text-muted">{t("deputies.secret")}</p>
           </div>
         </>
       )}
@@ -282,7 +280,7 @@ export default function MinistryPeople({ state, advisor, disabled, anyBusy, onSe
 function IntrigueCard({ intrigue, onDrop, disabled }: { intrigue: Intrigue; onDrop: () => void; disabled: boolean }) {
   const { t } = useI18n();
   return (
-    <div className="grid gap-2 rounded-xl border border-accent/30 bg-surface p-3">
+    <div className="grid gap-2 rounded-xl border border-accent/30 sheet p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="text-sm font-black text-ink">{t(`deputies.goal.${intrigue.goal}` as MessageKey)}</div>

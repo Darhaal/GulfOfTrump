@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { countsFor } from "./occupation";
 import type { AppliedChange, GameState, MapRegion, RegionState } from "./types";
 
 /**
@@ -119,10 +120,10 @@ export function losePopulation(
   }
 }
 
-/** People (thousands) in each owner's provinces now. */
+/** A country's people now, thousands: in the provinces it owns and those the front has left behind in its hands (engine/occupation.ts). */
 export function peopleOf(state: Pick<GameState, "regions">, map: Record<string, MapRegion> | null | undefined, tag: string): number {
   if (!map) return 0;
   let n = 0;
-  for (const [id, r] of Object.entries(state.regions)) if (r.owner === tag) n += peopleIn(r, map[id]);
+  for (const [id, r] of Object.entries(state.regions)) if (countsFor(r) === tag) n += peopleIn(r, map[id]);
   return n;
 }

@@ -82,12 +82,12 @@ export function newGameId(): string {
 
 /** What the player chooses for a new game besides the country. */
 export interface GameOptions {
-  /** Fog of war (engine/fog.ts); on unless the player turns it off. */
+  /** Fog of war (engine/fog.ts): always on in a new game; off only where a caller asks, as tests do. */
   fog?: boolean;
-  /** Free or historical history (engine/intentions.ts); free unless the player picks historical. */
+  /** Historical or free history (engine/intentions.ts); the country picker starts on historical (GAME_MODES[0]), and a game made without a choice is free. */
   mode?: GameMode;
-  /** Who the player is (engine/role.ts): the country's leader unless the player picks its opposition, with the names they gave, if any. */
-  role?: { kind: RoleKind; person?: string; gender?: Gender; movement?: string };
+  /** Who the player is (engine/role.ts): the country's leader unless the player picks its opposition, with the names they gave or a paragraph on who they are, if any. */
+  role?: { kind: RoleKind; person?: string; gender?: Gender; movement?: string; about?: string };
 }
 
 export function createGame(scenario: Scenario, mapRegions: MapRegion[], player: string, now = new Date(), locale: Locale = "en", options: GameOptions = {}): GameState {

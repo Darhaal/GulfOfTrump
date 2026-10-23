@@ -1,11 +1,17 @@
 import { z } from "zod";
-import type { AllianceSeed, AppliedChange, GameState, Summit, SummitLine, Text, War } from "./types";
+import type { Alliance, AllianceSeed, AppliedChange, GameState, Summit, SummitLine, Text, War } from "./types";
 
 /**
  * Foreign policy beyond war and peace: truces with an end date, blocs of
  * three kinds (military alliances, pacts, organisations) with terms and a
  * term, the player's invitations to found one, and summits — planned ahead,
- * then held, with a record of what each leader said.
+ * then held, with a record of what each leader said. A session of a bloc the
+ * player belongs to is called by an order: the turn's game master names it
+ * in `sessions`, and the engine schedules it for the player to attend at the
+ * start of the next period. A summit or session the player's country takes
+ * part in is never held without the player: it opens for the player to
+ * attend and speak, the others answering in turn; one among other
+ * governments only is reported by its outcome, without a transcript.
  */
 
 export const BLOC_KINDS = ["alliance", "pact", "organization", "trade"] as const;
@@ -48,7 +54,16 @@ export const foreignFields = {
     )
     .max(4)
     .default([]),
+  // Sessions of blocs the player belongs to that the player's orders called this period.
+  // Kept to the first MAX_SESSIONS when sanitized.
+  sessions: z
+    .array(z.object({ bloc: shortText.min(1), agenda: shortText.default("") }))
+    .catch([])
+    .default([]),
 };
+
+/** At most this many sessions an answer may call. */
+export const MAX_SESSIONS = 2;
 
 type ForeignRaw = { [K in keyof typeof foreignFields]: z.infer<(typeof foreignFields)[K]> };
 
@@ -58,7 +73,17 @@ export function findSummit(summits: Summit[] | undefined, key: string): Summit |
   return (summits ?? []).find((s) => s.id.toLowerCase() === needle || s.title.trim().toLowerCase() === needle);
 }
 
-/** Keeps what refers to wars, proposals, countries and summits that exist. */
+/** A bloc by id, or by its name in any language; a shortened name only when it fits one bloc alone. */
+export function findBloc(alliances: Alliance[], key: string): Alliance | undefined {
+  const needle = key.trim().toLowerCase();
+  const names = (a: Alliance) => (typeof a.name === "string" ? [a.name] : Object.values(a.name)).map((n) => n.toLowerCase());
+  const exact = alliances.find((a) => a.id.toLowerCase() === needle) ?? alliances.find((a) => names(a).includes(needle));
+  if (exact || needle.length < 3) return exact;
+  const loose = alliances.filter((a) => names(a).some((n) => n.includes(needle) || needle.includes(n)));
+  return loose.length === 1 ? loose[0] : undefined;
+}
+
+/** Keeps what refers to wars, proposals, countries and summits that exist; a session only of a bloc the player belongs to, once each. */
 export function sanitizeForeign(
   state: GameState,
   raw: ForeignRaw,
@@ -82,10 +107,20 @@ export function sanitizeForeign(
         raw.summits.map((s) => ({ ...s, participants: [...new Set(s.participants.filter(exists))] })),
         (s) => s.participants.length >= 2 && s.date >= state.date,
       ),
+      // Only summits among other governments, by their outcome: one the player is in waits for the player.
       summitsHeld: keep(
-        raw.summitsHeld.map((h) => ({ ...h, transcript: h.transcript.filter((line) => exists(line.country)) })),
-        (h) => findSummit(state.summits, h.summit)?.status === "planned",
+        raw.summitsHeld.map((h) => ({ ...h, transcript: [] })),
+        (h) => {
+          const s = findSummit(state.summits, h.summit);
+          return s?.status === "planned" && !s.participants.includes(state.player);
+        },
       ),
+      sessions: keep(
+        raw.sessions.map((s) => ({ ...s, bloc: findBloc(state.alliances, s.bloc)?.id ?? "" })),
+        (s) => Boolean(state.alliances.find((a) => a.id === s.bloc)?.members.includes(state.player)),
+      )
+        .filter((s, i, list) => list.findIndex((o) => o.bloc === s.bloc) === i)
+        .slice(0, MAX_SESSIONS),
     },
     dropped,
   };
@@ -148,7 +183,30 @@ export function applyForeign(
   }
 
   foreign.summits.forEach((s, i) => {
-    const summit: Summit = { id: `s${ctx.turn}-${i + 1}`, title: s.title, place: s.place, date: s.date, participants: s.participants, agenda: s.agenda, by: "world", status: "planned" };
+    // A meeting the player is in, dated inside the period just played, moves to the next one's first day: the player never had the chance to attend.
+    const date = s.participants.includes(next.player) && s.date < ctx.to ? ctx.to : s.date;
+    const summit: Summit = { id: `s${ctx.turn}-${i + 1}`, title: s.title, place: s.place, date, participants: s.participants, agenda: s.agenda, by: "world", status: "planned" };
+    next.summits = [...(next.summits ?? []), summit];
+    applied.push({ kind: "summit-planned", summit: summit.id, title: summit.title, date: summit.date });
+  });
+
+  // Sessions the player's orders called: on the next period's first day, for the player to attend.
+  foreign.sessions.forEach((s, i) => {
+    const bloc = next.alliances.find((a) => a.id === s.bloc);
+    if (!bloc?.members.includes(next.player)) return;
+    const title = typeof bloc.name === "string" ? bloc.name : bloc.name.en;
+    const summit: Summit = {
+      id: `s${ctx.turn}-c${i + 1}`,
+      title,
+      place: "",
+      date: ctx.to,
+      participants: bloc.members.filter((m) => next.countries[m]),
+      ...(s.agenda ? { agenda: s.agenda } : {}),
+      by: "player",
+      status: "planned",
+      live: true,
+      bloc: bloc.id,
+    };
     next.summits = [...(next.summits ?? []), summit];
     applied.push({ kind: "summit-planned", summit: summit.id, title: summit.title, date: summit.date });
   });
@@ -156,10 +214,9 @@ export function applyForeign(
   const held: string[] = [];
   for (const h of foreign.summitsHeld) {
     const summit = findSummit(next.summits, h.summit);
-    if (!summit || summit.status !== "planned") continue;
+    if (!summit || summit.status !== "planned" || summit.participants.includes(next.player)) continue;
     summit.status = "held";
     summit.outcome = h.outcome;
-    summit.transcript = h.transcript.map((line) => ({ country: line.country, speaker: line.speaker, text: line.text }));
     held.push(summit.id);
   }
 
@@ -236,6 +293,14 @@ export function canHoldNow(state: GameState, summit: Summit, periodEnd: string):
   return summit.status === "planned" && summit.participants.includes(state.player) && summit.date < periodEnd;
 }
 
+/** Whether the player's delegation has spoken at a meeting: until it has, nothing can be settled there. */
+export const playerHasSpoken = (summit: Pick<Summit, "transcript">, player: string): boolean => (summit.transcript ?? []).some((line) => line.country === player);
+
+/** Meetings the player's country is due at this period and has not yet spoken at: they open for the player to attend. */
+export function dueSessions(state: GameState, periodEnd: string): Summit[] {
+  return (state.summits ?? []).filter((s) => canHoldNow(state, s, periodEnd) && !playerHasSpoken(s, state.player)).sort((a, b) => a.date.localeCompare(b.date));
+}
+
 /** The player's words and the others' answers, added to the record of a meeting held in person. */
 export function speakAtSummit(state: GameState, id: string, said: SummitLine, replies: SummitLine[], now = new Date()): GameState {
   const known = (line: SummitLine) => Boolean(state.countries[line.country]);
@@ -246,8 +311,10 @@ export function speakAtSummit(state: GameState, id: string, said: SummitLine, re
   };
 }
 
-/** A meeting held in person ends: what came of it waits for the turn's game master, who must honour the agreements. */
+/** A meeting held in person ends: what came of it waits for the turn's game master, who must honour the agreements. Not before the player has spoken. */
 export function closeSummit(state: GameState, id: string, outcome: string, agreements: string[], now = new Date()): GameState {
+  const summit = (state.summits ?? []).find((s) => s.id === id);
+  if (!summit || !playerHasSpoken(summit, state.player)) return state;
   return {
     ...state,
     summits: (state.summits ?? []).map((s) => (s.id === id ? { ...s, status: "held" as const, live: true, outcome, agreements, heldTurn: state.turn } : s)),

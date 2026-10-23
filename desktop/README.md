@@ -26,7 +26,7 @@ The server's log is in `%APPDATA%\Gulf of Trump\logs\server.log`; attach it to
 a bug report.
 
 The loading screen is `splash.html`: the emblem, quotes of the game's eras
-(`public/quotes.json`, with the speakers' portraits from `public/portraits`)
+(the system language's `public/quotes/<locale>.json`, written by `npm run quotes`, with the speakers' portraits from `public/portraits`)
 and a bar that follows the start — checking the port, starting the server,
 waiting for it to answer, opening the game. The wait is paced by how long
 the last one took (`%APPDATA%\Gulf of Trump\startup.json`); the sums are in

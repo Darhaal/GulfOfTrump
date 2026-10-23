@@ -15,6 +15,9 @@ export interface StreamRequest {
   onDelta?: (delta: string) => void;
 }
 
+/** The game's dashes are short (–): a long one (—) the model writes is shortened as it streams. */
+const shortDashes = (text: string) => text.replaceAll("—", "–");
+
 /** Hard ceiling on one answer, well above any turn the game asks for. */
 const MAX_CHARS = 200_000;
 const TIMEOUT_MS = 6 * 60_000;
@@ -84,9 +87,10 @@ export async function streamText(token: string, request: StreamRequest): Promise
           throw new AiError("invalid_stream", "ChatGPT sent a malformed event. Try again.", true);
         }
         if (event.type === "response.output_text.delta" && typeof event.delta === "string") {
-          text += event.delta;
+          const delta = shortDashes(event.delta);
+          text += delta;
           if (text.length > MAX_CHARS) throw new AiError("response_too_large", "The answer was too long.");
-          request.onDelta?.(event.delta);
+          request.onDelta?.(delta);
         } else if (event.type === "response.failed") {
           throw fromApiError(event.response?.error ?? event.response, response.status);
         } else if (event.type === "error") {

@@ -12,7 +12,7 @@ body:
     attributes:
       label: Version · Версия
       description: Shown on the front page and in About. · Видна на главной и в «О проекте».
-      placeholder: 1.0.4-beta
+      placeholder: 1.0.5-beta
     validations:
       required: true
   - type: dropdown

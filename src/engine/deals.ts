@@ -2,6 +2,7 @@ import { z } from "zod";
 import { addStep } from "./calendar";
 import { type Accounts, nationalAccounts, type WorldScale } from "./economy";
 import { BARRELS_PER_TONNE } from "./units";
+import { countsFor } from "./occupation";
 import { peopleIn } from "./population";
 import type { ResourceType } from "./resources";
 import { countryCentres, distanceKm } from "./trade";
@@ -152,7 +153,8 @@ export function grainBooks(state: Pick<GameState, "countries" | "regions" | "sce
   const people = new Map<string, number>();
   for (const [id, r] of Object.entries(state.regions)) {
     const p = map[id];
-    if (p) people.set(r.owner, (people.get(r.owner) ?? 0) + peopleIn(r, p));
+    const by = countsFor(r);
+    if (p) people.set(by, (people.get(by) ?? 0) + peopleIn(r, p));
   }
   // Income per head, $: richer farmers get more from a field, richer people eat (and feed their herds) more grain.
   const income = (tag: string) => {

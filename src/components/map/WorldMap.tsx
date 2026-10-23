@@ -2,8 +2,8 @@
 
 import { geoNaturalEarth1, geoPath } from "d3-geo";
 import { feature, merge, mesh, neighbors as topoNeighbors } from "topojson-client";
-import { Anchor, Flag, Flame, Gem, Layers, Maximize2, Megaphone, Minus, Mountain, Plus, TrainFront, Users, Wheat, X, type LucideIcon } from "lucide-react";
-import { memo, useEffect, useId, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { Anchor, Flag, Flame, Gem, Handshake, Layers, Maximize2, Megaphone, Minus, Mountain, Plus, TrainFront, Users, Wheat, X, type LucideIcon } from "lucide-react";
+import { memo, useEffect, useId, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import type { Feature, FeatureCollection, MultiLineString, MultiPolygon, Point, Polygon } from "geojson";
 import type { GeometryObject } from "topojson-specification";
 import { useI18n } from "@/i18n/useI18n";
@@ -16,8 +16,9 @@ import type { AppliedChange, MapRegion, Protest, RegionState, ScenarioId, Text, 
 import { useCities, useTowns, useTransport, useWater } from "@/lib/assets";
 import { MAP_LAYERS, MAP_MODES, useMapSettings, type MapMode } from "@/lib/mapSettings";
 import { eraCities, eraTowns } from "./cities";
-import { layoutPlaces, PLACE_STYLE, PlaceIndex, placeRadius, type PlacedLabel, type PlacePoint } from "./places";
-import { DENSITY_STOPS, densityColor, fertilityColor, QUIET_LAND, RESOURCE_COLORS, resourceTint, softened, TERRAIN_COLORS } from "./colors";
+import { cityRadiusKm, dotRadius, labelGap, layoutPlaces, PLACE_STYLE, PlaceIndex, placeAt, placeRadius, SegmentIndex, type PlacedLabel, type PlacePoint } from "./places";
+import { DENSITY_STOPS, densityColor, fertilityColor, QUIET_LAND, RESOURCE_COLORS, resourceTint, SIDE_FILL, sideFill, softened, TERRAIN_COLORS } from "./colors";
+import type { Side } from "@/engine/sides";
 import { riverName } from "./rivers";
 import { DEFAULT_HELD } from "@/engine/outcome";
 import { adjustTaken, mergePlaces } from "@/engine/towns";
@@ -39,6 +40,7 @@ export interface MapCountry {
 
 const MODE_ICONS: Record<MapMode, LucideIcon> = {
   political: Flag,
+  diplomacy: Handshake,
   terrain: Mountain,
   fertility: Wheat,
   population: Users,
@@ -68,6 +70,10 @@ interface WorldMapProps {
   protests?: Protest[];
   /** Brings these provinces, or a country's home land, into view whenever the key changes. */
   focus?: { key: string | number; regions?: string[]; country?: string } | null;
+  /** The diplomatic view: the country it is about and every country's side towards it (engine/sides.ts). */
+  diplomacy?: { subject: string | null; sides: Record<string, Side> } | null;
+  /** The game's own controls, in the map's column under the zoom buttons (the turn length). */
+  controls?: ReactNode;
   className?: string;
 }
 
@@ -97,13 +103,14 @@ const shareBand = (held: number | undefined) => Math.min(4, Math.max(1, Math.rou
 const bubbleRadius = (output: number) => 2.4 + 2.7 * Math.sqrt(output);
 
 /**
- * The province map. Modes colour the land by holder, terrain, fertility,
+ * The province map. Modes colour the land by holder, by its holder's side
+ * towards one country (the diplomatic view), terrain, fertility,
  * population density, resource output (on grey land) or grey for transport; rivers,
  * railways, ports, cities and province borders are overlays. Places and lines
  * appear as the zoom grows. Wheel or pinch zooms around the pointer, drag
  * pans, a click picks the province and its sovereign.
  */
-export default function WorldMap({ topology, regions, countries, selected, selectedProvince, player, era, year, onSelect, wars, changes, protests, focus, className, placeNames }: WorldMapProps) {
+export default function WorldMap({ topology, regions, countries, selected, selectedProvince, player, era, year, onSelect, wars, changes, protests, focus, diplomacy, controls, className, placeNames }: WorldMapProps) {
   const { text, t, locale, people } = useI18n();
   const uid = useId().replace(/:/g, "");
   const svgRef = useRef<SVGSVGElement>(null);
@@ -133,11 +140,15 @@ export default function WorldMap({ topology, regions, countries, selected, selec
   const { mode, resource, layers } = settings;
   const [layersOpen, setLayersOpen] = useState(false);
   const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null);
+  // The city under the pointer (or tapped), with the province beneath it; its card asks for railways and ports once.
+  const [cityHover, setCityHover] = useState<{ place: PlacePoint; region: string | null; x: number; y: number } | null>(null);
+  const [cityFacts, setCityFacts] = useState(false);
+  const placedRef = useRef<PlacedLabel[]>([]);
   const showRail = mode === "transport" || layers.railways;
   const showPorts = mode === "transport" || layers.ports;
   const water = useWater();
   const cities = useCities();
-  const transport = useTransport(showRail || showPorts);
+  const transport = useTransport(showRail || showPorts || cityFacts);
   // Towns also draw the fronts through contested provinces, so they load whenever there is one.
   const contestedAny = useMemo(() => Object.values(regions).some((r) => r.contested), [regions]);
   const towns = useTowns((layers.cities && view.k >= 3.5) || contestedAny);
@@ -203,13 +214,38 @@ export default function WorldMap({ topology, regions, countries, selected, selec
       .filter((p): p is NonNullable<typeof p> => p !== null);
   }, [transport, geometry]);
 
+  /** Railways open by the in-game year, by grid cell: what a city's card asks of them. */
+  const railIndex = useMemo(() => {
+    if (!transport) return null;
+    const rails = feature(transport, transport.objects.railways) as unknown as FeatureCollection<MultiLineString, { r: number; s: number }>;
+    const index = new SegmentIndex();
+    for (const f of rails.features) {
+      if (f.properties.s > year) continue;
+      const lines = (f.geometry.type as string) === "LineString" ? [f.geometry.coordinates as unknown as [number, number][]] : f.geometry.coordinates;
+      for (const line of lines) {
+        let prev: [number, number] | null = null;
+        for (const point of line) {
+          const p = geometry.projection(point as [number, number]);
+          // A line across the date line would span the map: it is cut there.
+          if (p && prev && Math.abs(p[0] - prev[0]) < W / 2) index.add(prev[0], prev[1], p[0], p[1], f.properties.r);
+          prev = p ?? null;
+        }
+      }
+    }
+    return index;
+  }, [transport, geometry, year]);
+
   /** The era's places and GeoNames' towns, projected and indexed; names as they were on the start date. */
   const placeIndex = useMemo(() => {
     const points: PlacePoint[] = [];
     const add = (list: ReturnType<typeof eraCities>) => {
       for (const c of list) {
         const p = geometry.projection([c.x, c.y]);
-        if (p) points.push({ name: c.name, px: p[0], py: p[1], kind: c.kind, minZoom: c.minZoom, priority: c.priority, r: placeRadius(c.kind, c.pop) });
+        if (!p) continue;
+        // The built-up radius in map units: its kilometres measured north of the place on this projection.
+        const north = geometry.projection([c.x, Math.min(89, c.y + cityRadiusKm(c.pop) / 111)]);
+        const extent = north ? Math.hypot(north[0] - p[0], north[1] - p[1]) : 0;
+        points.push({ name: c.name, key: c.key, pop: c.pop, px: p[0], py: p[1], kind: c.kind, minZoom: c.minZoom, priority: c.priority, r: placeRadius(c.kind, c.pop), extent });
       }
     };
     if (cities) add(eraCities(cities, era, locale, placeNames));
@@ -410,6 +446,7 @@ export default function WorldMap({ topology, regions, countries, selected, selec
       const ctm = svg.getScreenCTM();
       if (!ctm) return;
       const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
+      setCityHover(null);
       const factor = Math.pow(1.0018, -e.deltaY);
       const v = live.current;
       const k = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, v.k * factor));
@@ -440,7 +477,14 @@ export default function WorldMap({ topology, regions, countries, selected, selec
       // Plain hover: position the tooltip relative to the map box.
       const target = (e.target as Element).closest("[data-region]");
       const box = e.currentTarget.getBoundingClientRect();
-      setHover(target ? { id: target.getAttribute("data-region")!, x: e.clientX - box.left, y: e.clientY - box.top } : null);
+      const region = target?.getAttribute("data-region") ?? null;
+      const at = { x: e.clientX - box.left, y: e.clientY - box.top };
+      setHover(region ? { id: region, ...at } : null);
+      // A city's dot takes no pointer events: the nearest drawn place within reach is the one under the pointer.
+      const point = toSvg(e.clientX, e.clientY);
+      const city = placeAt(placedRef.current, point.x, point.y, live.current, unit);
+      setCityHover(city ? { place: city, region, ...at } : null);
+      if (city && !cityFacts) setCityFacts(true);
       return;
     }
     const next = { x: e.clientX, y: e.clientY };
@@ -459,6 +503,7 @@ export default function WorldMap({ topology, regions, countries, selected, selec
     const dy = (next.y - prev.y) / scale;
     gesture.current.moved += Math.abs(next.x - prev.x) + Math.abs(next.y - prev.y);
     if (gesture.current.moved > 3 && hover) setHover(null);
+    if (gesture.current.moved > 3 && cityHover) setCityHover(null);
     const v = live.current;
     showView(clampView({ k: v.k, x: v.x + dx, y: v.y + dy }), "soon");
   };
@@ -468,9 +513,18 @@ export default function WorldMap({ topology, regions, countries, selected, selec
     pointers.current.delete(e.pointerId);
     if (pointers.current.size < 2) gesture.current.pinch = undefined;
     if (!wasClick) showView(live.current, "now");
-    if (!wasClick || !onSelect) return;
+    if (!wasClick) return;
     const target = document.elementFromPoint(e.clientX, e.clientY)?.closest("[data-region]");
     const id = target?.getAttribute("data-region") ?? null;
+    // A tap on a touch screen opens a city's card, as hovering does with a mouse.
+    if (e.pointerType !== "mouse") {
+      const point = toSvg(e.clientX, e.clientY);
+      const city = placeAt(placedRef.current, point.x, point.y, live.current, unit);
+      const box = e.currentTarget.getBoundingClientRect();
+      setCityHover(city ? { place: city, region: id, x: e.clientX - box.left, y: e.clientY - box.top } : null);
+      if (city) setCityFacts(true);
+    }
+    if (!onSelect) return;
     onSelect(id ? (regions[id]?.owner ?? null) : null, id);
   };
 
@@ -509,13 +563,16 @@ export default function WorldMap({ topology, regions, countries, selected, selec
   const onScreen = (x: number, y: number) =>
     x >= -view.x / k - margin && x <= (W - view.x) / k + margin && y >= -view.y / k - margin && y <= (H - view.y) / k + margin;
   const transportMode = mode === "transport";
+  const diplomatic = mode === "diplomacy";
+  // The modes that colour countries as countries, and so name them.
+  const named = mode === "political" || transportMode || diplomatic;
 
   /** Names that fit: country names first, then places by importance (see places.ts). */
   const placed = useMemo((): PlacedLabel[] => {
     if (!layers.cities) return [];
     const kk = view.k;
     const obstacles: [number, number, number, number][] = [];
-    if (mode === "political" || mode === "transport") {
+    if (named) {
       for (const l of labels) {
         if (l.size * kk < 34) continue;
         const size = Math.min(15, Math.max(4, l.size / 7)) * (1 / Math.sqrt(kk)) * kk;
@@ -528,7 +585,35 @@ export default function WorldMap({ topology, regions, countries, selected, selec
     const pad = 40 / kk;
     const candidates = placeIndex.query(-view.x / kk - pad, -view.y / kk - pad, (W - view.x) / kk + pad, (H - view.y) / kk + pad, kk);
     return layoutPlaces(candidates, view, W, H, obstacles, unit);
-  }, [layers.cities, view, mode, labels, countries, text, placeIndex, unit]);
+  }, [layers.cities, view, named, labels, countries, text, placeIndex, unit]);
+  useEffect(() => {
+    placedRef.current = placed;
+  }, [placed]);
+
+  /** The card of the city under the pointer: what it is, its people, who holds it and what stands there. */
+  const cityCard = useMemo(() => {
+    if (!cityHover) return null;
+    const c = cityHover.place;
+    const region = cityHover.region ? regions[cityHover.region] : undefined;
+    const props = cityHover.region ? geometry.byId.get(cityHover.region) : undefined;
+    // The start date's people, moved as the province's have since (war, famine, growth).
+    const moved = region && props?.pop ? Math.min(3, Math.max(0.2, peopleIn(region, props) / props.pop)) : 1;
+    // A town of a contested province is the other side's when the game names it among those it holds.
+    const holder = region ? (region.contested && c.key && region.taken?.includes(c.key) ? region.contested : region.controller) : undefined;
+    const perKm = c.extent && c.pop ? c.extent / cityRadiusKm(c.pop) : 1 / 35;
+    const near = Math.max(c.extent ?? 0, 6 * perKm);
+    const rail = railIndex?.nearest(c.px, c.py, near) ?? null;
+    const port = portPoints.some((p) => Math.hypot(p.px - c.px, p.py - c.py) <= Math.max(c.extent ?? 0, 10 * perKm));
+    return {
+      ...cityHover,
+      people: c.pop !== undefined ? c.pop * moved : undefined,
+      holder,
+      occupied: Boolean(region && holder && holder !== region.owner),
+      front: Boolean(region?.contested),
+      rail: rail === null ? null : rail <= 4 ? ("trunk" as const) : ("line" as const),
+      port,
+    };
+  }, [cityHover, regions, geometry, railIndex, portPoints]);
   const resourceName = (type: ResourceType) => t(`resource.${type}` as MessageKey);
 
   return (
@@ -542,7 +627,10 @@ export default function WorldMap({ topology, regions, countries, selected, selec
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
-        onPointerLeave={() => setHover(null)}
+        onPointerLeave={() => {
+          setHover(null);
+          setCityHover(null);
+        }}
         role="img"
         aria-label="World map"
       >
@@ -562,12 +650,12 @@ export default function WorldMap({ topology, regions, countries, selected, selec
         <rect width={W} height={H} fill="var(--sea)" />
         <g ref={groupRef} transform={`translate(${view.x} ${view.y}) scale(${k})`}>
           <path d={geometry.sphere} fill="var(--sea)" stroke="none" />
-          <Regions shapes={geometry.shapes} regions={regions} countries={countries} mode={mode} resource={resource} year={year} hatch={`url(#hatch-${uid})`} contestPrefix={`contest-${uid}-`} split={splitIds} />
-          {(mode === "political" || transportMode) && splits.size > 0 && (
+          <Regions shapes={geometry.shapes} regions={regions} countries={countries} mode={mode} resource={resource} year={year} hatch={`url(#hatch-${uid})`} contestPrefix={`contest-${uid}-`} split={splitIds} sides={diplomatic ? diplomacy?.sides : undefined} />
+          {named && splits.size > 0 && (
             <g pointerEvents="none">
               {[...splits].map(([id, sp]) => {
                 const color = countries[sp.by]?.color;
-                const fill = transportMode ? "var(--map-quiet)" : softened(color);
+                const fill = transportMode ? "var(--map-quiet)" : diplomatic ? sideFill(diplomacy?.sides[sp.by]) : softened(color);
                 return color ? <path key={id} d={sp.held} style={{ fill, stroke: fill }} strokeWidth={0.6} vectorEffect="non-scaling-stroke" /> : null;
               })}
             </g>
@@ -771,7 +859,7 @@ export default function WorldMap({ topology, regions, countries, selected, selec
             </g>
           )}
           {placed.length > 0 && <Places placed={placed} k={k} unit={unit} />}
-          {(mode === "political" || transportMode) && (
+          {named && (
             <g pointerEvents="none">
               {labels.map((l) => {
                 // Shown once the land is big enough on screen to hold its name.
@@ -801,7 +889,7 @@ export default function WorldMap({ topology, regions, countries, selected, selec
       </svg>
 
       {mode === "political" && (frontKinds.war || frontKinds.truce || (turn && turn.changed.size > 0)) && (
-        <div className="absolute left-3 top-3 flex max-w-[16rem] flex-col gap-1 rounded-xl border border-line bg-surface/90 p-2.5 shadow-sm backdrop-blur @lg:bottom-3 @lg:top-auto">
+        <div className="absolute left-3 top-3 flex max-w-[16rem] flex-col gap-1 rounded-xl border border-line sheet p-2.5 shadow-sm @lg:bottom-3 @lg:top-auto">
           {frontKinds.war && (
             <span className="inline-flex items-center gap-2 text-2xs font-bold text-ink">
               <span className="h-0.5 w-5 rounded-full bg-war" />
@@ -835,7 +923,22 @@ export default function WorldMap({ topology, regions, countries, selected, selec
       )}
 
       {mode !== "political" && (
-        <div className="absolute left-3 top-3 max-w-[15rem] rounded-xl border border-line bg-surface/90 p-2.5 shadow-sm backdrop-blur @lg:bottom-3 @lg:top-auto @lg:max-w-[17rem]">
+        <div className="absolute left-3 top-3 max-w-[15rem] rounded-xl border border-line sheet p-2.5 shadow-sm @lg:bottom-3 @lg:top-auto @lg:max-w-[17rem]">
+          {diplomatic && (
+            <div className="flex flex-col gap-1.5">
+              <div className="text-2xs font-black uppercase tracking-wider text-muted">
+                {diplomacy?.subject && countries[diplomacy.subject] ? t("map.legend.relations", { country: text(countries[diplomacy.subject].name) }) : t("map.legend.pickCountry")}
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-1">
+                {LEGEND_SIDES.map(([side, key]) => (
+                  <span key={side} className="inline-flex items-center gap-1.5 text-2xs font-bold text-ink">
+                    <span className="h-2.5 w-2.5 rounded-sm border border-line" style={{ background: SIDE_FILL[side] }} />
+                    {t(key)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           {mode === "terrain" && (
             <div className="flex flex-wrap gap-x-3 gap-y-1">
               {(Object.keys(TERRAIN_COLORS) as (keyof typeof TERRAIN_COLORS)[]).map((key) => (
@@ -949,7 +1052,7 @@ export default function WorldMap({ topology, regions, countries, selected, selec
                 {t("map.legend.railway")}
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="grid h-3.5 w-3.5 place-items-center rounded-full border border-line bg-surface">
+                <span className="grid h-3.5 w-3.5 place-items-center rounded-full border border-line sheet">
                   <Anchor className="h-2.5 w-2.5" color="var(--river)" />
                 </span>
                 {t("map.legend.port")}
@@ -959,9 +1062,34 @@ export default function WorldMap({ topology, regions, countries, selected, selec
         </div>
       )}
 
-      {hover && hovered && hoveredProps && (
+      {cityCard && (
         <div
-          className="pointer-events-none absolute z-10 max-w-64 rounded-xl border border-line bg-surface/95 px-3 py-2 text-xs shadow-lg shadow-shade/10 backdrop-blur"
+          className="pointer-events-none absolute z-10 max-w-64 rounded-xl border border-line sheet px-3 py-2 text-xs shadow-lg shadow-shade/10"
+          style={{ left: cityCard.x + 14, top: cityCard.y + 14 }}
+        >
+          <div className="font-black text-ink">{cityCard.place.name}</div>
+          <div className="font-bold text-muted">
+            {t(`map.city.${cityCard.place.kind}` as MessageKey)}
+            {cityCard.people !== undefined && <> · {t("map.city.people", { n: people(cityCard.people) })}</>}
+          </div>
+          {cityCard.holder && (
+            <div className={`mt-1 font-bold ${cityCard.occupied ? "text-red-600" : "text-muted"}`}>
+              {t("map.city.heldBy", { country: text(countries[cityCard.holder]?.name ?? cityCard.holder) })}
+            </div>
+          )}
+          {(cityCard.front || cityCard.rail || cityCard.port) && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {cityCard.front && <span className="rounded-md bg-war/15 px-1.5 py-0.5 font-bold text-war">{t("map.city.front")}</span>}
+              {cityCard.rail && <span className="rounded-md bg-page px-1.5 py-0.5 font-bold text-ink">{t(`map.city.rail.${cityCard.rail}` as MessageKey)}</span>}
+              {cityCard.port && <span className="rounded-md bg-sea/15 px-1.5 py-0.5 font-bold text-ink">{t("map.city.port")}</span>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!cityCard && hover && hovered && hoveredProps && (
+        <div
+          className="pointer-events-none absolute z-10 max-w-64 rounded-xl border border-line sheet px-3 py-2 text-xs shadow-lg shadow-shade/10"
           style={{ left: hover.x + 14, top: hover.y + 14 }}
         >
           <div className="font-black text-ink">{provinceName(hoveredProps, locale)}</div>
@@ -1021,15 +1149,17 @@ export default function WorldMap({ topology, regions, countries, selected, selec
               onClick={() => zoomButton(factor)}
               title={label}
               aria-label={label}
-              className="group grid h-9 w-9 place-items-center rounded-xl border border-line bg-surface/90 shadow-sm backdrop-blur transition-all hover:border-accent/30"
+              className="group grid h-9 w-9 place-items-center rounded-xl border border-line sheet shadow-sm transition-all hover:border-accent/30"
             >
               <Icon className="h-4 w-4 text-muted group-hover:text-accent" />
             </button>
           ))}
         </div>
 
+        {controls}
+
         {layersOpen && (
-          <div className="w-52 rounded-xl border border-line bg-surface/95 p-1.5 shadow-lg shadow-shade/10 backdrop-blur">
+          <div className="w-52 rounded-xl border border-line sheet p-1.5 shadow-lg shadow-shade/10">
             {MAP_LAYERS.map((layer) => {
               const forced = transportMode && (layer === "railways" || layer === "ports");
               return (
@@ -1051,13 +1181,13 @@ export default function WorldMap({ topology, regions, countries, selected, selec
           </div>
         )}
 
-        <div className="flex flex-col items-end gap-1 rounded-xl border border-line bg-surface/90 p-1 shadow-sm backdrop-blur">
+        <div className="flex flex-col items-end gap-1 rounded-xl border border-line sheet p-1 shadow-sm">
           {mode === "resources" && (
             <select
               value={resource}
               onChange={(e) => updateSettings({ resource: e.target.value as ResourceType | "all" })}
               aria-label={t("map.mode.resources")}
-              className="w-full rounded-lg border border-line bg-surface px-2 py-1 text-xs font-bold text-ink outline-none focus:border-ink"
+              className="w-full rounded-lg border border-line sheet px-2 py-1 text-xs font-bold text-ink outline-none focus:border-ink"
             >
               <option value="all">{t("map.resource.all")}</option>
               {RESOURCE_TYPES.map((type) => (
@@ -1068,7 +1198,6 @@ export default function WorldMap({ topology, regions, countries, selected, selec
             </select>
           )}
           <div className="flex items-center gap-0.5">
-            <span className="hidden px-1.5 text-2xs font-black uppercase tracking-wider text-ink @2xl:inline">{t(`map.mode.${mode}` as MessageKey)}</span>
             {MAP_MODES.map((m) => {
               const Icon = MODE_ICONS[m];
               const label = t(`map.mode.${m}` as MessageKey);
@@ -1104,6 +1233,14 @@ export default function WorldMap({ topology, regions, countries, selected, selec
   );
 }
 
+/** The sides the diplomatic view's legend names, in its order; a truce shares the pact's colour. */
+const LEGEND_SIDES: [Side, MessageKey][] = [
+  ["ally", "map.legend.ally"],
+  ["partner", "map.legend.partner"],
+  ["enemy", "map.legend.enemy"],
+  ["pact", "map.legend.pact"],
+];
+
 interface RegionsProps {
   shapes: { id: string; d: string; props: MapRegion }[];
   regions: Record<string, RegionState>;
@@ -1116,12 +1253,17 @@ interface RegionsProps {
   contestPrefix: string;
   /** Contested provinces drawn split along the front, without stripes. */
   split: Set<string>;
+  /** In the diplomatic view, each country's side towards the one it is about. */
+  sides?: Record<string, Side>;
 }
 
 /** The colour of a province in a mode. */
-function fillOf(props: MapRegion, region: RegionState | undefined, countries: Record<string, MapCountry>, mode: MapMode, resource: ResourceType | "all", year: number): string {
+function fillOf(props: MapRegion, region: RegionState | undefined, countries: Record<string, MapCountry>, mode: MapMode, resource: ResourceType | "all", year: number, sides?: Record<string, Side>): string {
   const holderColor = region ? countries[region.controller]?.color : undefined;
   switch (mode) {
+    case "diplomacy":
+      // Who holds the land, by their side towards the country the view is about; the rest is quiet.
+      return sideFill(region ? sides?.[region.controller] : undefined);
     case "terrain":
       return TERRAIN_COLORS[props.terrain];
     case "fertility":
@@ -1145,14 +1287,14 @@ function fillOf(props: MapRegion, region: RegionState | undefined, countries: Re
 }
 
 /** The filled provinces; memoised so panning only moves the group transform. */
-const Regions = memo(function Regions({ shapes, regions, countries, mode, resource, year, hatch, contestPrefix, split }: RegionsProps) {
+const Regions = memo(function Regions({ shapes, regions, countries, mode, resource, year, hatch, contestPrefix, split, sides }: RegionsProps) {
   const hatched = mode === "political" || mode === "transport";
   // One path per province; the hatching of occupied ones is a separate,
   // click-through layer, so the map holds as few elements as it can.
   return (
     <g>
       {shapes.map((s) => (
-        <path key={s.id} d={s.d} data-region={s.id} style={{ fill: fillOf(s.props, regions[s.id], countries, mode, resource, year) }} className="cursor-pointer hover:brightness-110" />
+        <path key={s.id} d={s.d} data-region={s.id} style={{ fill: fillOf(s.props, regions[s.id], countries, mode, resource, year, sides) }} className="cursor-pointer hover:brightness-110" />
       ))}
       {hatched && (
         <g pointerEvents="none">
@@ -1177,9 +1319,12 @@ const Places = memo(function Places({ placed, k, unit }: { placed: PlacedLabel[]
       {placed.map(({ place: c, side }, i) => {
         const capital = c.kind === "capital";
         const { font: fs } = PLACE_STYLE[c.kind];
-        const r = (c.r * unit) / k;
+        const onScreen = dotRadius(c, k, unit);
+        const r = onScreen / k;
         const font = (fs * unit) / k;
-        const gap = r * 1.7;
+        const gap = labelGap(onScreen, unit) / k;
+        // A city drawn at its true extent is a light disc, so the land under it still reads.
+        const wide = onScreen > 6 * unit;
         const at =
           side === "left"
             ? { x: c.px - gap, y: c.py, anchor: "end" as const }
@@ -1192,8 +1337,8 @@ const Places = memo(function Places({ placed, k, unit }: { placed: PlacedLabel[]
           <g key={i}>
             {capital ? (
               <>
-                <circle cx={c.px} cy={c.py} r={r} fill="none" stroke="var(--map-text)" strokeOpacity={0.6} strokeWidth={(0.9 * unit) / k} />
-                <circle cx={c.px} cy={c.py} r={r * 0.45} fill="var(--map-text)" fillOpacity={0.6} />
+                <circle cx={c.px} cy={c.py} r={r} fill={wide ? "var(--map-text)" : "none"} fillOpacity={0.14} stroke="var(--map-text)" strokeOpacity={0.6} strokeWidth={(0.9 * unit) / k} />
+                <circle cx={c.px} cy={c.py} r={wide ? (2 * unit) / k : r * 0.45} fill="var(--map-text)" fillOpacity={0.6} />
               </>
             ) : (
               <circle
@@ -1201,7 +1346,10 @@ const Places = memo(function Places({ placed, k, unit }: { placed: PlacedLabel[]
                 cy={c.py}
                 r={r}
                 fill="var(--map-text)"
-                fillOpacity={c.kind === "city" ? 0.5 : 0.35}
+                fillOpacity={wide ? 0.2 : c.kind === "city" ? 0.5 : 0.35}
+                stroke={wide ? "var(--map-text)" : undefined}
+                strokeOpacity={0.35}
+                strokeWidth={wide ? (0.8 * unit) / k : undefined}
               />
             )}
             {side && (

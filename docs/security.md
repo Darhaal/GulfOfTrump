@@ -87,6 +87,14 @@ against the state before anything is applied; stat changes are clamped to
   revoked from `authenticated` — RLS does not cover `TRUNCATE`.
 - The profile trigger is `security definer` with an empty `search_path`.
 - Saves are capped at 5 MB per row.
+- Exported save files are sealed (gzip, then AES-GCM, `src/lib/saveFile.ts`):
+  one changed byte and the game refuses the file. The key is in the open
+  code, so this stops editing by hand, not a programmer; on every load the
+  engine also brings back what no game could reach – reserves past two years
+  of output and one more for every year played, taxes past two, stores past
+  twelve months
+  (`boundEconomy` in `src/engine/economy.ts`). Plain JSON saves import only
+  from before sealed files (save step 21 or earlier).
 
 The anon key in `.env.local` is public by design; RLS is what protects the data.
 

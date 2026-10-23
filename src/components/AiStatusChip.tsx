@@ -1,15 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useI18n } from "@/i18n/useI18n";
 import { useGameMaster } from "@/lib/gameMaster";
+import { openAppDialog } from "./AppDialogs";
 import GameMasterChoice from "./GameMasterChoice";
 
 /**
  * A small pill in the header: who plays the world. Connected or in the demo
- * it links to Settings; with no game master it offers the choice — sign in
+ * it opens Settings; with no game master it offers the choice — sign in
  * with ChatGPT, or play the demo.
  */
 export default function AiStatusChip() {
@@ -18,7 +18,7 @@ export default function AiStatusChip() {
   const [choosing, setChoosing] = useState(false);
   const ok = chatgpt || demo;
   const className = `group hidden sm:inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition-all ${
-    chatgpt ? "border-line bg-surface text-ink hover:border-accent/30" : "border-amber-500/40 bg-amber-50 text-amber-700 hover:border-amber-500"
+    chatgpt ? "border-line sheet text-ink hover:border-accent/30" : "border-amber-500/40 bg-amber-50 text-amber-700 hover:border-amber-500"
   }`;
   const content = (
     <>
@@ -29,9 +29,9 @@ export default function AiStatusChip() {
   );
   if (ok || !canChoose || status === null)
     return (
-      <Link href="/settings" className={className}>
+      <button type="button" onClick={() => openAppDialog("settings")} className={className}>
         {content}
-      </Link>
+      </button>
     );
   return (
     <>

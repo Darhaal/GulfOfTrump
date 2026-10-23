@@ -30,7 +30,8 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-export default function SettingsClient() {
+/** Settings as a page, or `embedded` in the header's popup: no header of its own, and About opens beside it. */
+export default function SettingsClient({ embedded = false, onOpenAbout }: { embedded?: boolean; onOpenAbout?: () => void }) {
   const { t, locale, setLocale } = useI18n();
   const { desktop, fullScreen } = useDesktopWindow();
   const [theme, setTheme] = usePreference("theme");
@@ -116,9 +117,9 @@ export default function SettingsClient() {
   const cloud = isCloudEnabled();
 
   return (
-    <div className="min-h-screen">
-      <AppHeader back="/" title={t("settings.title")} subtitle={`${t("app.stage")} ${APP_VERSION}`} />
-      <main className="mx-auto grid max-w-3xl gap-4 px-4 py-6">
+    <div className={embedded ? "" : "min-h-screen"}>
+      {!embedded && <AppHeader back="/" title={t("settings.title")} subtitle={`${t("app.stage")} ${APP_VERSION}`} />}
+      <main className={embedded ? "grid gap-4" : "mx-auto grid max-w-3xl gap-4 px-4 py-6"}>
         <Section title={t("ai.title")}>
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center gap-3">
@@ -268,10 +269,17 @@ export default function SettingsClient() {
         <Section title={t("settings.about")}>
           <p className="text-sm font-medium leading-relaxed text-ink">{t("settings.aboutText")}</p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Link href="/about" className={`${ui.secondary} px-4 py-2.5 text-xs`}>
-              <Info className="h-4 w-4" />
-              {t("nav.about")}
-            </Link>
+            {onOpenAbout ? (
+              <button type="button" onClick={onOpenAbout} className={`${ui.secondary} px-4 py-2.5 text-xs`}>
+                <Info className="h-4 w-4" />
+                {t("nav.about")}
+              </button>
+            ) : (
+              <Link href="/about" className={`${ui.secondary} px-4 py-2.5 text-xs`}>
+                <Info className="h-4 w-4" />
+                {t("nav.about")}
+              </Link>
+            )}
             <Link href="/privacy" className={`${ui.secondary} px-4 py-2.5 text-xs`}>
               <ShieldCheck className="h-4 w-4" />
               {t("nav.privacy")}

@@ -1,4 +1,4 @@
-import { SummitCloseSchema, SummitTalkSchema } from "@/engine/foreign";
+import { playerHasSpoken, SummitCloseSchema, SummitTalkSchema } from "@/engine/foreign";
 import { buildSummitPrompt, SUMMIT_CLOSE_INSTRUCTIONS, SUMMIT_TALK_INSTRUCTIONS } from "@/engine/prompts";
 import { wantsDemo } from "@/server/demo";
 import { rejectNonLocal } from "@/server/guard";
@@ -27,6 +27,8 @@ export async function POST(request: Request) {
   const finish = body.finish === true;
   const line = typeof body.line === "string" ? body.line.trim() : "";
   if (!finish && (!line || line.length > MAX_MESSAGE_CHARS)) return badRequest("The statement is empty or too long.");
+  // Nothing is settled at a meeting the player's delegation has not spoken at.
+  if (finish && !playerHasSpoken(summit, state.player)) return badRequest("The player's delegation has not spoken yet.");
 
   return ndjsonResponse(request, async ({ signal, progress }) => {
     let chars = 0;

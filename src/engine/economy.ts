@@ -1,7 +1,9 @@
 import { yearOf } from "./calendar";
 import { peopleIn } from "./population";
+import { programmeShift } from "./programmes";
 import { crisisLimits, interestOf } from "./crises";
 import { callUpFactor } from "./laws";
+import { BEHIND_CALL_UP, BEHIND_TAKES, countsFor, heldBehind } from "./occupation";
 import { activeResources, linearOutput, RESOURCE_TYPES, type ResourceType } from "./resources";
 import type { Budget, Economy, EconomyFigures, GameState, MapRegion, RegionState, ScenarioId, TimeStep } from "./types";
 import { unitsPerPoint } from "./units";
@@ -525,9 +527,16 @@ export function seedEconomies<T extends Pick<GameState, "countries" | "regions" 
 const OWNER_UNDER_OCCUPATION = 0.3;
 const OCCUPIER_TAKES = 0.4;
 
-/** Who draws on a province's output: its owner in full, or under occupation a part to the owner and a part to the occupier; the rest is lost. */
+/**
+ * Who draws on a province's output: its owner in full; under occupation on a
+ * front a part to the owner and a part to the occupier; once the front has
+ * left it behind, the captor alone, less than from its own land
+ * (engine/occupation.ts). The rest is lost.
+ */
 export function outputShares(r: RegionState): [string, number][] {
-  return r.controller === r.owner ? [[r.owner, 1]] : [[r.owner, OWNER_UNDER_OCCUPATION], [r.controller, OCCUPIER_TAKES]];
+  if (r.controller === r.owner) return [[r.owner, 1]];
+  if (heldBehind(r)) return [[r.controller, BEHIND_TAKES]];
+  return [[r.owner, OWNER_UNDER_OCCUPATION], [r.controller, OCCUPIER_TAKES]];
 }
 
 /**
@@ -579,12 +588,16 @@ export function followLand(
     const ratio = gdp / e.gdp;
     e.gdp = money(gdp);
     e.budget.revenue = money(e.budget.revenue * ratio);
+    // The schools, pensions, roads and offices of land lost are no longer paid for, nor those of land won paid by nobody;
+    // the army stays what it is. Without this a state that lost most of its land kept its whole civil budget on a
+    // fraction of its taxes, and printed money for decades.
+    for (const line of ["industry", "social", "other"] as const) e.budget[line] = money(e.budget[line] * ratio);
   }
 }
 
 /** What a country produces, needs and trades this year, derived from the map and the economies. */
 export interface Accounts {
-  /** People in the provinces it owns, thousands. */
+  /** People in the provinces it owns, and in those the front has left behind in its hands, thousands. */
   population: number;
   /** Most it could put in uniform, thousands. */
   mobilisable: number;
@@ -801,20 +814,25 @@ export function nationalAccounts(state: Pick<GameState, "countries" | "regions" 
     return a;
   };
   const world: Partial<Record<ResourceType, number>> = {};
-  // Output of the land each country owns, whoever holds it.
+  // Output of the land each country owns, whoever holds it, or holds behind the front until a peace (engine/occupation.ts).
   const owned = new Map<string, Partial<Record<ResourceType, number>>>();
+  // People of captured land behind the front: counted as the captor's, few of them called up.
+  const captured = new Map<string, number>();
   for (const [id, r] of Object.entries(state.regions)) {
     const p = regions[id];
     if (!p) continue;
-    get(r.owner).population += peopleIn(r, p);
+    const by = countsFor(r);
+    const n = peopleIn(r, p);
+    get(by).population += n;
+    if (by !== r.owner) captured.set(by, (captured.get(by) ?? 0) + n);
     for (const { type, output } of activeResources(p, year)) {
       const held = get(r.controller);
       const amount = linearOutput(output);
       held.production[type] = (held.production[type] ?? 0) + amount;
       world[type] = (world[type] ?? 0) + amount;
-      const own = owned.get(r.owner) ?? {};
+      const own = owned.get(by) ?? {};
       own[type] = (own[type] ?? 0) + amount;
-      owned.set(r.owner, own);
+      owned.set(by, own);
     }
   }
   let worldGdp = 0;
@@ -844,8 +862,9 @@ export function nationalAccounts(state: Pick<GameState, "countries" | "regions" 
   }
   for (const [tag, c] of Object.entries(state.countries)) {
     const a = get(tag);
-    // The player's call-up law widens or narrows the reserve.
-    a.mobilisable = Math.round(a.population * era.mobilise * (tag === state.player ? callUpFactor(state.politics?.laws) : 1));
+    // The player's call-up law widens or narrows the reserve; captured land gives few soldiers.
+    const callable = a.population - (captured.get(tag) ?? 0) * (1 - BEHIND_CALL_UP);
+    a.mobilisable = Math.round(callable * era.mobilise * (tag === state.player ? callUpFactor(state.politics?.laws) : 1));
     if (!c.economy || worldGdp <= 0) continue;
     for (const type of RESOURCE_TYPES) {
       const total = world[type] ?? 0;
@@ -916,10 +935,24 @@ export function limitChange(change: EconomyChange, current: Economy): EconomyCha
 const PAY_SHARE = 0.5;
 /** Of the people, the share who work or look for work: soldiers called up leave it. */
 const WORKFORCE = 0.45;
+/** Of a deficit with its interest, the share met from the reserves while they last above their floor; the rest is borrowed. */
+const RESERVE_SHARE = 0.25;
+/** The band the reserves settle in, as shares of the era's normal holdings: drawn no lower for a deficit, pulled back above it. */
+const RESERVE_FLOOR = 0.5;
+const RESERVE_CEILING = 2;
 /** Of a deficit and interest, the share of GDP a government abroad lets run before it trims, unless its debt is past 90% of GDP. */
 const TOLERATED_DEFICIT = 0.03;
 /** Prices settle back to no more than this once nothing pushes them, % a year: a date's surge (2022's) does not last forever. */
 const CALM_INFLATION = 4;
+/** Debt past this many years of GDP makes a government abroad default; what is left after the write-down. */
+const DEFAULT_DEBT = 3;
+const RESTRUCTURED_DEBT = 1.2;
+/** The surplus, as a share of GDP, a government abroad with little debt keeps before it gives the rest back. */
+const SURPLUS_KEPT = 0.02;
+/** Most of a year's GDP the trade in strategic resources moves the reserves by, before the share that reaches them. */
+const TRADE_HELD = 0.25;
+/** Of the gap between unemployment and the era's usual level, the share that closes in a year. */
+const UNEMPLOYMENT_RETURN = 0.2;
 
 /** In a war that is not under a truce. */
 function fighting(state: Partial<Pick<GameState, "wars" | "date">>, tag: string): boolean {
@@ -942,10 +975,13 @@ function fighting(state: Partial<Pick<GameState, "wars" | "date">>, tag: string)
  * - GDP grows with real growth and the dollar, an untouched budget keeps its
  *   share of GDP, and a government abroad with a deficit it cannot carry
  *   trims spending and raises taxes;
- * - a deficit and the interest on the debt add to the debt; the trade in
- *   strategic resources moves the reserves, and the rest of the economy pulls
- *   them back towards the era's normal holdings (less so when trade is cut);
- *   what the reserves cannot cover is borrowed;
+ * - the interest on the debt is paid every turn; a deficit with it is met
+ *   partly from the reserves while they stand above half the era's normal
+ *   holdings, the rest borrowed; a surplus pays down half of what is owed and
+ *   puts the rest by; the trade in strategic resources moves the reserves,
+ *   and the rest of the economy pulls them back into a band of half to twice
+ *   the era's normal holdings (less so when trade is cut); what the reserves
+ *   cannot cover is borrowed;
  * - a country whose imports are cut lives off its stores.
  * Pure; returns the new economies by country.
  */
@@ -982,8 +1018,9 @@ export function advanceEconomies(
     const goneWithout = a && e.tradeCut < 1 ? (a.imports * e.tradeCut) / (1 - e.tradeCut) : 0;
     const drag = Math.min(10, ((lostExports + goneWithout) / gdpBefore) * 100);
 
-    // Growth drifts back towards the era's trend, less the drag, unless the model says otherwise.
-    e.growth = change.growth ?? round(e.growth + (era.trend - drag - e.growth) * Math.min(1, years) * 0.5);
+    // Growth drifts back towards the era's trend, less the drag and moved by the policies at work (engine/programmes.ts), unless the model says otherwise.
+    const shift = programmeShift(country, state.date).growth;
+    e.growth = change.growth ?? round(e.growth + (era.trend + shift - drag - e.growth) * Math.min(1, years) * 0.5);
 
     // Crises bite whatever the game master says: no growth through a shortage, hyperinflation or a debt crisis,
     // and prices that cannot fall while the deficit is printed.
@@ -1023,7 +1060,9 @@ export function advanceEconomies(
     else {
       const workforce = (a?.population ?? 0) * WORKFORCE;
       const drafted = workforce > 0 ? (Math.max(0, e.troops - before.troops) / workforce) * 100 : 0;
-      e.unemployment = round(clamp(before.unemployment - 0.4 * (e.growth - era.trend) * years - drafted, 0, 60));
+      // Out of a slump, jobs come back slowly towards the era's usual level, rather than staying lost for decades.
+      const back = (era.unemployment - before.unemployment) * Math.min(1, UNEMPLOYMENT_RETURN * years);
+      e.unemployment = round(clamp(before.unemployment - 0.4 * (e.growth - era.trend) * years - drafted + back, 0, 60));
     }
 
     // A government abroad that the model leaves alone keeps its books like most did: it lets run a deficit that does not raise
@@ -1041,18 +1080,53 @@ export function advanceEconomies(
         e.budget.other = money(Math.max(e.budget.revenue * 0.1, e.budget.other - fix / 2));
         e.budget.revenue = money(Math.min(e.gdp * 0.5, e.budget.revenue + fix / 2));
       }
+      // Nor does it hoard: a surplus past two points of GDP with little debt left goes back in lower taxes and more spending at home.
+      const spare = balance(e) - interestOf(before, state.scenarioId) - SURPLUS_KEPT * e.gdp;
+      if (spare > 0 && ratio < 0.3) {
+        const give = spare * Math.min(1, years * 0.25);
+        e.budget.revenue = money(Math.max(e.gdp * 0.05, e.budget.revenue - give / 2));
+        e.budget.social = money(e.budget.social + give / 2);
+      }
     }
 
-    // The books: a deficit and the interest on the debt are borrowed, trade and loans move the reserves;
-    // what the reserves cannot cover is borrowed too.
+    // The books, every turn whatever the game master says. Loans it reports add to both the debt and the reserves.
+    // The period's balance after interest: a deficit is met partly from the reserves above their floor, the rest borrowed;
+    // a surplus pays down half of what is owed and puts the rest by.
     const borrow = change.borrow ?? 0;
-    e.debt = money(Math.max(0, before.debt - balance(e) * years + interestOf(before, state.scenarioId) * years + borrow));
-    const trade = a ? (a.exports - lostExports - a.imports) * years * 0.2 : 0;
-    // The rest of the current account and the flows of capital pull the reserves back towards what the era's states held,
-    // so a country that buys its oil does not run dry in peace, nor one that sells it pile up gold forever.
-    const pull = (gdpBefore * era.reserves - before.reserves) * Math.min(1, years * 0.25) * (1 - e.tradeCut);
-    const reserves = before.reserves + trade + pull + borrow;
-    if (reserves < 0) e.debt = money(e.debt - reserves);
+    const norm = gdpBefore * era.reserves;
+    const gap = balance(e) * years - interestOf(before, state.scenarioId) * years;
+    let debt = before.debt + borrow;
+    let reserves = before.reserves + borrow;
+    if (gap < 0) {
+      const drawn = Math.min(-gap * RESERVE_SHARE, Math.max(0, before.reserves - norm * RESERVE_FLOOR));
+      reserves -= drawn;
+      debt += -gap - drawn;
+    } else {
+      const repaid = Math.min(Math.max(0, debt), gap / 2);
+      debt -= repaid;
+      reserves += gap - repaid;
+    }
+    // Trade in strategic resources moves the reserves. The rest of the current account and the flows of capital pull them
+    // back into a band around what the era's states held, so a country that buys its oil does not run dry in peace,
+    // nor one that sells it pile up gold forever.
+    // The surplus or gap in that trade is held within a quarter of GDP a year: a state that has lost most of its land
+    // still digs the resources the accounts value, and must not pile up gold many times its shrunken economy.
+    const traded = a ? clamp(a.exports - lostExports - a.imports, -TRADE_HELD * gdpBefore, TRADE_HELD * gdpBefore) : 0;
+    reserves += traded * years * 0.2;
+    const settle = Math.min(Math.max(reserves, norm * RESERVE_FLOOR), norm * RESERVE_CEILING);
+    reserves += (settle - reserves) * Math.min(1, years * 0.25) * (1 - e.tradeCut);
+    // Reserves past the band pay off debt first, never below the eighth of GDP that keeps a borrower trusted (crises.ts interestRate).
+    const idle = reserves - Math.max(norm * RESERVE_CEILING, 0.125 * gdpBefore);
+    if (idle > 0 && debt > 0) {
+      const paid = Math.min(debt, idle * Math.min(1, years));
+      debt -= paid;
+      reserves -= paid;
+    }
+    if (reserves < 0) debt -= reserves;
+    // A government abroad whose debt has outgrown its economy past any hope of paying – most often a state that lost
+    // most of its land and kept its debt – defaults, and its creditors write the debt down.
+    if (tag !== state.player && debt > DEFAULT_DEBT * e.gdp) debt = RESTRUCTURED_DEBT * e.gdp;
+    e.debt = money(Math.max(0, debt));
     e.reserves = money(Math.max(0, reserves));
 
     // Stores, in months of need: cut-off imports eat them, a surplus refills them.
@@ -1098,6 +1172,74 @@ export function setBudget<T extends Pick<GameState, "countries" | "player" | "da
 }
 
 /** The figures the turn report compares for the player. */
+/**
+ * The bounds of boundEconomy, in years of output where they are money. Past
+ * anything the engine lets a country reach however long the game runs – it
+ * settles reserves around a tenth to a third of GDP and caps taxes at 70% of
+ * it, so even a country that spent nothing could not put by a year of output
+ * every year – and past any country in history (the largest reserves ever
+ * held were about 1.3 years of output): what lies beyond was written into
+ * the save by hand.
+ */
+export const ECONOMY_BOUNDS = { reserves: 2, reservesPerYear: 1, revenue: 2, troops: 1_000_000 } as const;
+
+/** What a country's money is measured against: its own output, or a quarter of the largest economy's for a government left with little land (one in exile keeps its gold). */
+export interface EconomyBasis {
+  /** The largest GDP in the world. */
+  largest: number;
+  /** Years since the game began. */
+  years: number;
+}
+
+/**
+ * An economy with what no game could have reached taken out: reserves past
+ * two years of output and one more for every year played, taxes past two,
+ * a billion soldiers, stores past what the engine keeps, rates outside any
+ * country's, figures that are not numbers. Debt and spending have no
+ * ceiling: a game can run them up, and more of either never helps a player.
+ * A save edited by hand, or a cloud copy changed outside the game, loads as
+ * a country the engine can run; a played game, however long, loads unchanged.
+ */
+export function boundEconomy(e: Economy, basis: EconomyBasis = { largest: 0, years: 0 }): Economy {
+  const n = (value: number, min: number, max = Infinity) => (Number.isFinite(value) ? clamp(value, min, max) : min);
+  const gdp = Number.isFinite(e.gdp) && e.gdp > 0 ? e.gdp : 0.05;
+  const output = Math.max(gdp, (Number.isFinite(basis.largest) ? basis.largest : 0) / 4);
+  const years = Number.isFinite(basis.years) ? Math.max(0, basis.years) : 0;
+  return {
+    ...e,
+    gdp,
+    growth: n(e.growth, -100, 100),
+    inflation: n(e.inflation, -100, 1_000_000),
+    unemployment: n(e.unemployment, 0, 100),
+    budget: {
+      revenue: n(e.budget.revenue, 0, output * ECONOMY_BOUNDS.revenue),
+      army: n(e.budget.army, 0),
+      industry: n(e.budget.industry, 0),
+      social: n(e.budget.social, 0),
+      other: n(e.budget.other, 0),
+    },
+    debt: n(e.debt, 0),
+    reserves: n(e.reserves, 0, output * (ECONOMY_BOUNDS.reserves + ECONOMY_BOUNDS.reservesPerYear * years)),
+    troops: n(e.troops, 0, ECONOMY_BOUNDS.troops),
+    tradeCut: n(e.tradeCut, 0, 1),
+    ...(e.stocks ? { stocks: Object.fromEntries(Object.entries(e.stocks).map(([k, v]) => [k, n(v ?? 0, 0, MAX_STOCK_MONTHS)])) } : {}),
+  };
+}
+
+/** Every country's economy within boundEconomy, `years` after the game began; the same object where nothing was out of bounds. */
+export function boundEconomies<T extends Pick<GameState, "countries">>(state: T, years = 0): T {
+  const largest = Math.max(0, ...Object.values(state.countries).map((c) => (c.economy && Number.isFinite(c.economy.gdp) ? c.economy.gdp : 0)));
+  let countries: GameState["countries"] | null = null;
+  for (const [tag, country] of Object.entries(state.countries)) {
+    if (!country.economy) continue;
+    const bounded = boundEconomy(country.economy, { largest, years });
+    if (JSON.stringify(bounded) === JSON.stringify(country.economy)) continue;
+    countries ??= { ...state.countries };
+    countries[tag] = { ...country, economy: bounded };
+  }
+  return countries ? { ...state, countries } : state;
+}
+
 export const snapshot = (e: Economy): EconomyFigures => ({ gdp: e.gdp, debt: e.debt, reserves: e.reserves, troops: e.troops, balance: round(balance(e), 2) });
 
 /** "$39 bn", "$1.2 tn", "$450 M" — for the prompt. */

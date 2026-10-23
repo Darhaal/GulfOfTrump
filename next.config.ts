@@ -19,6 +19,15 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "no-referrer" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
+          // The desktop app's page is cross-origin isolated, so the game's own
+          // voice (public/voice/tts-worker.js) runs on several threads; it loads
+          // nothing from other sites itself, and its links open in the system browser.
+          ...(process.env.GOT_DESKTOP === "1"
+            ? [
+                { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+                { key: "Cross-Origin-Embedder-Policy", value: "credentialless" },
+              ]
+            : []),
         ],
       },
     ];

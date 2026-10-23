@@ -5,6 +5,7 @@ import { Flag, Loader2, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import CountryFlag from "@/components/Flag";
 import AppHeader from "@/components/AppHeader";
+import DownloadButton from "@/components/DownloadButton";
 import CountryDetails from "@/components/game/CountryDetails";
 import WorldMap from "@/components/map/WorldMap";
 import { ui } from "@/components/ui/classes";
@@ -12,7 +13,9 @@ import { formatDate, yearOf } from "@/engine/calendar";
 import { getScenario } from "@/engine/scenarios";
 import { nationalAccounts, seedEconomies } from "@/engine/economy";
 import { peopleByOwner } from "@/engine/provinces";
+import { ABOUT_CHARS } from "@/engine/role";
 import { createGame, regionsByOwner, startingWorld } from "@/engine/setup";
+import { sidesOf } from "@/engine/sides";
 import { tr } from "@/engine/text";
 import { GAME_MODES, ROLE_KINDS, type GameMode, type RoleKind, type ScenarioId } from "@/engine/types";
 import { useI18n } from "@/i18n/useI18n";
@@ -28,12 +31,10 @@ export default function PickClient({ scenarioId }: { scenarioId: ScenarioId }) {
   const [selected, setSelected] = useState<string | null>(scenario.featured[0] ?? null);
   const [query, setQuery] = useState("");
   const [starting, setStarting] = useState(false);
-  const [mode, setMode] = useState<GameMode>("free");
-  const [fog, setFog] = useState(true);
-  // Who the player is: the country's leader, or its opposition with the names they give (engine/role.ts).
+  const [mode, setMode] = useState<GameMode>(GAME_MODES[0]);
+  // Who the player is: the country's leader, or its opposition as they describe it in a paragraph (engine/role.ts).
   const [role, setRole] = useState<RoleKind>("leader");
-  const [person, setPerson] = useState("");
-  const [movement, setMovement] = useState("");
+  const [about, setAbout] = useState("");
 
   // The starting world with every country's economy, as a new game will have it.
   const world = useMemo(
@@ -46,6 +47,8 @@ export default function PickClient({ scenarioId }: { scenarioId: ScenarioId }) {
   );
   const counts = useMemo(() => (world ? regionsByOwner(world) : new Map<string, string[]>()), [world]);
   const population = useMemo(() => (world ? peopleByOwner(world.regions, map?.index) : new Map<string, number>()), [world, map]);
+  // The map's diplomatic view of the picked country, from the start date's wars and treaties; no player yet, so no fog.
+  const diplomacy = useMemo(() => ({ subject: selected, sides: selected ? sidesOf(scenario, selected) : {} }), [scenario, selected]);
 
   const groups = useMemo(() => {
     if (!world) return null;
@@ -66,7 +69,7 @@ export default function PickClient({ scenarioId }: { scenarioId: ScenarioId }) {
     if (!map || !selected) return;
     setStarting(true);
     try {
-      const state = createGame(scenario, map.regions, selected, new Date(), locale, { fog, mode, role: { kind: role, person, movement } });
+      const state = createGame(scenario, map.regions, selected, new Date(), locale, { mode, role: { kind: role, about } });
       await writeSave(state);
       router.push(`/play/${state.id}`);
     } catch {
@@ -90,7 +93,6 @@ export default function PickClient({ scenarioId }: { scenarioId: ScenarioId }) {
       >
         <CountryFlag tag={c.tag} scenario={scenario.id} color={c.color} size="sm" />
         <span className="min-w-0 flex-1 truncate">{text(c.name)}</span>
-        <span className={`text-2xs tabular-nums ${active ? "text-on-ink/60" : "text-muted"}`}>{counts.get(tag)?.length ?? 0}</span>
       </button>
     );
   };
@@ -98,13 +100,13 @@ export default function PickClient({ scenarioId }: { scenarioId: ScenarioId }) {
   const list = (
     <div className={`${ui.card} flex min-h-[320px] flex-col overflow-hidden lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] xl:static xl:h-full xl:max-h-none`}>
       <div className="border-b border-divider p-3">
-        <label className="flex items-center gap-2 rounded-xl border border-gray-200 bg-page px-3 focus-within:border-ink focus-within:bg-surface">
+        <label className="flex items-center gap-2 rounded-xl border border-line bg-page/70 px-3 focus-within:border-ink focus-within:bg-surface">
           <Search className="h-4 w-4 text-muted" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("pick.search")}
-            className="w-full bg-transparent py-2.5 text-sm font-medium text-ink outline-none placeholder:text-gray-400"
+            className="w-full bg-transparent py-2.5 text-sm font-medium text-ink outline-none placeholder:text-faded"
           />
         </label>
       </div>
@@ -147,7 +149,8 @@ export default function PickClient({ scenarioId }: { scenarioId: ScenarioId }) {
         <aside className="order-2 lg:order-none lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:self-stretch xl:row-span-1 xl:min-h-0">{list}</aside>
 
         <div className="order-1 flex min-w-0 flex-col gap-4 lg:order-none lg:col-start-2 lg:row-start-1 xl:min-h-0 xl:overflow-y-auto">
-          <div className={`${ui.card} relative aspect-[1000/540] w-full overflow-hidden`}>
+          {/* The map gives way so the start button stays in view, but no further than 240px: a taller briefing scrolls the column instead. */}
+          <div className={`${ui.card} relative aspect-[1000/540] min-h-[240px] w-full overflow-hidden`}>
             {map && world ? (
               <WorldMap
                 topology={map.topology}
@@ -157,6 +160,7 @@ export default function PickClient({ scenarioId }: { scenarioId: ScenarioId }) {
                 era={scenario.id}
                 year={yearOf(scenario.startDate)}
                 onSelect={(tag) => tag && setSelected(tag)}
+                diplomacy={diplomacy}
                 className="h-full w-full"
               />
             ) : (
@@ -195,29 +199,26 @@ export default function PickClient({ scenarioId }: { scenarioId: ScenarioId }) {
               </div>
               <p className="mt-2 text-xs font-medium text-muted">{t(`pick.role.${role}.hint`)}</p>
               {role === "opposition" && (
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <label className="block">
-                    <span className={`${ui.label} mb-1 block`}>{t("pick.role.person")}</span>
-                    <input value={person} onChange={(e) => setPerson(e.target.value)} maxLength={80} placeholder={t("pick.role.optional")} className={`${ui.input} py-2 text-sm`} />
-                  </label>
-                  <label className="block">
-                    <span className={`${ui.label} mb-1 block`}>{t("pick.role.movement")}</span>
-                    <input value={movement} onChange={(e) => setMovement(e.target.value)} maxLength={80} placeholder={t("pick.role.optional")} className={`${ui.input} py-2 text-sm`} />
-                  </label>
-                </div>
+                <label className="mt-3 block">
+                  <span className={`${ui.label} mb-1 flex items-baseline justify-between gap-2`}>
+                    {t("pick.role.about")}
+                    <span className="font-medium normal-case tracking-normal tabular-nums">
+                      {about.length}/{ABOUT_CHARS}
+                    </span>
+                  </span>
+                  <textarea
+                    value={about}
+                    onChange={(e) => setAbout(e.target.value)}
+                    maxLength={ABOUT_CHARS}
+                    rows={4}
+                    placeholder={t("pick.role.aboutPlaceholder")}
+                    className={`${ui.input} resize-y py-2 text-sm leading-relaxed`}
+                  />
+                </label>
               )}
             </div>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-divider pt-4">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-muted">{t("pick.hint")}</p>
-                <label className="mt-2 flex cursor-pointer items-start gap-2 text-xs">
-                  <input type="checkbox" checked={fog} onChange={(e) => setFog(e.target.checked)} className="mt-0.5 h-3.5 w-3.5 accent-current" />
-                  <span>
-                    <span className="font-bold text-ink">{t("pick.fog")}</span>
-                    <span className="block font-medium text-muted">{t("pick.fogNote")}</span>
-                  </span>
-                </label>
-              </div>
+              <p className="min-w-0 flex-1 text-xs font-medium text-muted">{t("pick.hint")}</p>
               {country && (
                 <button type="button" onClick={start} disabled={starting || !map} className={`${ui.primary} max-w-full px-5 py-3 text-sm`}>
                   {starting ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Flag className="h-4 w-4 shrink-0" />}
@@ -225,6 +226,7 @@ export default function PickClient({ scenarioId }: { scenarioId: ScenarioId }) {
                 </button>
               )}
             </div>
+            <DownloadButton variant="link" why className="mt-3 text-xs" />
           </div>
         </div>
 

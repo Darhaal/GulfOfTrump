@@ -58,7 +58,6 @@ export default function ProvisionPanel({ state, regions }: { state: GameState; r
           );
         })}
       </ul>
-      <p className="text-2xs font-medium text-muted">{t("supply.short")}</p>
     </section>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { isDemo } from "@/constants/app";
 import { parseGameState } from "@/engine/schema";
 import { newGameId } from "@/engine/setup";
 import type { GameState, SaveMeta } from "@/engine/types";
@@ -9,7 +10,9 @@ import { getSupabase } from "./supabase";
 /**
  * Saves live in the browser always (IndexedDB, see localSaves.ts), and in
  * the player's Supabase account as well when they are signed in. A list
- * merges both, newest copy winning; a load tries this device first.
+ * merges both, newest copy winning; a load tries this device first. The
+ * public demo saves nothing: its games stay in memory (localSaves.ts) and
+ * never reach the cloud.
  */
 
 export function metaOf(state: GameState): SaveMeta {
@@ -29,6 +32,7 @@ export type SaveSource = "local" | "cloud";
 export type ListedSave = SaveMeta & { sources: SaveSource[] };
 
 async function cloudUserId(): Promise<string | null> {
+  if (isDemo()) return null;
   const supabase = await getSupabase();
   if (!supabase) return null;
   const { data } = await supabase.auth.getSession();

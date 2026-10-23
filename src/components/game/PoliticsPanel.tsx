@@ -1,34 +1,41 @@
 "use client";
 
-import { ArrowDownRight, ArrowUpRight, Briefcase, Check, ChevronDown, Clock, Eye, Flame, Gavel, Handshake, Landmark, Loader2, Megaphone, MessagesSquare, Plus, Shield, ShieldAlert, Siren, Tv, Unlock, Users, Vote } from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
+import { ArrowDownRight, ArrowUpRight, Briefcase, Check, ChevronDown, Clock, Gavel, Handshake, Landmark, Loader2, Megaphone, MessagesSquare, Plus, Shield, ShieldAlert, Siren, Tv, Unlock, Users, Vote } from "lucide-react";
+import { type ReactNode, useId, useMemo, useState } from "react";
 import { ui } from "@/components/ui/classes";
 import { MAX_ORDERS } from "@/constants/app";
-import { addStep, formatDate } from "@/engine/calendar";
-import type { AdvisorId } from "@/engine/advisors";
-import { officialAt } from "@/engine/government";
+import { formatDate } from "@/engine/calendar";
+import { LAW_IDS, LAWS, type LawId } from "@/engine/laws";
+import { availableMotions, checkMotion, holdsElections, openSession, seatsNeeded } from "@/engine/parliament";
 import { governmentSeats, loyaltyOf } from "@/engine/politics";
+import { talksWith } from "@/engine/talks";
 import { ownProtests } from "@/engine/unrest";
-import { type GameState, type Loyalty, type Parliament, type Party, PILLARS, type Protest } from "@/engine/types";
+import { type GameState, type Loyalty, type Motion, type MotionKind, type Parliament, type Party, PILLARS, type Protest, type Session, type Talk } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
-import { ACTIONS, CATEGORY_ICONS, needed, partyActions, type ActionCategory, type PoliticsAction } from "./politics/actions";
+import { partyActions, type PoliticsAction } from "./politics/actions";
 import { abbreviation, hemicycle, INNER, inkOn, partyColors, seatingOrder, spread } from "./politics/layout";
+import { useMotionLabel } from "./politics/motion";
+import { OilDefs, oilFills, oilFilter } from "./politics/oil";
 
 interface PoliticsPanelProps {
   state: GameState;
   busy: { chars: number } | null;
   disabled: boolean;
   onLoad: () => void;
-  /** Adds an order to the turn; actions here are orders the game master judges. */
+  /** Adds an order to the turn; moves here are orders the game master judges. */
   onOrder: (order: string) => void;
   /** A province's name in the interface language. */
   regionName: (id: string) => string;
-  /** Opens the cabinet on a question for a minister: covert work abroad is planned with intelligence. */
-  onConsult: (advisor: AdvisorId, question: string) => void;
+  /** Opens a sitting of parliament on a motion (engine/parliament.ts). */
+  onConvene: (motion: Motion) => void;
+  /** Opens the sitting under way again. */
+  onResumeSession: (id: string) => void;
+  /** Opens talks with a protest's leaders or with plotters, or takes them up again (engine/talks.ts). */
+  onTalks: (kind: Talk["with"], target: string) => void;
 }
 
-type Tab = "parliament" | "parties" | "actions" | "street";
+type Tab = "parliament" | "parties" | "street";
 
 const STAGE_TONE: Record<Protest["stage"], string> = {
   rally: "bg-amber-50 text-amber-700",
@@ -42,11 +49,10 @@ const RISK_TONE = { low: "bg-emerald-500", medium: "bg-amber-500", high: "bg-red
 /** Above this many seats the hemicycle is drawn as wedges, not dots. */
 const MAX_DOTS = 1000;
 
-/** Measures against a protest at home; the risk of force follows the loyalty of whoever must use it. */
-const HOME_MEASURES = ["concede", "talk", "disperse", "troops", "arrestLeaders", "counterRally", "curfew", "smearProtest", "offerElections", "offerPosts", "protestAmnesty"] as const;
+/** Measures against a protest at home; the risk of force follows the loyalty of whoever must use it. Talks are held in person. */
+const HOME_MEASURES = ["concede", "disperse", "troops", "arrestLeaders", "counterRally", "curfew", "smearProtest", "offerElections", "offerPosts", "protestAmnesty"] as const;
 const HOME_ICONS: Record<(typeof HOME_MEASURES)[number], PoliticsAction["icon"]> = {
   concede: Handshake,
-  talk: MessagesSquare,
   disperse: Shield,
   troops: Siren,
   arrestLeaders: Gavel,
@@ -57,14 +63,16 @@ const HOME_ICONS: Record<(typeof HOME_MEASURES)[number], PoliticsAction["icon"]>
   offerPosts: Briefcase,
   protestAmnesty: Unlock,
 };
-/** What can be done about a protest in another country. */
-// Open moves on a protest abroad; covert ones are planned with the head of intelligence.
+/** Open moves on a protest abroad. */
 const ABROAD_MEASURES = [
   { id: "condemnCrackdown", icon: Megaphone, risk: "low" },
   { id: "backRegime", icon: Shield, risk: "medium" },
 ] as const satisfies readonly PoliticsAction[];
 
 const riskOf = (loyalty: number): PoliticsAction["risk"] => (loyalty < 40 ? "high" : loyalty < 60 ? "medium" : "low");
+
+/** An id safe inside url(#…). */
+const safeId = (id: string) => id.replace(/[^a-zA-Z0-9-]/g, "");
 
 /** The pillars of power, as bars with their change over the last turn. */
 function Pillars({ loyalty, was }: { loyalty: Loyalty; was?: Loyalty }) {
@@ -115,12 +123,26 @@ function ProtestFacts({ p, state, regionName }: { p: Protest; state: GameState; 
   return <div className="mt-0.5 text-xs font-medium text-muted">{facts.join(" · ")}</div>;
 }
 
+/** The button that opens talks, or takes them up again. */
+function TalksButton({ under, disabled, onClick }: { under: boolean; disabled: boolean; onClick: () => void }) {
+  const { t } = useI18n();
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="inline-flex items-center gap-1 rounded-lg border border-accent/40 bg-surface px-2 py-1 text-2xs font-black uppercase tracking-wider text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
+    >
+      <MessagesSquare className="h-3 w-3" />
+      {under ? t("politics.talk.resume") : t("politics.talk.open")}
+    </button>
+  );
+}
+
 /**
  * The street and the forces that face it: the loyalty of the army, police,
- * security services and elites; the protests at home with every measure
- * against them; protests abroad to condemn, back or use; and covert work
- * abroad — stirring up protests, a coup, sabotage — planned in conversation
- * with the head of intelligence, who drafts the operation for approval.
+ * security services and elites; the protests at home, with talks in person
+ * and every other measure against them; protests abroad to condemn or back.
  */
 function Street({
   state,
@@ -128,27 +150,20 @@ function Street({
   order,
   orders,
   regionName,
-  onConsult,
+  onTalks,
 }: {
   state: GameState;
   disabled: boolean;
   order: (text: string) => void;
   orders: Set<string>;
   regionName: (id: string) => string;
-  onConsult: (advisor: AdvisorId, question: string) => void;
+  onTalks: (kind: Talk["with"], target: string) => void;
 }) {
   const { t, text } = useI18n();
   const [open, setOpen] = useState<string | null>(null);
   const loyalty = state.politics ? loyaltyOf(state.politics) : null;
   const home = ownProtests(state.protests, state.player);
   const abroad = (state.protests ?? []).filter((p) => !home.includes(p));
-  const spy = officialAt(state, "intelligence");
-  const consultButton = (question: string) => (
-    <button type="button" onClick={() => onConsult("intelligence", question)} className={`${ui.secondary} px-3 py-1.5 text-2xs`}>
-      <Eye className="h-3.5 w-3.5" />
-      {spy ? t("politics.consult.named", { name: spy.name }) : t("politics.consult.intel")}
-    </button>
-  );
   const row = (action: PoliticsAction, line: string) => (
     <ActionRow
       key={action.id}
@@ -175,7 +190,7 @@ function Street({
         ) : (
           <ul className="grid gap-2">
             {home.map((p) => (
-              <li key={p.id} className="rounded-xl border border-line bg-surface p-3">
+              <li key={p.id} className="rounded-xl border border-line sheet p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="text-sm font-black text-ink">{p.title}</div>
@@ -184,13 +199,14 @@ function Street({
                   <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-2xs font-black uppercase tracking-wider ${STAGE_TONE[p.stage]}`}>{t(`politics.protest.${p.stage}` as MessageKey)}</span>
                 </div>
                 {p.demands && <p className="mt-1.5 text-xs font-medium text-ink">{t("politics.protest.demands", { demands: p.demands })}</p>}
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {(["concede", "talk", "disperse", "troops"] as const).map((action) => (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <TalksButton under={Boolean(talksWith(state.politics, p.id))} disabled={disabled} onClick={() => onTalks("protest", p.id)} />
+                  {(["concede", "disperse", "troops"] as const).map((action) => (
                     <button
                       key={action}
                       type="button"
                       disabled={disabled}
-                      onClick={() => order(t(`politics.order.${action}` as MessageKey, { title: p.title, demands: p.demands || "—" }))}
+                      onClick={() => order(t(`politics.order.${action}` as MessageKey, { title: p.title, demands: p.demands || "–" }))}
                       className="rounded-lg border border-line px-2 py-1 text-2xs font-black uppercase tracking-wider text-muted transition-colors hover:border-accent/30 hover:text-ink"
                     >
                       {t(`politics.act.${action}` as MessageKey)}
@@ -209,8 +225,8 @@ function Street({
                 {open === p.id && (
                   <div className="mt-2 grid gap-1.5">
                     {HOME_MEASURES.map((id) => {
-                      const risk = id === "disperse" && loyalty ? riskOf(loyalty.police) : id === "troops" && loyalty ? (loyalty.army < 60 ? "high" : "medium") : (["concede", "talk", "offerElections", "protestAmnesty"] as string[]).includes(id) ? "low" : "medium";
-                      return row({ id, icon: HOME_ICONS[id], risk }, t(`politics.order.${id}` as MessageKey, { title: p.title, demands: p.demands || "—" }));
+                      const risk = id === "disperse" && loyalty ? riskOf(loyalty.police) : id === "troops" && loyalty ? (loyalty.army < 60 ? "high" : "medium") : (["concede", "offerElections", "protestAmnesty"] as string[]).includes(id) ? "low" : "medium";
+                      return row({ id, icon: HOME_ICONS[id], risk }, t(`politics.order.${id}` as MessageKey, { title: p.title, demands: p.demands || "–" }));
                     })}
                   </div>
                 )}
@@ -227,7 +243,7 @@ function Street({
             {abroad.map((p) => {
               const country = text(state.countries[p.country!]?.name ?? p.country);
               return (
-                <li key={p.id} className="rounded-xl border border-line bg-surface p-3">
+                <li key={p.id} className="rounded-xl border border-line sheet p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="text-sm font-black text-ink">{p.title}</div>
@@ -245,38 +261,22 @@ function Street({
                     {t("politics.partyActions")}
                     <ChevronDown className={`h-3 w-3 transition-transform ${open === p.id ? "rotate-180" : ""}`} />
                   </button>
-                  {open === p.id && (
-                    <div className="mt-2 grid gap-1.5">
-                      {ABROAD_MEASURES.map((a) => row(a, t(`politics.order.${a.id}` as MessageKey, { title: p.title, country })))}
-                      <div>{consultButton(t("politics.consult.protest", { title: p.title, country }))}</div>
-                    </div>
-                  )}
+                  {open === p.id && <div className="mt-2 grid gap-1.5">{ABROAD_MEASURES.map((a) => row(a, t(`politics.order.${a.id}` as MessageKey, { title: p.title, country })))}</div>}
                 </li>
               );
             })}
           </ul>
         </section>
       )}
-
-      <section className="rounded-xl border border-line bg-surface p-3">
-        <div className="flex items-start gap-2.5">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-page text-muted">
-            <Flame className="h-4 w-4" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="text-xs font-black text-ink">{t("politics.act.incite")}</div>
-            <p className="mt-0.5 text-xs font-medium leading-snug text-muted">{t("politics.desc.incite")}</p>
-          </div>
-        </div>
-        <div className="mt-2.5">{consultButton(t("politics.consult.incite"))}</div>
-      </section>
     </div>
   );
 }
 
-/** The house as the press draws it: a half ring of seats, one wedge per faction, left to right. */
+/** The house as the press draws it, painted: a half ring of seats, one wedge per faction, left to right. */
 function Hemicycle({ house, parties, colors, focus, onFocus }: { house: Parliament; parties: Party[]; colors: Map<string, string>; focus: string | null; onFocus: (id: string) => void }) {
   const { t } = useI18n();
+  const id = `hemi-${safeId(useId())}`;
+  const fills = useMemo(() => oilFills(id, colors), [id, colors]);
   const W = 320;
   const S = 150;
   const cx = W / 2;
@@ -286,7 +286,7 @@ function Hemicycle({ house, parties, colors, focus, onFocus }: { house: Parliame
   const owners: (Party | null)[] = seated.flatMap((p) => Array.from({ length: p.seats ?? 0 }, () => p));
   while (owners.length < house.seats) owners.push(null);
   const majority = Math.floor(house.seats / 2) + 1;
-  const fill = (p: Party | null) => (p ? colors.get(p.id)! : "var(--divider)");
+  const fill = (p: Party | null) => (p ? fills.get(p.id)! : "var(--divider)");
   const faded = (p: Party | null) => (focus && p?.id !== focus ? 0.28 : 1);
 
   let wedges: ReactNode = null;
@@ -302,31 +302,25 @@ function Hemicycle({ house, parties, colors, focus, onFocus }: { house: Parliame
       const pt = (a: number, r: number) => `${cx + Math.cos(a) * r * S},${cy - Math.sin(a) * r * S}`;
       const large = a0 - a1 > Math.PI ? 1 : 0;
       const d = `M${pt(a0, 1)} A${S},${S} 0 ${large} 1 ${pt(a1, 1)} L${pt(a1, INNER)} A${S * INNER},${S * INNER} 0 ${large} 0 ${pt(a0, INNER)} Z`;
-      return <path key={p?.id ?? `rest-${i}`} d={d} fill={fill(p)} opacity={faded(p)} stroke="var(--surface)" strokeWidth="1" onClick={() => p && onFocus(p.id)} className={p ? "cursor-pointer" : ""} />;
+      return <path key={p?.id ?? `rest-${i}`} d={d} fill={p ? colors.get(p.id) : "var(--divider)"} opacity={faded(p)} stroke="var(--surface)" strokeWidth="1" onClick={() => p && onFocus(p.id)} className={p ? "cursor-pointer" : ""} />;
     });
   }
   const dots = house.seats > MAX_DOTS ? [] : hemicycle(house.seats);
 
   return (
     <svg viewBox={`0 0 ${W} ${cy + 6}`} className="mx-auto block w-full max-w-[360px]" role="img" aria-label={`${house.name}: ${house.seats}`}>
-      {wedges}
-      {dots.map((d, i) => {
-        const p = owners[i] ?? null;
-        return (
-          <circle
-            key={i}
-            cx={cx + d.x * S}
-            cy={cy - d.y * S}
-            r={d.r * S}
-            fill={fill(p)}
-            opacity={faded(p)}
-            onClick={() => p && onFocus(p.id)}
-            className={p ? "cursor-pointer" : ""}
-          >
-            {p && <title>{`${p.name}: ${p.seats}`}</title>}
-          </circle>
-        );
-      })}
+      <OilDefs id={id} colors={colors} />
+      {wedges && <g filter={oilFilter(id)}>{wedges}</g>}
+      <g filter={oilFilter(id)}>
+        {dots.map((d, i) => {
+          const p = owners[i] ?? null;
+          return (
+            <circle key={i} cx={cx + d.x * S} cy={cy - d.y * S} r={d.r * S * 1.08} fill={fill(p)} opacity={faded(p)} onClick={() => p && onFocus(p.id)} className={p ? "cursor-pointer" : ""}>
+              {p && <title>{`${p.name}: ${p.seats}`}</title>}
+            </circle>
+          );
+        })}
+      </g>
       {/* Half the house: a majority has to cross this line. */}
       <line x1={cx} y1={cy - S - 5} x2={cx} y2={cy - S * INNER + 3} stroke="var(--ink)" strokeWidth="1" strokeDasharray="2 2" opacity="0.5" />
       <text x={cx} y={cy - 26} textAnchor="middle" fontSize="28" className="fill-ink font-black tabular-nums">
@@ -367,9 +361,11 @@ function GovernmentBar({ house, parties, colors }: { house: Parliament; parties:
   );
 }
 
-/** Where the parties stand, drawn so every circle and its letters stay readable. */
+/** Where the parties stand, drawn so every circle and its letters stay readable; the circles painted like the house's seats. */
 function IdeasCompass({ parties, colors, focus, onFocus }: { parties: Party[]; colors: Map<string, string>; focus: string | null; onFocus: (id: string) => void }) {
   const { t } = useI18n();
+  const id = `ideas-${safeId(useId())}`;
+  const fills = useMemo(() => oilFills(id, colors), [id, colors]);
   const [vertical, setVertical] = useState<"freedom" | "nation">("freedom");
   const size = 300;
   const pad = 18;
@@ -392,16 +388,17 @@ function IdeasCompass({ parties, colors, focus, onFocus }: { parties: Party[]; c
         ))}
       </div>
       <svg viewBox={`0 0 ${size} ${size}`} className="mx-auto block w-full max-w-[360px]" role="img" aria-label={t("politics.ideas")}>
+        <OilDefs id={id} colors={colors} />
         <defs>
-          <marker id="drift" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <marker id={`${id}-drift`} viewBox="0 0 6 6" refX="5" refY="3" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
             <path d="M0,0 L6,3 L0,6 z" fill="var(--muted)" />
           </marker>
-          <clipPath id="ideas-box">
+          <clipPath id={`${id}-box`}>
             <rect x={pad} y={pad} width={size - pad * 2} height={size - pad * 2} rx="12" />
           </clipPath>
         </defs>
         <rect x={pad} y={pad} width={size - pad * 2} height={size - pad * 2} rx="12" fill="var(--page)" />
-        <g clipPath="url(#ideas-box)" fill="var(--divider)" opacity="0.45">
+        <g clipPath={`url(#${id}-box)`} fill="var(--divider)" opacity="0.45">
           <rect x={pad} y={pad} width={size / 2 - pad} height={size / 2 - pad} />
           <rect x={size / 2} y={size / 2} width={size / 2 - pad} height={size / 2 - pad} />
         </g>
@@ -415,7 +412,7 @@ function IdeasCompass({ parties, colors, focus, onFocus }: { parties: Party[]; c
         {ordered.map((p) => {
           const was = p.was;
           if (!was || (was.economy === p.stance.economy && was[vertical] === p.stance[vertical])) return null;
-          return <line key={`d-${p.id}`} x1={at(was.economy)} y1={y(was[vertical])} x2={at(p.stance.economy)} y2={y(p.stance[vertical])} stroke="var(--muted)" strokeWidth="1.2" strokeDasharray="3 2" markerEnd="url(#drift)" />;
+          return <line key={`d-${p.id}`} x1={at(was.economy)} y1={y(was[vertical])} x2={at(p.stance.economy)} y2={y(p.stance[vertical])} stroke="var(--muted)" strokeWidth="1.2" strokeDasharray="3 2" markerEnd={`url(#${id}-drift)`} />;
         })}
         {ordered.map((p, i) => {
           const { x: tx, y: ty, r } = truth[i];
@@ -433,7 +430,7 @@ function IdeasCompass({ parties, colors, focus, onFocus }: { parties: Party[]; c
                   <circle cx={tx} cy={ty} r="2" fill={color} />
                 </>
               )}
-              <circle cx={x} cy={dy} r={r} fill={color} stroke={focus === p.id ? "var(--ink)" : "var(--surface)"} strokeWidth={focus === p.id ? 2.5 : 1.5} />
+              <circle cx={x} cy={dy} r={r} fill={fills.get(p.id)} filter={oilFilter(id)} stroke={focus === p.id ? "var(--ink)" : "var(--surface)"} strokeWidth={focus === p.id ? 2.5 : 1.5} />
               <text x={x} y={dy + font * 0.36} textAnchor="middle" fontSize={font} fontWeight="900" fill={inkOn(color)}>
                 {text}
               </text>
@@ -445,38 +442,12 @@ function IdeasCompass({ parties, colors, focus, onFocus }: { parties: Party[]; c
   );
 }
 
-/** One thing the government can do: what it gives, what it risks, the votes it needs, and the button. */
-function ActionRow({
-  action,
-  label,
-  desc,
-  vote,
-  disabled,
-  inOrders,
-  defaultDate,
-  onOrder,
-}: {
-  action: PoliticsAction;
-  label: string;
-  desc: string;
-  vote?: { need: number; have: number };
-  disabled: boolean;
-  inOrders: boolean;
-  defaultDate?: string;
-  onOrder: (value: string) => void;
-}) {
+/** One thing the government can do: what it gives, what it risks, and the button. */
+function ActionRow({ action, label, desc, disabled, inOrders, onOrder }: { action: PoliticsAction; label: string; desc: string; disabled: boolean; inOrders: boolean; onOrder: () => void }) {
   const { t } = useI18n();
-  const [open, setOpen] = useState(false);
-  const [value, setValue] = useState(action.input === "date" ? (defaultDate ?? "") : "");
   const Icon = action.icon;
-  const valid = action.input === "date" ? /^\d{4}-\d{2}-\d{2}$/.test(value) : value.trim().length > 2;
-  const submit = () => {
-    onOrder(value.trim());
-    setOpen(false);
-    if (action.input !== "date") setValue("");
-  };
   return (
-    <div className="rounded-xl border border-line bg-surface p-2.5">
+    <div className="rounded-xl border border-line sheet p-2.5">
       <div className="flex items-start gap-2.5">
         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-page text-muted">
           <Icon className="h-4 w-4" />
@@ -485,17 +456,10 @@ function ActionRow({
           <div className="text-xs font-black text-ink">{label}</div>
           <p className="mt-0.5 text-xs font-medium leading-snug text-muted">{desc}</p>
           <div className="mt-1.5 flex flex-wrap items-center justify-between gap-1.5">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="inline-flex items-center gap-1 text-2xs font-bold text-muted">
-                <span className={`h-1.5 w-1.5 rounded-full ${RISK_TONE[action.risk]}`} />
-                {t(`politics.risk.${action.risk}` as MessageKey)}
-              </span>
-              {vote && (
-                <span className={`rounded-md px-1.5 py-0.5 text-2xs font-bold tabular-nums ${vote.have >= vote.need ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-                  {t("politics.vote", vote)}
-                </span>
-              )}
-            </div>
+            <span className="inline-flex items-center gap-1 text-2xs font-bold text-muted">
+              <span className={`h-1.5 w-1.5 rounded-full ${RISK_TONE[action.risk]}`} />
+              {t(`politics.risk.${action.risk}` as MessageKey)}
+            </span>
             {inOrders ? (
               <span className="inline-flex items-center gap-1 text-2xs font-black uppercase tracking-wider text-emerald-700">
                 <Check className="h-3 w-3" />
@@ -505,40 +469,16 @@ function ActionRow({
               <button
                 type="button"
                 disabled={disabled}
-                onClick={() => (action.input ? setOpen((v) => !v) : onOrder(""))}
-                aria-expanded={action.input ? open : undefined}
+                onClick={onOrder}
                 className="inline-flex items-center gap-1 rounded-lg border border-line px-2 py-1 text-2xs font-black uppercase tracking-wider text-ink transition-colors hover:border-accent/40 hover:text-accent disabled:opacity-50"
               >
-                {action.input ? <ChevronDown className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} /> : <Plus className="h-3 w-3" />}
+                <Plus className="h-3 w-3" />
                 {t("politics.add")}
               </button>
             )}
           </div>
         </div>
       </div>
-      {open && action.input && (
-        <form
-          className="mt-2 flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (valid) submit();
-          }}
-        >
-          <input
-            autoFocus
-            type={action.input === "date" ? "date" : "text"}
-            value={value}
-            min={action.input === "date" ? defaultDate : undefined}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder={action.input === "date" ? undefined : t(`politics.placeholder.${action.input}` as MessageKey)}
-            aria-label={label}
-            className={`${ui.input} py-2`}
-          />
-          <button type="submit" disabled={disabled || !valid} className={`${ui.primary} shrink-0 px-3 py-2 text-2xs`}>
-            <Plus className="h-3.5 w-3.5" />
-          </button>
-        </form>
-      )}
     </div>
   );
 }
@@ -555,7 +495,7 @@ function AxisBar({ name, left, right, value, was, color }: { name: string; left:
       </div>
       <div className="relative mt-1 h-1.5 rounded-full bg-divider">
         <span className="absolute inset-y-0 left-1/2 w-px bg-line" />
-        {was !== undefined && was !== value && <span className="absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-muted bg-surface" style={{ left: pos(was) }} />}
+        {was !== undefined && was !== value && <span className="absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-muted sheet" style={{ left: pos(was) }} />}
         <span className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-surface" style={{ left: pos(value), background: color }} />
       </div>
     </div>
@@ -563,18 +503,111 @@ function AxisBar({ name, left, right, value, was, color }: { name: string; left:
 }
 
 /**
- * The player's domestic politics: the regime and how restless the country
- * is, the parliament seat by seat, every party with its support, ideas and
- * what can be done about it, a catalogue of the government's moves at home
- * with what each gives and risks, and the threats in the street and in the
- * shadows. Every move becomes an order the game master judges.
+ * A new sitting: what parliament is to vote on. A change of one law is
+ * chosen from the law's options; a bill or an amendment is written; the
+ * motions of state need nothing more. The seats it needs show before it opens.
  */
-export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, regionName, onConsult }: PoliticsPanelProps) {
+function MotionForm({ state, disabled, onConvene }: { state: GameState; disabled: boolean; onConvene: (motion: Motion) => void }) {
+  const { t } = useI18n();
+  const kinds = availableMotions(state);
+  const laws = state.politics?.laws;
+  const [kind, setKind] = useState<MotionKind>(kinds[0] ?? "law");
+  const [law, setLaw] = useState<LawId>("press");
+  const options = (LAWS[law] as readonly string[]).filter((o) => o !== laws?.[law]);
+  const [option, setOption] = useState<string>("");
+  const [text, setText] = useState("");
+  const picked = options.includes(option) ? option : (options[0] ?? "");
+  const motion: Motion = kind === "law" ? { kind, text, law, option: picked } : { kind, text };
+  const valid = checkMotion(state, motion) !== null;
+  const house = state.politics?.parliament;
+  if (!kinds.length || !house) return null;
+  return (
+    <section className="grid gap-2 rounded-xl border border-line sheet p-3">
+      <div className={ui.label}>{t("politics.session.new")}</div>
+      <select value={kind} onChange={(e) => setKind(e.target.value as MotionKind)} aria-label={t("politics.session.motion")} className={`${ui.input} py-2 text-xs`}>
+        {kinds.map((k) => (
+          <option key={k} value={k}>
+            {t(`politics.motion.${k}` as MessageKey)}
+          </option>
+        ))}
+      </select>
+      {kind === "law" && (
+        <div className="grid grid-cols-2 gap-1.5">
+          <select value={law} onChange={(e) => setLaw(e.target.value as LawId)} aria-label={t("politics.session.law")} className={`${ui.input} py-2 text-xs`}>
+            {LAW_IDS.map((id) => (
+              <option key={id} value={id}>
+                {t(`law.${id}` as MessageKey)}
+              </option>
+            ))}
+          </select>
+          <select value={picked} onChange={(e) => setOption(e.target.value)} aria-label={t("politics.session.option")} className={`${ui.input} py-2 text-xs`}>
+            {options.map((o) => (
+              <option key={o} value={o}>
+                {t(`law.${law}.${o}` as MessageKey)}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      {(kind === "law" || kind === "bill" || kind === "constitution") && (
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value.slice(0, 600))}
+          rows={2}
+          placeholder={t(`politics.session.text.${kind}` as MessageKey)}
+          className={`${ui.input} resize-none py-2 text-xs`}
+        />
+      )}
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-2xs font-bold tabular-nums text-muted">{t("politics.session.needs", { n: seatsNeeded(kind, house.seats), total: house.seats })}</span>
+        <button type="button" disabled={disabled || !valid} onClick={() => onConvene(motion)} className={`${ui.primary} px-3 py-2 text-2xs`}>
+          <Landmark className="h-3.5 w-3.5" />
+          {t("politics.session.open")}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+/** The sittings already held: what was voted on and how. */
+function RecentSessions({ sessions }: { sessions: Session[] }) {
+  const { t } = useI18n();
+  const label = useMotionLabel();
+  if (!sessions.length) return null;
+  return (
+    <section>
+      <div className={`${ui.label} mb-2`}>{t("politics.session.recent")}</div>
+      <ul className="grid gap-1.5">
+        {sessions.map((s) => (
+          <li key={s.id} className="rounded-lg bg-page px-3 py-2">
+            <div className="flex items-start justify-between gap-2">
+              <span className="min-w-0 text-xs font-bold leading-snug text-ink">{label(s.motion)}</span>
+              <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-2xs font-black uppercase tracking-wider ${s.status === "passed" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                {t(s.status === "passed" ? "politics.session.passed" : "politics.session.failed")}
+              </span>
+            </div>
+            {s.vote && <div className="mt-0.5 text-2xs font-bold tabular-nums text-muted">{t("politics.session.tally", { for: s.vote.for, against: s.vote.against, abstain: s.vote.abstain })}</div>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/**
+ * The player's domestic politics: the regime, the elections and the
+ * government's majority; parliament seat by seat, where the government
+ * brings motions to sittings and speaks; every party with its support and
+ * ideas; and the threats in the street and in the shadows, with talks in
+ * person. The other moves become orders the game master judges.
+ */
+export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, regionName, onConvene, onResumeSession, onTalks }: PoliticsPanelProps) {
   const { t, text, locale } = useI18n();
   const politics = state.politics;
   const [tab, setTab] = useState<Tab>("parliament");
   const [focus, setFocus] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
+  const label = useMotionLabel();
   const orders = useMemo(() => new Set([...state.draft, ...(state.standing ?? [])]), [state.draft, state.standing]);
   const full = state.draft.length + (state.standing?.length ?? 0) >= MAX_ORDERS;
   const order = (line: string) => {
@@ -594,8 +627,9 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
   const majority = house ? Math.floor(house.seats / 2) + 1 : 0;
   const plots = politics?.plots.filter((p) => p.known) ?? [];
   const threats = ownProtests(state.protests, state.player).length + plots.length;
-  const unrest = politics?.unrest ?? 0;
-  const unrestTone = unrest >= 70 ? "bg-red-600" : unrest >= 40 ? "bg-amber-500" : "bg-emerald-600";
+  const elections = holdsElections(state);
+  const sitting = openSession(politics);
+  const pastSessions = (politics?.sessions ?? []).filter((s) => s.status !== "open").slice(-4).reverse();
   const loadButton = (
     <button type="button" onClick={onLoad} disabled={disabled || Boolean(busy)} className={`${ui.primary} w-full px-4 py-3 text-xs`}>
       {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Landmark className="h-4 w-4" />}
@@ -607,17 +641,14 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
     setFocus((f) => (f === id ? null : id));
     setTab("parties");
   };
-  const voteOf = (action: PoliticsAction) => (house && action.vote ? { need: needed(action.vote, house.seats), have: held } : undefined);
-  const orderFor = (action: PoliticsAction, value: string, party?: Party) => {
-    const key = `politics.order.${action.id}` as MessageKey;
-    const line = party ? t(key, { party: party.name }) : action.input === "date" ? t(key, { date: formatDate(value, locale) }) : t(key, { text: value });
-    return party && action.id === "arrest" && party.leader ? `${line} (${party.leader})` : line;
+  const partyOrder = (action: PoliticsAction, party: Party) => {
+    const line = t(`politics.order.${action.id}` as MessageKey, { party: party.name });
+    return action.id === "arrest" && party.leader ? `${line} (${party.leader})` : line;
   };
 
   const tabs: { id: Tab; icon: typeof Landmark; badge?: number }[] = [
     { id: "parliament", icon: Landmark },
     { id: "parties", icon: Users },
-    { id: "actions", icon: Vote },
     { id: "street", icon: ShieldAlert, badge: threats },
   ];
 
@@ -628,21 +659,14 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
       <section className="rounded-xl bg-page p-3">
         <div className={ui.label}>{t("politics.regime")}</div>
         <div className="mt-1 text-sm font-black leading-snug text-ink">{politics?.regime || text(state.countries[state.player]?.government)}</div>
-        <div className="mt-3 grid grid-cols-3 gap-1.5">
-          <div className="min-w-0 rounded-lg border border-line bg-surface p-2">
-            <div className="truncate text-2xs font-bold text-muted">
-              {t("politics.unrest")}
-            </div>
-            <div className="mt-0.5 text-sm font-black tabular-nums text-ink">{unrest}</div>
-            <div className="mt-1 h-1 overflow-hidden rounded-full bg-divider">
-              <div className={`h-full rounded-full ${unrestTone}`} style={{ width: `${unrest}%` }} />
-            </div>
-          </div>
-          <div className="min-w-0 rounded-lg border border-line bg-surface p-2">
+        <div className="mt-3 grid grid-cols-2 gap-1.5">
+          <div className="min-w-0 rounded-lg border border-line sheet p-2" title={elections ? undefined : t("politics.noElectionsNote")}>
             <div className="truncate text-2xs font-bold text-muted">{t("politics.electionTile")}</div>
-            <div className="mt-0.5 text-xs font-black leading-tight text-ink">{politics?.nextElection ? formatDate(politics.nextElection, locale) : "—"}</div>
+            <div className="mt-0.5 text-xs font-black leading-tight text-ink">
+              {!elections ? t("politics.noElections") : politics?.nextElection ? formatDate(politics.nextElection, locale) : "–"}
+            </div>
           </div>
-          <div className="min-w-0 rounded-lg border border-line bg-surface p-2">
+          <div className="min-w-0 rounded-lg border border-line sheet p-2">
             <div className="truncate text-2xs font-bold text-muted">{t("politics.majorityTile")}</div>
             {house ? (
               <div className={`mt-0.5 flex items-center gap-1 text-sm font-black tabular-nums ${held >= majority ? "text-emerald-700" : "text-amber-700"}`}>
@@ -650,10 +674,11 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
                 {held >= majority && <Check className="h-3.5 w-3.5" />}
               </div>
             ) : (
-              <div className="mt-0.5 text-sm font-black text-muted">—</div>
+              <div className="mt-0.5 text-sm font-black text-muted">–</div>
             )}
           </div>
         </div>
+        {!elections && <p className="mt-2 text-2xs font-medium text-muted">{t("politics.noElectionsNote")}</p>}
       </section>
 
       {parties.length === 0 && (
@@ -663,7 +688,7 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
         </section>
       )}
 
-      <div className="grid grid-cols-4 gap-1 rounded-xl bg-page p-1">
+      <div className="grid grid-cols-3 gap-1 rounded-xl bg-page p-1">
         {tabs.map(({ id, icon: Icon, badge }) => (
           <button key={id} type="button" onClick={() => setTab(id)} aria-pressed={tab === id} className={`${ui.segment} ${tab === id ? ui.segmentOn : ui.segmentOff} relative flex flex-col items-center gap-0.5 px-1`}>
             <Icon className="h-3.5 w-3.5" />
@@ -676,7 +701,7 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
       {tab === "parliament" && (
         <div className="flex flex-col gap-3">
           {house ? (
-            <section className="rounded-xl border border-line bg-surface p-3">
+            <section className="rounded-xl border border-line sheet p-3">
               <div className="mb-1 text-sm font-black text-ink">{house.name}</div>
               <Hemicycle house={house} parties={parties} colors={colors} focus={focus} onFocus={focusParty} />
               <div className="mt-2">
@@ -684,8 +709,20 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
               </div>
             </section>
           ) : (
-            parties.length > 0 && <p className="rounded-xl bg-page px-3 py-2 text-xs font-medium text-muted">{t("politics.noParliament")}</p>
+            parties.length > 0 && <p className="rounded-xl bg-page px-3 py-2 text-xs font-medium text-muted">{t("politics.noSitting")}</p>
           )}
+          {house && sitting && (
+            <section className="flex items-center justify-between gap-2 rounded-xl border border-accent/40 sheet p-3">
+              <div className="min-w-0">
+                <div className={ui.label}>{t("politics.session.under")}</div>
+                <div className="mt-0.5 text-xs font-bold leading-snug text-ink">{label(sitting.motion)}</div>
+              </div>
+              <button type="button" onClick={() => onResumeSession(sitting.id)} className={`${ui.primary} shrink-0 px-3 py-2 text-2xs`}>
+                {t("politics.session.resume")}
+              </button>
+            </section>
+          )}
+          {house && !sitting && parties.length > 0 && <MotionForm state={state} disabled={disabled} onConvene={onConvene} />}
           {parties.length > 0 && (
             <ul className="flex flex-col gap-0.5">
               {parties.map((p) => {
@@ -693,14 +730,14 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
                 return (
                   <li key={p.id} className="min-w-0">
                     <button type="button" onClick={() => focusParty(p.id)} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-page">
-                      <span className="h-3 w-3 shrink-0 rounded-sm" style={{ background: colors.get(p.id) }} />
+                      <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: colors.get(p.id) }} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-xs font-black text-ink">{p.name}</span>
                         <span className={`text-2xs font-bold uppercase tracking-wider ${gov ? "text-emerald-700" : p.status === "banned" || p.status === "underground" ? "text-red-600" : "text-muted"}`}>
                           {t(`politics.status.${p.status}` as MessageKey)}
                         </span>
                       </span>
-                      {house && <span className="w-10 shrink-0 text-right text-sm font-black tabular-nums text-ink">{p.seats ?? "—"}</span>}
+                      {house && <span className="w-10 shrink-0 text-right text-sm font-black tabular-nums text-ink">{p.seats ?? "–"}</span>}
                       <span className="w-10 shrink-0 text-right text-xs font-bold tabular-nums text-muted">{p.support}%</span>
                     </button>
                   </li>
@@ -708,7 +745,7 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
               })}
               {house && house.seats > parties.reduce((s, p) => s + (p.seats ?? 0), 0) && (
                 <li className="flex items-center gap-2 px-2 py-1.5">
-                  <span className="h-3 w-3 shrink-0 rounded-sm bg-divider" />
+                  <span className="h-3 w-3 shrink-0 rounded-full bg-divider" />
                   <span className="min-w-0 flex-1 truncate text-xs font-bold text-muted">{t("politics.others")}</span>
                   <span className="w-10 shrink-0 text-right text-sm font-black tabular-nums text-muted">{house.seats - parties.reduce((s, p) => s + (p.seats ?? 0), 0)}</span>
                   <span className="w-10 shrink-0" />
@@ -716,7 +753,8 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
               )}
             </ul>
           )}
-          {politics?.lastElection && (
+          <RecentSessions sessions={pastSessions} />
+          {elections && politics?.lastElection && (
             <section>
               <div className={`${ui.label} mb-2`}>{t("politics.lastElection", { date: formatDate(politics.lastElection.date, locale) })}</div>
               <ul className="flex flex-col gap-1">
@@ -745,7 +783,7 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
               const gov = p.status === "ruling" || p.status === "coalition";
               const outlawed = p.status === "banned" || p.status === "underground";
               return (
-                <li key={p.id} className={`overflow-hidden rounded-xl border bg-surface ${open ? "border-accent/40 shadow-sm" : "border-line"}`} style={{ borderLeftWidth: 4, borderLeftColor: color }}>
+                <li key={p.id} className={`overflow-hidden rounded-xl border sheet ${open ? "border-accent/40 shadow-sm" : "border-line"}`} style={{ borderLeftWidth: 4, borderLeftColor: color }}>
                   <button type="button" onClick={() => setFocus(open ? null : p.id)} aria-expanded={open} className="block w-full p-3 text-left">
                     <div className="flex items-start gap-2.5">
                       <span className="grid h-9 min-w-9 shrink-0 place-items-center rounded-lg px-1 text-2xs font-black" style={{ background: color, color: inkOn(color) }}>
@@ -786,7 +824,7 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
                       </div>
                       <div className="grid gap-1.5">
                         {partyActions(p).map((action) => {
-                          const line = orderFor(action, "", p);
+                          const line = partyOrder(action, p);
                           return (
                             <ActionRow
                               key={action.id}
@@ -811,41 +849,9 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
 
       {tab === "parties" && parties.length === 0 && <p className="text-xs font-medium text-muted">{t("politics.loadNote")}</p>}
 
-      {tab === "actions" && (
-        <div className="flex flex-col gap-4">
-          {(Object.keys(ACTIONS) as ActionCategory[]).map((category) => {
-            const Icon = CATEGORY_ICONS[category];
-            return (
-              <section key={category}>
-                <div className={`${ui.label} mb-2 flex items-center gap-1.5`}>
-                  <Icon className="h-3.5 w-3.5" />
-                  {t(`politics.cat.${category}` as MessageKey)}
-                </div>
-                <div className="grid gap-1.5">
-                  {ACTIONS[category].map((action) => (
-                    <ActionRow
-                      key={action.id}
-                      action={action}
-                      label={t(`politics.act.${action.id}` as MessageKey)}
-                      desc={t(`politics.desc.${action.id}` as MessageKey)}
-                      vote={voteOf(action)}
-                      disabled={disabled}
-                      inOrders={!action.input && orders.has(orderFor(action, ""))}
-                      defaultDate={action.input === "date" ? addStep(state.date, "quarter") : undefined}
-                      onOrder={(value) => order(orderFor(action, value))}
-                    />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-          <p className="text-xs font-medium text-muted">{t("politics.partyHint")}</p>
-        </div>
-      )}
-
       {tab === "street" && (
         <div className="flex flex-col gap-4">
-          <Street state={state} disabled={disabled} order={order} orders={orders} regionName={regionName} onConsult={onConsult} />
+          <Street state={state} disabled={disabled} order={order} orders={orders} regionName={regionName} onTalks={onTalks} />
           <section>
             <div className={`${ui.label} mb-2`}>{t("politics.plots")}</div>
             {plots.length === 0 ? (
@@ -859,14 +865,17 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
                         <div className="text-sm font-black text-ink">{p.title}</div>
                         <div className="text-xs font-medium text-muted">{p.by}</div>
                       </div>
-                      <button
-                        type="button"
-                        disabled={disabled}
-                        onClick={() => order(t("politics.order.foil", { title: p.title }))}
-                        className="shrink-0 rounded-lg border border-line bg-surface px-2 py-1 text-2xs font-black uppercase tracking-wider text-red-700 hover:border-red-300"
-                      >
-                        {t("politics.act.foil")}
-                      </button>
+                      <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+                        <TalksButton under={Boolean(talksWith(politics, p.id))} disabled={disabled} onClick={() => onTalks("plot", p.id)} />
+                        <button
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => order(t("politics.order.foil", { title: p.title }))}
+                          className="rounded-lg border border-line sheet px-2 py-1 text-2xs font-black uppercase tracking-wider text-red-700 hover:border-red-300"
+                        >
+                          {t("politics.act.foil")}
+                        </button>
+                      </div>
                     </div>
                     <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-divider">
                       <div className="h-full rounded-full bg-red-600" style={{ width: `${p.strength}%` }} />

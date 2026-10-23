@@ -1,5 +1,6 @@
 "use client";
 
+import { isDemo } from "@/constants/app";
 import type { SaveMeta } from "@/engine/types";
 
 /**
@@ -8,9 +9,10 @@ import type { SaveMeta } from "@/engine/types";
  * so it filled after some ten games. On first use the games in localStorage
  * move to IndexedDB and leave localStorage. A browser without IndexedDB (or
  * one that refuses it, as some private windows do) keeps using localStorage.
+ * The public demo keeps nothing: its games live in memory, gone on reload.
  */
 export interface LocalStore {
-  kind: "indexeddb" | "localstorage";
+  kind: "indexeddb" | "localstorage" | "memory";
   list(): Promise<SaveMeta[]>;
   get(id: string): Promise<unknown | null>;
   put(id: string, state: unknown, meta: SaveMeta): Promise<void>;
@@ -53,6 +55,34 @@ const localStorageStore: LocalStore = {
     localStorage.setItem(LS_INDEX, JSON.stringify(lsIndex().filter((m) => m.id !== id)));
   },
 };
+
+// ---- memory, the public demo's
+
+/** A store that keeps games only while the page is open. */
+export function memoryStore(): LocalStore {
+  const games = new Map<string, { state: unknown; meta: SaveMeta }>();
+  return {
+    kind: "memory",
+    async list() {
+      return [...games.values()].map((g) => g.meta);
+    },
+    async get(id) {
+      return games.get(id)?.state ?? null;
+    },
+    async put(id, state, meta) {
+      games.set(id, { state: structuredClone(state), meta });
+    },
+    async remove(id) {
+      games.delete(id);
+    },
+  };
+}
+
+/** Where games go: in memory on the public demo, else IndexedDB where the browser has it, else localStorage. */
+export function storeKind(demo: boolean, hasIndexedDb: boolean): LocalStore["kind"] {
+  if (demo) return "memory";
+  return hasIndexedDb ? "indexeddb" : "localstorage";
+}
 
 // ---- IndexedDB
 
@@ -145,7 +175,9 @@ let opened: Promise<LocalStore> | null = null;
 /** The browser's store for games, opened (and moved over from localStorage) once per page. */
 export function localStore(): Promise<LocalStore> {
   opened ??= (async () => {
-    if (typeof indexedDB === "undefined") return localStorageStore;
+    const kind = storeKind(isDemo(), typeof indexedDB !== "undefined");
+    if (kind === "memory") return memoryStore();
+    if (kind === "localstorage") return localStorageStore;
     try {
       const store = indexedDbStore(await openDb());
       await moveFromLocalStorage(store).catch(() => undefined);

@@ -25,6 +25,10 @@ interface Preferences {
   readTurns: string;
   /** Voice input: "off" hides the microphone buttons. */
   mic: string;
+  /** The microphone picked in Settings (its deviceId), or "" for the system's. */
+  micDevice: string;
+  /** How loud the voice reads, 0–100; "" for full. */
+  volume: string;
   /** "1" when the player chose the offline demo game master (lib/gameMaster.ts). */
   demo: string;
 }
@@ -38,6 +42,8 @@ const KEYS: Record<keyof Preferences, string> = {
   rate: "got_rate",
   readTurns: "got_read_turns",
   mic: "got_mic",
+  micDevice: "got_mic_device",
+  volume: "got_volume",
   demo: "got_demo",
 };
 
@@ -52,7 +58,7 @@ function browserLocale(): Locale {
   return "en";
 }
 
-const DEFAULTS = (): Preferences => ({ locale: browserLocale(), theme: "system", model: "", speech: "", voice: "", rate: "", readTurns: "", mic: "", demo: "" });
+const DEFAULTS = (): Preferences => ({ locale: browserLocale(), theme: "system", model: "", speech: "", voice: "", rate: "", readTurns: "", mic: "", micDevice: "", volume: "", demo: "" });
 
 function read<K extends keyof Preferences>(key: K): Preferences[K] {
   try {

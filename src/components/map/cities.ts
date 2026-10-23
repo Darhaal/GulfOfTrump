@@ -22,6 +22,8 @@ export type CityKind = "capital" | "city" | "seat" | "town";
 
 export interface EraCity {
   name: string;
+  /** English name on the map files: the key the game state uses for towns. */
+  key: string;
   x: number;
   y: number;
   kind: CityKind;
@@ -267,7 +269,7 @@ export function eraCities(cities: CityRecord[], era: ScenarioId, locale: Locale,
     const kind: CityKind = isCapital(c) ? "capital" : pop >= 400 ? "city" : c.adm1 ? "seat" : "town";
     // A name proclaimed in play wins over the era's.
     const name = cityNameIn(c, era, locale, renamed);
-    out.push({ name, x: c.x, y: c.y, kind, minZoom: minZoomOf(kind, pop, notable), pop, priority: priorityOf(kind, pop, notable) });
+    out.push({ name, key: c.n, x: c.x, y: c.y, kind, minZoom: minZoomOf(kind, pop, notable), pop, priority: priorityOf(kind, pop, notable) });
   }
   return out;
 }
@@ -284,9 +286,9 @@ export function eraTowns(towns: TownRecord[], era: ScenarioId, locale: Locale): 
   return towns.map(([n, x, y, today, seat, ru, uk]) => {
     const pop = today * scale;
     const kind: CityKind = seat ? "seat" : "town";
-    // Seats show a step earlier than towns of their size.
-    const minZoom = (today >= 100 ? 8 : today >= 50 ? 10 : today >= 25 ? 13 : 16) - (seat ? 1.5 : 0);
+    // Seats show a step earlier than towns of their size; by 12× every town may show.
+    const minZoom = (today >= 100 ? 7 : today >= 50 ? 8.5 : today >= 25 ? 10 : 12) - (seat ? 1 : 0);
     const name = locale === "ru" ? ru || n : locale === "uk" ? uk || n : n;
-    return { name, x, y, kind, minZoom, pop, priority: pop + (seat ? 20 : 0) };
+    return { name, key: n, x, y, kind, minZoom, pop, priority: pop + (seat ? 20 : 0) };
   });
 }

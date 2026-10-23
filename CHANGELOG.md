@@ -11,6 +11,595 @@ included.
 
 ## [Unreleased]
 
+## [1.0.5-beta] — 2026-10-22
+
+The whole game in oil, a world that governs itself, and a turn that tells
+its story first. Since 1.0.4-beta:
+
+- every screen walked through and redrawn in oil and on paper, with plainer
+  words and short dashes;
+- a world that governs itself: every government takes peaceful decisions,
+  and incidents grow out of friction between countries, not out of dates;
+- a turn written in stages: the story of the period comes first, the world
+  and home follow;
+- eight ministries, industry split from the economy; the tab's minister
+  sits at the top of each tab and proposes a budget, a research split or
+  orders only when asked;
+- parliament sits with speeches, talks with strikers and plotters, foreign
+  policy in four parts and a diplomatic map as in Hearts of Iron;
+- the army by training, its fronts and offensives; land the front has left
+  behind stays with its captor until the peace;
+- 512 quotes with portraits and 103 author's tips while a turn is written,
+  and the game's own voice for Russian and Ukrainian;
+- sealed save files, and economies no game could reach brought back on load;
+- the game is in the Microsoft Store.
+
+### Added
+- **The game's own voice for Russian and Ukrainian.** Where the system has
+  no voice for the language – Windows has no Ukrainian one at all, and an
+  English Windows no Russian – reading aloud can use a voice of the game's
+  own, downloaded once from Settings or from the note that says the voice is
+  missing (about 90 MB for Ukrainian, 60 MB for Russian) and then working
+  offline. Ukrainian is Piper's `ukrainian_tts` (three speakers, data CC0);
+  Russian is the light UtrobinTTS (a woman and a man, Apache-2.0), plainer
+  to the ear. Numbers, per cent, money and abbreviations are said in words
+  that agree. The models run in the page and are checked against their
+  hashes; the desktop app's page is cross-origin isolated so they run on
+  several threads. About credits the voices
+  ([docs/built-in-voice.md](docs/built-in-voice.md)).
+- **The game is in the Microsoft Store**
+  ([apps.microsoft.com](https://apps.microsoft.com/detail/9n07jx2chmw0)).
+  "Get it from Microsoft Store" stands beside the GitHub installer on the
+  demo site (the front page, a date's story, the country picker, the header
+  and the game), on the About page and in the README; the front page says
+  the Store version is signed by Microsoft and updated by the Store.
+- **The first news comes first: a turn is written in stages.** The game
+  master now writes a turn in three requests
+  ([src/engine/stages.ts](src/engine/stages.ts),
+  [src/engine/stagePrompts.ts](src/engine/stagePrompts.ts)): the story – the
+  headline, the narrative of the player's period and a verdict on every
+  order – then the world (the map and fronts, wars, blocs, other governments,
+  the world's news) and home (the economies, politics, the government, money,
+  the street) side by side, each carrying the story out; the ministers' views
+  follow as before. The waiting screen turns into the turn's report as soon
+  as the story is in, and the report fills in as the rest arrives, with quiet
+  placeholders and a way to cancel. Each stage reads only its sections of the
+  world and its own rules and is checked by its own sanitizer; nothing is
+  applied until all three are in, so the map and the panels change once and
+  the engine's dice stay the same. A turn cancelled or cut off keeps what
+  landed and, played again with the same orders, asks only for the rest – the
+  story already read stays. Together the three requests spend about what the
+  one did (from 5 % less to 6 % more, measured on three dates). The summits
+  held during a turn now open after its report rather than before.
+- **512 quotes and 103 author's tips, so the wait no longer repeats itself.**
+  The game's statesmen of 1914–2022 now speak beside 234 voices in all:
+  writers, thinkers and sages from Confucius, Thucydides and Seneca to
+  Montaigne, Swift, Twain, Chekhov, Shevchenko, Orwell and Pratchett. Every
+  quote has its source, date and speaker in Russian, Ukrainian and English,
+  and a game still never shows a line said after its date (a year alone
+  counts from its last day; 500 BC reads as such). 466 of them come from the
+  sourced sections of Wikiquote (en, ru, uk; never the disputed or
+  misattributed ones) and `npm run quotes -- --check` finds each again on its
+  page ([scripts/quotes.mjs](scripts/quotes.mjs)); the About page lists the
+  Wikiquote pages (CC BY-SA 4.0) beside the portrait credits. The tips,
+  signed "Author's tip", are short and checked against the game: hotkeys,
+  standing orders, limits, the fog of war, parliament, the map's modes and
+  layers, the timelapse.
+- **A face for every quoted writer and thinker.** 167 of the 174 who are not
+  the game's people are painted in oil like the leaders, from free pictures
+  on Wikimedia Commons (busts and old paintings for the ancients), by
+  `npm run portraits -- --quoted` from `scripts/portraits/quoted.json`; the
+  other seven get a shadow of their era. They stay out of people.json and
+  the engine's index.
+- **The quotes load faster.** The game fetches only its own language's lines
+  (`public/quotes/<locale>.json`, written by `npm run quotes`, quotes and
+  tips together, about 130–170 KB) when the first wait begins, instead of
+  every quote in three languages; the desktop loading screen reads the same
+  file.
+- **A world that governs itself, not only one that fights**
+  ([src/engine/policies.ts](src/engine/policies.ts),
+  [src/engine/programmes.ts](src/engine/programmes.ts),
+  [src/engine/incidents.ts](src/engine/incidents.ts)). Every government but
+  the player's, small states included, now takes peaceful decisions of its
+  own, as plans that climb stages like a war plan and that the game master
+  tells: policies at home (infrastructure, industry and technology
+  programmes, market reform, austerity, stimulus, rearmament, defence cuts,
+  a political opening, a crackdown), sanctions imposed and lifted, trade
+  agreements, and talks that ease a quarrel. At action the engine applies
+  them: budget lines, the growth an economy drifts to, support and
+  stability, the regime, sanctions and trade (a trade agreement is a trade
+  bloc of two for eight years), and the ties between governments. The
+  states without a foreign course choose by their own numbers, their
+  neighbours and their bloc's leader; the cap of sixteen live plans now
+  counts only wars, war entries, blocs, leaving and peace. Crises grow out
+  of the state of the world: every turn the engine weighs the friction
+  between pairs of states (claims, tension and distrust, rival blocs,
+  sanctions, opposed regimes next door, a war nearby) and casts incidents –
+  a border clash, an airspace violation, a spy scandal, diplomats expelled,
+  a cyber attack – before the turn, so the game master tells them; each
+  draws an answer by the dice (a march towards war, sanctions, talks, or
+  protests alone), so the same quarrel can end in war in one game and in
+  talks in another. The quarrels of 2022 are seeded (India and Pakistan,
+  Iran and Israel, Armenia and Azerbaijan, Serbia and Kosovo and more). The
+  news and the chronicle tell policies, accords and incidents in three
+  languages. Save step 22. Design: [docs/world.md](docs/world.md).
+- **The world left alone for years, as a test**
+  ([tests/world-run.test.ts](tests/world-run.test.ts)). 2022 plays ten
+  years and 1939 five with no orders and an empty game master, and must
+  stay sane: finite numbers, no runaway debt or GDP, wars that end, far
+  more peaceful decisions than wars. `WORLD_RUN=1` plays monthly turns and
+  writes the alternate histories, every major event with its chain of
+  causes, to [docs/playtests/world-2022-2032.md](docs/playtests/world-2022-2032.md)
+  and [docs/playtests/world-1939-1944.md](docs/playtests/world-1939-1944.md).
+- **The demo site shows where to download the game.** A "Download for
+  Windows" button in the header of every screen, a prominent one with a line
+  on why under the front page's title, and quieter links in a date's story,
+  under the country picker's start button, in the footer and in the demo
+  banner. Each goes to the latest release's installer
+  ([src/components/DownloadButton.tsx](src/components/DownloadButton.tsx)).
+- **The demo site saves nothing.** A demo game lives only while the page is
+  open, never in the browser's storage or the cloud
+  ([src/lib/localSaves.ts](src/lib/localSaves.ts)); the front page has no
+  "Your games", no last game and no loading of saves, and a game reloaded
+  after it is gone says so and offers a new one or the download. The app and
+  a local run keep their saves as before.
+- **A diplomatic map, as in Hearts of Iron**
+  ([src/engine/sides.ts](src/engine/sides.ts)). A new map mode (the handshake
+  in the map's mode buttons) colours the world by its side towards one
+  country – the one picked on the map, or the player's own: allies green
+  (a military alliance or a war fought on the same side), bloc and trade
+  partners a paler green, pacts and truces a muted tone, enemies at war red,
+  the country itself in orange, everyone else quiet. A war outweighs a
+  treaty; a world body colours nobody. Under the fog of war a pact between
+  two foreign governments shows only when the player's government knows
+  enough of one of them; wars and alliances are public. A legend names
+  whose relations they are. It works on the country picker too.
+- **The front page in oil and on paper.** Each of the eight dates sits on its
+  own scene painted in oil from a free picture of that moment on Wikimedia
+  Commons (the arrest in Sarajevo, the barrier on the Polish border, refugees
+  on a Korean road, the destroyer Maddox, a tank with flowers in Moscow, a
+  Tomahawk leaving its cruiser, the Maidan, a wreck on 24 February 2022),
+  painted by a new `npm run scenes`
+  ([scripts/scenes.mjs](scripts/scenes.mjs)) and credited on the About page.
+  Under each title one sentence, and **More** opens the world of that day in
+  three paragraphs, with a button on to the country picker. The pages lie
+  on worn, oiled paper (an ivory page in the light theme, a faint wear in
+  the dark one) instead of the plain modern grey.
+- **The tab's minister at the top of the tab**
+  ([src/components/game/AdvisorStrip.tsx](src/components/game/AdvisorStrip.tsx)).
+  - Army, Science, Foreign policy, Domestic politics and Economy each open
+    with a small strip: the minister's portrait, name and a field to ask or
+    request. The Economy tab has the economy and industry ministers with a
+    small switch between them.
+  - The conversation opens when used and folds back. It is the cabinet's
+    own thread with that minister, so a question asked on a tab shows in
+    the cabinet and the other way round.
+  - The minister says nothing unasked.
+  - With no government named yet, the strip offers to name it, as the
+    cabinet does.
+- **Ministers change things when asked to**
+  ([src/engine/advice.ts](src/engine/advice.ts)).
+  - Asked to rebalance the research money, the science minister proposes a
+    new split; asked what industry should build first, the general staff
+    proposes it; asked about the budget, the economy minister proposes one,
+    as before.
+  - Each proposal comes as a card in the conversation, on the strip and in
+    the cabinet, with "Применить". Nothing changes until the player clicks
+    it; then the engine checks it again against the state as it is (only
+    the minister's own field, a valid change: the research split whole and
+    to 100, at most two kinds the country can build, the budget within the
+    limits of a budget change) and applies it once.
+- **Ministers draft orders when the player asks for them.**
+  - Asked for an order or what to do, a minister drafts at most two in
+    their answer, on the strip or in the cabinet.
+  - Each comes as a card with "+", which adds it to the turn's orders as it
+    is; there the player can edit or remove it.
+  - The engine trims them and drops repeats and what the turn already
+    holds. Otherwise ministers advise in words, and their views after a turn
+    stay opinions with nothing to add.
+- **Tension in the stats bar**: the country's unrest, out of 100 with a
+  small bar, just left of the crises, red from 70 and amber from 40.
+- **Sound in Settings**: the microphone voice input listens to (the
+  system's by default; a missing one falls back to it), the reading
+  volume, and where the voice comes out – the system's speaker, with a
+  button to Windows' sound settings in the desktop app.
+- **Parliament sits; politics has no catalogue of moves**
+  ([src/engine/parliament.ts](src/engine/parliament.ts)). The Politics
+  panel's "Actions" tab is gone. The government brings a motion to the house
+  instead:
+  - the motions: a change of one law, a bill or a constitutional amendment
+    in its own words, a vote of confidence, an early election, putting an
+    election off, or a state of emergency;
+  - members of the parties speak in character, the player answers, and the
+    model says how each speech moved the parties; the engine allows a speech
+    0.15 of sway and a sitting 0.35;
+  - the engine counts the vote, seat by seat, from where each party starts
+    (in government or not, and how its ideas sit with the law) with seeded
+    dice for the waverers;
+  - a passed law is in force at once, an election is called or put off, an
+    emergency begins, and the next turn's game master is told what passed.
+- **Talks with strikers and plotters** ([src/engine/talks.ts](src/engine/talks.ts)).
+  "Переговоры" on a protest at home or on a plot the government knows of
+  opens a conversation with their leaders. When it ends, the model says
+  what came of it and the engine decides and applies it:
+  - a deal halves a protest or weakens a plot;
+  - a concession ends it, at the elites' goodwill;
+  - a split thins its ranks;
+  - plotters may only play for time, the likelier the stronger the plot.
+- **Sittings and talks never play out without the player.** The house
+  votes only after the government has spoken, and talks end only after it
+  has said something; the server refuses to settle talks the player has not
+  spoken in. On request the interior minister drafts the next speech or
+  reply ("Черновик"); the draft lands in the player's box to edit and give
+  and is never said for them.
+- **No elections where there are none.** Under a dictator, a single party or
+  a junta, or with elections suspended by law, the panel says there are no
+  free elections and offers no election motions.
+- The Politics panel no longer shows tension or the covert operations abroad
+  ("Разжечь протесты"); the parliament's seats and the parties' circles are
+  painted in oil.
+- The offline game master's politics follow the country's regime: one party
+  and no elections for a dictatorship, a dominant party under managed
+  elections, a democracy's next election a couple of years ahead. Nazi
+  Germany no longer gets a multiparty assembly elected in 2030.
+- **The economy minister proposes a budget**
+  ([src/engine/budgetAdvice.ts](src/engine/budgetAdvice.ts)). Asked about
+  the budget – in the cabinet or from the budget itself, "Попросить
+  министра" – the minister may answer with new figures for every line and a
+  reason. The engine holds them to what the country can do: nothing below
+  zero, no line more than triples, taxes below 70% of GDP, and a deficit no
+  wider than 6% of GDP (or today's, if wider), trimming spending in
+  proportion. The proposal shows in the budget as a card; "Применить" fills
+  the fields, and the budget still takes effect only when the player
+  approves it.
+- **A plainer economy tab.** The explanatory notes are gone (the debt and
+  reserves, the new budget's effect, the people's 70% line), and so are the
+  "Economic decisions" buttons. Sanctions left the trade tab: the government
+  imposes, tightens or lifts them by order, and the game master answers in
+  the turn. The deals tab no longer drafts the player's own proposals; it
+  shows the market's offers and the deals in force.
+- **The state's debt and reserves move every turn**
+  ([src/engine/economy.ts](src/engine/economy.ts)). They looked frozen: a
+  deficit went wholly into the debt, and the reserves were pulled back to
+  the era's norm each turn. Now the interest is paid every turn; a deficit
+  with it is met a quarter from the reserves while they stand above half
+  the era's normal holdings, the rest borrowed; a surplus pays down half of
+  the debt it can and puts the rest by; resource trade moves the reserves,
+  which settle back only outside a band of half to twice the era's norm.
+  The economy tab shows how much each moved since the last turn.
+- **No more State tab: acts of state are orders.** The talk with the chief
+  of staff, its drafts and the acts list are gone. To rename the country or
+  one of its cities, or give it a new colour on the maps, write it as an
+  order ("Переименовать Днепропетровск в Днепр"): the game master answers it
+  in the turn with the new name in three languages and how the country takes
+  it, and the engine proclaims it as the turn ends – only when an order asked,
+  only for the country or a city it holds, named by any of its names. Laws
+  still change by the game master's word or a bill.
+- **The country panel in sections**: Province (when one is chosen),
+  Government, Economy, Army and, for your own country, Laws – the laws in
+  force, each with what it means on hover. Army shows the soldiers, your
+  weapons, the wars, alliances and pacts.
+- A click on the sea closes the chosen province; the panel shows the
+  country again.
+- **The turn's report ends with one button, "Back to the game".** "Show on
+  the map" and "Picture" are gone from it; the chronicle keeps both for a
+  past turn.
+- **"What changed" lists no front movements.** A share of a province won or
+  lost, a new front or a front pushed back are left out of the turn's
+  report, the chronicle, its download and the world's news; the ministers
+  tell of the fronts when asked. Land that changed hands, wars begun,
+  joined and ended and everything else stay. The map's "Turn N: what
+  changed" highlights and counts the same land the list names.
+- **Nothing moves when a turn ends.** The map keeps its zoom and place (the
+  report no longer zooms it to the turn's changes), and the side panels keep
+  their tab and their scroll while the turn is played, while its report is
+  open and after it closes, whatever arrives meanwhile.
+- **Quotes and tips stay long enough to read.** Each line stays ten seconds
+  and half a second a word (up to forty), about twice as long as before for
+  a long quote, and fades out gently before the next, on the waiting screen
+  and on the app's loading screen alike.
+- **The author's tips between the quotes.** While a turn is written, and on
+  the app's loading screen, a quote of the era and a short tip from the
+  author take turns: 26 small things a player may miss (a pinned order
+  repeats every turn, a quiet minister answers when asked, a save file can
+  be dropped on the front page…), in Russian, Ukrainian and English.
+- **More voices in the quotes, each with a face.** 46 quotes from 41
+  people, most of them leaders of the game's own start dates – Franz Joseph,
+  Wilhelm II, Bethmann Hollweg, Poincaré, Józef Beck, Chiang Kai-shek,
+  Hirohito, Omar Bradley, Khrushchev, Sukarno, Kohl, Bush, Clinton, Obama,
+  Macron, Scholz and more – every one beside the speaker's oil portrait. The
+  quotes by people the game has no portrait of, and Putin's, are gone.
+
+### Changed
+- **The screenshots show the new interface.** The pictures of the 1950 game
+  on the demo's front page and in the README, and the Store's screenshots,
+  are retaken from the game as it is now: the cabinet's eight ministries
+  with the Secretary of Defense's view of the turn, a sitting of the House
+  on the Defense Production Act, debt and the budget, China under fog of
+  war with its economy and army as ranges of estimates, the orders, the
+  turn's chronicle, a turn as a picture, the timelapse and four maps. New
+  ones show the army and science panels with their minister on top, and
+  the diplomatic map for the United Kingdom; the picture of the old "State"
+  tab is gone, as acts of state are orders now. The Store gets ten
+  screenshots (with the diplomatic map and the army), written to
+  `desktop/store-screens/`, which git ignores. `scripts/screens/make-save.ts`
+  plays the save through the engine again – eight ministries, ministers'
+  answers with their proposals and drafted orders, the army's organisation,
+  biographies, a sitting under way – and seals it as
+  `scripts/screens/1950-usa.gotsave`, since "Import a save" opens only
+  sealed files; the plain JSON save is gone. `scripts/screens.mjs` follows
+  the new panels and imports the sealed file.
+- **Reading aloud at a person's pace.** "Normal" speed is the brisk pace of
+  someone reading aloud (1.15 of the engines' own, which drags), "fast" is
+  1.45 and "slow" 0.9. The game's Ukrainian voice speeds up by its own pace
+  rather than by stretching the sound.
+- **About says what the game has now.** "What is in the game" grows from
+  six cards to nine – the map at war, the army piece by piece, the economy,
+  science against history, a government of people, politics at home, a world
+  that answers, a turn and its report, your games – each saying what is
+  there today; the line under the author's portrait is gone.
+- **Save files can no longer be edited by hand.** "Export a save" writes a
+  sealed `.gotsave` file – compressed and encrypted, about a tenth of the
+  old JSON – and "Import a save" refuses one changed by a single byte
+  ("changed by hand or damaged"). Plain JSON saves exported before still
+  import. On every load the engine also brings back what no game could
+  reach – reserves past two years of output and one more for every year
+  played (a tester's 1939 USSR had $100 trillion, over 3,000 years of
+  output, in its first week), taxes past two, a billion soldiers, stores
+  past twelve months; a played game, however long, loads unchanged, and
+  debt and spending keep no ceiling.
+- **The turn length takes less of the map.** Five small squares the size of
+  the zoom buttons – 1w, 1m, 3m, 6m, 1y – under those buttons, instead of a
+  wide bar of words above them; hovering one says how long a turn then lasts
+  ("One turn – 3 months").
+- **The whole game in oil and on paper, as the front page is.** The theme's
+  colours are warmed into paper and ink in both themes – an ivory page and
+  lighter sheets on it by day, a warm dark by night, lines in a soft ink
+  rather than grey, shadows umber
+  ([src/app/globals.css](src/app/globals.css)). The game's side panels lie
+  on the same worn paper as the pages; cards, panel heads, the header and
+  the stats bar, the side navigation, every popup (the turn's report,
+  sittings, talks, summits, settings, about) and the tutorial are lighter
+  sheets with the paper showing through
+  ([src/components/ui/classes.ts](src/components/ui/classes.ts)). The
+  header no longer blurs the page scrolling under it. The map
+  stays a map: it sits in a fine mount with a soft shadow at its edges, and
+  its legend, buttons and the turn's length are paper sheets that no longer
+  blur the map under them, which also keeps panning quick. The portraits on
+  the turn's waiting screen and the desktop's loading screen take the
+  mirror frame, and the loading screen lies on the paper too. The tile is
+  small and only painted, with no filters over the scrolling panels.
+- **What the long runs showed, fixed.** A peace the engine makes by itself
+  (one the game master left out) costs the side that asked for terms the
+  land the other holds of it, instead of returning everything. A war plan
+  against a target a great alliance stands behind backs down at its
+  decision, and a military bloc admits no country at war or with a claim it
+  means on a strong state outside it – a quiet 2022 no longer ends in NATO
+  against Russia. Fronts slow as a war drags on and an offensive deep in
+  enemy land runs short of supply (`fronts.ts`), so long wars settle into
+  lines. Coups are rare in rich states. A government abroad whose debt
+  passes three years of GDP (a state that lost its land and kept its debt)
+  defaults to 120%; one with a surplus and little debt gives it back in
+  lower taxes and spending; reserves past their band pay off debt, and the
+  resource trade moves them by at most a quarter of GDP a year.
+  Unemployment returns towards the era's level after a slump instead of
+  staying lost for decades. The civil budget (industry, social, other)
+  follows land lost or won, as taxes already did. Western sanctions on an
+  aggressor come from the attack itself, however far away (partial, an
+  embargo only where tension is past bearing); a bloc follows its leader's
+  sanctions only against an aggressor, never against a member. The
+  fifty-turn economy campaigns play with fixed dice instead of a random
+  game id.
+- The turn prompt lists trade agreements between two governments on one
+  line, and the living world's sections add on average about 260 tokens a
+  turn (peaceful moves ~75, incidents ~25, the trade-agreement line ~120
+  instead of ~320, sanctions ~35).
+- The front page's lead is one sentence, and its footer names the author
+  without the photograph.
+- The oil painting the portraits, the shadows and the scenes share lives in
+  [scripts/portraits/oil.mjs](scripts/portraits/oil.mjs), for a canvas of
+  any size; the portraits and shadows it paints are the same to the byte.
+- **Land the front has left behind is the captor's until the peace**
+  ([src/engine/occupation.ts](src/engine/occupation.ts)). A province an
+  enemy took counts for its owner while the front runs through or beside
+  it. Once the front has moved on to the next provinces – not contested,
+  nothing of the owner's side around it – it joins the captor's country
+  until a peace decides: its people, 60% of its output and taxes, its food
+  to find and a quarter of its people towards the call-up. The owner stays
+  recorded for the peace talks, the map still hatches the land as occupied,
+  and the turn's report says so ("the front has moved on – Germany's until
+  a peace"). A peace returns it or, by annexation, gives it for good; land
+  held without a war stays its owner's. Over twenty months of 1939 Germany
+  grows from 85 to 104 million people as Poland falls to 13 million.
+- **Soldiers by training** ([src/engine/army.ts](src/engine/army.ts)). Every
+  army is career soldiers, trained conscripts and recruits still in
+  training, adding up to its soldiers. The call-up adds recruits, a few
+  months of training make them soldiers, a few conscripts sign on in peace,
+  and war wears down all three, recruits worst. Training counts in a war's
+  strength: a career soldier weighs a quarter more than a conscript, a
+  recruit about half. Volunteer armies (Britain since 1963, the United States
+  since 1973 and the rest) are mostly career soldiers, and the player's
+  conscription law sets the player's. Saves get the split of their era by
+  migration step 17.
+- **"Learn about the army."** The game master describes the player's armies,
+  fleets and air forces: their divisions, commanders and where they stand,
+  shown on the map with a click. The engine keeps only provinces the player
+  holds or fights in and no more divisions than its soldiers can fill. The
+  button is a reusable piece (RefineButton) for other panels to ask the game
+  master the same way.
+- **Fronts and offensives in the army tab.** For each war: each side's
+  divisions (the enemy's as an estimate under the fog of war), the balance
+  of strength, the front line province by province, last turn's losses, the
+  enemy plans the government knows of, and a field to order an offensive for
+  the whole army or one of its armies – an ordinary order the player writes.
+- **The army tab reads like the army's books.** Weapons and soldiers are
+  counted in full ("4 653 287" rifles, not "4 653 thousand"), with a natural
+  tail on round counts fixed by the game, the country, the kind and the turn;
+  the shown figures change nothing the engine counts. Technology levels and
+  the explanatory paragraphs are gone from the tab.
+- **Special operations beside the orders.** The orders panel has a second
+  tab, "Special operations": the operations under way, each with its
+  ministry, target, secrecy and the last word on it, and those finished,
+  done or failed. A form plans a new one with the fields a minister's
+  proposal has (the ministry that runs it, target, goal, means, timing,
+  secrecy); approving it starts it as a standing directive, checked like a
+  proposal ([src/engine/advisors.ts](src/engine/advisors.ts) `planOperation`).
+  Stirring up protests abroad, backing a protest abroad and foiling a known
+  plot at home fill the form under their ministry; the player writes the
+  rest.
+- **Ctrl+Enter adds an order** (Cmd+Enter on a Mac); plain Enter starts a
+  new line. A small hint by the button says so.
+- **Orders can be edited.** A click on an order, or its pencil, opens it in
+  place, the turn's and the standing ones alike: Enter saves, Escape
+  cancels. Under the orders, the last turn's list gives each one "Edit and
+  repeat", which brings it back into the draft opened for editing; sending
+  it is still the end of the turn.
+- **The turn's length sits over the map**, at its bottom right just above
+  the map's own controls, instead of at the top of the orders panel.
+- **Plainer orders and tutorial.** The order field, its hint and the empty
+  list say what to do in a line. The tutorial is shorter and plain, has a
+  step for the turn's length, and puts its card beside each target with an
+  arrow pointing at it, its highlight inside the window and shaped like the
+  target; its last step shows example orders to start from instead of
+  adding them with a click.
+- "Политика" is now "Внутренняя политика" / "Внутрішня політика" /
+  "Domestic politics".
+- The Science tab no longer carries the minister's own note on the split,
+  the Army tab no longer has a button to ask the chief of the general staff
+  in the cabinet, and the Economy tab's budget no longer has a field of its
+  own to ask the economy minister: the minister on the strip above answers,
+  when asked. The economy minister's latest budget still shows by the
+  budget's fields, to fill them in.
+- **Short dashes everywhere.** Every string of the interface, the scenarios,
+  the treaties, the loading screen's quotes and the offline game master uses
+  the short dash (–) instead of the long one (—), and the game master's own
+  text is shortened the same way as it streams.
+- The front page's header no longer says "Open source · MIT" under the name.
+- **The country picker, simplified.**
+  - The list shows countries without their province counts.
+  - "Historical" history comes first and is chosen by default.
+  - Fog of war is always on: the switch is gone from the picker and from
+    the game's header.
+  - The map's mode buttons no longer spell out the chosen mode; each says
+    its name on hover.
+- **Say who you are in opposition.** Choosing the opposition opens one
+  paragraph in your own words – who you are, which party or movement you
+  lead, whose side you are on – instead of two name fields. The game master
+  reads it every turn and names the leader and the movement from it; left
+  empty, it names them itself, as before. The text is cleaned and kept to
+  600 characters ([src/engine/role.ts](src/engine/role.ts)).
+- **Cities on the map keep their size and tell what they are**
+  ([src/components/map/places.ts](src/components/map/places.ts)). A city's
+  dot is sized in steps by its people and stays that size on screen as the
+  map comes closer, a little smaller on the widest views; at the closest
+  zooms it grows to the city's true built-up extent, a light disc. More
+  towns show as the zoom grows – a dot alone where its name has no room,
+  and every town by 12× – up to 1 400 places at once. Hovering a dot (or
+  tapping it) shows the city's card: what it is, about how many people
+  live there now, who holds it (the other side for a town it took on a
+  front), and whether a railway, a main line or a port is there.
+- **About and Settings open over the screen**, as popups from the header,
+  so opening them never leaves a game; so does Settings from the game
+  master's chip and the sign-in offer. The /about and /settings pages stay
+  for links.
+- **The game's header is plainer.** The fog-of-war switch (the crossed-out
+  eye that showed other countries' true figures) is gone; the flag for
+  reporting the game master's text moves to the right end.
+- **Every figure under the header explains itself** on hover, focus or a
+  tap: what it is and what moves it – GDP, the budget, debt, reserves,
+  inflation, the army, crises, resources.
+
+### Fixed
+- **No figure cut at the edge of the top bar.** Where the figures and their
+  names did not fit (a 1440-pixel window), the row scrolled and the army's
+  figure read "1.!". The names now shorten first ("GDP", "Army"), then go
+  (their hints still give them), so every figure shows whole.
+- **A bill is named once in a sitting.** The sitting showed "Bill" above a
+  line that already began "Bill: …"; the kind now stands above a law only.
+- **A minister asked for a whole plan no longer fails the answer.** An
+  answer past 4,000 characters – a detailed plan "from first to last" – was
+  refused twice and ended in "The game master's answer could not be read".
+  Ministers and foreign leaders who run long are now cut at the last whole
+  sentence (5,000 characters at most, the numbered steps of a plan kept),
+  and a minister asked for a complete plan gives its main steps as a short
+  numbered list and offers to work out any of them.
+- **Reading aloud no longer reads only the digits.** Where Windows has no
+  voice for the game's language (an English Windows has no Russian one), the
+  text went to an English voice, which skipped the Cyrillic and read the
+  numbers. Now nothing reads, and the game says why and how to add a voice
+  (Settings → Time & language → Speech → Add voices, then a restart); the
+  desktop app opens Windows' speech settings, and Settings shows the same
+  note in place of the voice list. Ukrainian, which Windows has no voice
+  for, is read by a Russian voice as before.
+- **Voice input shows its limits.** While listening the microphone's note
+  counts the time spoken, against the minute a recording may last where
+  speech is recognised on the computer; a recording cut at the minute and
+  words that did not fit the field (an order holds 1000 characters) are
+  each said; a microphone busy with another field says so. Settings
+  explains in one paragraph how dictation works and where it stops.
+- **Every ministry has its minister from the start.** The government named
+  at the start no longer leaves the science ministry (or another of the
+  eight) empty when the country had no ministry by that name: it names
+  whoever did that work then. The offline game master names a science
+  minister too.
+- **No quote from the future.** Every quote knows the day it was said, and
+  a game shows only those said before its date: a 1939 game no longer
+  quotes Roosevelt's address of December 1941. With no quote old enough (28
+  June 1914), the tips alone are shown.
+- **An eighth ministry: industry.** The economy splits in two. The finance
+  ministry becomes the economy (the budget, taxes, debt, reserves, prices,
+  money); the new ministry of industry takes factories and production,
+  resources, trade deals and exports, the people's provision and the war
+  economy. The cabinet shows the eight as two rows of four. A game begun
+  before it has the post vacant until someone is appointed (save step 21).
+- **Questions sway ministers.** How the leader asks and what is asked may
+  please or offend a minister or a deputy: their mood towards the leader
+  moves one step at most per answer, and someone devoted (loyalty 4 or more)
+  objects at most.
+- **The cabinet's switch reads "Министры | Министерства".** Ministers is the
+  list of the government's people; until they are named, its button names
+  them. Ministries holds the ministers' tiles, talk, directives and deputies.
+- **"About the minister"**, a tab of its own beside talk, directives and the
+  ministry: the minister's card and a short biography.
+- **Short biographies** of the leader, under their name, and of each
+  minister: two or three sentences of their life up to the game's start date
+  only, a real person's real life and an invented one's from what the game
+  knows. Written once per person and language, when first seen.
+- The cabinet's explanatory hints are gone, and so are the suggested
+  questions under a ministry's talk: the player asks their own.
+- **Foreign policy in four parts**
+  ([src/components/game/ForeignPanel.tsx](src/components/game/ForeignPanel.tsx)):
+  - **Wars:** each war shows its sides as flags, since when it has been
+    fought, what it has cost each side, the fronts (the provinces in battle
+    and each side's share, the land each side holds of the other's) and the
+    plans abroad that touch it.
+  - **Pacts and truces.**
+  - **Organisations and alliances**, with their sessions and summits.
+  - **Talks** with any government: every past correspondence, and a
+    country to write to found by name or picked on the map. They used to sit
+    in the right-hand panel's Diplomacy tab, which is gone; a country's
+    "Write to the government" opens them.
+  Members show as flags, each name on hover; a pact's or a bloc's terms show
+  when the card is hovered or tapped.
+- **A war's losses are kept**
+  ([src/engine/warLosses.ts](src/engine/warLosses.ts)). The game master
+  reports a period's soldiers killed and wounded by war and side; the engine
+  keeps them within what the armies and the fighting allow and works out the
+  rest itself. The weapons a country loses are split between its wars. The
+  player's own losses are known exactly; under the fog of war the enemy's are
+  an intelligence estimate, with its range on hover.
+- **A bloc's session is called by an order**, such as "Convene the UN
+  Security Council on Poland", instead of a button. The game master names
+  it, and the engine opens it on the next period's first day.
+- **No meeting with the player happens without the player.** A summit or
+  session the player's country takes part in is never held by the turn's
+  game master or the offline stand-in. It opens by itself once the turn's
+  report is closed, and the player speaks while the other delegations
+  answer in turn. The foreign minister stands by to draft a line, and the
+  meeting cannot be closed before the player has spoken. Summits among
+  other governments only are reported by their outcome, without a record of
+  who said what.
+
 ## [1.0.4-beta] — 2026-10-21
 
 Fronts that move, ministers who think, and faces of their time. Since

@@ -45,6 +45,15 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "abraham-lincoln": {
+  "name": "Abraham Lincoln",
+  "source": "https://commons.wikimedia.org/wiki/File:Abraham_Lincoln_O-77_matte_collodion_print.jpg",
+  "file": "File:Abraham Lincoln O-77 matte collodion print.jpg",
+  "author": "Alexander Gardner",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "adam-glapinski": {
   "name": "Adam Glapiński",
   "source": "https://commons.wikimedia.org/wiki/File:Prof._Adam_Glapinski_Nov_2015_(cropped).jpg",
@@ -53,6 +62,15 @@
   "licence": "CC BY-SA",
   "licenceName": "CC BY-SA 2.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "adam-smith": {
+  "name": "Adam Smith",
+  "source": "https://commons.wikimedia.org/wiki/File:AdamSmith.jpg",
+  "file": "File:AdamSmith.jpg",
+  "author": "Etching created by Cadell and Davies (1811), John Horsburgh (1828) or R.C. Bell (1872).",
+  "licence": "public domain",
+  "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "adnan-menderes": {
@@ -81,6 +99,16 @@
   "author": "Agence de presse Meurisse",
   "licence": "public domain",
   "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "aesop": {
+  "name": "Aesop",
+  "source": "https://commons.wikimedia.org/wiki/File:Aesop_pushkin01.jpg",
+  "file": "File:Aesop pushkin01.jpg",
+  "author": "user:shakko",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "agim-ceku": {
@@ -158,6 +186,24 @@
   "licenceUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "albert-camus": {
+  "name": "Albert Camus",
+  "source": "https://commons.wikimedia.org/wiki/File:Albert_Camus,_gagnant_de_prix_Nobel,_portrait_en_buste,_pos%C3%A9_au_bureau,_faisant_face_%C3%A0_gauche,_cigarette_de_tabagisme.jpg",
+  "file": "File:Albert Camus, gagnant de prix Nobel, portrait en buste, posé au bureau, faisant face à gauche, cigarette de tabagisme.jpg",
+  "author": "Photograph by United Press International",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "albert-einstein": {
+  "name": "Albert Einstein",
+  "source": "https://commons.wikimedia.org/wiki/File:Albert_Einstein_Head_cleaned.jpg",
+  "file": "File:Albert Einstein Head cleaned.jpg",
+  "author": "Oren Jack Turner",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "albert-i-of-belgium": {
   "name": "Albert I of Belgium",
   "source": "https://commons.wikimedia.org/wiki/File:Albert_I_Koning_der_Belgen.jpg",
@@ -193,6 +239,15 @@
   "licence": "CC BY-SA",
   "licenceName": "CC BY-SA 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "aldous-huxley": {
+  "name": "Aldous Huxley",
+  "source": "https://commons.wikimedia.org/wiki/File:Aldous_Huxley_1947.png",
+  "file": "File:Aldous Huxley 1947.png",
+  "author": "Anonymous Unknown author",
+  "licence": "public domain",
+  "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "alec-douglas-home": {
@@ -273,6 +328,24 @@
   "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "alexander-griboyedov": {
+  "name": "Alexander Griboyedov",
+  "source": "https://commons.wikimedia.org/wiki/File:Ivan_Nikolayevich_Kramskoi_-_Portrait_of_Alexander_Sergeyevich_Griboyedov,_1873.jpg",
+  "file": "File:Ivan Nikolayevich Kramskoi - Portrait of Alexander Sergeyevich Griboyedov, 1873.jpg",
+  "author": "Ivan Kramskoi",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "alexander-herzen": {
+  "name": "Alexander Herzen",
+  "source": "https://commons.wikimedia.org/wiki/File:Personnalit%C3%A9s_des_arts_et_des_lettres_-_Alexandre_Herzen.jpg",
+  "file": "File:Personnalités des arts et des lettres - Alexandre Herzen.jpg",
+  "author": "Étienne Carjat",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "alexander-i-of-yugoslavia": {
   "name": "Alexander I of Yugoslavia",
   "source": "https://commons.wikimedia.org/wiki/File:Propri%C3%A9t%C3%A9_d%27_Albert_Kahn_,_Boulogne_,_France_S_.A_.R_Alexandre_,_Prince_R%C3%A9gent_du_Royaume_des_Serbes_,_Croates_et_Slov%C3%A8nes.jpg",
@@ -291,6 +364,15 @@
   "licence": "CC BY",
   "licenceName": "CC BY 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "alexander-pushkin": {
+  "name": "Alexander Pushkin",
+  "source": "https://commons.wikimedia.org/wiki/File:Kiprensky_Pushkin.jpg",
+  "file": "File:Kiprensky Pushkin.jpg",
+  "author": "Orest Kiprensky",
+  "licence": "public domain",
+  "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "alexander-rutskoy": {
@@ -318,6 +400,15 @@
   "source": "https://commons.wikimedia.org/wiki/File:Krobatin_Alexander_FM_1849_1933_photo.jpg",
   "file": "File:Krobatin Alexander FM 1849 1933 photo.jpg",
   "author": "Unknown author Unknown author",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "alexis-de-tocqueville": {
+  "name": "Alexis de Tocqueville",
+  "source": "https://commons.wikimedia.org/wiki/File:Alexis_de_Tocqueville_(Th%C3%A9odore_Chass%C3%A9riau_-_Versailles).jpg",
+  "file": "File:Alexis de Tocqueville (Théodore Chassériau - Versailles).jpg",
+  "author": "Théodore Chassériau",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -385,6 +476,15 @@
   "source": "https://commons.wikimedia.org/wiki/File:Alija_Izetbegovic_(cropped).jpg",
   "file": "File:Alija Izetbegovic (cropped).jpg",
   "author": "Helene C. Stikkel",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "ambrose-bierce": {
+  "name": "Ambrose Bierce",
+  "source": "https://commons.wikimedia.org/wiki/File:Ambrose_Bierce_portrait_by_John_Herbert_Evelyn_Partington_(retouched).jpg",
+  "file": "File:Ambrose Bierce portrait by John Herbert Evelyn Partington (retouched).jpg",
+  "author": "John Herbert Evelyn Partington",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -568,6 +668,24 @@
   "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "antoine-de-saint-exupery": {
+  "name": "Antoine de Saint-Exupéry",
+  "source": "https://commons.wikimedia.org/wiki/File:Antoine_de_Saint-Euxpery_(1920).jpg",
+  "file": "File:Antoine de Saint-Euxpery (1920).jpg",
+  "author": "Unknown author Unknown author",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "anton-chekhov": {
+  "name": "Anton Chekhov",
+  "source": "https://commons.wikimedia.org/wiki/File:Anton_Chekhov_with_bow-tie_sepia_image.jpg",
+  "file": "File:Anton Chekhov with bow-tie sepia image.jpg",
+  "author": "Unknown author Unknown author",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "anton-siluanov": {
   "name": "Anton Siluanov",
   "source": "https://commons.wikimedia.org/wiki/File:Anton_Siluanov_(2019-09-25).jpg",
@@ -615,6 +733,15 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "aristotle": {
+  "name": "Aristotle",
+  "source": "https://commons.wikimedia.org/wiki/File:Aristotle_Altemps_Inv8575.jpg",
+  "file": "File:Aristotle Altemps Inv8575.jpg",
+  "author": "After Lysippos",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "armand-calinescu": {
   "name": "Armand Călinescu",
   "source": "https://commons.wikimedia.org/wiki/File:Armand_Calinescu.jpg",
@@ -638,6 +765,15 @@
   "source": "https://commons.wikimedia.org/wiki/File:Zverev_AG.jpg",
   "file": "File:Zverev AG.jpg",
   "author": "Unknown author Unknown author",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "arthur-schopenhauer": {
+  "name": "Arthur Schopenhauer",
+  "source": "https://commons.wikimedia.org/wiki/File:Arthur_Schopenhauer_by_J_Sch%C3%A4fer,_1859b.jpg",
+  "file": "File:Arthur Schopenhauer by J Schäfer, 1859b.jpg",
+  "author": "Johann Schäfer",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -757,6 +893,15 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "baruch-spinoza": {
+  "name": "Baruch Spinoza",
+  "source": "https://commons.wikimedia.org/wiki/File:Spinoza.jpg",
+  "file": "File:Spinoza.jpg",
+  "author": "anonymous",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "basil-hall-chamberlain": {
   "name": "Basil Hall Chamberlain",
   "source": "https://commons.wikimedia.org/wiki/File:Basil_Hall_Chamberlain.jpg",
@@ -794,6 +939,24 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "benjamin-disraeli": {
+  "name": "Benjamin Disraeli",
+  "source": "https://commons.wikimedia.org/wiki/File:Benjamin_Disraeli_(1804%E2%80%931881)_cropped.png",
+  "file": "File:Benjamin Disraeli (1804–1881) cropped.png",
+  "author": "Cornelius Jabez Hughes",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "benjamin-franklin": {
+  "name": "Benjamin Franklin",
+  "source": "https://commons.wikimedia.org/wiki/File:Joseph_Siffrein_Duplessis_-_Benjamin_Franklin_-_Google_Art_Project.jpg",
+  "file": "File:Joseph Siffrein Duplessis - Benjamin Franklin - Google Art Project.jpg",
+  "author": "Joseph-Siffred Duplessis",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "benjamin-netanyahu": {
   "name": "Benjamin Netanyahu",
   "source": "https://commons.wikimedia.org/wiki/File:Benjamin_Netanyahu,_February_2023.jpg",
@@ -804,11 +967,39 @@
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "bertolt-brecht": {
+  "name": "Bertolt Brecht",
+  "source": "https://commons.wikimedia.org/wiki/File:Bundesarchiv_Bild_183-W0409-300,_Bertolt_Brecht.jpg",
+  "file": "File:Bundesarchiv Bild 183-W0409-300, Bertolt Brecht.jpg",
+  "author": "Kolbe, Jörg",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 3.0 de",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0/de/deed.en",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "bertrand-russell": {
+  "name": "Bertrand Russell",
+  "source": "https://commons.wikimedia.org/wiki/File:Bertrand_Russell_photo.jpg",
+  "file": "File:Bertrand Russell photo.jpg",
+  "author": "Bassano Ltd",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "bill-clinton": {
   "name": "Bill Clinton",
   "source": "https://commons.wikimedia.org/wiki/File:Bill_Clinton.jpg",
   "file": "File:Bill Clinton.jpg",
   "author": "Bob McNeely, The White House [ 1 ]",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "blaise-pascal": {
+  "name": "Blaise Pascal",
+  "source": "https://commons.wikimedia.org/wiki/File:Blaise_Pascal_Versailles.JPG",
+  "file": "File:Blaise Pascal Versailles.JPG",
+  "author": "unknown; a copy of the painting of François II Quesnel, which was made for Gérard Edelinck en 1691 [réf. nécessaire] .",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -938,6 +1129,15 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "c-s-lewis": {
+  "name": "C. S. Lewis",
+  "source": "https://commons.wikimedia.org/wiki/File:CS_Lewis_photo_on_dust_jacket.jpg",
+  "file": "File:CS Lewis photo on dust jacket.jpg",
+  "author": "John S. Murray",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "carl-enckell": {
   "name": "Carl Enckell",
   "source": "https://commons.wikimedia.org/wiki/File:Carl_Enckell.jpg",
@@ -952,6 +1152,24 @@
   "source": "https://commons.wikimedia.org/wiki/File:Mannerheim1940.jpg",
   "file": "File:Mannerheim1940.jpg",
   "author": "sa-kuva",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "carl-sagan": {
+  "name": "Carl Sagan",
+  "source": "https://commons.wikimedia.org/wiki/File:Carl_Sagan_Planetary_Society.JPG",
+  "file": "File:Carl Sagan Planetary Society.JPG",
+  "author": "NASA/JPL",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "carl-von-clausewitz": {
+  "name": "Carl von Clausewitz",
+  "source": "https://commons.wikimedia.org/wiki/File:Clausewitz.jpg",
+  "file": "File:Clausewitz.jpg",
+  "author": "Wilhelm Wach",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -1010,6 +1228,15 @@
   "licence": "no known restrictions",
   "licenceName": "No restrictions",
   "licenceUrl": "https://www.flickr.com/commons/usage/",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "charles-dickens": {
+  "name": "Charles Dickens",
+  "source": "https://commons.wikimedia.org/wiki/File:Dickens_Gurney_head.jpg",
+  "file": "File:Dickens Gurney head.jpg",
+  "author": "Jeremiah Gurney",
+  "licence": "public domain",
+  "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "charles-guthrie-baron-guthrie-of-craigiebank": {
@@ -1104,6 +1331,16 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "cicero": {
+  "name": "Cicero",
+  "source": "https://commons.wikimedia.org/wiki/File:Bust_of_Cicero_(1st-cent._BC)_-_Palazzo_Nuovo_-_Musei_Capitolini_-_Rome_2016.jpg",
+  "file": "File:Bust of Cicero (1st-cent. BC) - Palazzo Nuovo - Musei Capitolini - Rome 2016.jpg",
+  "author": "José Luiz",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "clement-attlee": {
   "name": "Clement Attlee",
   "source": "https://commons.wikimedia.org/wiki/File:Clement_Attlee.jpg",
@@ -1119,6 +1356,15 @@
   "source": "https://commons.wikimedia.org/wiki/File:Colin_Powell_official_Secretary_of_State_photo.jpg",
   "file": "File:Colin Powell official Secretary of State photo.jpg",
   "author": "Department of State of the United States of America",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "confucius": {
+  "name": "Confucius",
+  "source": "https://commons.wikimedia.org/wiki/File:Konfuzius-1770.jpg",
+  "file": "File:Konfuzius-1770.jpg",
+  "author": "Confucius, gouache on paper, c. 1770 . Encyclopedia Britannica.",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -1155,6 +1401,15 @@
   "name": "Count Karl von Stürgkh",
   "source": "https://commons.wikimedia.org/wiki/File:Karl_Graf_von_St%C3%BCrgkh.jpg",
   "file": "File:Karl Graf von Stürgkh.jpg",
+  "author": "Unknown author Unknown author",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "dag-hammarskjold": {
+  "name": "Dag Hammarskjöld",
+  "source": "https://commons.wikimedia.org/wiki/File:Dag_Hammarskj%C3%B6ld.jpg",
+  "file": "File:Dag Hammarskjöld.jpg",
   "author": "Unknown author Unknown author",
   "licence": "public domain",
   "licenceName": "Public domain",
@@ -1273,6 +1528,16 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "demosthenes": {
+  "name": "Demosthenes",
+  "source": "https://commons.wikimedia.org/wiki/File:Demosthenes_orator_Louvre.jpg",
+  "file": "File:Demosthenes orator Louvre.jpg",
+  "author": "Copy of Polyeuktos",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 2.5",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.5",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "deng-xiaoping": {
   "name": "Deng Xiaoping",
   "source": "https://commons.wikimedia.org/wiki/File:Deng_Xiaoping_at_the_arrival_ceremony_for_the_Vice_Premier_of_China_(cropped).jpg",
@@ -1328,6 +1593,16 @@
   "licence": "CC BY",
   "licenceName": "CC BY 2.0",
   "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "diogenes": {
+  "name": "Diogenes",
+  "source": "https://commons.wikimedia.org/wiki/File:Diogenes-statue-Sinop-enhanced.jpg",
+  "file": "File:Diogenes-statue-Sinop-enhanced.jpg",
+  "author": "Diogenes-statue-Sinop.JPG : Tony f derivative work: Singinglemon ( talk )",
+  "licence": "CC BY",
+  "licenceName": "CC BY 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/3.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "diosdado-macapagal": {
@@ -1435,6 +1710,25 @@
   "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "dorothy-parker": {
+  "name": "Dorothy Parker",
+  "source": "https://commons.wikimedia.org/wiki/File:Young_Dorothy_Parker.jpg",
+  "file": "File:Young Dorothy Parker.jpg",
+  "author": "Unknown author Unknown author",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "douglas-adams": {
+  "name": "Douglas Adams",
+  "source": "https://commons.wikimedia.org/wiki/File:Douglas_adams_portrait.jpg",
+  "file": "File:Douglas adams portrait.jpg",
+  "author": "Michael Hughes",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "douglas-macarthur": {
   "name": "Douglas MacArthur",
   "source": "https://commons.wikimedia.org/wiki/File:MacArthur_Manila_(cropped2).jpg",
@@ -1459,6 +1753,15 @@
   "source": "https://commons.wikimedia.org/wiki/File:Portrait_of_D%C6%B0%C6%A1ng_V%C4%83n_Minh,_Vietnam_Fights_and_Builds_No.1,_July_1964.jpg",
   "file": "File:Portrait of Dương Văn Minh, Vietnam Fights and Builds No.1, July 1964.jpg",
   "author": "The Republic of Vietnam",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "dwight-d-eisenhower": {
+  "name": "Dwight D. Eisenhower",
+  "source": "https://commons.wikimedia.org/wiki/File:Dwight_D._Eisenhower,_official_photo_portrait,_May_29,_1959.jpg",
+  "file": "File:Dwight D. Eisenhower, official photo portrait, May 29, 1959.jpg",
+  "author": "White House",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -1489,6 +1792,15 @@
   "licence": "CC BY",
   "licenceName": "CC BY 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "edmund-burke": {
+  "name": "Edmund Burke",
+  "source": "https://commons.wikimedia.org/wiki/File:Sir_Joshua_Reynolds_-_Edmund_Burke,_1729_-_1797._Statesman,_orator_and_author_-_PG_2362_-_National_Galleries_of_Scotland.jpg",
+  "file": "File:Sir Joshua Reynolds - Edmund Burke, 1729 - 1797. Statesman, orator and author - PG 2362 - National Galleries of Scotland.jpg",
+  "author": "Joshua Reynolds",
+  "licence": "public domain",
+  "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "edmund-ironside-1st-baron-ironside": {
@@ -1573,6 +1885,16 @@
   "licence": "CC BY",
   "licenceName": "CC BY 3.0",
   "licenceUrl": "https://creativecommons.org/licenses/by/3.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "eleanor-roosevelt": {
+  "name": "Eleanor Roosevelt",
+  "source": "https://commons.wikimedia.org/wiki/File:Eleanor_Roosevelt_at_the_United_Nations,_circa_1946-1947_(3x4_cropped).jpg",
+  "file": "File:Eleanor Roosevelt at the United Nations, circa 1946-1947 (3x4 cropped).jpg",
+  "author": "FDR Presidential Library & Museum",
+  "licence": "CC BY",
+  "licenceName": "CC BY 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "eleftherios-venizelos": {
@@ -1676,6 +1998,33 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "epictetus": {
+  "name": "Epictetus",
+  "source": "https://commons.wikimedia.org/wiki/File:Epictetus_from_L._Annaei_Senecae_philosophi_Opera,_1605,_title_page_detail.png",
+  "file": "File:Epictetus from L. Annaei Senecae philosophi Opera, 1605, title page detail.png",
+  "author": "Theodoor Galle",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "epicurus": {
+  "name": "Epicurus",
+  "source": "https://commons.wikimedia.org/wiki/File:Epikouros_BM_1843.jpg",
+  "file": "File:Epikouros BM 1843.jpg",
+  "author": "Unknown artist Unknown artist",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "erasmus": {
+  "name": "Erasmus",
+  "source": "https://commons.wikimedia.org/wiki/File:Holbein-erasmus.jpg",
+  "file": "File:Holbein-erasmus.jpg",
+  "author": "Hans Holbein the Younger",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "erdem-basc": {
   "name": "Erdem Başçı",
   "source": "https://commons.wikimedia.org/wiki/File:Erdem_Basci_-_World_Economic_Forum_on_the_Middle_East,_North_Africa_and_Eurasia_2012_crop.jpg",
@@ -1684,6 +2033,16 @@
   "licence": "CC BY-SA",
   "licenceName": "CC BY-SA 2.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "erich-maria-remarque": {
+  "name": "Erich Maria Remarque",
+  "source": "https://commons.wikimedia.org/wiki/File:Bundesarchiv_Bild_183-R04034,_Erich_Maria_Remarque_(cropped).jpg",
+  "file": "File:Bundesarchiv Bild 183-R04034, Erich Maria Remarque (cropped).jpg",
+  "author": "Unknown author Unknown author",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 3.0 de",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0/de/deed.en",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "erich-von-falkenhayn": {
@@ -1700,6 +2059,15 @@
   "source": "https://commons.wikimedia.org/wiki/File:Ernest_Bevin_MP.jpg",
   "file": "File:Ernest Bevin MP.jpg",
   "author": "Howard Coster",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "ernest-hemingway": {
+  "name": "Ernest Hemingway",
+  "source": "https://commons.wikimedia.org/wiki/File:ErnestHemingway.jpg",
+  "file": "File:ErnestHemingway.jpg",
+  "author": "Lloyd Arnold",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -1806,6 +2174,15 @@
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "francis-bacon": {
+  "name": "Francis Bacon",
+  "source": "https://commons.wikimedia.org/wiki/File:Somer_Francis_Bacon.jpg",
+  "file": "File:Somer Francis Bacon.jpg",
+  "author": "Paul van Somer I / Formerly attributed to Frans Pourbus the Younger",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "francisco-franco": {
   "name": "Francisco Franco",
   "source": "https://commons.wikimedia.org/wiki/File:RETRATO_DEL_GRAL._FRANCISCO_FRANCO_BAHAMONDE_(adjusted_levels).jpg",
@@ -1892,6 +2269,24 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "franz-kafka": {
+  "name": "Franz Kafka",
+  "source": "https://commons.wikimedia.org/wiki/File:Franz_Kafka,_1923.jpg",
+  "file": "File:Franz Kafka, 1923.jpg",
+  "author": "Unknown photographer",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "frederick-the-great": {
+  "name": "Frederick the Great",
+  "source": "https://commons.wikimedia.org/wiki/File:Friedrich_der_Gro%C3%9Fe_(1781_or_1786)_-_Google_Art_Project.jpg",
+  "file": "File:Friedrich der Große (1781 or 1786) - Google Art Project.jpg",
+  "author": "Anton Graff",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "fredrik-reinfeldt": {
   "name": "Fredrik Reinfeldt",
   "source": "https://commons.wikimedia.org/wiki/File:Nordisk-baltisk_statsministermote_under_Nordiska_radets_session_i_Helsingfors_(3)_(cropped).jpg",
@@ -1902,6 +2297,34 @@
   "licenceUrl": "https://creativecommons.org/licenses/by/2.5/dk/deed.en",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "friedrich-hayek": {
+  "name": "Friedrich Hayek",
+  "source": "https://commons.wikimedia.org/wiki/File:Friedrich_Hayek_portrait.jpg",
+  "file": "File:Friedrich Hayek portrait.jpg",
+  "author": "The original uploader was DickClarkMises at English Wikipedia .",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "friedrich-nietzsche": {
+  "name": "Friedrich Nietzsche",
+  "source": "https://commons.wikimedia.org/wiki/File:Nietzsche187a.jpg",
+  "file": "File:Nietzsche187a.jpg",
+  "author": "Friedrich Hermann Hartmann",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "friedrich-schiller": {
+  "name": "Friedrich Schiller",
+  "source": "https://commons.wikimedia.org/wiki/File:Friedrich_Schiller_by_Ludovike_Simanowiz.jpg",
+  "file": "File:Friedrich Schiller by Ludovike Simanowiz.jpg",
+  "author": "Ludovike Simanowiz",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "fumio-kishida": {
   "name": "Fumio Kishida",
   "source": "https://commons.wikimedia.org/wiki/File:Kishida_Fumio_in_1999.jpg",
@@ -1910,6 +2333,33 @@
   "licence": "CC BY",
   "licenceName": "CC BY 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "fyodor-dostoevsky": {
+  "name": "Fyodor Dostoevsky",
+  "source": "https://commons.wikimedia.org/wiki/File:Vasily_Perov_-_%D0%9F%D0%BE%D1%80%D1%82%D1%80%D0%B5%D1%82_%D0%A4.%D0%9C.%D0%94%D0%BE%D1%81%D1%82%D0%BE%D0%B5%D0%B2%D1%81%D0%BA%D0%BE%D0%B3%D0%BE_-_Google_Art_Project.jpg",
+  "file": "File:Vasily Perov - Портрет Ф.М.Достоевского - Google Art Project.jpg",
+  "author": "Vasily Perov",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "fyodor-tyutchev": {
+  "name": "Fyodor Tyutchev",
+  "source": "https://commons.wikimedia.org/wiki/File:Tiutchev.jpg",
+  "file": "File:Tiutchev.jpg",
+  "author": "Sergey Lvovich Levitsky",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "g-k-chesterton": {
+  "name": "G. K. Chesterton",
+  "source": "https://commons.wikimedia.org/wiki/File:Gilbert_Chesterton.jpg",
+  "file": "File:Gilbert Chesterton.jpg",
+  "author": "Ernest Herbert Mills",
+  "licence": "public domain",
+  "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "galeazzo-ciano": {
@@ -1950,6 +2400,15 @@
   "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "george-bernard-shaw": {
+  "name": "George Bernard Shaw",
+  "source": "https://commons.wikimedia.org/wiki/File:George_Bernard_Shaw.jpg",
+  "file": "File:George Bernard Shaw.jpg",
+  "author": "Bain News Service, publisher",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "george-h-w-bush": {
   "name": "George H. W. Bush",
   "source": "https://commons.wikimedia.org/wiki/File:George_H._W._Bush_presidential_portrait_(cropped).jpg",
@@ -1976,6 +2435,16 @@
   "licence": "no known restrictions",
   "licenceName": "No restrictions",
   "licenceUrl": "https://www.flickr.com/commons/usage/",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "george-orwell": {
+  "name": "George Orwell",
+  "source": "https://commons.wikimedia.org/wiki/File:George_Orwell,_c._1940_(41928180381).jpg",
+  "file": "File:George Orwell, c. 1940 (41928180381).jpg",
+  "author": "Cassowary Colorizations",
+  "licence": "CC BY",
+  "licenceName": "CC BY 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "george-osborne": {
@@ -2029,6 +2498,15 @@
   "source": "https://commons.wikimedia.org/wiki/File:Georges_Bonnet_1937.jpg",
   "file": "File:Georges Bonnet 1937.jpg",
   "author": "Harris & Ewing",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "georges-clemenceau": {
+  "name": "Georges Clemenceau",
+  "source": "https://commons.wikimedia.org/wiki/File:Georges_Clemenceau_par_Nadar.jpg",
+  "file": "File:Georges Clemenceau par Nadar.jpg",
+  "author": "Paul Nadar",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -2118,6 +2596,24 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "goethe": {
+  "name": "Johann Wolfgang von Goethe",
+  "source": "https://commons.wikimedia.org/wiki/File:Goethe_(Stieler_1828).jpg",
+  "file": "File:Goethe (Stieler 1828).jpg",
+  "author": "Joseph Karl Stieler",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "golda-meir": {
+  "name": "Golda Meir",
+  "source": "https://commons.wikimedia.org/wiki/File:Golda_Meir_03265u-2_(cropped).jpg",
+  "file": "File:Golda Meir 03265u-2 (cropped).jpg",
+  "author": "Talmoryair ( talk ) after Marion S. Trikosko",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "gordon-brown": {
   "name": "Gordon Brown",
   "source": "https://commons.wikimedia.org/wiki/File:Gordon_Brown_(2008).jpg",
@@ -2146,6 +2642,15 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "h-g-wells": {
+  "name": "H. G. Wells",
+  "source": "https://commons.wikimedia.org/wiki/File:H.G._Wells_by_Beresford.jpg",
+  "file": "File:H.G. Wells by Beresford.jpg",
+  "author": "George Charles Beresford",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "h-h-asquith": {
   "name": "H. H. Asquith",
   "source": "https://commons.wikimedia.org/wiki/File:Herbert_Henry_Asquith.jpg",
@@ -2164,6 +2669,15 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "h-l-mencken": {
+  "name": "H. L. Mencken",
+  "source": "https://commons.wikimedia.org/wiki/File:H-L-Mencken-1928.jpg",
+  "file": "File:H-L-Mencken-1928.jpg",
+  "author": "Ben Pinchot",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "hakan-fidan": {
   "name": "Hakan Fidan",
   "source": "https://commons.wikimedia.org/wiki/File:GRM5406_(55240186269)_(cropped).png",
@@ -2172,6 +2686,16 @@
   "licence": "CC BY",
   "licenceName": "CC BY 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "hannah-arendt": {
+  "name": "Hannah Arendt",
+  "source": "https://commons.wikimedia.org/wiki/File:Hannah_Arendt_auf_dem_1._Kulturkritikerkongress,_Barbara_Niggl_Radloff,_FM-2019-1-5-9-16_(cropped).jpg",
+  "file": "File:Hannah Arendt auf dem 1. Kulturkritikerkongress, Barbara Niggl Radloff, FM-2019-1-5-9-16 (cropped).jpg",
+  "author": "Barbara Niggl Radloff",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "hans-dietrich-genscher": {
@@ -2248,6 +2772,24 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "hegel": {
+  "name": "Hegel",
+  "source": "https://commons.wikimedia.org/wiki/File:Jakob_Schlesinger_-_Hegel_1831.jpg",
+  "file": "File:Jakob Schlesinger - Hegel 1831.jpg",
+  "author": "Jakob Schlesinger",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "heinrich-heine": {
+  "name": "Heinrich Heine",
+  "source": "https://commons.wikimedia.org/wiki/File:Heinrich_Heine.PNG",
+  "file": "File:Heinrich Heine.PNG",
+  "author": "Moritz Daniel Oppenheim",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "heinrich-himmler": {
   "name": "Heinrich Himmler",
   "source": "https://commons.wikimedia.org/wiki/File:Bundesarchiv_Bild_183-S72707,_Heinrich_Himmler.jpg",
@@ -2305,6 +2847,24 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "henry-david-thoreau": {
+  "name": "Henry David Thoreau",
+  "source": "https://commons.wikimedia.org/wiki/File:Benjamin_D._Maxham_-_Henry_David_Thoreau_-_Restored_-_greyscale_-_straightened.jpg",
+  "file": "File:Benjamin D. Maxham - Henry David Thoreau - Restored - greyscale - straightened.jpg",
+  "author": "B. D. Maxham",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "henry-kissinger": {
+  "name": "Henry Kissinger",
+  "source": "https://commons.wikimedia.org/wiki/File:Henry_A._Kissinger,_U.S._Secretary_of_State,_1973-1977.jpg",
+  "file": "File:Henry A. Kissinger, U.S. Secretary of State, 1973-1977.jpg",
+  "author": "U.S. Department of State from United States",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "henry-morgenthau-jr": {
   "name": "Henry Morgenthau Jr.",
   "source": "https://commons.wikimedia.org/wiki/File:Henry_Morgenthau,_Jr._(1944).jpg",
@@ -2324,6 +2884,16 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "heraclitus": {
+  "name": "Heraclitus",
+  "source": "https://commons.wikimedia.org/wiki/File:Ca%27_Rezzonico_-_Eraclito_1705_-_Giuseppe_Torretti.jpg",
+  "file": "File:Ca' Rezzonico - Eraclito 1705 - Giuseppe Torretti.jpg",
+  "author": "Didier Descouens",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "hermann-goring": {
   "name": "Hermann Göring",
   "source": "https://commons.wikimedia.org/wiki/File:Hermann_G%C3%B6ring_-_R%C3%B6hr.jpg",
@@ -2331,6 +2901,16 @@
   "author": "Robert Röhr",
   "licence": "public domain",
   "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "herodotus": {
+  "name": "Herodotus",
+  "source": "https://commons.wikimedia.org/wiki/File:Marble_bust_of_Herodotos_MET_DT11742_(cropped).jpg",
+  "file": "File:Marble bust of Herodotos MET DT11742 (cropped).jpg",
+  "author": "This file was donated to Wikimedia Commons as part of a project by the Metropolitan Museum of Art . See the Image and Data Resources Open Access Policy",
+  "licence": "public domain",
+  "licenceName": "CC0",
+  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "heydar-aliyev": {
@@ -2370,11 +2950,38 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "honore-de-balzac": {
+  "name": "Honoré de Balzac",
+  "source": "https://commons.wikimedia.org/wiki/File:Honor%C3%A9_de_Balzac_(1842)_detail.jpg",
+  "file": "File:Honoré de Balzac (1842) detail.jpg",
+  "author": "Louis-Auguste Bisson",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "horace": {
+  "name": "Horace",
+  "source": "https://commons.wikimedia.org/wiki/File:Quintus_Horatius_Flaccus.jpg",
+  "file": "File:Quintus Horatius Flaccus.jpg",
+  "author": "Anton von Werner",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "horace-wilson": {
   "name": "Horace Wilson",
   "source": "https://commons.wikimedia.org/wiki/File:Horace_Wilson_1874.jpg",
   "file": "File:Horace Wilson 1874.jpg",
   "author": "内田 九一",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "hryhorii-skovoroda": {
+  "name": "Hryhorii Skovoroda",
+  "source": "https://commons.wikimedia.org/wiki/File:%D0%93%D1%80%D0%B8%D0%B3%D0%BE%D1%80%D0%B8%D0%B9_%D0%A1%D0%BA%D0%BE%D0%B2%D0%BE%D1%80%D0%BE%D0%B4%D0%B0.jpg",
+  "file": "File:Григорий Сковорода.jpg",
+  "author": "Unknown author Unknown author",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -2407,6 +3014,16 @@
   "licence": "CC BY-SA",
   "licenceName": "CC BY-SA 3.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "ibn-khaldun": {
+  "name": "Ibn Khaldun",
+  "source": "https://commons.wikimedia.org/wiki/File:Bust_of_Ibn_Khaldun_(Casbah_of_Bejaia,_Algeria).jpg",
+  "file": "File:Bust of Ibn Khaldun (Casbah of Bejaia, Algeria).jpg",
+  "author": "Reda Kerbush",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "ibn-saud": {
@@ -2504,6 +3121,25 @@
   "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "immanuel-kant": {
+  "name": "Immanuel Kant",
+  "source": "https://commons.wikimedia.org/wiki/File:Immanuel_Kant_-_Gemaelde_2.jpg",
+  "file": "File:Immanuel Kant - Gemaelde 2.jpg",
+  "author": "Becker",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "indira-gandhi": {
+  "name": "Indira Gandhi",
+  "source": "https://commons.wikimedia.org/wiki/File:Indira_Gandhi_official_portrait.png",
+  "file": "File:Indira Gandhi official portrait.png",
+  "author": "Prime Minister's Office",
+  "licence": "GODL-India",
+  "licenceName": "GODL-India",
+  "licenceUrl": "https://data.gov.in/sites/default/files/Gazette_Notification_OGDL.pdf",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "ioannis-metaxas": {
   "name": "Ioannis Metaxas",
   "source": "https://commons.wikimedia.org/wiki/File:Ioannis_Metaxas_1937_cropped.jpg",
@@ -2530,6 +3166,25 @@
   "licence": "CC BY-SA",
   "licenceName": "CC BY-SA 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "isaac-asimov": {
+  "name": "Isaac Asimov",
+  "source": "https://commons.wikimedia.org/wiki/File:Isaac.Asimov01.jpg",
+  "file": "File:Isaac.Asimov01.jpg",
+  "author": "Phillip Leonian [ 1 ] from New York World-Telegram & Sun. [ 2 ]",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "isaiah-berlin": {
+  "name": "Isaiah Berlin",
+  "source": "https://commons.wikimedia.org/wiki/File:IsaiahBerlin1983.jpg",
+  "file": "File:IsaiahBerlin1983.jpg",
+  "author": "Rob C. Croes (ANEFO)",
+  "licence": "public domain",
+  "licenceName": "CC0",
+  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "isaias-afwerki": {
@@ -2590,6 +3245,15 @@
   "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "ivan-franko": {
+  "name": "Ivan Franko",
+  "source": "https://commons.wikimedia.org/wiki/File:%D0%86%D0%B2%D0%B0%D0%BD_%D0%AF%D0%BA%D0%BE%D0%B2%D0%B8%D1%87_%D0%A4%D1%80%D0%B0%D0%BD%D0%BA%D0%BE.jpg",
+  "file": "File:Іван Якович Франко.jpg",
+  "author": "M. Nikopoli",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "ivan-goremykin": {
   "name": "Ivan Goremykin",
   "source": "https://commons.wikimedia.org/wiki/File:Ivan_Logginovitch_Goremykin,_c._1906_(cropped).jpg",
@@ -2607,6 +3271,15 @@
   "licence": "CC BY-SA",
   "licenceName": "CC BY-SA 3.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "ivan-kotliarevsky": {
+  "name": "Ivan Kotliarevsky",
+  "source": "https://commons.wikimedia.org/wiki/File:%D0%86%D0%B2%D0%B0%D0%BD_%D0%9A%D0%BE%D1%82%D0%BB%D1%8F%D1%80%D0%B5%D0%B2%D1%81%D1%8C%D0%BA%D0%B8%D0%B9_cropped.jpg",
+  "file": "File:Іван Котляревський cropped.jpg",
+  "author": "Іван_Котляревський.jpg : unknown derivative work: Gnesener1900",
+  "licence": "public domain",
+  "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "ivan-kubrakow": {
@@ -2639,11 +3312,29 @@
   "licenceUrl": "https://creativecommons.org/licenses/by/3.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "ivan-turgenev": {
+  "name": "Ivan Turgenev",
+  "source": "https://commons.wikimedia.org/wiki/File:Turgenev_by_Repin.jpg",
+  "file": "File:Turgenev by Repin.jpg",
+  "author": "Ilya Repin",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "j-edgar-hoover": {
   "name": "J. Edgar Hoover",
   "source": "https://commons.wikimedia.org/wiki/File:Hoover-JEdgar-LOC.jpg",
   "file": "File:Hoover-JEdgar-LOC.jpg",
   "author": "Marion S. Trikosko",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "j-r-r-tolkien": {
+  "name": "J. R. R. Tolkien",
+  "source": "https://commons.wikimedia.org/wiki/File:J._R._R._Tolkien,_ca._1925.jpg",
+  "file": "File:J. R. R. Tolkien, ca. 1925.jpg",
+  "author": "Unknown photo studio commissioned by Tolkien's students 1925/6 (private communication from Catherine McIlwaine, Tolkien Archivist, Bodleian Library)",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -2732,6 +3423,15 @@
   "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "james-madison": {
+  "name": "James Madison",
+  "source": "https://commons.wikimedia.org/wiki/File:James_Madison.jpg",
+  "file": "File:James Madison.jpg",
+  "author": "John Vanderlyn",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "james-r-clapper": {
   "name": "James R. Clapper",
   "source": "https://commons.wikimedia.org/wiki/File:James_R._Clapper_official_portrait.jpg",
@@ -2793,6 +3493,33 @@
   "source": "https://commons.wikimedia.org/wiki/File:Jawaharlal_Nehru,_circa_1925.jpg",
   "file": "File:Jawaharlal Nehru, circa 1925.jpg",
   "author": "Keystone View Company/FPG",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "jean-de-la-fontaine": {
+  "name": "Jean de La Fontaine",
+  "source": "https://commons.wikimedia.org/wiki/File:Henri_Millot_-_Jean_de_La_Fontaine_-_A_II_792_-_Finnish_National_Gallery.jpg",
+  "file": "File:Henri Millot - Jean de La Fontaine - A II 792 - Finnish National Gallery.jpg",
+  "author": "Henri Millot",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "jean-jacques-rousseau": {
+  "name": "Jean-Jacques Rousseau",
+  "source": "https://commons.wikimedia.org/wiki/File:Jean-Jacques_Rousseau_(painted_portrait).jpg",
+  "file": "File:Jean-Jacques Rousseau (painted portrait).jpg",
+  "author": "Maurice Quentin de La Tour",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "jerome-k-jerome": {
+  "name": "Jerome K. Jerome",
+  "source": "https://commons.wikimedia.org/wiki/File:Jerome_K._Jerome_02.jpg",
+  "file": "File:Jerome K. Jerome 02.jpg",
+  "author": "George Grantham Bain Collection (Library of Congress)",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -2861,6 +3588,15 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "john-f-kennedy": {
+  "name": "John F. Kennedy",
+  "source": "https://commons.wikimedia.org/wiki/File:John_F._Kennedy,_White_House_color_photo_portrait.jpg",
+  "file": "File:John F. Kennedy, White House color photo portrait.jpg",
+  "author": "Cecil W. Stoughton",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "john-glen": {
   "name": "John Glen",
   "source": "https://commons.wikimedia.org/wiki/File:Official_portrait_of_John_Glen_MP_crop_2,_2024.jpg",
@@ -2881,6 +3617,15 @@
   "licenceUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "john-kenneth-galbraith": {
+  "name": "John Kenneth Galbraith",
+  "source": "https://commons.wikimedia.org/wiki/File:John_Kenneth_Galbraith_from_the_back_cover_of_%22The_Affluent_Society%22.jpeg",
+  "file": "File:John Kenneth Galbraith from the back cover of \"The Affluent Society\".jpeg",
+  "author": "Published by Houghton Mifflin Company. Photographer is unknown.",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "john-kerry": {
   "name": "John Kerry",
   "source": "https://commons.wikimedia.org/wiki/File:John_F._Kerry.jpg",
@@ -2890,11 +3635,29 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "john-locke": {
+  "name": "John Locke",
+  "source": "https://commons.wikimedia.org/wiki/File:JohnLocke.png",
+  "file": "File:JohnLocke.png",
+  "author": "Godfrey Kneller",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "john-major": {
   "name": "John Major",
   "source": "https://commons.wikimedia.org/wiki/File:Prime_Minister_John_Major_(cropped).jpg",
   "file": "File:Prime Minister John Major (cropped).jpg",
   "author": "Sharon Farmer",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "john-maynard-keynes": {
+  "name": "John Maynard Keynes",
+  "source": "https://commons.wikimedia.org/wiki/File:Keynes_1933.jpg",
+  "file": "File:Keynes 1933.jpg",
+  "author": "Unknown author Unknown author",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -2936,11 +3699,38 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "john-stuart-mill": {
+  "name": "John Stuart Mill",
+  "source": "https://commons.wikimedia.org/wiki/File:John_Stuart_Mill_by_London_Stereoscopic_Company,_c1870.jpg",
+  "file": "File:John Stuart Mill by London Stereoscopic Company, c1870.jpg",
+  "author": "London Stereoscopic Company",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "john-wesley-snyder": {
   "name": "John Wesley Snyder",
   "source": "https://commons.wikimedia.org/wiki/File:Portrait_of_John_W._Snyder.jpg",
   "file": "File:Portrait of John W. Snyder.jpg",
   "author": "Greta Kempton",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "jonathan-swift": {
+  "name": "Jonathan Swift",
+  "source": "https://commons.wikimedia.org/wiki/File:Jonathan_Swift_by_Charles_Jervas_detail.jpg",
+  "file": "File:Jonathan Swift by Charles Jervas detail.jpg",
+  "author": "Charles Jervas",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "jorge-luis-borges": {
+  "name": "Jorge Luis Borges",
+  "source": "https://commons.wikimedia.org/wiki/File:Jorge_Luis_Borges_1951,_by_Grete_Stern_(full).jpg",
+  "file": "File:Jorge Luis Borges 1951, by Grete Stern (full).jpg",
+  "author": "Grete Stern",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -2953,6 +3743,16 @@
   "licence": "CC BY-SA",
   "licenceName": "CC BY-SA 2.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "joseph-brodsky": {
+  "name": "Joseph Brodsky",
+  "source": "https://commons.wikimedia.org/wiki/File:Joseph_Brodsky_1988.jpg",
+  "file": "File:Joseph Brodsky 1988.jpg",
+  "author": "Anefo / Croes, R.C.",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 3.0 nl",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0/nl/deed.en",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "joseph-cook": {
@@ -2972,6 +3772,15 @@
   "licence": "CC BY-SA",
   "licenceName": "CC BY-SA 3.0 de",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0/de/deed.en",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "joseph-heller": {
+  "name": "Joseph Heller",
+  "source": "https://commons.wikimedia.org/wiki/File:Joseph_Heller_circa_1979.jpg",
+  "file": "File:Joseph Heller circa 1979.jpg",
+  "author": "Photograph: Thomas R. Koeniges",
+  "licence": "public domain",
+  "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "joseph-joffre": {
@@ -3048,6 +3857,15 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "julius-caesar": {
+  "name": "Julius Caesar",
+  "source": "https://commons.wikimedia.org/wiki/File:Retrato_de_Julio_C%C3%A9sar_(26724093101)_(cropped).jpg",
+  "file": "File:Retrato de Julio César (26724093101) (cropped).jpg",
+  "author": "Ángel M. Felicísimo from Mérida, España",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "juozas-olekas": {
   "name": "Juozas Olekas",
   "source": "https://commons.wikimedia.org/wiki/File:Juozas_Olekas.jpg",
@@ -3086,6 +3904,15 @@
   "licenceName": "Attribution",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "juvenal": {
+  "name": "Juvenal",
+  "source": "https://commons.wikimedia.org/wiki/File:Juvenal_portrait.jpg",
+  "file": "File:Juvenal portrait.jpg",
+  "author": "S. H. Gimber",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "jyrki-katainen": {
   "name": "Jyrki Katainen",
   "source": "https://commons.wikimedia.org/wiki/File:EPP_Political_Assembly,_09-10_March,_Helsinki_(52736730189)_(cropped).jpg",
@@ -3094,6 +3921,34 @@
   "licence": "CC BY",
   "licenceName": "CC BY 2.0",
   "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "karel-capek": {
+  "name": "Karel Čapek",
+  "source": "https://commons.wikimedia.org/wiki/File:Karel_%C4%8Capek_podepisuje_prvn%C3%AD_v%C3%BDtisky_Pov%C4%9Btron%C4%9B,_Pestr%C3%BD_t%C3%BDden_27.1.1934.jpg",
+  "file": "File:Karel Čapek podepisuje první výtisky Povětroně, Pestrý týden 27.1.1934.jpg",
+  "author": "Unknown author Unknown author",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "karl-marx": {
+  "name": "Karl Marx",
+  "source": "https://commons.wikimedia.org/wiki/File:Karl_Marx_001_restored.jpg",
+  "file": "File:Karl Marx 001 restored.jpg",
+  "author": "John Jabez Edwin Mayall",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "karl-popper": {
+  "name": "Karl Popper",
+  "source": "https://commons.wikimedia.org/wiki/File:Karl_Popper.jpg",
+  "file": "File:Karl Popper.jpg",
+  "author": "Franz Barta",
+  "licence": "no known restrictions",
+  "licenceName": "No restrictions",
+  "licenceUrl": "https://www.flickr.com/commons/usage/",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "kassym-jomart-tokayev": {
@@ -3231,6 +4086,15 @@
   "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "kofi-annan": {
+  "name": "Kofi Annan",
+  "source": "https://commons.wikimedia.org/wiki/File:Kofi_Annan_2012_(cropped).jpg",
+  "file": "File:Kofi Annan 2012 (cropped).jpg",
+  "author": "US Mission in Geneva",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "konrad-adenauer": {
   "name": "Konrad Adenauer",
   "source": "https://commons.wikimedia.org/wiki/File:Bundesarchiv_B_145_Bild-F078072-0004,_Konrad_Adenauer.jpg",
@@ -3239,6 +4103,24 @@
   "licence": "CC BY-SA",
   "licenceName": "CC BY-SA 3.0 de",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0/de/deed.en",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "kozma-prutkov": {
+  "name": "Kozma Prutkov",
+  "source": "https://commons.wikimedia.org/wiki/File:Kozma_Prutkov_by_L_M_Zhemchuzhnikov.jpg",
+  "file": "File:Kozma Prutkov by L M Zhemchuzhnikov.jpg",
+  "author": "unknown",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "kurt-vonnegut": {
+  "name": "Kurt Vonnegut",
+  "source": "https://commons.wikimedia.org/wiki/File:Kurt_Vonnegut_by_Bernard_Gotfryd_(1965).jpg",
+  "file": "File:Kurt Vonnegut by Bernard Gotfryd (1965).jpg",
+  "author": "Bernard Gotfryd / Adam Cuerden",
+  "licence": "public domain",
+  "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "kyosti-kallio": {
@@ -3270,6 +4152,15 @@
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "la-rochefoucauld": {
+  "name": "François de La Rochefoucauld",
+  "source": "https://commons.wikimedia.org/wiki/File:Fran%C3%A7ois_de_La_Rochefoucauld.jpg",
+  "file": "File:François de La Rochefoucauld.jpg",
+  "author": "Théodore Chassériau",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "lal-bahadur-shastri": {
   "name": "Lal Bahadur Shastri",
   "source": "https://commons.wikimedia.org/wiki/File:Lal_Bahadur_Shastri_(from_stamp).jpg",
@@ -3278,6 +4169,15 @@
   "licence": "GODL-India",
   "licenceName": "GODL-India",
   "licenceUrl": "https://data.gov.in/sites/default/files/Gazette_Notification_OGDL.pdf",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "laozi": {
+  "name": "Laozi",
+  "source": "https://commons.wikimedia.org/wiki/File:Lao_Tzu_-_Project_Gutenberg_eText_15250.jpg",
+  "file": "File:Lao Tzu - Project Gutenberg eText 15250.jpg",
+  "author": "Unknown author Unknown author",
+  "licence": "public domain",
+  "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "laurent-desire-kabila": {
@@ -3336,6 +4236,15 @@
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "lee-kuan-yew": {
+  "name": "Lee Kuan Yew",
+  "source": "https://commons.wikimedia.org/wiki/File:Lee_Kuan_Yew.jpg",
+  "file": "File:Lee Kuan Yew.jpg",
+  "author": "Robert D. Ward",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "lee-teng-hui": {
   "name": "Lee Teng-hui",
   "source": "https://commons.wikimedia.org/wiki/File:Lee_Teng-hui_official_portrait.png",
@@ -3346,11 +4255,29 @@
   "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "leo-tolstoy": {
+  "name": "Leo Tolstoy",
+  "source": "https://commons.wikimedia.org/wiki/File:L.N.Tolstoy_Prokudin-Gorsky.jpg",
+  "file": "File:L.N.Tolstoy Prokudin-Gorsky.jpg",
+  "author": "Sergei Prokudin-Gorskii",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "leon-bilinski": {
   "name": "Leon Biliński",
   "source": "https://commons.wikimedia.org/wiki/File:Bilinski.jpg",
   "file": "File:Bilinski.jpg",
   "author": "Charles Scolik",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "leon-trotsky": {
+  "name": "Leon Trotsky",
+  "source": "https://commons.wikimedia.org/wiki/File:Le%C3%B3n_trotski_1924_color.jpg",
+  "file": "File:León trotski 1924 color.jpg",
+  "author": "Unknown author Unknown author",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -3419,6 +4346,15 @@
   "source": "https://commons.wikimedia.org/wiki/File:Leslie_Hore.jpg",
   "file": "File:Leslie Hore.jpg",
   "author": "Bassano Ltd",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "lesya-ukrainka": {
+  "name": "Lesya Ukrainka",
+  "source": "https://commons.wikimedia.org/wiki/File:Lesya_Ukrainka_1901_(facecrop).jpg",
+  "file": "File:Lesya Ukrainka 1901 (facecrop).jpg",
+  "author": "Johann Krzanowski",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -3557,6 +4493,15 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "lord-acton": {
+  "name": "Lord Acton",
+  "source": "https://commons.wikimedia.org/wiki/File:Picture_of_John_Dalberg-Acton,_1st_Baron_Acton.jpg",
+  "file": "File:Picture of John Dalberg-Acton, 1st Baron Acton.jpg",
+  "author": "Allen & Co.",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "louis-a-johnson": {
   "name": "Louis A. Johnson",
   "source": "https://commons.wikimedia.org/wiki/File:Secretary_of_Defense_Louise_Johnson.jpg",
@@ -3688,6 +4633,15 @@
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "mahatma-gandhi": {
+  "name": "Mahatma Gandhi",
+  "source": "https://commons.wikimedia.org/wiki/File:Mahatma-Gandhi,_studio,_1931.jpg",
+  "file": "File:Mahatma-Gandhi, studio, 1931.jpg",
+  "author": "Elliott & Fry",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "maia-sandu": {
   "name": "Maia Sandu",
   "source": "https://commons.wikimedia.org/wiki/File:Maia_Sandu,_September_2025.jpg",
@@ -3744,6 +4698,16 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "marcus-aurelius": {
+  "name": "Marcus Aurelius",
+  "source": "https://commons.wikimedia.org/wiki/File:Marcus_Aurelius_Louvre_MR561_n02.jpg",
+  "file": "File:Marcus Aurelius Louvre MR561 n02.jpg",
+  "author": "Marie-Lan Nguyen (2011)",
+  "licence": "CC BY",
+  "licenceName": "CC BY 2.5",
+  "licenceUrl": "https://creativecommons.org/licenses/by/2.5",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "marek-belka": {
   "name": "Marek Belka",
   "source": "https://commons.wikimedia.org/wiki/File:Marek_Belka_NBP.jpg",
@@ -3762,6 +4726,16 @@
   "licence": "CC BY",
   "licenceName": "CC BY 2.0",
   "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "margaret-thatcher": {
+  "name": "Margaret Thatcher",
+  "source": "https://commons.wikimedia.org/wiki/File:Margaret_Thatcher_(1983).jpg",
+  "file": "File:Margaret Thatcher (1983).jpg",
+  "author": "Rob Bogaerts",
+  "licence": "public domain",
+  "licenceName": "CC0",
+  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "mario-draghi": {
@@ -3793,11 +4767,29 @@
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "mark-twain": {
+  "name": "Mark Twain",
+  "source": "https://commons.wikimedia.org/wiki/File:MarkTwain.LOC.jpg",
+  "file": "File:MarkTwain.LOC.jpg",
+  "author": "Unknown author Unknown author",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "marriner-stoddard-eccles": {
   "name": "Marriner Stoddard Eccles",
   "source": "https://commons.wikimedia.org/wiki/File:Marriner_Eccles_1939_(cropped).jpg",
   "file": "File:Marriner Eccles 1939 (cropped).jpg",
   "author": "Harris & Ewing, photographer",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "martin-luther-king": {
+  "name": "Martin Luther King Jr.",
+  "source": "https://commons.wikimedia.org/wiki/File:The_Rev._Dr._Martin_Luther_King_Jr._Color_Portrait_(high_quality).jpg",
+  "file": "File:The Rev. Dr. Martin Luther King Jr. Color Portrait (high quality).jpg",
+  "author": "Associated Press",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -3906,6 +4898,15 @@
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "mencius": {
+  "name": "Mencius",
+  "source": "https://commons.wikimedia.org/wiki/File:Half_Portraits_of_the_Great_Sage_and_Virtuous_Men_of_Old_-_Meng_Ke_(%E5%AD%9F%E8%BB%BB).jpg",
+  "file": "File:Half Portraits of the Great Sage and Virtuous Men of Old - Meng Ke (孟軻).jpg",
+  "author": "anonymous",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "mevlut-cavusoglu": {
   "name": "Mevlüt Çavuşoğlu",
   "source": "https://commons.wikimedia.org/wiki/File:Mevl%C3%BCt_%C3%87avu%C5%9Fo%C4%9Flu_2023_(cropped).jpg",
@@ -3936,11 +4937,29 @@
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "michel-de-montaigne": {
+  "name": "Michel de Montaigne",
+  "source": "https://commons.wikimedia.org/wiki/File:Montaigne-Dumonstier.jpg",
+  "file": "File:Montaigne-Dumonstier.jpg",
+  "author": "anonymous",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "mieczys-aw-gocu": {
   "name": "Mieczysław Gocuł",
   "source": "https://commons.wikimedia.org/wiki/File:Gen._Mieczyslaw_Gocul_2015.jpg",
   "file": "File:Gen. Mieczyslaw Gocul 2015.jpg",
   "author": "Sean Harp",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "miguel-de-cervantes": {
+  "name": "Miguel de Cervantes",
+  "source": "https://commons.wikimedia.org/wiki/File:Cervantes_J%C3%A1uregui.jpg",
+  "file": "File:Cervantes Jáuregui.jpg",
+  "author": "Attributed to Juan de Jáuregui",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -3955,6 +4974,15 @@
   "licenceUrl": "https://creativecommons.org/licenses/by/3.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "mikhail-bulgakov": {
+  "name": "Mikhail Bulgakov",
+  "source": "https://commons.wikimedia.org/wiki/File:%D0%9C%D0%B8%D1%85%D0%B0%D0%B8%D0%BB-%D0%91%D1%83%D0%BB%D0%B3%D0%B0%D0%BA%D0%BE%D0%B2.jpg",
+  "file": "File:Михаил-Булгаков.jpg",
+  "author": "Moisej Nappelbaum",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "mikhail-gorbachev": {
   "name": "Mikhail Gorbachev",
   "source": "https://commons.wikimedia.org/wiki/File:GorbachevMS.jpg",
@@ -3963,6 +4991,15 @@
   "licence": "CC BY-SA",
   "licenceName": "CC BY-SA 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "mikhail-lermontov": {
+  "name": "Mikhail Lermontov",
+  "source": "https://commons.wikimedia.org/wiki/File:Mikhail_lermontov.jpg",
+  "file": "File:Mikhail lermontov.jpg",
+  "author": "Petr Zabolotskiy",
+  "licence": "public domain",
+  "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "mikhail-mishustin": {
@@ -4023,6 +5060,16 @@
   "licenceName": "Attribution",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "milan-kundera": {
+  "name": "Milan Kundera",
+  "source": "https://commons.wikimedia.org/wiki/File:Milan_Kundera_redux.jpg",
+  "file": "File:Milan Kundera redux.jpg",
+  "author": "Elisa Cabot",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "milan-milutinovic": {
   "name": "Milan Milutinović",
   "source": "https://commons.wikimedia.org/wiki/File:Milan_Milutinovi%C4%87_2005.png",
@@ -4040,6 +5087,15 @@
   "licence": "European Parliament",
   "licenceName": "European Parliament",
   "licenceUrl": "https://www.europarl.europa.eu/legal-notice/",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "milton-friedman": {
+  "name": "Milton Friedman",
+  "source": "https://commons.wikimedia.org/wiki/File:Portrait_Of_Milton_Friedman_(cropped).jpg",
+  "file": "File:Portrait Of Milton Friedman (cropped).jpg",
+  "author": "Bachrach Studios",
+  "licence": "public domain",
+  "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "mircea-snegur": {
@@ -4099,6 +5155,15 @@
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "moliere": {
+  "name": "Molière",
+  "source": "https://commons.wikimedia.org/wiki/File:Pierre_Mignard_-_Portrait_de_Jean-Baptiste_Poquelin_dit_Moli%C3%A8re_(1622-1673)_-_Google_Art_Project_(cropped).jpg",
+  "file": "File:Pierre Mignard - Portrait de Jean-Baptiste Poquelin dit Molière (1622-1673) - Google Art Project (cropped).jpg",
+  "author": "Pierre Mignard I",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "momir-bulatovic": {
   "name": "Momir Bulatović",
   "source": "https://commons.wikimedia.org/wiki/File:Momir_Bulatovi%C4%87_(cropped).jpg",
@@ -4107,6 +5172,15 @@
   "licence": "CC BY-SA",
   "licenceName": "CC BY-SA 3.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "montesquieu": {
+  "name": "Montesquieu",
+  "source": "https://commons.wikimedia.org/wiki/File:Montesquieu_1.png",
+  "file": "File:Montesquieu 1.png",
+  "author": "After Jacques-Antoine Dassier",
+  "licence": "public domain",
+  "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "moon-jae-in": {
@@ -4124,6 +5198,15 @@
   "source": "https://commons.wikimedia.org/wiki/File:Elnahas_basha.jpg",
   "file": "File:Elnahas basha.jpg",
   "author": "مصطفى النحاس باشا",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "mustafa-kemal-ataturk": {
+  "name": "Mustafa Kemal Atatürk",
+  "source": "https://commons.wikimedia.org/wiki/File:Atat%C3%BCrk_Kemal.jpg",
+  "file": "File:Atatürk Kemal.jpg",
+  "author": "Unknown author Unknown author",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -4146,6 +5229,15 @@
   "licence": "CC BY-SA",
   "licenceName": "CC BY-SA 3.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "napoleon": {
+  "name": "Napoleon",
+  "source": "https://commons.wikimedia.org/wiki/File:Jacques-Louis_David_-_The_Emperor_Napoleon_in_His_Study_at_the_Tuileries_-_Google_Art_Project.jpg",
+  "file": "File:Jacques-Louis David - The Emperor Napoleon in His Study at the Tuileries - Google Art Project.jpg",
+  "author": "Jacques-Louis David",
+  "licence": "public domain",
+  "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "narendra-modi": {
@@ -4214,6 +5306,16 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "nelson-mandela": {
+  "name": "Nelson Mandela",
+  "source": "https://commons.wikimedia.org/wiki/File:Nelson_Mandela_1994.jpg",
+  "file": "File:Nelson Mandela 1994.jpg",
+  "author": "Kingkongphoto & www.celebrity-photos.com from Laurel",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "neville-chamberlain": {
   "name": "Neville Chamberlain",
   "source": "https://commons.wikimedia.org/wiki/File:Right_Honourable_Neville_Chamberlain._Wellcome_M0003096.jpg",
@@ -4249,6 +5351,15 @@
   "licence": "CC BY-SA",
   "licenceName": "CC BY-SA 3.0 nl",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0/nl/deed.en",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "niccolo-machiavelli": {
+  "name": "Niccolò Machiavelli",
+  "source": "https://commons.wikimedia.org/wiki/File:Portrait_of_Niccol%C3%B2_Machiavelli_by_Santi_di_Tito.jpg",
+  "file": "File:Portrait of Niccolò Machiavelli by Santi di Tito.jpg",
+  "author": "Santi di Tito",
+  "licence": "public domain",
+  "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "nicholas-f-brady": {
@@ -4360,6 +5471,15 @@
   "source": "https://commons.wikimedia.org/wiki/File:Bundesarchiv_Bild_183-29921-0001,_Bulganin,_Nikolai_Alexandrowitsch_(cropped).jpg",
   "file": "File:Bundesarchiv Bild 183-29921-0001, Bulganin, Nikolai Alexandrowitsch (cropped).jpg",
   "author": "Unknown author Unknown author",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "nikolai-gogol": {
+  "name": "Nikolai Gogol",
+  "source": "https://commons.wikimedia.org/wiki/File:N.Gogol_by_F.Moller_(1840,_Tretyakov_gallery).jpg",
+  "file": "File:N.Gogol by F.Moller (1840, Tretyakov gallery).jpg",
+  "author": "Otto Friedrich Theodor von Möller",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -4476,6 +5596,25 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "omar-khayyam": {
+  "name": "Omar Khayyám",
+  "source": "https://commons.wikimedia.org/wiki/File:Omar_Khayyam2.JPG",
+  "file": "File:Omar Khayyam2.JPG",
+  "author": "The original uploader was Atilin at French Wikipedia .",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 3.0",
+  "licenceUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "oscar-wilde": {
+  "name": "Oscar Wilde",
+  "source": "https://commons.wikimedia.org/wiki/File:Oscar_Wilde_by_Napoleon_Sarony._Three-quarter-length_photograph,_seated.jpg",
+  "file": "File:Oscar Wilde by Napoleon Sarony. Three-quarter-length photograph, seated.jpg",
+  "author": "Napoleon Sarony / Adam Cuerden",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "otto-grotewohl": {
   "name": "Otto Grotewohl",
   "source": "https://commons.wikimedia.org/wiki/File:Bundesarchiv_Bild_183-19204-3150,_Otto_Grotewohl.jpg",
@@ -4494,6 +5633,15 @@
   "licence": "CC BY-SA",
   "licenceName": "CC BY-SA 3.0 de",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0/de/deed.en",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "otto-von-bismarck": {
+  "name": "Otto von Bismarck",
+  "source": "https://commons.wikimedia.org/wiki/File:Bundesarchiv_Bild_146-2005-0057,_Otto_von_Bismarck.jpg",
+  "file": "File:Bundesarchiv Bild 146-2005-0057, Otto von Bismarck.jpg",
+  "author": "Jacques Pilartz",
+  "licence": "public domain",
+  "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "p-v-narasimha-rao": {
@@ -4717,6 +5865,26 @@
   "licenceUrl": "https://creativecommons.org/licenses/by/3.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "plato": {
+  "name": "Plato",
+  "source": "https://commons.wikimedia.org/wiki/File:Plato_Silanion_Musei_Capitolini_MC1377.jpg",
+  "file": "File:Plato Silanion Musei Capitolini MC1377.jpg",
+  "author": "Marie-Lan Nguyen",
+  "licence": "CC BY",
+  "licenceName": "CC BY 2.5",
+  "licenceUrl": "https://creativecommons.org/licenses/by/2.5",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "plutarch": {
+  "name": "Plutarch",
+  "source": "https://commons.wikimedia.org/wiki/File:Plutarch_of_Chaeronea-03.jpg",
+  "file": "File:Plutarch of Chaeronea-03.jpg",
+  "author": "Odysses",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "prince-paul-of-yugoslavia": {
   "name": "Prince Paul of Yugoslavia",
   "source": "https://commons.wikimedia.org/wiki/File:Prince_Paul_of_Yugoslavia.jpg",
@@ -4741,6 +5909,15 @@
   "source": "https://commons.wikimedia.org/wiki/File:Bark_Piotr_(1869-1937).jpg",
   "file": "File:Bark Piotr (1869-1937).jpg",
   "author": "unknown russian pre-revolutionary Photograph",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "pyotr-stolypin": {
+  "name": "Pyotr Stolypin",
+  "source": "https://commons.wikimedia.org/wiki/File:Pyotr_Stolypin_LOC_07327.jpg",
+  "file": "File:Pyotr Stolypin LOC 07327.jpg",
+  "author": "unknown",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -4771,6 +5948,15 @@
   "licence": "public domain",
   "licenceName": "CC0",
   "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "rabindranath-tagore": {
+  "name": "Rabindranath Tagore",
+  "source": "https://commons.wikimedia.org/wiki/File:Rabindranath_Tagore_in_1909.jpg",
+  "file": "File:Rabindranath Tagore in 1909.jpg",
+  "author": "Generalstabens litografiska anstalt",
+  "licence": "public domain",
+  "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "raden-eddy-martadinata": {
@@ -4829,6 +6015,15 @@
   "licence": "CC BY-SA",
   "licenceName": "CC BY-SA 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "ralph-waldo-emerson": {
+  "name": "Ralph Waldo Emerson",
+  "source": "https://commons.wikimedia.org/wiki/File:Ralph_Waldo_Emerson_ca1857_retouched.jpg",
+  "file": "File:Ralph Waldo Emerson ca1857 retouched.jpg",
+  "author": "User:Scewing derivative work: 2009",
+  "licence": "public domain",
+  "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "raman-halowchanka": {
@@ -4904,6 +6099,16 @@
   "author": "United States Department of Education",
   "licence": "public domain",
   "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "richard-feynman": {
+  "name": "Richard Feynman",
+  "source": "https://commons.wikimedia.org/wiki/File:RichardFeynman-PaineMansionWoods1984_copyrightTamikoThiel_bw.jpg",
+  "file": "File:RichardFeynman-PaineMansionWoods1984 copyrightTamikoThiel bw.jpg",
+  "author": "Copyright Tamiko Thiel 1984",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "richard-hull": {
@@ -5031,6 +6236,15 @@
   "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "ronald-reagan": {
+  "name": "Ronald Reagan",
+  "source": "https://commons.wikimedia.org/wiki/File:Ronald_Reagan_1981_presidential_portrait.jpg",
+  "file": "File:Ronald Reagan 1981 presidential portrait.jpg",
+  "author": "Michael Evans",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "roscoe-henry-hillenkoetter": {
   "name": "Roscoe Henry Hillenkoetter",
   "source": "https://commons.wikimedia.org/wiki/File:Roscoe_H._Hillenkoetter_(1957).jpg",
@@ -5070,6 +6284,24 @@
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "rudyard-kipling": {
+  "name": "Rudyard Kipling",
+  "source": "https://commons.wikimedia.org/wiki/File:Kipling_nd.jpg",
+  "file": "File:Kipling nd.jpg",
+  "author": "Bain News Service, publisher",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "rumi": {
+  "name": "Rumi",
+  "source": "https://commons.wikimedia.org/wiki/File:Mevlana-celaleddin-i-rumi-1.jpg",
+  "file": "File:Mevlana-celaleddin-i-rumi-1.jpg",
+  "author": "Unknown author Unknown author",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "ruslan-khasbulatov": {
   "name": "Ruslan Khasbulatov",
   "source": "https://commons.wikimedia.org/wiki/File:Ruslan_Khasbulatov_August_2011_Moscow.jpg",
@@ -5078,6 +6310,15 @@
   "licence": "CC BY-SA",
   "licenceName": "CC BY-SA 3.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "saadi": {
+  "name": "Saadi",
+  "source": "https://commons.wikimedia.org/wiki/File:The_poet_Sa%60di_(detail)_with_his_friends_in_the_orchard_at_night,_from_Prince_Baysunghur%27s_Rose_Garden_(Gulistan)_by_Sa%60di.jpg",
+  "file": "File:The poet Sa`di (detail) with his friends in the orchard at night, from Prince Baysunghur's Rose Garden (Gulistan) by Sa`di.jpg",
+  "author": "1427 artist, Herat",
+  "licence": "public domain",
+  "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "saddam-hussein": {
@@ -5118,6 +6359,15 @@
   "licenceUrl": "https://creativecommons.org/licenses/by/3.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "sallust": {
+  "name": "Sallust",
+  "source": "https://commons.wikimedia.org/wiki/File:Salluste_(cropped).jpg",
+  "file": "File:Salluste (cropped).jpg",
+  "author": "Philippe Trière d'après «Maréchal»",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "sally-jewell": {
   "name": "Sally Jewell",
   "source": "https://commons.wikimedia.org/wiki/File:Secretary_Jewell_and_the_Northwest_Youth_Corps_(8818705428).jpg",
@@ -5147,11 +6397,29 @@
   "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "saltykov-shchedrin": {
+  "name": "Mikhail Saltykov-Shchedrin",
+  "source": "https://commons.wikimedia.org/wiki/File:Kramskoj_-_saltykov-schedrin.jpg",
+  "file": "File:Kramskoj - saltykov-schedrin.jpg",
+  "author": "Ivan Kramskoi",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "samuel-hoare-1st-viscount-templewood": {
   "name": "Samuel Hoare, 1st Viscount Templewood",
   "source": "https://commons.wikimedia.org/wiki/File:Sir_Samuel_Hoare_GGBain.jpg",
   "file": "File:Sir Samuel Hoare GGBain.jpg",
   "author": "George Grantham Bain Collection (Library of Congress)",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "samuel-johnson": {
+  "name": "Samuel Johnson",
+  "source": "https://commons.wikimedia.org/wiki/File:Samuel_Johnson_by_Joshua_Reynolds.jpg",
+  "file": "File:Samuel Johnson by Joshua Reynolds.jpg",
+  "author": "Joshua Reynolds",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -5221,6 +6489,16 @@
   "licence": "CC BY",
   "licenceName": "CC BY 3.0 au",
   "licenceUrl": "https://creativecommons.org/licenses/by/3.0/au/deed.en",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "seneca": {
+  "name": "Seneca",
+  "source": "https://commons.wikimedia.org/wiki/File:Duble_herma_of_Socrates_and_Seneca_Antikensammlung_Berlin_07.jpg",
+  "file": "File:Duble herma of Socrates and Seneca Antikensammlung Berlin 07.jpg",
+  "author": "Calidius",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 3.0",
+  "licenceUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "sergei-kruglov": {
@@ -5378,6 +6656,24 @@
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.5",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "socrates": {
+  "name": "Socrates",
+  "source": "https://commons.wikimedia.org/wiki/File:Socrates_Louvre.jpg",
+  "file": "File:Socrates Louvre.jpg",
+  "author": "Copy of Lysippos (?)",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "soren-kierkegaard": {
+  "name": "Søren Kierkegaard",
+  "source": "https://commons.wikimedia.org/wiki/File:S%C3%B8ren_Kierkegaard_(1813-1855)_-_(cropped).jpg",
+  "file": "File:Søren Kierkegaard (1813-1855) - (cropped).jpg",
+  "author": "La Biblioteca Real de Dinamarca",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "souphanouvong": {
   "name": "Souphanouvong",
   "source": "https://commons.wikimedia.org/wiki/File:Souphanouvong1978.jpg",
@@ -5404,6 +6700,15 @@
   "licence": "public domain",
   "licenceName": "CC0",
   "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "stanislaw-jerzy-lec": {
+  "name": "Stanisław Jerzy Lec",
+  "source": "https://commons.wikimedia.org/wiki/File:Stanislaw_J._Lec.jpg",
+  "file": "File:Stanislaw J. Lec.jpg",
+  "author": "Unknown photographer",
+  "licence": "public domain",
+  "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "stephen-harper": {
@@ -5473,10 +6778,28 @@
   "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "sun-tzu": {
+  "name": "Sun Tzu",
+  "source": "https://commons.wikimedia.org/wiki/File:%E5%90%B4%E5%8F%B8%E9%A9%AC%E5%AD%99%E6%AD%A6.jpg",
+  "file": "File:吴司马孙武.jpg",
+  "author": "Unknown author Unknown author",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "syngman-rhee": {
   "name": "Syngman Rhee",
   "source": "https://commons.wikimedia.org/wiki/File:Rhee_Syng-Man_in_1948.jpg",
   "file": "File:Rhee Syng-Man in 1948.jpg",
+  "author": "Unknown author Unknown author",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "tacitus": {
+  "name": "Tacitus",
+  "source": "https://commons.wikimedia.org/wiki/File:Tacitus,_Cornelius_(50_-_116).jpg",
+  "file": "File:Tacitus, Cornelius (50 - 116).jpg",
   "author": "Unknown author Unknown author",
   "licence": "public domain",
   "licenceName": "Public domain",
@@ -5491,11 +6814,29 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "talleyrand": {
+  "name": "Talleyrand",
+  "source": "https://commons.wikimedia.org/wiki/File:Charles_Maurice_de_Talleyrand-P%C3%A9rigord_by_Fran%C3%A7ois_G%C3%A9rard,_1808.jpg",
+  "file": "File:Charles Maurice de Talleyrand-Périgord by François Gérard, 1808.jpg",
+  "author": "François Gérard",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "tang-jiaxuan": {
   "name": "Tang Jiaxuan",
   "source": "https://commons.wikimedia.org/wiki/File:Tang_Jiaxuan_01.jpg",
   "file": "File:Tang Jiaxuan 01.jpg",
   "author": "Mike Gross ( http://www.state.gov/ )",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "taras-shevchenko": {
+  "name": "Taras Shevchenko",
+  "source": "https://commons.wikimedia.org/wiki/File:%D0%A2._%D0%93._%D0%A8%D0%B5%D0%B2%D1%87%D0%B5%D0%BD%D0%BA%D0%BE._%D0%9A%D0%B2%D1%96%D1%82%D0%B5%D0%BD%D1%8C_1859.jpg",
+  "file": "File:Т. Г. Шевченко. Квітень 1859.jpg",
+  "author": "Andrey Denyer",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -5527,6 +6868,16 @@
   "author": "Russell Roederer",
   "licence": "public domain",
   "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "terry-pratchett": {
+  "name": "Terry Pratchett",
+  "source": "https://commons.wikimedia.org/wiki/File:10.12.12TerryPratchettByLuigiNovi1.jpg",
+  "file": "File:10.12.12TerryPratchettByLuigiNovi1.jpg",
+  "author": "Luigi Novi",
+  "licence": "CC BY",
+  "licenceName": "CC BY 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/3.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "thanom-kittikachorn": {
@@ -5569,6 +6920,15 @@
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0/de/deed.en",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "theodore-roosevelt": {
+  "name": "Theodore Roosevelt",
+  "source": "https://commons.wikimedia.org/wiki/File:Theodore_Roosevelt_by_the_Pach_Bros.jpg",
+  "file": "File:Theodore Roosevelt by the Pach Bros.jpg",
+  "author": "Adam Cuerden",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "theresa-may": {
   "name": "Theresa May",
   "source": "https://commons.wikimedia.org/wiki/File:Official_portrait_of_Baroness_May_of_Maidenhead_crop_2.jpg",
@@ -5593,6 +6953,43 @@
   "source": "https://commons.wikimedia.org/wiki/File:2017-09-24_Thomas_de_Maizi%C3%A8re_by_Sandro_Halank%E2%80%931.jpg",
   "file": "File:2017-09-24 Thomas de Maizière by Sandro Halank–1.jpg",
   "author": "Sandro Halank , Wikimedia Commons",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "thomas-hobbes": {
+  "name": "Thomas Hobbes",
+  "source": "https://commons.wikimedia.org/wiki/File:Thomas_Hobbes_(portrait).jpg",
+  "file": "File:Thomas Hobbes (portrait).jpg",
+  "author": "John Michael Wright",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "thomas-jefferson": {
+  "name": "Thomas Jefferson",
+  "source": "https://commons.wikimedia.org/wiki/File:Official_Presidential_portrait_of_Thomas_Jefferson_(by_Rembrandt_Peale,_1800)(cropped).jpg",
+  "file": "File:Official Presidential portrait of Thomas Jefferson (by Rembrandt Peale, 1800)(cropped).jpg",
+  "author": "Rembrandt Peale",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "thomas-more": {
+  "name": "Thomas More",
+  "source": "https://commons.wikimedia.org/wiki/File:Hans_Holbein,_the_Younger_-_Sir_Thomas_More_-_Google_Art_Project.jpg",
+  "file": "File:Hans Holbein, the Younger - Sir Thomas More - Google Art Project.jpg",
+  "author": "Hans Holbein the Younger",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "thucydides": {
+  "name": "Thucydides",
+  "source": "https://commons.wikimedia.org/wiki/File:Thucydides_pushkin01.jpg",
+  "file": "File:Thucydides pushkin01.jpg",
+  "author": "user:shakko",
   "licence": "CC BY-SA",
   "licenceName": "CC BY-SA 3.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
@@ -5709,6 +7106,16 @@
   "source": "https://commons.wikimedia.org/wiki/File:Staatsgreep_in_Birma,_premier_U_nu,_Bestanddeelnr_913-5820_(cropped).jpg",
   "file": "File:Staatsgreep in Birma, premier U nu, Bestanddeelnr 913-5820 (cropped).jpg",
   "author": "Staatsgreep in Birma, premier U nu, Bestanddeelnr 913-5820.jpg :Anefo derivative work: Supakit prem",
+  "licence": "public domain",
+  "licenceName": "CC0",
+  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "umberto-eco": {
+  "name": "Umberto Eco",
+  "source": "https://commons.wikimedia.org/wiki/File:Italiaanse_schrijver_Umberto_Eco_,_kop,_Bestanddeelnr_932-9758.jpg",
+  "file": "File:Italiaanse schrijver Umberto Eco , kop, Bestanddeelnr 932-9758.jpg",
+  "author": "Rob Bogaerts for Anefo",
   "licence": "public domain",
   "licenceName": "CC0",
   "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
@@ -5831,11 +7238,56 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "vasily-kliuchevsky": {
+  "name": "Vasily Klyuchevsky",
+  "source": "https://commons.wikimedia.org/wiki/File:Vasily_Klyuchevsky_2.jpg",
+  "file": "File:Vasily Klyuchevsky 2.jpg",
+  "author": "Vasily Mate",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "vasyl-stus": {
+  "name": "Vasyl Stus",
+  "source": "https://commons.wikimedia.org/wiki/File:Stus_KGB_photo_1980_(cropped).jpg",
+  "file": "File:Stus KGB photo 1980 (cropped).jpg",
+  "author": "Official KGB photo from Stus file after arrest 1972",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "vasyl-symonenko": {
+  "name": "Vasyl Symonenko",
+  "source": "https://commons.wikimedia.org/wiki/File:Stamp_of_Ukraine_s1421_(cropped).jpg",
+  "file": "File:Stamp of Ukraine s1421 (cropped).jpg",
+  "author": "Укпошта",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "viacheslav-chornovil": {
+  "name": "Viacheslav Chornovil",
+  "source": "https://commons.wikimedia.org/wiki/File:%D0%9D%D0%94%D0%A3_3_%D0%A7%D0%BE%D1%80%D0%BD%D0%BE%D0%B2%D1%96%D0%BB_%D0%92%D1%8F%D1%87%D0%B5%D1%81%D0%BB%D0%B0%D0%B2_%D0%9C%D0%B0%D0%BA%D1%81%D0%B8%D0%BC%D0%BE%D0%B2%D0%B8%D1%87.jpg",
+  "file": "File:НДУ 3 Чорновіл Вячеслав Максимович.jpg",
+  "author": "Верховна Рада України",
+  "licence": "CC BY",
+  "licenceName": "Attribution",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "victor-emmanuel-iii-of-italy": {
   "name": "Victor Emmanuel III of Italy",
   "source": "https://commons.wikimedia.org/wiki/File:Vitorio_Emanuel_III.jpg",
   "file": "File:Vitorio Emanuel III.jpg",
   "author": "Mario Nunes Vais",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "victor-hugo": {
+  "name": "Victor Hugo",
+  "source": "https://commons.wikimedia.org/wiki/File:Victor_Hugo_by_%C3%89tienne_Carjat_1876_-_full.jpg",
+  "file": "File:Victor Hugo by Étienne Carjat 1876 - full.jpg",
+  "author": "Étienne Carjat",
   "licence": "public domain",
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
@@ -5867,6 +7319,16 @@
   "author": "Arquivos soviéticos, TASS",
   "licence": "public domain",
   "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "viktor-chernomyrdin": {
+  "name": "Viktor Chernomyrdin",
+  "source": "https://commons.wikimedia.org/wiki/File:%D0%A7%D0%95%D0%A0%D0%9D%D0%9E%D0%9C%D0%AB%D0%A0%D0%94%D0%98%D0%9D_%D0%92%D0%B8%D0%BA%D1%82%D0%BE%D1%80_%D0%A1%D1%82%D0%B5%D0%BF%D0%B0%D0%BD%D0%BE%D0%B2%D0%B8%D1%87.jpg",
+  "file": "File:ЧЕРНОМЫРДИН Виктор Степанович.jpg",
+  "author": "Александр Стручков",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "viktor-gerashchenko": {
@@ -5977,6 +7439,15 @@
   "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "vladimir-lenin": {
+  "name": "Vladimir Lenin",
+  "source": "https://commons.wikimedia.org/wiki/File:Vlad%C3%ADmir_Lenin_(fotograf%C3%ADa_coloreada).jpg",
+  "file": "File:Vladímir Lenin (fotografía coloreada).jpg",
+  "author": "Pavel Zhukov",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "vladimir-makei": {
   "name": "Vladimir Makei",
   "source": "https://commons.wikimedia.org/wiki/File:Uladzimir_Makei_(cropped).jpg",
@@ -6064,6 +7535,15 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "volodymyr-vynnychenko": {
+  "name": "Volodymyr Vynnychenko",
+  "source": "https://commons.wikimedia.org/wiki/File:Vynnychenko.jpg",
+  "file": "File:Vynnychenko.jpg",
+  "author": "Unknown author Unknown author",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "volodymyr-zelenskyy": {
   "name": "Volodymyr Zelenskyy",
   "source": "https://commons.wikimedia.org/wiki/File:New_Year%27s_Eve_from_President_of_Ukraine_Volodymyr_Zelensky_(31-12-2025)_(cropped).jpg",
@@ -6072,6 +7552,16 @@
   "licence": "CC BY",
   "licenceName": "CC BY 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "voltaire": {
+  "name": "Voltaire",
+  "source": "https://commons.wikimedia.org/wiki/File:Nicolas_de_Largilli%C3%A8re_-_Portrait_de_Voltaire_(1694-1778)_en_1718_-_P208_-_mus%C3%A9e_Carnavalet_-_5_(cropped).jpg",
+  "file": "File:Nicolas de Largillière - Portrait de Voltaire (1694-1778) en 1718 - P208 - musée Carnavalet - 5 (cropped).jpg",
+  "author": "Nicolas de Largillière",
+  "licence": "public domain",
+  "licenceName": "CC0",
+  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "vyacheslav-molotov": {
@@ -6216,6 +7706,15 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "will-rogers": {
+  "name": "Will Rogers",
+  "source": "https://commons.wikimedia.org/wiki/File:Will_Rogers_1922.jpg",
+  "file": "File:Will Rogers 1922.jpg",
+  "author": "Melbourne Spurr",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "william-cohen": {
   "name": "William Cohen",
   "source": "https://commons.wikimedia.org/wiki/File:William_Cohen,_official_portrait.jpg",
@@ -6297,6 +7796,15 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "william-shakespeare": {
+  "name": "William Shakespeare",
+  "source": "https://commons.wikimedia.org/wiki/File:Shakespeare.jpg",
+  "file": "File:Shakespeare.jpg",
+  "author": "Attributed to John Taylor",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "william-slim-1st-viscount-slim": {
   "name": "William Slim, 1st Viscount Slim",
   "source": "https://commons.wikimedia.org/wiki/File:FM_william_Slim.jpg",
@@ -6304,6 +7812,16 @@
   "author": "Ministry of Information Photo Division Photographer",
   "licence": "public domain",
   "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "willy-brandt": {
+  "name": "Willy Brandt",
+  "source": "https://commons.wikimedia.org/wiki/File:Bundesarchiv_B_145_Bild-F057884-0009,_Willy_Brandt.jpg",
+  "file": "File:Bundesarchiv B 145 Bild-F057884-0009, Willy Brandt.jpg",
+  "author": "Engelbert Reineke",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 3.0 de",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0/de/deed.en",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "winston-churchill": {
@@ -6369,6 +7887,15 @@
   "licenceName": "Public domain",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
+ "yevhen-malaniuk": {
+  "name": "Yevhen Malaniuk",
+  "source": "https://commons.wikimedia.org/wiki/File:Jevhen_Malanjuk.jpg",
+  "file": "File:Jevhen Malanjuk.jpg",
+  "author": "Original uploader was Leonst at uk.wikipedia",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
  "yi-gang": {
   "name": "Yi Gang",
   "source": "https://commons.wikimedia.org/wiki/File:Yi_Gang_World_Economic_Forum_2013_(2).jpg",
@@ -6386,6 +7913,16 @@
   "author": "Ministry of Foreign Affairs - 외무부",
   "licence": "public domain",
   "licenceName": "Public domain",
+  "changes": "cropped to head and shoulders, toned and painted in oil"
+ },
+ "yitzhak-rabin": {
+  "name": "Yitzhak Rabin",
+  "source": "https://commons.wikimedia.org/wiki/File:Flickr_-_Israel_Defense_Forces_-_Life_of_Lt._Gen._Yitzhak_Rabin,_7th_IDF_Chief_of_Staff_in_photos_(11).jpg",
+  "file": "File:Flickr - Israel Defense Forces - Life of Lt. Gen. Yitzhak Rabin, 7th IDF Chief of Staff in photos (11).jpg",
+  "author": "Yaakov Saar",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
   "changes": "cropped to head and shoulders, toned and painted in oil"
  },
  "yoweri-museveni": {

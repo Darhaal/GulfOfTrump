@@ -10,6 +10,7 @@ import Dictation from "@/components/voice/Dictation";
 import SpeakButton from "@/components/voice/SpeakButton";
 import { ADVISOR_TITLES, ADVISORS, type AdvisorId } from "@/engine/advisors";
 import { formatDate } from "@/engine/calendar";
+import { playerHasSpoken } from "@/engine/foreign";
 import { ADVISOR_POST, officialAt } from "@/engine/government";
 import type { GameState, Summit } from "@/engine/types";
 import { useI18n } from "@/i18n/useI18n";
@@ -27,17 +28,22 @@ interface LiveSummitDialogProps {
 
 /**
  * A meeting the player holds in person: the record as it grows, the
- * player's own statement, and beside it a minister to whisper to — the
- * chief of staff by default — who sees the record too. Ending the meeting
- * sums up what was agreed; the next turn has to honour it.
+ * player's own statement, the others answering in turn, and beside it a
+ * minister to whisper to – the foreign minister by default, or the minister
+ * of the field – who sees the record too and can draft a line. Ending the
+ * meeting sums up what was agreed, once the player has spoken; the next
+ * turn has to honour it.
  */
 export default function LiveSummitDialog({ state, summit, busy, disabled, onSpeak, onFinish, onAsk, onClose }: LiveSummitDialogProps) {
   const { t, text, locale } = useI18n();
   const [line, setLine] = useState("");
   const [whisper, setWhisper] = useState("");
-  const [advisor, setAdvisor] = useState<AdvisorId>("chief");
+  const [advisor, setAdvisor] = useState<AdvisorId>("foreign");
   const name = (tag: string) => text(state.countries[tag]?.name ?? tag);
   const record = summit?.transcript ?? [];
+  const bloc = summit?.bloc ? state.alliances.find((a) => a.id === summit.bloc) : undefined;
+  const heading = summit ? (bloc ? t("live.sessionOf", { name: text(bloc.name) }) : summit.title) : "";
+  const spoken = summit ? playerHasSpoken(summit, state.player) : false;
   const over = summit?.status === "held";
   const talking = busy?.kind === "summit";
   const whispering = busy?.kind === "advice" && busy.advisor === advisor;
@@ -46,7 +52,7 @@ export default function LiveSummitDialog({ state, summit, busy, disabled, onSpea
   const context = () =>
     summit
       ? [
-          `The government is at "${summit.title}"${summit.place ? ` in ${summit.place}` : ""} with ${summit.participants.filter((p) => p !== state.player).slice(0, 20).join(", ")}.`,
+          `The government is at "${bloc ? text(bloc.name) : summit.title}"${summit.place ? ` in ${summit.place}` : ""} with ${summit.participants.filter((p) => p !== state.player).slice(0, 20).join(", ")}.`,
           summit.agenda ? `Agenda: ${summit.agenda}` : "",
           "What has been said:",
           ...record.slice(-12).map((l) => `[${l.country}]${l.speaker ? ` ${l.speaker}` : ""}: ${l.text}`),
@@ -66,7 +72,7 @@ export default function LiveSummitDialog({ state, summit, busy, disabled, onSpea
   };
 
   return (
-    <Dialog open={summit !== null} onClose={onClose} huge title={summit?.title ?? ""}>
+    <Dialog open={summit !== null} onClose={onClose} huge title={heading}>
       {summit && (
         <div className="grid gap-4 md:grid-cols-[1fr_16rem]">
           <div className="flex min-w-0 flex-col gap-3">
@@ -91,7 +97,7 @@ export default function LiveSummitDialog({ state, summit, busy, disabled, onSpea
                 return (
                   <div key={i} className={`flex gap-2 ${mine ? "flex-row-reverse" : ""}`}>
                     <Flag tag={l.country} scenario={state.scenarioId} color={state.countries[l.country]?.color} className="mt-1" />
-                    <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${mine ? "rounded-tr-md bg-ink text-on-ink" : "rounded-tl-md border border-line bg-surface text-ink"}`}>
+                    <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${mine ? "rounded-tr-md bg-ink text-on-ink" : "rounded-tl-md border border-line sheet text-ink"}`}>
                       <div className={`mb-0.5 flex items-center gap-2 text-2xs font-black uppercase tracking-widest ${mine ? "text-on-ink/60" : "text-muted"}`}>
                         {mine ? t("diplomacy.you") : [l.speaker, name(l.country)].filter(Boolean).join(" · ")}
                         {!mine && <SpeakButton id={`summit-${i}`} text={l.text} className="-my-1 ml-auto" />}
@@ -149,7 +155,7 @@ export default function LiveSummitDialog({ state, summit, busy, disabled, onSpea
                     <Mic className="h-4 w-4" />
                     {t("live.speak")}
                   </button>
-                  <button type="button" disabled={disabled || Boolean(busy) || record.length === 0} onClick={() => void onFinish()} className={`${ui.secondary} px-4 py-2.5 text-xs`}>
+                  <button type="button" disabled={disabled || Boolean(busy) || !spoken} onClick={() => void onFinish()} className={`${ui.secondary} px-4 py-2.5 text-xs`}>
                     <Square className="h-4 w-4" />
                     {t("live.finish")}
                   </button>
@@ -172,7 +178,7 @@ export default function LiveSummitDialog({ state, summit, busy, disabled, onSpea
             </select>
             <ChatScroll watch={`${advisor}-${thread.length}-${whispering}`} className="max-h-[40vh]">
               {thread.map((m, i) => (
-                <div key={i} className={`rounded-xl px-2.5 py-1.5 text-xs ${m.from === "player" ? "ml-4 bg-ink text-on-ink" : "mr-4 border border-line bg-surface text-ink"}`}>
+                <div key={i} className={`rounded-xl px-2.5 py-1.5 text-xs ${m.from === "player" ? "ml-4 bg-ink text-on-ink" : "mr-4 border border-line sheet text-ink"}`}>
                   <p className="whitespace-pre-wrap font-medium leading-relaxed">{m.text}</p>
                 </div>
               ))}

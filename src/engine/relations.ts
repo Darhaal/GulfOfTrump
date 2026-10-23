@@ -2,6 +2,7 @@ import { lostShares, yearsBetween } from "./abroad";
 import { countryCrises } from "./crises";
 import { fixed, roll } from "./dice";
 import { countryCentres, distanceKm, exportShares } from "./trade";
+import { STRATEGIC_KINDS } from "./types";
 import type { Aim, Alliance, AppliedChange, Course, DeedKind, GameState, MapRegion, RegimeKind, ScenarioId, Tie, War } from "./types";
 
 /**
@@ -178,7 +179,8 @@ export function actorsOf(state: Pick<GameState, "countries" | "regions" | "wars"
   const top = (score: (tag: string) => number, n: number) => [...candidates].sort((a, b) => score(b) - score(a) || a.localeCompare(b)).slice(0, n);
   const out = new Set([...top((tag) => power.get(tag) ?? 0, ACTORS), ...top((tag) => state.countries[tag]?.economy?.gdp ?? 0, ECONOMIES)]);
   for (const w of state.wars) for (const tag of [...w.attackers, ...w.defenders]) if (power.has(tag) && tag !== state.player) out.add(tag);
-  for (const p of state.plans ?? []) if (!p.end) for (const tag of [p.by, ...(p.partners ?? [])]) if (power.has(tag) && tag !== state.player) out.add(tag);
+  // Only a strategic plan makes a government one that matters; a peaceful plan is any state's (engine/policies.ts).
+  for (const p of state.plans ?? []) if (!p.end && STRATEGIC_KINDS.includes(p.kind)) for (const tag of [p.by, ...(p.partners ?? [])]) if (power.has(tag) && tag !== state.player) out.add(tag);
   return out;
 }
 

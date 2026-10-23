@@ -1,13 +1,13 @@
 "use client";
 
-import type { ActDraft } from "@/engine/acts";
 import type { AdviceReply, AdvisorId } from "@/engine/advisors";
 import type { Candidate } from "@/engine/government";
 import type { DeputyDraft } from "@/engine/deputies";
 import type { DiplomacyReply } from "@/engine/diplomacy";
-import type { Outcome } from "@/engine/outcome";
+import type { SessionTalk } from "@/engine/parliament";
 import type { MinisterReport } from "@/engine/reports";
-import type { GameState, Locale, Official, OfficialPost, Politics, SummitLine } from "@/engine/types";
+import type { StagePart, StoryCarry, TurnStage } from "@/engine/stages";
+import type { ArmyOrganisation, GameState, Locale, Official, OfficialPost, Politics, SummitLine, TalkResult } from "@/engine/types";
 import { DEMO_HEADER } from "@/constants/app";
 import { readPreference } from "./preferences";
 
@@ -102,14 +102,16 @@ function trimForServer(state: GameState): GameState {
   };
 }
 
-export function playTurn(
+/** One stage of a turn (engine/stages.ts): the story first, then the world and home with the story that came back. */
+export function playTurnStage<S extends TurnStage>(
   state: GameState,
   orders: string[],
-  options: { locale: Locale; model?: string; signal?: AbortSignal; onProgress: (chars: number) => void },
+  stage: S,
+  options: { locale: Locale; model?: string; signal?: AbortSignal; onProgress: (chars: number) => void; story?: StoryCarry },
 ) {
-  return stream<{ outcome: Outcome }>(
+  return stream<{ stage: S; part: StagePart<S> }>(
     "/api/game/turn",
-    { state: trimForServer(state), orders, locale: options.locale, model: options.model || undefined },
+    { state: trimForServer(state), orders, stage, ...(options.story ? { story: options.story } : {}), locale: options.locale, model: options.model || undefined },
     options.onProgress,
     options.signal,
   );
@@ -153,25 +155,21 @@ export function setupDeputies(state: GameState, ministry: AdvisorId, options: { 
   );
 }
 
+/** A short biography of the leader or a minister, up to the game's start date (engine/bios.ts). */
+export function requestBio(state: GameState, name: string, options: { locale: Locale; model?: string; signal?: AbortSignal; onProgress?: (chars: number) => void }) {
+  return stream<{ key: string; bio: string }>(
+    "/api/game/bio",
+    { state: trimForServer(state), name, locale: options.locale, model: options.model || undefined },
+    options.onProgress ?? (() => {}),
+    options.signal,
+  );
+}
+
 /** A minister's report on a turn already played; null when the ministry had nothing to report on. */
 export function requestReport(state: GameState, ministry: AdvisorId, turn: number, options: { locale: Locale; model?: string; signal?: AbortSignal; onProgress: (chars: number) => void }) {
   return stream<{ report: MinisterReport | null }>(
     "/api/game/report",
     { state: trimForServer(state), ministry, turn, locale: options.locale, model: options.model || undefined },
-    options.onProgress,
-    options.signal,
-  );
-}
-
-export function askChiefOfActs(
-  state: GameState,
-  question: string,
-  cities: { key: string; name: string }[],
-  options: { locale: Locale; model?: string; signal?: AbortSignal; onProgress: (chars: number) => void },
-) {
-  return stream<{ reply: { answer: string; acts: ActDraft[] } }>(
-    "/api/game/acts",
-    { state: trimForServer(state), question, cities, locale: options.locale, model: options.model || undefined },
     options.onProgress,
     options.signal,
   );
@@ -190,6 +188,11 @@ export function setupPolitics(
   );
 }
 
+/** The player's army as the game master describes it now, checked by the engine (engine/army.ts). */
+export function learnArmy(state: GameState, options: { locale: Locale; model?: string; signal?: AbortSignal; onProgress: (chars: number) => void }) {
+  return stream<{ organisation: ArmyOrganisation }>("/api/game/army", { state: trimForServer(state), locale: options.locale, model: options.model || undefined }, options.onProgress, options.signal);
+}
+
 export function summitTalk(
   state: GameState,
   summit: string,
@@ -206,6 +209,31 @@ export function summitClose(state: GameState, summit: string, options: { locale:
     options.onProgress,
     options.signal,
   );
+}
+
+/** At the opening of a sitting (no line) or after the government's speech: the house answers, and says how the speech moved the parties. */
+export function sessionTalk(
+  state: GameState,
+  session: string,
+  line: string | null,
+  options: { locale: Locale; model?: string; signal?: AbortSignal; onProgress: (chars: number) => void },
+) {
+  return stream<SessionTalk>(
+    "/api/game/parliament",
+    { state: trimForServer(state), session, ...(line === null ? { open: true } : { line }), locale: options.locale, model: options.model || undefined },
+    options.onProgress,
+    options.signal,
+  );
+}
+
+/** The other side's answer to the government's words at talks. */
+export function talksSpeak(state: GameState, talk: string, line: string, options: { locale: Locale; model?: string; signal?: AbortSignal; onProgress: (chars: number) => void }) {
+  return stream<{ speaker: string; said: string }>("/api/game/talks", { state: trimForServer(state), talk, line, locale: options.locale, model: options.model || undefined }, options.onProgress, options.signal);
+}
+
+/** What came of talks, as the model sees it; the engine decides (engine/talks.ts). */
+export function talksFinish(state: GameState, talk: string, options: { locale: Locale; model?: string; signal?: AbortSignal; onProgress: (chars: number) => void }) {
+  return stream<{ result: TalkResult; note: string }>("/api/game/talks", { state: trimForServer(state), talk, finish: true, locale: options.locale, model: options.model || undefined }, options.onProgress, options.signal);
 }
 
 export function findCandidates(

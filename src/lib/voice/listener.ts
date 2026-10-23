@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import { isDesktopApp } from "@/constants/app";
 import type { Locale } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
+import { getPreference } from "@/lib/preferences";
 import { cleanTranscript, isSilent, SPEECH_LANG } from "./text";
 
 /**
@@ -16,7 +17,10 @@ import { cleanTranscript, isSilent, SPEECH_LANG } from "./text";
  *   browser engine has the API but no service behind it (the requests fail
  *   with "network"). A browser whose service fails is moved to it too.
  *
- * One microphone at a time; `owner` is the button that holds it.
+ * One microphone at a time; `owner` is the button that holds it. Its limits
+ * are shown as they bite: the time spoken against the local engine's minute
+ * while listening, and a notice when the minute ran out or the words did not
+ * fit the field.
  */
 
 export type VoiceEngine = "browser" | "local";
@@ -32,14 +36,22 @@ interface ListenerState {
   modelReady: boolean;
   /** The browser's speech service failed this session; the local engine stands in. */
   browserFailed: boolean;
+  /** When the current listening began (ms), for the time shown while it lasts. */
+  since: number;
+  /** Seconds a recording may last, where the engine stops it by itself. */
+  limit: number | null;
+  /** A note after the words were written in: the recording ran out of time, or the field out of room. */
+  notice: VoiceNotice | null;
 }
+
+export type VoiceNotice = { key: "voice.capped" } | { key: "voice.cut"; n: number };
 
 const MODEL_FLAG = "got_voice_model";
 const CACHES = ["gulf-voice-runtime", "gulf-voice-model"];
 /** About what the first use downloads: the runtime and Whisper base. */
 export const MODEL_MB = 100;
-/** Longest recording for the local engine. */
-const MAX_SECONDS = 60;
+/** Longest recording for the local engine (voice.capped says "a minute"). */
+export const MAX_SECONDS = 60;
 
 const readFlag = () => {
   try {
@@ -49,7 +61,7 @@ const readFlag = () => {
   }
 };
 
-let state: ListenerState = { owner: null, phase: "idle", progress: 0, error: null, modelReady: false, browserFailed: false };
+let state: ListenerState = { owner: null, phase: "idle", progress: 0, error: null, modelReady: false, browserFailed: false, since: 0, limit: null, notice: null };
 let started = false;
 const listeners = new Set<() => void>();
 const set = (next: Partial<ListenerState>) => {
@@ -238,10 +250,11 @@ function listenInBrowser(owner: string, locale: Locale, onText: (text: string) =
   };
   rec.onend = () => {
     stop = null;
-    if (state.owner === owner) set({ phase: "idle", error, owner: error ? owner : null });
+    // The button keeps the microphone's note in view: a problem, or words that did not fit.
+    if (state.owner === owner) set({ phase: "idle", error, owner: error || state.notice ? owner : null });
   };
   stop = () => rec.stop();
-  set({ owner, phase: "listening", error: null });
+  set({ owner, phase: "listening", error: null, notice: null, since: Date.now(), limit: null });
   try {
     rec.start();
   } catch {
@@ -251,19 +264,33 @@ function listenInBrowser(owner: string, locale: Locale, onText: (text: string) =
 }
 
 async function listenLocally(owner: string, locale: Locale, onText: (text: string) => void) {
-  set({ owner, phase: "listening", error: null });
+  set({ owner, phase: "listening", error: null, notice: null, since: Date.now(), limit: MAX_SECONDS });
   let stream: MediaStream;
+  const audio: MediaTrackConstraints = { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+  const device = getPreference("micDevice");
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    stream = await navigator.mediaDevices.getUserMedia({ audio: device ? { ...audio, deviceId: { exact: device } } : audio });
   } catch (error) {
-    return set({ owner, phase: "idle", error: micError(error) });
+    // The microphone picked in Settings is gone: the system's own instead.
+    const gone = device && error instanceof DOMException && (error.name === "OverconstrainedError" || error.name === "NotFoundError");
+    try {
+      if (!gone) throw error;
+      stream = await navigator.mediaDevices.getUserMedia({ audio });
+    } catch (again) {
+      return set({ owner, phase: "idle", error: micError(again) });
+    }
   }
   // Warm the model while the player speaks.
   void prepareLocal().catch(() => undefined);
   const recorder = new MediaRecorder(stream);
   const chunks: Blob[] = [];
   recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-  const limit = setTimeout(() => recorder.state === "recording" && recorder.stop(), MAX_SECONDS * 1000);
+  let capped = false;
+  const limit = setTimeout(() => {
+    if (recorder.state !== "recording") return;
+    capped = true;
+    recorder.stop();
+  }, MAX_SECONDS * 1000);
   recorder.onstop = async () => {
     clearTimeout(limit);
     stop = null;
@@ -274,14 +301,16 @@ async function listenLocally(owner: string, locale: Locale, onText: (text: strin
       if (isSilent(audio)) return set({ owner, phase: "idle", error: "voice.noSpeech" });
       const text = cleanTranscript(await transcribe(audio, locale));
       if (!text) return set({ owner, phase: "idle", error: "voice.noSpeech" });
+      set(capped ? { owner, phase: "idle", notice: { key: "voice.capped" } } : { owner: null, phase: "idle" });
       onText(text);
-      set({ owner: null, phase: "idle" });
     } catch {
       set({ owner, phase: "idle", error: "voice.failed" });
     }
   };
   stop = () => recorder.state === "recording" && recorder.stop();
   recorder.start();
+  // The minute counts from when the recording starts, not from asking for the microphone.
+  set({ since: Date.now() });
 }
 
 /** Starts listening for a field; the words arrive through onText. Another field's listening stops first. */
@@ -297,4 +326,10 @@ export function stopListening() {
   stop?.();
 }
 
-export const clearVoiceError = (owner: string) => state.owner === owner && state.phase === "idle" && set({ owner: null, error: null });
+export const clearVoiceError = (owner: string) => state.owner === owner && state.phase === "idle" && set({ owner: null, error: null, notice: null });
+
+/** A note on a field's button after its words were written in (a recording cut at the minute, words that did not fit). */
+export function showVoiceNotice(owner: string, notice: VoiceNotice) {
+  if (state.owner !== null && state.owner !== owner) return;
+  set({ owner, notice });
+}

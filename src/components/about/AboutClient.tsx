@@ -1,25 +1,26 @@
 "use client";
 
-import { Check, CodeXml, ExternalLink, Globe2, Landmark, Mail, Map, Save, TrendingUp, Users } from "lucide-react";
+import { Check, CodeXml, Download, ExternalLink, FlaskConical, Globe2, Landmark, Mail, Map, Newspaper, Save, Shield, Store, TrendingUp, Users } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 import { ui } from "@/components/ui/classes";
 import PortraitCredits from "./PortraitCredits";
-import { APP_NAME, APP_VERSION, REPO_URL } from "@/constants/app";
+import { BUILTIN_VOICES } from "@/lib/voice/builtin";
+import { APP_NAME, APP_VERSION, DOWNLOAD_URL, REPO_URL, STORE_URL } from "@/constants/app";
 import { ABOUT, AUTHOR_EMAIL, AUTHOR_LINKS } from "@/i18n/about";
 import { useI18n } from "@/i18n/useI18n";
 
 /** One icon per entry of "what is in the game", in order. */
-const FEATURE_ICONS = [Map, TrendingUp, Users, Landmark, Globe2, Save];
+const FEATURE_ICONS = [Map, Shield, TrendingUp, FlaskConical, Users, Landmark, Globe2, Newspaper, Save];
 
-/** Rules in short, what the game has, where the data lives and who makes it. */
-export default function AboutClient() {
+/** Rules in short, what the game has, where the data lives and who makes it; `embedded` is the header's popup, without a header of its own. */
+export default function AboutClient({ embedded = false }: { embedded?: boolean }) {
   const { locale, t } = useI18n();
   const a = ABOUT[locale];
 
   return (
-    <div className="min-h-screen">
-      <AppHeader back="/" title={a.title} subtitle={`${APP_NAME} · ${t("app.stage")} ${APP_VERSION}`} />
-      <main className="mx-auto grid max-w-4xl gap-4 px-4 py-8">
+    <div className={embedded ? "" : "min-h-screen"}>
+      {!embedded && <AppHeader back="/" title={a.title} subtitle={`${APP_NAME} · ${t("app.stage")} ${APP_VERSION}`} />}
+      <main className={embedded ? "grid gap-4" : "mx-auto grid max-w-4xl gap-4 px-4 py-8"}>
         <section className="pb-4">
           <h1 className="text-3xl md:text-5xl font-black tracking-tighter leading-none text-ink">
             {APP_NAME}
@@ -65,10 +66,7 @@ export default function AboutClient() {
             <div className="flex items-end gap-5">
               {/* eslint-disable-next-line @next/next/no-img-element -- a static file, no optimisation needed */}
               <img src="/about/artem-okhten-oil.webp" alt={a.authorName} width={128} height={160} className="h-40 w-32 shrink-0 rounded-2xl border border-line object-cover shadow-lg" />
-              <div className="pb-1">
-                <div className="text-2xl font-black leading-tight text-ink">{a.authorName}</div>
-                <div className="mt-1 text-xs font-medium italic text-muted">{t("about.oil")}</div>
-              </div>
+              <div className="pb-1 text-2xl font-black leading-tight text-ink">{a.authorName}</div>
             </div>
             <p className="mt-2 text-sm font-medium leading-relaxed text-muted">{a.authorBio}</p>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -98,16 +96,44 @@ export default function AboutClient() {
         </div>
 
         <PortraitCredits />
+        <PortraitCredits kind="scenes" />
+        <PortraitCredits kind="quotes" />
+
+        {/* The open models the voice features download and run on the player's computer. */}
+        <section className={`${ui.card} p-5 md:p-6`}>
+          <h2 className={`${ui.label} mb-2`}>{t("about.voices.title")}</h2>
+          <p className="mb-3 text-sm font-medium leading-relaxed text-muted">{t("about.voices.lead")}</p>
+          <ul className="grid gap-1.5 text-sm font-medium text-ink">
+            {[...Object.values(BUILTIN_VOICES).map((v) => v.credit), { name: "Whisper base · onnx-community/whisper-base", url: "https://huggingface.co/onnx-community/whisper-base", licence: "MIT" }].map((c) => (
+              <li key={c.url}>
+                <a href={c.url} target="_blank" rel="noreferrer" className="font-bold underline decoration-line underline-offset-2 hover:text-accent">
+                  {c.name}
+                </a>{" "}
+                <span className="text-muted">· {c.licence}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
 
         <section className={`${ui.card} flex flex-wrap items-center gap-4 p-5 md:p-6`}>
           <div className="min-w-0 flex-1">
             <h2 className={`${ui.label} mb-2`}>{a.licenseTitle}</h2>
             <p className="text-sm font-medium leading-relaxed text-muted">{a.license}</p>
           </div>
-          <a href={REPO_URL} target="_blank" rel="noreferrer" className={`${ui.secondary} px-4 py-2.5 text-xs`}>
-            <CodeXml className="h-4 w-4" />
-            GitHub
-          </a>
+          <div className="flex flex-wrap gap-2">
+            <a href={STORE_URL} target="_blank" rel="noreferrer" className={`${ui.primary} px-4 py-2.5 text-xs`}>
+              <Store className="h-4 w-4" />
+              {t("download.store")}
+            </a>
+            <a href={DOWNLOAD_URL} target="_blank" rel="noreferrer" className={`${ui.secondary} px-4 py-2.5 text-xs`}>
+              <Download className="h-4 w-4" />
+              {t("download.installer")}
+            </a>
+            <a href={REPO_URL} target="_blank" rel="noreferrer" className={`${ui.secondary} px-4 py-2.5 text-xs`}>
+              <CodeXml className="h-4 w-4" />
+              GitHub
+            </a>
+          </div>
         </section>
       </main>
     </div>

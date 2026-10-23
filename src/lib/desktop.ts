@@ -10,6 +10,10 @@ export interface DesktopWindow {
   setFullScreen(on: boolean): Promise<boolean>;
   onFullScreen(listener: (on: boolean) => void): () => void;
   quit(): Promise<void>;
+  /** Missing in an app built before it: Windows' sound settings, where the voice's speaker is chosen. */
+  openSoundSettings?(): Promise<void>;
+  /** Missing in an app built before it: Windows' speech settings, where a voice for the game's language is added. */
+  openSpeechSettings?(): Promise<void>;
   /** Missing in an app built before visible updates. */
   updates?: {
     get(): Promise<UpdateSnapshot | null>;

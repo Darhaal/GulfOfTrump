@@ -6,6 +6,8 @@
  *   npm run portraits -- --index   only the engine's index, after editing names in people.json
  *   npm run portraits -- --author  the developer's own photograph (public/about), for the about page
  *   npm run portraits -- --shadows only the shadows
+ *   npm run portraits -- --quoted  the writers and thinkers quoted on the waiting screens
+ *                                  (scripts/portraits/quoted.json), or only the ids after it
  *
  * For each person with a Wikidata id it reads the picture (P18) and sex
  * (P21), keeps the picture only if Commons gives it a free licence (public
@@ -19,7 +21,9 @@
  * shadows.mjs), several to each, so strangers do not share one face. It also
  * writes public/portraits/credits.json (who made each source
  * picture, its licence, what was changed) and src/engine/people.data.ts, the
- * index the engine matches names against.
+ * index the engine matches names against. The quoted are painted the same
+ * way into public/portraits and credited in credits.json, but they are not
+ * the game's people: they stay out of people.json and the engine's index.
  *
  * The painting: grey, smoothed like flat paint (Kuwahara), light on the face
  * and the room sinking into shadow, a few brush strokes, a warm ramp from
@@ -29,53 +33,28 @@
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { autocontrast, blurGrey as blurAt, commons, fetchFile, fetchJson, freeLicence, paint as paintAt, sharp, sleep } from "./portraits/oil.mjs";
 import { SHADOW_ERAS, shadowSvg } from "./portraits/shadows.mjs";
 
-let sharp;
-try {
-  sharp = (await import("sharp")).default;
-} catch {
-  console.error("sharp is not installed: npm i --no-save sharp");
-  process.exit(1);
-}
+export { freeLicence };
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")), "..");
 const PEOPLE = path.join(ROOT, "scripts/portraits/people.json");
+const QUOTED = path.join(ROOT, "scripts/portraits/quoted.json");
 const CACHE = path.join(ROOT, "scripts/.cache/portraits");
 const OUT = path.join(ROOT, "public/portraits");
 const INDEX = path.join(ROOT, "src/engine/people.data.ts");
-const UA = "GulfOfTrump-portraits/1.0 (https://github.com/Darhaal/GulfOfTrump; artem@okhtengroup.com)";
 
 const W = 480;
 const H = 600;
 const OUT_W = 256;
 const OUT_H = 320;
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/** Paints a grey picture (W×H, 0–1) in oil; returns the webp, at the portraits' size unless told otherwise. */
+const paint = (g, face, size = { width: OUT_W, height: OUT_H, quality: 68 }) => paintAt(g, face, W, H, size);
 
-async function fetchJson(url) {
-  for (let i = 0; i < 5; i++) {
-    const res = await fetch(url, { headers: { "User-Agent": UA } });
-    if (res.ok) return res.json();
-    await sleep(2000 * (i + 1));
-  }
-  throw new Error(`could not fetch ${url}`);
-}
-
-async function fetchFile(url, file) {
-  if (existsSync(file)) return readFileSync(file);
-  for (let i = 0; i < 5; i++) {
-    const res = await fetch(url, { headers: { "User-Agent": UA } });
-    if (res.ok) {
-      const buf = Buffer.from(await res.arrayBuffer());
-      writeFileSync(file, buf);
-      await sleep(400);
-      return buf;
-    }
-    await sleep(3000 * (i + 1));
-  }
-  throw new Error(`could not download ${url}`);
-}
+/** A grey picture (W×H, 0–1) blurred by sharp. */
+const blurGrey = (grey, sigma) => blurAt(grey, sigma, W, H);
 
 // --- Wikidata and Commons ---
 
@@ -97,201 +76,7 @@ async function wikidata(qids) {
   return out;
 }
 
-const stripHtml = (s) =>
-  String(s ?? "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;/g, "'")
-    .replace(/&nbsp;/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-async function commons(titles) {
-  const out = new Map();
-  for (let i = 0; i < titles.length; i += 40) {
-    const chunk = titles.slice(i, i + 40);
-    const j = await fetchJson(
-      `https://commons.wikimedia.org/w/api.php?action=query&format=json&prop=imageinfo&iiprop=url|size|extmetadata&iiurlwidth=900&titles=${chunk.map(encodeURIComponent).join("|")}`,
-    );
-    const norm = new Map((j.query?.normalized ?? []).map((n) => [n.to, n.from]));
-    for (const p of Object.values(j.query?.pages ?? {})) {
-      const ii = p.imageinfo?.[0];
-      if (!ii) continue;
-      const m = ii.extmetadata ?? {};
-      const v = (k) => m[k]?.value;
-      const info = {
-        file: p.title,
-        page: ii.descriptionurl,
-        url: ii.thumburl ?? ii.url,
-        author: stripHtml(v("Artist")) || stripHtml(v("Credit")) || "unknown",
-        licence: stripHtml(v("LicenseShortName")) || stripHtml(v("License")),
-        licenceUrl: v("LicenseUrl"),
-        code: String(v("License") ?? "").toLowerCase(),
-      };
-      out.set(p.title, info);
-      if (norm.has(p.title)) out.set(norm.get(p.title), info);
-    }
-    await sleep(300);
-  }
-  return out;
-}
-
-/** Free enough to paint and publish: public domain, CC0, CC BY, CC BY-SA, OGL, GODL-India, KOGL Type 1, FAL, the European Parliament's, no known restrictions. */
-export function freeLicence({ licence, code }) {
-  const s = `${licence} ${code}`.toLowerCase();
-  if (/\bnc\b|-nc|noncommercial|\bnd\b|-nd|noderiv|fair use|non-free/.test(s)) return null;
-  if (/public domain|^pd|\bpd-|\bpd\b|cc0|cc-zero/.test(s)) return "public domain";
-  if (/cc[ -]by[ -]sa|cc-by-sa|share ?alike/.test(s)) return "CC BY-SA";
-  if (/cc[ -]by\b|cc-by-\d|attribution/.test(s)) return "CC BY";
-  if (/\bogl\b|open government licence/.test(s)) return "OGL";
-  // India's Government Open Data Licence: free to use and adapt, with the source named.
-  if (/godl|government open data licen[cs]e/.test(s)) return "GODL-India";
-  // Korea's open government licence, type 1 only: types 2-4 bar commercial use or changes.
-  if (/kogl type 1|korea open government licen[cs]e type 1/.test(s)) return "KOGL Type 1";
-  // The Free Art License: free to use and change, the result under the same licence.
-  if (/\bfal\b|free art licen[cs]e|licence art libre/.test(s)) return "FAL";
-  // The European Parliament's photographs: free to reuse with the source named.
-  if (/european parliament/.test(s)) return "European Parliament";
-  // Flickr Commons and archives that know of no copyright on the picture.
-  if (/no (known )?(copyright )?restrictions/.test(s)) return "no known restrictions";
-  return null;
-}
-
-// --- painting (a port of the tested Python reference) ---
-
-function mulberry32(seed) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function gaussian(rand) {
-  const u = Math.max(1e-12, rand());
-  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rand());
-}
-
-/** Stretch the greys so 1% are black and 1% white. */
-function autocontrast(g) {
-  const hist = new Uint32Array(256);
-  for (const v of g) hist[Math.round(v * 255)]++;
-  const cut = g.length * 0.01;
-  let lo = 0;
-  let hi = 255;
-  for (let acc = 0; lo < 255 && acc + hist[lo] <= cut; lo++) acc += hist[lo];
-  for (let acc = 0; hi > 0 && acc + hist[hi] <= cut; hi--) acc += hist[hi];
-  if (hi <= lo) return g;
-  const out = new Float32Array(g.length);
-  for (let i = 0; i < g.length; i++) out[i] = Math.min(1, Math.max(0, (g[i] * 255 - lo) / (hi - lo)));
-  return out;
-}
-
-/** Edge-keeping smoothing: each pixel takes the mean of its calmest quadrant. */
-function kuwahara(img, r) {
-  const pw = W + 2 * r;
-  const ph = H + 2 * r;
-  const at = (x, y) => {
-    const cx = x < 0 ? -x : x >= W ? 2 * W - x - 2 : x;
-    const cy = y < 0 ? -y : y >= H ? 2 * H - y - 2 : y;
-    return img[cy * W + cx];
-  };
-  // Integral images of the padded picture, one row and column of zeros in front.
-  const s = new Float64Array((pw + 1) * (ph + 1));
-  const s2 = new Float64Array((pw + 1) * (ph + 1));
-  for (let y = 0; y < ph; y++) {
-    let row = 0;
-    let row2 = 0;
-    for (let x = 0; x < pw; x++) {
-      const v = at(x - r, y - r);
-      row += v;
-      row2 += v * v;
-      const i = (y + 1) * (pw + 1) + (x + 1);
-      s[i] = s[i - (pw + 1)] + row;
-      s2[i] = s2[i - (pw + 1)] + row2;
-    }
-  }
-  const box = (arr, x0, y0, x1, y1) => arr[y1 * (pw + 1) + x1] - arr[y0 * (pw + 1) + x1] - arr[y1 * (pw + 1) + x0] + arr[y0 * (pw + 1) + x0];
-  const n = (r + 1) * (r + 1);
-  const out = new Float32Array(W * H);
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      let best = Infinity;
-      let mean = 0;
-      for (const dy of [0, r]) {
-        for (const dx of [0, r]) {
-          const x0 = x + dx;
-          const y0 = y + dy;
-          const a = box(s, x0, y0, x0 + r + 1, y0 + r + 1);
-          const b = box(s2, x0, y0, x0 + r + 1, y0 + r + 1);
-          const m = a / n;
-          const v = b / n - m * m;
-          if (v < best) {
-            best = v;
-            mean = m;
-          }
-        }
-      }
-      out[y * W + x] = mean;
-    }
-  }
-  return out;
-}
-
-/** Brush texture: noise smeared along one direction. */
-function strokes(seed, angle, length, amount) {
-  const rand = mulberry32(seed);
-  const noise = new Float32Array(W * H);
-  for (let i = 0; i < noise.length; i++) noise[i] = gaussian(rand);
-  const acc = new Float32Array(W * H);
-  const dx = Math.cos(angle);
-  const dy = Math.sin(angle);
-  for (let k = -length; k <= length; k++) {
-    const ox = Math.round(k * dx);
-    const oy = Math.round(k * dy);
-    for (let y = 0; y < H; y++) {
-      const sy = (((y - oy) % H) + H) % H;
-      for (let x = 0; x < W; x++) {
-        const sx = (((x - ox) % W) + W) % W;
-        acc[y * W + x] += noise[sy * W + sx];
-      }
-    }
-  }
-  let sum = 0;
-  let sum2 = 0;
-  for (const v of acc) {
-    sum += v;
-    sum2 += v * v;
-  }
-  const mean = sum / acc.length;
-  const std = Math.sqrt(sum2 / acc.length - mean * mean) + 1e-6;
-  for (let i = 0; i < acc.length; i++) acc[i] = (acc[i] / std) * amount;
-  return acc;
-}
-
-const OIL = [
-  [0, [16, 11, 10]],
-  [0.28, [52, 32, 24]],
-  [0.52, [120, 76, 48]],
-  [0.76, [196, 146, 100]],
-  [1, [244, 224, 188]],
-];
-
-function ramp(v) {
-  for (let i = 1; i < OIL.length; i++) {
-    if (v <= OIL[i][0]) {
-      const [t0, c0] = OIL[i - 1];
-      const [t1, c1] = OIL[i];
-      const f = (v - t0) / (t1 - t0);
-      return [c0[0] + (c1[0] - c0[0]) * f, c0[1] + (c1[1] - c0[1]) * f, c0[2] + (c1[2] - c0[2]) * f];
-    }
-  }
-  return OIL[OIL.length - 1][1];
-}
+// --- painting: scripts/portraits/oil.mjs, at the portraits' size ---
 
 /** Light that falls on the face: 1 at its centre, fading out by an ellipse. */
 function faceMask(cx, cy, rx = 0.2, ry = 0.19, soft = 0.9) {
@@ -303,39 +88,6 @@ function faceMask(cx, cy, rx = 0.2, ry = 0.19, soft = 0.9) {
     }
   }
   return m;
-}
-
-/** Paints a grey picture (W×H, 0–1) in oil; returns the webp, at the portraits' size unless told otherwise. */
-async function paint(g, face, size = { width: OUT_W, height: OUT_H, quality: 68 }) {
-  const lum = kuwahara(g, 3);
-  const brush = strokes(7, 0.4, 6, 0.025);
-  const rgb = Buffer.alloc(W * H * 3);
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const i = y * W + x;
-      const r = Math.min(1, Math.hypot((x / W - 0.5) / 0.6, (y / H - 0.42) / 0.7));
-      const vignette = 1 - 0.55 * r * r;
-      let v = lum[i] * (0.55 + 0.45 * vignette) * (0.78 + 0.32 * face[i]);
-      v = Math.min(1, Math.max(0, v + brush[i])) ** 1.1;
-      const c = ramp(v);
-      rgb[i * 3] = c[0];
-      rgb[i * 3 + 1] = c[1];
-      rgb[i * 3 + 2] = c[2];
-    }
-  }
-  const raw = { raw: { width: W, height: H, channels: 3 } };
-  const glaze = await sharp(rgb, raw).blur(3).raw().toBuffer();
-  const out = Buffer.alloc(W * H * 3);
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const weave = Math.sin((x * Math.PI) / 1.6) * Math.sin((y * Math.PI) / 1.6) * 4;
-      for (let c = 0; c < 3; c++) {
-        const i = (y * W + x) * 3 + c;
-        out[i] = Math.max(0, Math.min(255, rgb[i] * 0.7 + glaze[i] * 0.3 + weave));
-      }
-    }
-  }
-  return sharp(out, raw).sharpen({ sigma: 1.2 }).resize(size.width, size.height, { kernel: "lanczos3" }).webp({ quality: size.quality ?? 68, effort: 6 }).toBuffer();
 }
 
 /**
@@ -370,16 +122,6 @@ async function greyFrom(buf, crop) {
   const g = new Float32Array(W * H);
   for (let i = 0; i < g.length; i++) g[i] = data[i] / 255;
   return autocontrast(g);
-}
-
-/** A grey picture (W×H, 0–1) blurred by sharp; one channel back, whatever sharp would make of it. */
-async function blurGrey(grey, sigma) {
-  const out = await sharp(Buffer.from(grey.map((v) => Math.round(v * 255))), { raw: { width: W, height: H, channels: 1 } })
-    .blur(sigma)
-    .extractChannel(0)
-    .raw()
-    .toBuffer();
-  return Float32Array.from(out, (v) => v / 255);
 }
 
 /** A drawn bust (an SVG of the W×H canvas) as a dark figure against a lit wall, its edge caught by the light. */
@@ -438,23 +180,44 @@ async function main() {
     return;
   }
   const people = JSON.parse(readFileSync(PEOPLE, "utf8"));
+  const quoted = JSON.parse(readFileSync(QUOTED, "utf8"));
   if (args.includes("--index")) {
     // Only the engine's index and the credits, from people.json and what is painted: after an edit to names or aliases.
-    const credits = prune(JSON.parse(readFileSync(path.join(OUT, "credits.json"), "utf8")), people);
+    const credits = prune(JSON.parse(readFileSync(path.join(OUT, "credits.json"), "utf8")), [...people, ...quoted]);
     writeFileSync(path.join(OUT, "credits.json"), JSON.stringify(credits, null, 1) + "\n");
     writeIndex(people, credits);
     return;
   }
-  const only = new Set(args);
+  const only = new Set(args.filter((a) => !a.startsWith("--")));
   mkdirSync(CACHE, { recursive: true });
   mkdirSync(OUT, { recursive: true });
   const creditsFile = path.join(OUT, "credits.json");
   const credits = existsSync(creditsFile) ? JSON.parse(readFileSync(creditsFile, "utf8")) : {};
+  const save = () => {
+    const sorted = only.size ? Object.fromEntries(Object.entries(credits).sort(([a], [b]) => a.localeCompare(b))) : prune(credits, [...people, ...quoted]);
+    writeFileSync(creditsFile, JSON.stringify(sorted, null, 1) + "\n");
+    return sorted;
+  };
+
+  if (args.includes("--quoted")) {
+    // The quoted: painted and credited like the game's people, never in the engine's index.
+    const { painted, shadowed } = await paintPeople(quoted.filter((p) => p.qid && (!only.size || only.has(p.id))), credits);
+    save();
+    console.log(`quoted: painted ${painted}, shadows ${shadowed}`);
+    return;
+  }
 
   // The shadows, always: drawn here, so they have no source to credit.
   await paintShadows();
 
-  const todo = people.filter((p) => p.qid && (!only.size || only.has(p.id)));
+  const { painted, shadowed } = await paintPeople(people.filter((p) => p.qid && (!only.size || only.has(p.id))), credits);
+  const sorted = save();
+  if (!only.size) writeIndex(people, sorted);
+  console.log(`painted ${painted}, shadows ${shadowed}`);
+}
+
+/** Paints everyone in `todo` whose picture is free and fills in their credits; the rest get a shadow. */
+async function paintPeople(todo, credits) {
   const wd = await wikidata(todo.map((p) => p.qid));
   const files = [...new Set(todo.map((p) => p.photo ?? wd.get(p.qid)?.image ?? p.image).filter(Boolean).map((f) => `File:${f}`))];
   const info = await commons(files);
@@ -503,16 +266,12 @@ async function main() {
       shadowed++;
     }
   }
-
-  const sorted = only.size ? Object.fromEntries(Object.entries(credits).sort(([a], [b]) => a.localeCompare(b))) : prune(credits, people);
-  writeFileSync(creditsFile, JSON.stringify(sorted, null, 1) + "\n");
-  if (!only.size) writeIndex(people, sorted);
-  console.log(`painted ${painted}, shadows ${shadowed}`);
+  return { painted, shadowed };
 }
 
 /**
- * Credits and files kept in step: someone renamed or dropped from people.json,
- * or marked noPortrait, loses their file and credit, and a file nobody credits
+ * Credits and files kept in step: someone renamed or dropped from people.json
+ * and quoted.json, or marked noPortrait, loses their file and credit, and a file nobody credits
  * goes, unless it is one of today's shadows. Returns the credits, sorted.
  */
 function prune(credits, people) {

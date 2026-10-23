@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { ui } from "@/components/ui/classes";
 import { formatDate } from "@/engine/calendar";
 import { planLadder, shownStage } from "@/engine/intentions";
+import { planKindKey, planStageKey } from "./changes";
 import type { CountryState, Plan, Tie } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
@@ -27,7 +28,7 @@ export default function CourseBlock({ country, countries, plans, player }: { cou
   const { t, text, locale } = useI18n();
   const month = (iso: string) => new Intl.DateTimeFormat(MONTH_LOCALE[locale], { month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
   const chip = (tag: string) => (
-    <span key={tag} className="inline-flex min-w-0 items-center gap-1 rounded-md bg-surface px-1.5 py-0.5 text-2xs font-bold text-ink">
+    <span key={tag} className="inline-flex min-w-0 items-center gap-1 rounded-md sheet px-1.5 py-0.5 text-2xs font-bold text-ink">
       <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: countries[tag]?.color }} />
       <span className="truncate">{text(countries[tag]?.name ?? tag)}</span>
     </span>
@@ -45,9 +46,9 @@ export default function CourseBlock({ country, countries, plans, player }: { cou
     return (
       <li key={p.id} className="grid gap-1">
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="font-bold text-ink">{t(`plan.kind.${p.kind}` as MessageKey)}</span>
+          <span className="font-bold text-ink">{t(planKindKey(p))}</span>
           {chip(who)}
-          <span className="font-medium text-muted">{t(`plan.stage.${p.kind}.${stage}` as MessageKey)}</span>
+          <span className="font-medium text-muted">{t(planStageKey(p, stage))}</span>
         </div>
         <div className="flex gap-1" aria-hidden>
           {ladder.map((s, i) => (

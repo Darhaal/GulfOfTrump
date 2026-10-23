@@ -34,6 +34,7 @@ const TEXT = {
     phaseOpening: "Opening the game…",
     author: "Artem Okhten",
     madeBy: (name) => `Made by ${name}`,
+    tip: "Author's tip",
   },
   ru: {
     portBusy: `Порт ${PORT}, нужный игре, занят другой программой. Закройте её и запустите игру снова.`,
@@ -49,6 +50,7 @@ const TEXT = {
     phaseOpening: "Открываем игру…",
     author: "Артём Охтень",
     madeBy: (name) => `Сделал ${name}`,
+    tip: "Совет автора",
   },
   uk: {
     portBusy: `Порт ${PORT}, потрібний грі, зайнятий іншою програмою. Закрийте її й запустіть гру знову.`,
@@ -64,6 +66,7 @@ const TEXT = {
     phaseOpening: "Відкриваємо гру…",
     author: "Артем Охтень",
     madeBy: (name) => `Зробив ${name}`,
+    tip: "Порада автора",
   },
 };
 const text = () => TEXT[splashLogic.localeOf(app.getLocale())];
@@ -179,7 +182,7 @@ function createWindow() {
     minHeight: 680,
     title: "Gulf of Trump",
     // The page colour of the system's theme from the first frame, so a dark desktop never flashes white.
-    backgroundColor: nativeTheme.shouldUseDarkColors ? "#0E1116" : "#F8FAFC",
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#12100D" : "#F5F0E6",
     icon: path.join(__dirname, "build", "icon.png"),
     fullscreen: fullScreenWanted(),
     webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false, preload: path.join(__dirname, "preload.cjs") },
@@ -215,7 +218,7 @@ function createWindow() {
 
 /**
  * The loading screen (splash.html): quotes of the game's eras with their
- * speakers' portraits, who made the game, and a bar that follows the start —
+ * speakers' portraits and the author's tips by turns, who made the game, and a bar that follows the start —
  * the port, the server, the wait for it to answer (paced by how long the
  * last start took), opening the game. The sums are in splash-logic.cjs.
  */
@@ -241,23 +244,30 @@ function paintSplash() {
   onSplash(`window.splash.progress(${share}, ${JSON.stringify(status)})`);
 }
 
-/** The quotes for this start (none repeats until all have been seen), the made-by line and the version. */
+/**
+ * The lines for this start: quotes and the author's tips by turns (none
+ * repeats until all of its kind have been seen), the made-by line and the
+ * version. No game is open yet, so a quote of any year may show. Only the
+ * system language's lines are read (public/quotes/<locale>.json).
+ */
 function fillSplash() {
   const t = text();
   const locale = splashLogic.localeOf(app.getLocale());
   const publicDir = path.join(serverDir(), "public");
-  const all = readJson(path.join(publicDir, "quotes.json"), []);
-  const seenFile = path.join(app.getPath("userData"), "quotes-seen.json");
-  const { picked, seen } = splashLogic.pickQuotes(all.map((q) => q.id), readJson(seenFile, []), 4);
-  writeJson(seenFile, seen);
-  const fileUrl = (file) => (fs.existsSync(file) ? pathToFileURL(file).href : null);
-  const quotes = picked
-    .map((id) => all.find((q) => q.id === id))
-    .filter(Boolean)
-    .map((q) => ({ ...splashLogic.quoteIn(q, locale), portrait: q.person ? fileUrl(path.join(publicDir, "portraits", `${q.person}.webp`)) : null }));
+  const fileUrl = (file) => (file && fs.existsSync(file) ? pathToFileURL(file).href : null);
+  const author = fileUrl(path.join(publicDir, "about", "artem-okhten-oil.webp"));
+  const lines = readJson(splashLogic.linesFile(publicDir, locale), {});
+  const pick = (all, seenName, count) => {
+    const seenFile = path.join(app.getPath("userData"), seenName);
+    const { picked, seen } = splashLogic.pickQuotes(all.map((q) => q.id), readJson(seenFile, []), count);
+    writeJson(seenFile, seen);
+    return picked.map((id) => all.find((q) => q.id === id)).filter(Boolean);
+  };
+  const quotes = pick(lines.quotes ?? [], "quotes-seen.json", 2).map((q) => ({ text: q.text, name: q.name, when: q.when, portrait: fileUrl(splashLogic.publicFile(publicDir, q.portrait)) }));
+  const tips = pick(lines.tips ?? [], "tips-seen.json", 2).map((tip) => ({ text: tip.text, name: t.tip, portrait: author, tip: true }));
   const data = {
-    quotes,
-    madeBy: { name: t.author, line: t.madeBy(t.author), portrait: fileUrl(path.join(publicDir, "about", "artem-okhten-oil.webp")) },
+    quotes: splashLogic.interleave(quotes, tips).map((line) => ({ ...line, ms: splashLogic.readMs(line.text) })),
+    madeBy: { name: t.author, line: t.madeBy(t.author), portrait: author },
     version: `v${app.getVersion()}`,
     status: t.phasePort,
   };
@@ -377,6 +387,14 @@ function answerThePage() {
   });
   ipcMain.handle("app:quit", (event) => {
     if (fromGame(event)) app.quit();
+  });
+  // Windows' sound settings, where the speaker the voice reads through is chosen; a fixed address, nothing from the page.
+  ipcMain.handle("system:sound-settings", (event) => {
+    if (fromGame(event) && process.platform === "win32") void shell.openExternal("ms-settings:sound");
+  });
+  // Windows' speech settings, where a voice for the game's language is added; a fixed address too.
+  ipcMain.handle("system:speech-settings", (event) => {
+    if (fromGame(event) && process.platform === "win32") void shell.openExternal("ms-settings:speech");
   });
   ipcMain.handle("updates:get", (event) => (fromGame(event) ? updatesSnapshot() : null));
   ipcMain.handle("updates:check", (event) => {

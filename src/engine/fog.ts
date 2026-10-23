@@ -1,4 +1,4 @@
-import { coupRiskIn, lostShares } from "./abroad";
+import { coupRiskIn, incomes, lostShares } from "./abroad";
 import { roll } from "./dice";
 import { officialAt } from "./government";
 import { intelligenceBonus } from "./researchEffects";
@@ -234,7 +234,7 @@ export function foreignView(state: ViewState, tag: string, ctx: ViewContext = {}
     view.stability = estimateRate(d.stability, k, 40, state, `${tag}:stability`, [0, 100]);
   }
   if (d && k >= COUP_RUMOUR) {
-    const risk = coupRiskIn(state, tag, ctx.lost ?? lostShares(state, ctx.map));
+    const risk = coupRiskIn(state, tag, ctx.lost ?? lostShares(state, ctx.map), incomes(state, ctx.map));
     const guess = estimate(risk, k, state, `${tag}:coup`).value;
     view.coup = k >= COUP_SEEN ? { level: coupLevel(guess), n: Math.round(guess * 10) / 10, rumour: false } : { level: coupLevel(guess), rumour: true };
   }

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { advanceMen, menOf, menTotal, startingMen, trainingQuality } from "./army";
 import { yearOf } from "./calendar";
 import { nationalAccounts, STEP_YEARS } from "./economy";
 import { armsEfficiency, techYear } from "./researchEffects";
@@ -287,7 +288,7 @@ export function startingArsenal(
     if (n > 0 || seed?.[kind] !== undefined) stock[kind] = { n: round(n), level: Math.max(1, level) };
   }
   const nuclear = (NUCLEAR_SINCE[tag] ?? Infinity) <= yearFraction(state.date);
-  return { stock, ...(nuclear ? { nuclear: true } : {}) };
+  return { stock, men: startingMen(tag, troops, year), ...(nuclear ? { nuclear: true } : {}) };
 }
 
 /** Every country with an economy and no weapons gets them; the state is returned as it was when nobody lacks them. */
@@ -301,7 +302,7 @@ export function seedArsenals<T extends Pick<GameState, "countries" | "regions" |
   return { ...state, countries };
 }
 
-/** What a country's weapons and soldiers weigh in a war: thousands of soldiers, armed or not, and the heavy weapons by their level against the day's. */
+/** What a country's weapons and soldiers weigh in a war: thousands of soldiers by their training, armed or not, and the heavy weapons by their level against the day's. */
 const WEIGHT: Partial<Record<WeaponKind, number>> = { artillery: 0.04, tanks: 0.08, aircraft: 0.1, airDefence: 0.03, drones: 0.02 };
 
 export function combatPower(state: Pick<GameState, "countries" | "date">, tag: string): number {
@@ -309,9 +310,9 @@ export function combatPower(state: Pick<GameState, "countries" | "date">, tag: s
   const troops = c?.economy?.troops ?? 0;
   const stock = c?.arsenal?.stock ?? {};
   const year = yearOf(state.date);
-  // Soldiers without rifles count for half.
+  // Soldiers without rifles count for half; career soldiers for more than conscripts, recruits for about half.
   const armed = stock.rifles ? Math.min(1, stock.rifles.n / Math.max(1, troops)) : 1;
-  let power = troops * (0.5 + 0.5 * armed);
+  let power = troops * trainingQuality(menOf(state, c)) * (0.5 + 0.5 * armed);
   for (const [kind, w] of Object.entries(WEIGHT) as [WeaponKind, number][]) {
     const s = stock[kind];
     if (!s?.n) continue;
@@ -509,7 +510,8 @@ function add(arsenal: Arsenal, kind: WeaponKind, n: number, level: number): void
  * Moves every country's weapons through one turn: new ones are built,
  * old ones retire, wars wear them down — by the game master's word where
  * it gave one, else by the engine's own rule — and captured ones change
- * hands. Countries without weapons get them first. Mutates `next`.
+ * hands. Countries without weapons get them first. Mutates `next`; what
+ * each country lost goes into `lostBy`, for the wars' records.
  */
 export function advanceArsenals(
   next: GameState,
@@ -519,6 +521,7 @@ export function advanceArsenals(
   map: Record<string, MapRegion> | null,
   applied: AppliedChange[],
   deliveries: Delivery[] = [],
+  lostBy?: Map<string, Partial<Record<WeaponKind, number>>>,
 ): void {
   const seeded = seedArsenals(next, map);
   next.countries = seeded.countries;
@@ -526,6 +529,8 @@ export function advanceArsenals(
   const coast = coastalCountries(next, map);
   const wealth = wealthOf(next);
   const reported = new Map(word.losses.map((l) => [`${l.country}:${l.kind}`, l]));
+  const fighting = enemiesOf(next);
+  const year0 = yearOf(next.date);
   if (word.focus && next.countries[next.player]?.arsenal) next.countries[next.player].arsenal!.focus = word.focus;
   const captured: { by: string; from: string; kind: WeaponKind; n: number; level: number }[] = [];
 
@@ -557,7 +562,10 @@ export function advanceArsenals(
       if (add >= 0.5) madeOut[kind] = round(add);
       if (lost >= 0.5) lostOut[kind] = round(lost);
     }
+    if (lostBy && Object.keys(lostOut).length) lostBy.set(tag, lostOut);
     const nuclear = arsenal.nuclear || (tag !== next.player && (NUCLEAR_SINCE[tag] ?? Infinity) <= yearFraction(next.date));
+    // Recruits train, the call-up adds new ones, and losses or demobilisation take men away.
+    const men = advanceMen(menOf(before, before.countries[tag] ?? country), country.economy.troops, years * 12, year0, fighting.has(tag));
     next.countries[tag] = {
       ...country,
       arsenal: {
@@ -565,6 +573,8 @@ export function advanceArsenals(
         ...(arsenal.focus?.length ? { focus: arsenal.focus } : {}),
         ...(tag === next.player ? { made: madeOut, lost: lostOut } : {}),
         ...(nuclear ? { nuclear: true } : {}),
+        men,
+        ...(tag === next.player && arsenal.organisation ? { organisation: arsenal.organisation } : {}),
       },
     };
   }
@@ -617,6 +627,8 @@ export function describeArms(state: GameState): string[] {
     const lost = Object.entries(player.arsenal.lost ?? {}).map(([k, n]) => `${KIND_EN[k as WeaponKind]} −${n}`);
     if (made.length || lost.length) lines.push(`  last turn: built ${made.join(", ") || "nothing"}; lost ${lost.join(", ") || "nothing"}`);
     if (player.arsenal.focus?.length) lines.push(`  industry builds first: ${player.arsenal.focus.map((k) => KIND_EN[k]).join(", ")}`);
+    const men = menOf(state, player);
+    if (menTotal(men) > 0) lines.push(`  soldiers by training (thousands): ${Math.round(men.pro)} career, ${Math.round(men.trained)} trained conscripts, ${Math.round(men.recruits)} recruits still in training`);
   }
   const enemies = enemiesOf(state);
   const shown = new Set([state.player]);
@@ -632,7 +644,7 @@ export function describeArms(state: GameState): string[] {
       const side = (tags: string[]) => Math.round(tags.reduce((sum, t) => sum + combatPower(state, t), 0));
       return `- ${typeof w.name === "string" ? w.name : w.name.en}: attackers ${side(w.attackers)} vs defenders ${side(w.defenders)}`;
     });
-  if (balance.length) lines.push("STRENGTH IN EACH WAR (soldiers and weapons by their level, in thousand-soldier equivalents; battles should reflect it):", ...balance);
+  if (balance.length) lines.push("STRENGTH IN EACH WAR (soldiers by their training and weapons by their level, in thousand-soldier equivalents; battles should reflect it):", ...balance);
   return lines.length > 2 ? lines : [];
 }
 

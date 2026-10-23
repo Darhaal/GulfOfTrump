@@ -8,7 +8,7 @@ import { RESOURCE_TYPES, type ResourceType } from "@/engine/resources";
  * browser so a reload or another game opens the map the way it was left.
  * Storage may be missing or throw; the defaults then hold for the session.
  */
-export const MAP_MODES = ["political", "terrain", "fertility", "population", "resources", "transport"] as const;
+export const MAP_MODES = ["political", "diplomacy", "terrain", "fertility", "population", "resources", "transport"] as const;
 export type MapMode = (typeof MAP_MODES)[number];
 
 export const MAP_LAYERS = ["fronts", "changes", "rivers", "railways", "ports", "cities", "provinces"] as const;

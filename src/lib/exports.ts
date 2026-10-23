@@ -4,7 +4,7 @@ import { formatDate } from "@/engine/calendar";
 import { regionLabel } from "@/engine/provinces";
 import type { GameState, Locale, MapIndex, Text } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
-import { describeChange, sortChanges } from "@/components/game/changes";
+import { describeChange, listedChanges, sortChanges } from "@/components/game/changes";
 
 type T = (key: MessageKey, vars?: Record<string, string | number>) => string;
 
@@ -30,7 +30,7 @@ export function downloadBlob(name: string, blob: Blob) {
 export function chronicleMarkdown(state: GameState, index: MapIndex | null, locale: Locale, t: T, text: (v: Text | undefined) => string): string {
   const lines: string[] = [];
   const player = text(state.countries[state.player]?.name);
-  lines.push(`# Gulf of Trump — ${player}, ${state.scenarioId}`);
+  lines.push(`# Gulf of Trump – ${player}, ${state.scenarioId}`);
   lines.push("");
   lines.push(`${formatDate(state.date, locale)} · ${t("game.turn", { n: state.turn })}`);
   for (const e of [...state.chronicle].reverse()) {
@@ -45,18 +45,19 @@ export function chronicleMarkdown(state: GameState, index: MapIndex | null, loca
       lines.push(`### ${t("game.yourOrders")}`);
       e.orders.forEach((o, i) => {
         const v = e.verdicts?.find((x) => x.n === i + 1);
-        lines.push(`${i + 1}. ${o}${v ? ` — **${t(`verdict.${v.result}` as MessageKey)}**${v.note ? `: ${v.note}` : ""}` : ""}`);
+        lines.push(`${i + 1}. ${o}${v ? ` – **${t(`verdict.${v.result}` as MessageKey)}**${v.note ? `: ${v.note}` : ""}` : ""}`);
       });
     }
-    if (e.applied.length) {
+    const listed = listedChanges(e.applied);
+    if (listed.length) {
       lines.push("");
       lines.push(`### ${t("game.changes")}`);
-      for (const c of sortChanges(e.applied)) lines.push(`- ${describeChange(c, state, t, text, (id) => regionLabel(id, index, locale), (iso) => formatDate(iso, locale))}`);
+      for (const c of sortChanges(listed)) lines.push(`- ${describeChange(c, state, t, text, (id) => regionLabel(id, index, locale), (iso) => formatDate(iso, locale))}`);
     }
     if (e.events.length) {
       lines.push("");
       lines.push(`### ${t("game.events")}`);
-      for (const ev of e.events) lines.push(`- **${ev.title}** — ${ev.body}`);
+      for (const ev of e.events) lines.push(`- **${ev.title}** – ${ev.body}`);
     }
   }
   return lines.join("\n") + "\n";

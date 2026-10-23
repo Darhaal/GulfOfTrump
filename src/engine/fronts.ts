@@ -18,6 +18,13 @@ import type { GameState, MapIndex, MapRegion, Terrain, War } from "./types";
  * or hold land next to it, and a quarter of what its members far from any
  * front can send.
  *
+ * A side's strength at a province also falls with its depth in enemy land:
+ * the hops from the nearest province of its own it holds, so an offensive
+ * that runs far from home runs short of supplies (SUPPLY). And a war wears
+ * its armies down: the longer it has lasted, the slower its fronts move
+ * (EXHAUSTION), so a long war settles into lines that weariness and peace
+ * plans can end.
+ *
  * A war whose front has no fight in it at all sees the side that started it
  * probe the enemy's line now and then, unless it is hopelessly weaker.
  *
@@ -43,6 +50,10 @@ const FALLS = 95;
 const DRIVEN_OUT = 5;
 /** What a side's members far from every front add along it. */
 const FAR = 0.25;
+/** A side's strength for each hop into enemy land past the second, from the nearest province of its own it holds. */
+const SUPPLY = 0.88;
+/** Years of war that halve the pace of its fronts. */
+const EXHAUSTION = 4;
 
 /** How hard each terrain is to attack across: plains are open, mountains hold. */
 const TERRAIN: Record<Terrain, number> = { plains: 1, desert: 0.9, hills: 0.75, forest: 0.7, tundra: 0.6, wetlands: 0.55, jungle: 0.5, mountains: 0.45 };
@@ -112,13 +123,50 @@ export function frontStrength(state: Pick<GameState, "countries" | "regions" | "
     const r = state.regions[id];
     return r.controller === tag || r.contested === tag || (index.neighbors[id] ?? []).some((n) => state.regions[n]?.controller === tag);
   };
+  /** Hops from each province a side holds to the nearest province of its own it holds, by side. */
+  const depths = new Map<string, Map<string, number>>();
+  const depthOf = (side: string[]) => {
+    const key = [...side].sort().join("+");
+    let d = depths.get(key);
+    if (d) return d;
+    d = new Map<string, number>();
+    const mine = new Set(side);
+    let edge: string[] = [];
+    for (const [id, r] of Object.entries(state.regions)) {
+      if (mine.has(r.owner) && mine.has(r.controller)) {
+        d.set(id, 0);
+        edge.push(id);
+      }
+    }
+    for (let hop = 1; edge.length; hop++) {
+      const next: string[] = [];
+      for (const id of edge) {
+        for (const n of index.neighbors[id] ?? []) {
+          if (d.has(n) || !state.regions[n] || !mine.has(state.regions[n].controller)) continue;
+          d.set(n, hop);
+          next.push(n);
+        }
+      }
+      edge = next;
+    }
+    depths.set(key, d);
+    return d;
+  };
+  /** How well a side is supplied at a province: full near its own land, less the deeper it stands in the enemy's. */
+  const supply = (side: string[], id: string) => {
+    const d = depthOf(side);
+    const r = state.regions[id];
+    let depth = side.includes(r.controller) ? d.get(id) : undefined;
+    if (depth === undefined) for (const n of index.neighbors[id] ?? []) if (d.has(n)) depth = Math.min(depth ?? Infinity, d.get(n)! + 1);
+    return SUPPLY ** Math.max(0, (depth ?? 2) - 2);
+  };
   /** A side's strength at a province of a war's front. */
   const at = (war: Pick<War, "id">, side: string[], id: string) => {
     const front = fronts.get(war.id) ?? [];
     const holding = front.filter((f) => side.includes(state.regions[f].controller)).length;
     const far = side.filter((tag) => !posts.has(tag)).reduce((sum, tag) => sum + powerOf(tag), 0);
     const near = side.filter((tag) => present(tag, id)).reduce((sum, tag) => sum + density(tag), 0);
-    return near + (far * FAR) / Math.max(1, holding);
+    return (near + (far * FAR) / Math.max(1, holding)) * supply(side, id);
   };
   /** The edge of `side` over `other` at a province, in doublings within ±MAX_EDGE. */
   const edge = (war: Pick<War, "id">, side: string[], other: string[], id: string) =>
@@ -154,7 +202,10 @@ export function frontMoves(state: GameState, index: MapIndex, named: ReadonlySet
     const sideOf = (tag: string) => (a.has(tag) ? war.attackers : d.has(tag) ? war.defenders : null);
     // Where the answer moved this war's front, the game master leads it: the rest only drifts, and it opens no new fights.
     const led = front.some((id) => named.has(id));
-    const scale = led ? 0.5 : 1;
+    // A long war moves slower: its armies are worn down.
+    const years = Math.max(0, (Date.parse(state.date) - Date.parse(war.since)) / (365.25 * 86400000));
+    const tired = 1 / (1 + years / EXHAUSTION);
+    const scale = (led ? 0.5 : 1) * tired;
 
     // The provinces the front runs through: the side holding part gains or yields by the balance there.
     for (const id of front) {
@@ -193,7 +244,7 @@ export function frontMoves(state: GameState, index: MapIndex, named: ReadonlySet
       let broken = 0;
       for (const s of sectors) {
         if (broken >= MAX_BREAKS) break;
-        const chance = Math.min(0.9, s.surplus * 0.5 * months * going(index.regions[s.id]));
+        const chance = Math.min(0.9, s.surplus * 0.5 * months * going(index.regions[s.id]) * tired);
         if (dice(`${war.id}:${s.id}:break`) >= chance) continue;
         broken += 1;
         done.add(s.id);

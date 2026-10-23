@@ -6,25 +6,37 @@ import Dialog from "@/components/ui/Dialog";
 import { ui } from "@/components/ui/classes";
 import { useI18n } from "@/i18n/useI18n";
 import { usePreference } from "@/lib/preferences";
-import { clearVoiceError, downloadModel, MODEL_MB, startListening, stopListening, useListener, useVoiceEngine } from "@/lib/voice/listener";
+import { clearVoiceError, downloadModel, MODEL_MB, showVoiceNotice, startListening, stopListening, useListener, useVoiceEngine } from "@/lib/voice/listener";
 import { appendDictation } from "@/lib/voice/text";
 
 /**
  * A text field with a microphone in its corner: what the player says is
- * written in after what is typed. Only the field itself where voice input
+ * written in after what is typed, as far as the field has room – and the
+ * button says so when it ran out. Only the field itself where voice input
  * does not work here or is off.
  */
 export default function Dictation({ id, set, max, disabled, children }: { id: string; set: Dispatch<SetStateAction<string>>; max?: number; disabled?: boolean; children: ReactNode }) {
   const engine = useVoiceEngine();
   const [mic] = usePreference("mic");
   const shown = engine !== null && mic !== "off";
+  const write = (words: string) =>
+    set((value) => {
+      const all = appendDictation(value, words);
+      if (max === undefined || all.length <= max) return all;
+      // Told after the update, never from inside it.
+      queueMicrotask(() => showVoiceNotice(id, { key: "voice.cut", n: max }));
+      return all.slice(0, max);
+    });
   return (
     <div className={`relative ${shown ? "[&>textarea]:pr-11" : ""}`}>
       {children}
-      {shown && <MicButton id={id} disabled={disabled} onText={(words) => set((value) => appendDictation(value, words, max))} />}
+      {shown && <MicButton id={id} disabled={disabled} onText={write} />}
     </div>
   );
 }
+
+/** Seconds as the clock shows them: 0:07, 1:00. */
+const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
 function MicButton({ id, disabled, onText }: { id: string; disabled?: boolean; onText: (words: string) => void }) {
   const { t, locale } = useI18n();
@@ -35,13 +47,25 @@ function MicButton({ id, disabled, onText }: { id: string; disabled?: boolean; o
   const phase = mine ? voice.phase : "idle";
   const pct = Math.min(99, Math.round(voice.progress * 100));
   const error = mine && phase === "idle" ? voice.error : null;
+  const notice = mine && phase === "idle" && !error ? voice.notice : null;
+  // Another field holds the microphone.
+  const busy = !mine && voice.phase !== "idle";
 
-  // A problem stays in view a few seconds, then goes.
+  // The time spoken, counted while listening; a clock older than the start reads 0:00.
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (!error) return;
+    if (phase !== "listening") return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [phase]);
+  const spoken = Math.max(0, Math.floor((now - voice.since) / 1000));
+
+  // A problem or a note stays in view a few seconds, then goes.
+  useEffect(() => {
+    if (!error && !notice) return;
     const timer = setTimeout(() => clearVoiceError(id), 7000);
     return () => clearTimeout(timer);
-  }, [error, id]);
+  }, [error, notice, id]);
 
   const click = () => {
     if (phase === "listening") return stopListening();
@@ -52,21 +76,27 @@ function MicButton({ id, disabled, onText }: { id: string; disabled?: boolean; o
 
   const status =
     phase === "listening"
-      ? t("voice.listening")
+      ? voice.limit
+        ? t("voice.listeningCap", { time: clock(Math.min(spoken, voice.limit)), cap: clock(voice.limit) })
+        : t("voice.listening", { time: clock(spoken) })
       : phase === "loading" || (phase === "working" && voice.progress < 1)
         ? t("voice.loading", { pct })
         : phase === "working"
           ? t("voice.working")
           : error
             ? t(error)
-            : null;
-  const label = t(phase === "listening" ? "voice.micStop" : "voice.mic");
+            : notice
+              ? notice.key === "voice.cut"
+                ? t("voice.cut", { n: notice.n })
+                : t(notice.key)
+              : null;
+  const label = busy ? t("voice.busy") : t(phase === "listening" ? "voice.micStop" : "voice.mic");
 
   return (
     <>
       <button
         type="button"
-        disabled={disabled || (!mine && voice.phase !== "idle")}
+        disabled={disabled || busy}
         onClick={click}
         aria-pressed={phase === "listening"}
         aria-label={label}

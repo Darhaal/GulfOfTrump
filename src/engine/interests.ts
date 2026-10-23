@@ -39,6 +39,13 @@ export const AGENDAS: Record<AdvisorId, Record<string, Agenda>> = {
     openness: { en: "free trade and foreign investment", label: { ru: "Свободная торговля", uk: "Вільна торгівля", en: "Free trade" } },
     industry: { en: "protecting the country's own industry", label: { ru: "Защита своей промышленности", uk: "Захист власної промисловості", en: "Protect home industry" } },
   },
+  industry: {
+    output: { en: "output above all: the plans met and the plants running", label: { ru: "План любой ценой", uk: "План будь-якою ціною", en: "Output above all" } },
+    war: { en: "the war economy: arms production before everything", label: { ru: "Военное производство", uk: "Воєнне виробництво", en: "Arms production first" } },
+    exports: { en: "exports and trade deals that bring in money", label: { ru: "Экспорт и сделки", uk: "Експорт і угоди", en: "Exports and deals" } },
+    provision: { en: "the people's provision: bread, fuel and goods in the shops", label: { ru: "Хлеб и товары людям", uk: "Хліб і товари людям", en: "Bread and goods for people" } },
+    resources: { en: "securing the strategic resources: oil, coal and metals", label: { ru: "Свои ресурсы", uk: "Власні ресурси", en: "Secure the resources" } },
+  },
   foreign: {
     allies: { en: "closer ties with the country's strongest ally", label: { ru: "Ближе к главному союзнику", uk: "Ближче до головного союзника", en: "Closer to the main ally" } },
     neutral: { en: "keeping out of other people's wars", label: { ru: "Не лезть в чужие войны", uk: "Не лізти в чужі війни", en: "Out of others' wars" } },

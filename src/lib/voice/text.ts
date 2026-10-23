@@ -47,6 +47,18 @@ export function pickVoice<V extends VoiceLike>(voices: readonly V[], locale: Loc
   return { voice: null, standIn: true };
 }
 
+/**
+ * Who reads a locale's text: its voice as pickVoice finds it, or `missing`
+ * when the system has voices and none of them reads the language. Then
+ * nothing should read: the engine would hand the text to a voice of another
+ * script, and an English voice reads only the digits of a Russian text. With
+ * no voices listed yet (they arrive late) the language tag alone is tried.
+ */
+export function readerFor<V extends VoiceLike>(voices: readonly V[], locale: Locale, wanted?: string): { voice: V | null; standIn: boolean; missing: boolean } {
+  const picked = pickVoice(voices, locale, wanted);
+  return { ...picked, missing: voices.length > 0 && !picked.voice };
+}
+
 /** The voices worth offering for a locale in Settings, its own language first. */
 export function voicesFor<V extends VoiceLike>(voices: readonly V[], locale: Locale): V[] {
   const langs = VOICE_LANGS[locale];

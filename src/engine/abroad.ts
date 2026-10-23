@@ -3,6 +3,7 @@ import { countryCrises } from "./crises";
 import { fixed, happens } from "./dice";
 import { STEP_YEARS } from "./economy";
 import { peopleIn } from "./population";
+import { programmeShift } from "./programmes";
 import { provisionBooks, provisionOf } from "./provision";
 import { REGIMES } from "./scenarios/regimes";
 import { en } from "./text";
@@ -140,6 +141,8 @@ export interface CoupContext {
   atWar: boolean;
   /** Share of the country's own people in provinces held by others, 0–1 (lostShares). */
   lost: number;
+  /** Income per person against the median state's (incomes); missing when unknown. */
+  income?: number;
 }
 
 /**
@@ -158,6 +161,8 @@ export function coupRisk(d: Pick<Domestic, "regime" | "stability" | "support">, 
   if (ctx.atWar && ctx.lost >= 0.25) risk *= 1.3;
   // A state with next to no soldiers has next to no one to stage a coup.
   if (ctx.economy && ctx.economy.troops < 2) risk *= 0.1;
+  // Armies seldom move in rich states: a coup is a poor country's misfortune.
+  if (ctx.income !== undefined) risk *= ctx.income >= 3 ? 0.1 : ctx.income >= 1.8 ? 0.4 : 1;
   return round(Math.min(35, risk));
 }
 
@@ -199,12 +204,29 @@ export function lostShares(state: Pick<GameState, "regions">, map?: Record<strin
 export const warsOf = (state: Pick<GameState, "wars" | "date">, tag: string) =>
   state.wars.filter((w) => (w.attackers.includes(tag) || w.defenders.includes(tag)) && !(w.truce && w.truce.until > state.date));
 
+/**
+ * Each country's income per person against the median state's: its GDP over
+ * the people of its provinces (the map's figures until the game moves them).
+ */
+export function incomes(state: Pick<GameState, "countries" | "regions">, map?: Record<string, MapRegion> | null): Map<string, number> {
+  const people = new Map<string, number>();
+  for (const [id, r] of Object.entries(state.regions)) people.set(r.owner, (people.get(r.owner) ?? 0) + peopleIn(r, map?.[id]));
+  const perHead = new Map<string, number>();
+  for (const [tag, n] of people) {
+    const gdp = state.countries[tag]?.economy?.gdp;
+    if (n > 0 && gdp) perHead.set(tag, gdp / n);
+  }
+  const sorted = [...perHead.values()].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)] || 1;
+  return new Map([...perHead].map(([tag, v]) => [tag, v / median] as const));
+}
+
 /** The coup risk of one country in a state, % a year; none where no coup can happen (no land, a movement without territory, a government abroad). */
-export function coupRiskIn(state: Pick<GameState, "countries" | "regions" | "wars" | "date" | "scenarioId">, tag: string, lost = lostShares(state)): number {
+export function coupRiskIn(state: Pick<GameState, "countries" | "regions" | "wars" | "date" | "scenarioId">, tag: string, lost = lostShares(state), income?: Map<string, number>): number {
   const c = state.countries[tag];
   // lostShares has every country that owns a province, and only those.
   if (!c?.domestic || c.dormant || c.exile || !lost.has(tag)) return 0;
-  return coupRisk(c.domestic, { era: state.scenarioId, economy: c.economy, atWar: warsOf(state, tag).length > 0, lost: lost.get(tag) ?? 0 });
+  return coupRisk(c.domestic, { era: state.scenarioId, economy: c.economy, atWar: warsOf(state, tag).length > 0, lost: lost.get(tag) ?? 0, income: income?.get(tag) });
 }
 
 export type AbroadEvent = { kind: "election"; country: string; date: string; kept: boolean } | { kind: "coup"; country: string; succeeded: boolean };
@@ -221,6 +243,7 @@ export function castAbroad(state: GameState, map?: Record<string, MapRegion> | n
   const to = addStep(state.date, state.step);
   const years = STEP_YEARS[state.step];
   const lost = lostShares(state, map);
+  const income = incomes(state, map);
   const owners = new Set(Object.values(state.regions).map((r) => r.owner));
   const out: AbroadEvent[] = [];
   for (const [tag, c] of Object.entries(state.countries)) {
@@ -229,7 +252,7 @@ export function castAbroad(state: GameState, map?: Record<string, MapRegion> | n
     if (!d || tag === state.player || c.exile || (!c.dormant && !owners.has(tag))) continue;
     // A calendar year passes between one attempt on a government and the next, whatever the length of a turn.
     if (!c.dormant && !(d.lastCoup && to < addStep(d.lastCoup, "year"))) {
-      const risk = coupRiskIn(state, tag, lost) / 100;
+      const risk = coupRiskIn(state, tag, lost, income) / 100;
       if (happens(1 - (1 - risk) ** years, game, state.turn, `coup:${tag}`)) {
         const succeeded = happens(coupSuccess(d), game, state.turn, `coup-success:${tag}`);
         out.push({ kind: "coup", country: tag, succeeded });
@@ -319,8 +342,10 @@ export function applyAbroad(next: GameState, events: AbroadEvent[], ctx: AbroadC
     // A government of the start date has been in office some years already.
     const tenure = d.changed ? yearsBetween(d.changed.date, ctx.to) : yearsBetween(start, ctx.to) + fixed(`tenure:${next.scenarioId}:${tag}`) * 4;
     const provision = ctx.map && books ? provisionOf(next, tag, ctx.map, books)?.overall : undefined;
-    d.support = fine(d.support + (supportTarget(c, { lost: share, warYears, tenure, provision }) - d.support) * pace);
-    d.stability = fine(d.stability + (stabilityTarget(next, tag, d, share) - d.stability) * slow);
+    // The policies at work move where support and stability head (engine/programmes.ts).
+    const shift = programmeShift(c, ctx.to);
+    d.support = fine(d.support + (clamp(supportTarget(c, { lost: share, warYears, tenure, provision }) + shift.support, 5, 90) - d.support) * pace);
+    d.stability = fine(d.stability + (clamp(stabilityTarget(next, tag, d, share) + shift.stability, 5, 95) - d.stability) * slow);
     // A leader the game master put in office outside an election or a coup: a new government, given a little goodwill.
     if (ctx.replaced.has(tag) && !events.some((e) => e.country === tag)) {
       d.support = fine((d.support + 55) / 2);
@@ -383,9 +408,10 @@ export function describeAbroad(state: GameState, name: (tag: string) => string, 
   );
   if (unnamed.length) lines.push(`NEW GOVERNMENTS WITHOUT A NAMED LEADER (name them in leaders): ${unnamed.map((c) => `${name(c.tag)} [${c.tag}]`).join(", ")}`);
   const lost = lostShares(state, map);
+  const income = incomes(state, map);
   const shaky = Object.values(state.countries)
     .filter((c) => c.tag !== state.player && c.domestic && !c.dormant && c.economy)
-    .map((c) => ({ c, risk: coupRiskIn(state, c.tag, lost) }))
+    .map((c) => ({ c, risk: coupRiskIn(state, c.tag, lost, income) }))
     .filter((x) => x.risk >= 10)
     .sort((a, b) => b.c.economy!.gdp - a.c.economy!.gdp)
     .slice(0, 6);

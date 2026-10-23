@@ -52,3 +52,5 @@ next-env.d.ts
 /desktop/build/license.txt
 /desktop/build/installerSidebar.bmp
 /desktop/build/installerHeader.bmp
+# the Store's screenshots, made by scripts/screens.mjs (SCREENS_STORE)
+/desktop/store-screens/

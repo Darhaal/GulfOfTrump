@@ -2,7 +2,7 @@ import type { MessageKey } from "@/i18n/messages";
 import { INSTITUTIONS } from "@/engine/funds";
 import { formatPopulation } from "@/engine/provinces";
 import { breakthroughOf } from "@/engine/research";
-import type { AppliedChange, GameState, ResearchDirection, Stats, Text } from "@/engine/types";
+import type { AppliedChange, GameState, PlanKind, PlanStage, PolicyKind, ResearchDirection, Stats, Text } from "@/engine/types";
 import { researchLabel, versusText } from "./armsText";
 
 /** Directions whose breakthroughs say what the direction brings; the military and strategic ones say it themselves. */
@@ -23,6 +23,17 @@ export function planWho(plan: { by: string; target?: string }, country: (tag: st
   return plan.target ? t("plan.pair", { by: country(plan.by), target: country(plan.target) }) : country(plan.by);
 }
 
+/** The name of a plan's kind: lifting sanctions reads apart from imposing them, a policy by its own name. */
+export function planKindKey(plan: { kind: PlanKind; lift?: boolean; policy?: PolicyKind }): MessageKey {
+  if (plan.kind === "policy" && plan.policy) return `policy.${plan.policy}` as MessageKey;
+  return (plan.kind === "sanction" && plan.lift ? "plan.kind.sanctionLift" : `plan.kind.${plan.kind}`) as MessageKey;
+}
+
+/** The words for a stage a plan has reached. */
+export function planStageKey(plan: { kind: PlanKind; lift?: boolean }, stage: PlanStage): MessageKey {
+  return `plan.stage.${plan.kind === "sanction" && plan.lift ? "sanctionLift" : plan.kind}.${stage}` as MessageKey;
+}
+
 /** One applied change as a line of the chronicle, in the interface language; `date` formats a calendar date. */
 export function describeChange(change: AppliedChange, state: GameState, t: T, text: TextFn, region: RegionName, date: (iso: string) => string = (iso) => iso): string {
   const country = (tag: string) => text(state.countries[tag]?.name ?? tag);
@@ -33,6 +44,8 @@ export function describeChange(change: AppliedChange, state: GameState, t: T, te
       return t("change.occupy", { region: region(change.region), to: country(change.to) });
     case "liberate":
       return t("change.liberate", { region: region(change.region), to: country(change.to) });
+    case "behind":
+      return t("change.behind", { region: region(change.region), to: country(change.to) });
     case "contest":
       if (change.held === undefined) return t("change.contest", { region: region(change.region), by: country(change.by) });
       return t("change.contestShare", {
@@ -60,9 +73,17 @@ export function describeChange(change: AppliedChange, state: GameState, t: T, te
     case "accession":
       return t("change.accession", { country: country(change.country), name: text(change.name) });
     case "plan":
-      return t("change.plan", { who: planWho(change, country, t), stage: t(`plan.stage.${change.type}.${change.stage}` as MessageKey) });
+      if (change.type === "policy" && change.policy) return t("change.policyPlan", { country: country(change.by), policy: t(`policy.${change.policy}` as MessageKey), stage: t(planStageKey({ kind: change.type }, change.stage)) });
+      return t("change.plan", { who: planWho(change, country, t), stage: t(planStageKey({ kind: change.type, lift: change.lift }, change.stage)) });
     case "plan-end":
-      return t("change.planEnd", { who: planWho(change, country, t), drop: t(`plan.drop.${change.type}` as MessageKey), why: t(`plan.end.${change.why}` as MessageKey) });
+      if (change.type === "policy" && change.policy) return t("change.policyEnd", { country: country(change.by), policy: t(`policy.${change.policy}` as MessageKey), why: t(`plan.end.${change.why}` as MessageKey) });
+      return t("change.planEnd", { who: planWho(change, country, t), drop: t((change.type === "sanction" && change.lift ? "plan.drop.sanctionLift" : `plan.drop.${change.type}`) as MessageKey), why: t(`plan.end.${change.why}` as MessageKey) });
+    case "policy":
+      return t("change.policy", { country: country(change.country), policy: t(`policy.${change.policy}` as MessageKey) });
+    case "accord":
+      return t(change.pact ? "change.accordPact" : "change.accord", { by: country(change.by), with: country(change.with) });
+    case "incident":
+      return t((change.answer === "none" ? "change.incident" : `change.incident.${change.answer}`) as MessageKey, { what: t(`incident.${change.what}` as MessageKey), by: country(change.by), target: country(change.target) });
     case "truce":
       return t("change.truce", { name: text(change.name), date: date(change.until) });
     case "truce-ended":
@@ -71,8 +92,11 @@ export function describeChange(change: AppliedChange, state: GameState, t: T, te
       return t("change.allianceEnded", { name: text(change.name) });
     case "invitation":
       return t(change.answer === "accept" ? "change.invitationAccept" : "change.invitationDecline", { country: country(change.country), name: text(change.name) });
-    case "summit-planned":
-      return t("change.summitPlanned", { title: change.title, date: date(change.date) });
+    case "summit-planned": {
+      // A bloc's session reads as the session of that bloc, in the player's language.
+      const bloc = state.alliances.find((a) => a.id === (state.summits ?? []).find((s) => s.id === change.summit)?.bloc);
+      return t("change.summitPlanned", { title: bloc ? t("live.sessionOf", { name: text(bloc.name) }) : change.title, date: date(change.date) });
+    }
     case "party":
       return t(`change.party.${change.change}` as MessageKey, { party: change.party });
     case "election":
@@ -109,7 +133,7 @@ export function describeChange(change: AppliedChange, state: GameState, t: T, te
       return change.note ? `${line}. ${change.note}` : line;
     }
     case "bill":
-      return t(change.change === "passed" ? "change.bill.passed" : "change.bill.failed", { title: change.title }) + (change.note ? ` — ${change.note}` : "");
+      return t(change.change === "passed" ? "change.bill.passed" : "change.bill.failed", { title: change.title }) + (change.note ? ` – ${change.note}` : "");
     case "law":
       return t("change.law", { law: t(`law.${change.law}` as MessageKey), to: t(`law.${change.law}.${change.to}` as MessageKey) });
     case "identity":
@@ -134,7 +158,7 @@ export function describeChange(change: AppliedChange, state: GameState, t: T, te
       if (!b) return line;
       // A breakthrough with when it came against history, what it is and what its direction brings.
       const when = change.ahead === undefined ? "" : `, ${versusText(change.ahead, t)}`;
-      const gives = GIVES.has(b.direction) ? ` — ${t(`research.gives.${b.direction}` as MessageKey)}` : "";
+      const gives = GIVES.has(b.direction) ? ` – ${t(`research.gives.${b.direction}` as MessageKey)}` : "";
       return `${line}${when}. ${text(b.effect)}${gives}`;
     }
     case "captured":
@@ -156,7 +180,7 @@ export function describeChange(change: AppliedChange, state: GameState, t: T, te
             : t("change.population.refugees", { n: formatPopulation(change.refugees) })
           : "",
       ].filter(Boolean);
-      return t("change.population", { country: country(change.country), what: parts.join(", "), cause: change.cause || "—" });
+      return t("change.population", { country: country(change.country), what: parts.join(", "), cause: change.cause || "–" });
     }
     case "stats": {
       const delta = (Object.entries(change.delta) as [keyof Stats, number][])
@@ -167,10 +191,20 @@ export function describeChange(change: AppliedChange, state: GameState, t: T, te
   }
 }
 
+/**
+ * A front's movement: a share of a province won or lost, a new front, a
+ * front pushed back. The ministers tell of the fronts when asked; the lists
+ * of what changed leave them out and keep land that changed hands.
+ */
+export const isFrontMovement = (change: AppliedChange): boolean => change.kind === "contest" || change.kind === "repel";
+
+/** What a turn lists as changed: everything but the fronts' movements. */
+export const listedChanges = (applied: AppliedChange[]): AppliedChange[] => applied.filter((c) => !isFrontMovement(c));
+
 /** Map changes first, then politics, then the numbers. */
 export function sortChanges(changes: AppliedChange[]): AppliedChange[] {
   const rank: Record<AppliedChange["kind"], number> = {
-    overthrown: -2, rise: -1.9, exile: -1, return: -1, "new-country": 0, war: 1, peace: 2, truce: 3, "truce-ended": 4, annex: 5, liberate: 6, occupy: 7, contest: 8, repel: 9, alliance: 10, invitation: 11, "alliance-ended": 12, leave: 13, "summit-planned": 14, election: 15, coup: 15.2, vote: 15.4, party: 16, protest: 16.5, plot: 17, leader: 18, official: 18.2, enter: 1.5, accession: 10.5, plan: 14.2, "plan-end": 14.3, sanction: 14.5, deal: 14.6, funds: 14.7, law: 16.8, bill: 16.7, identity: 0.5, budget: 18.3, population: 18.5, stats: 19, research: 18.25, captured: 14.8, intrigue: 18.1, repression: 16.6, movement: 16.65,
+    overthrown: -2, rise: -1.9, exile: -1, return: -1, "new-country": 0, war: 1, peace: 2, truce: 3, "truce-ended": 4, annex: 5, liberate: 6, occupy: 7, behind: 7.5, contest: 8, repel: 9, alliance: 10, invitation: 11, "alliance-ended": 12, leave: 13, "summit-planned": 14, election: 15, coup: 15.2, vote: 15.4, party: 16, protest: 16.5, plot: 17, leader: 18, official: 18.2, enter: 1.5, accession: 10.5, plan: 14.2, "plan-end": 14.3, incident: 14.15, policy: 14.25, accord: 14.35, sanction: 14.5, deal: 14.6, funds: 14.7, law: 16.8, bill: 16.7, identity: 0.5, budget: 18.3, population: 18.5, stats: 19, research: 18.25, captured: 14.8, intrigue: 18.1, repression: 16.6, movement: 16.65,
   };
   return [...changes].sort((a, b) => rank[a.kind] - rank[b.kind]);
 }
@@ -186,11 +220,11 @@ export function isNotableStats(change: AppliedChange, player: string): boolean {
  * Occupations of many provinces in one turn read as a list of dozens of
  * lines; they are grouped per recipient and former holder instead.
  */
-export function groupTerritory(changes: AppliedChange[]): { lines: AppliedChange[]; groups: { kind: "annex" | "occupy" | "liberate"; from: string; to: string; regions: string[] }[] } {
-  const groups = new Map<string, { kind: "annex" | "occupy" | "liberate"; from: string; to: string; regions: string[] }>();
+export function groupTerritory(changes: AppliedChange[]): { lines: AppliedChange[]; groups: { kind: "annex" | "occupy" | "liberate" | "behind"; from: string; to: string; regions: string[] }[] } {
+  const groups = new Map<string, { kind: "annex" | "occupy" | "liberate" | "behind"; from: string; to: string; regions: string[] }>();
   const lines: AppliedChange[] = [];
   for (const c of changes) {
-    if (c.kind === "annex" || c.kind === "occupy" || c.kind === "liberate") {
+    if (c.kind === "annex" || c.kind === "occupy" || c.kind === "liberate" || c.kind === "behind") {
       const key = `${c.kind}|${c.from}|${c.to}`;
       const group = groups.get(key) ?? { kind: c.kind, from: c.from, to: c.to, regions: [] };
       group.regions.push(c.region);

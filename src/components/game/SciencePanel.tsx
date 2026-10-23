@@ -1,9 +1,8 @@
 "use client";
 
-import { MessageCircle, Minus, Plus } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
 import { ui } from "@/components/ui/classes";
-import { officialAt } from "@/engine/government";
-import { BOMB_SHARE, bombStatus, breakthroughOf, directionView, ministerPace, researchMoney, researchNote, scienceBoost, shiftShares, startingResearch } from "@/engine/research";
+import { BOMB_SHARE, bombStatus, breakthroughOf, directionView, scienceBoost, shiftShares, startingResearch } from "@/engine/research";
 import { armsEfficiency, communicationsGrowth, harvestBonus, industryGrowth, intelligenceBonus, medicineBonus, populationBonus, techYear, yearFraction } from "@/engine/researchEffects";
 import { RESEARCH_DIRECTIONS, type GameState, type ResearchDirection } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
@@ -14,31 +13,25 @@ interface SciencePanelProps {
   state: GameState;
   disabled: boolean;
   onShares: (shares: Record<ResearchDirection, number>) => void;
-  onConsult: () => void;
 }
 
 /** Points a click on a direction's stepper moves its share. */
 const STEP = 5;
 
 /**
- * The player's research: the money it gets from the army and industry
- * budgets and how fast it goes, the science minister's word on the split,
- * each direction with its share, the year of technology it has reached, the
- * next breakthrough and when it comes against history, and what it gives
- * now; then the breakthroughs this game has made.
+ * The player's research: each direction with its share, the year of
+ * technology it has reached, the next breakthrough and when it comes against
+ * history, and what it gives now; then the breakthroughs this game has made.
+ * The science minister speaks in the advisor strip above it, when asked.
  */
-export default function SciencePanel({ state, disabled, onShares, onConsult }: SciencePanelProps) {
-  const { t, text, money, locale } = useI18n();
+export default function SciencePanel({ state, disabled, onShares }: SciencePanelProps) {
+  const { t, text, locale } = useI18n();
   const view = state.research?.shares ? state : { ...state, research: startingResearch(state) };
   const shares = view.research!.shares;
-  const funds = researchMoney(view);
   const bomb = bombStatus(view);
-  const note = researchNote(view);
-  const minister = officialAt(view, "science")?.name ?? t("research.ministry");
   const dir = (d: ResearchDirection) => t(`research.dir.${d}` as MessageKey);
 
   const signed = (n: number, digits = 0, unit = "") => `${n >= 0 ? "+" : "−"}${Math.abs(n).toLocaleString(locale, { maximumFractionDigits: digits, minimumFractionDigits: digits })}${unit}`;
-  const times = (n: number) => n.toLocaleString(locale, { maximumFractionDigits: 2, minimumFractionDigits: 1 });
   const pct = (n: number) => signed(Math.round(n * 100), 0, "%");
 
   const effect = (d: ResearchDirection): string => {
@@ -60,35 +53,10 @@ export default function SciencePanel({ state, disabled, onShares, onConsult }: S
     }
   };
 
-  const noteText = (() => {
-    switch (note.kind) {
-      case "lopsided":
-      case "behind":
-        return t(`research.note.${note.kind}`, { name: minister, direction: dir(note.direction), n: note.n });
-      case "bomb":
-        return t("research.note.bomb", { name: minister, n: note.n });
-      default:
-        return t(`research.note.${note.kind}`, { name: minister });
-    }
-  })();
-
   const done = [...(view.research!.done ?? [])].reverse();
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-xs font-medium leading-relaxed text-muted">{t("research.intro")}</p>
-
-      <div className="grid gap-1 rounded-xl bg-page p-3 text-xs font-medium text-muted">
-        <span className={ui.label}>{t("research.moneyLabel")}</span>
-        <span className="text-ink">{t("research.money", { money: money(funds.pool) })}</span>
-        <span className="text-2xs font-bold tabular-nums">{t("research.pace", { money: times(Math.cbrt(funds.ratio)), minister: times(ministerPace(view)), science: times(scienceBoost(view)) })}</span>
-      </div>
-
-      <div className="flex gap-2.5 rounded-xl border border-line bg-surface p-3">
-        <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-        <p className="text-xs font-medium leading-relaxed text-ink">{noteText}</p>
-      </div>
-
       <ul className="flex flex-col gap-2">
         {RESEARCH_DIRECTIONS.map((d) => {
           const v = directionView(view, d);
@@ -189,11 +157,6 @@ export default function SciencePanel({ state, disabled, onShares, onConsult }: S
           })}
         </ul>
       </div>
-
-      <button type="button" onClick={onConsult} className={`${ui.secondary} px-4 py-2.5 text-xs`}>
-        <MessageCircle className="h-4 w-4" />
-        {t("research.ask")}
-      </button>
     </div>
   );
 }

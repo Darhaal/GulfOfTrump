@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { AdvisorId } from "./advisors";
 import { dealInterests, interestsLine } from "./interests";
 import { dressOfficial, samePerson, syncRulers } from "./people";
 import type { AppliedChange, Gender, GameState, Official, OfficialPost } from "./types";
@@ -8,7 +7,8 @@ import { OFFICIAL_POSTS } from "./types";
 /**
  * The people of the player's government: the head of state and of
  * government, the leader's chief of staff, the ministers the cabinet talks
- * to, the head of intelligence and the central banker. Each has a name,
+ * to (the economy and industry among them), the head of intelligence and
+ * the central banker. Each has a name,
  * traits, a manner of speaking, competence and loyalty (1–5) and maybe a
  * faction. The game master first names them for the country and date; the
  * player appoints and dismisses them between turns (the turn then judges
@@ -61,16 +61,8 @@ export const officialsField = z
   .max(6)
   .default([]);
 
-/** The post each minister of the cabinet holds. */
-export const ADVISOR_POST: Record<AdvisorId, OfficialPost> = {
-  chief: "chief",
-  military: "military",
-  finance: "finance",
-  foreign: "foreign",
-  interior: "interior",
-  intelligence: "intelligence",
-  science: "science",
-};
+// The post each minister of the cabinet holds lives with the ministers (engine/advisors.ts), kept here for its many readers.
+export { ADVISOR_POST } from "./advisors";
 
 const clampScore = (v: number) => Math.min(5, Math.max(1, Math.round(v)));
 

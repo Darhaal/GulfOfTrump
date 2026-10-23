@@ -1,5 +1,5 @@
 export const APP_NAME = "Gulf of Trump";
-export const APP_VERSION = "1.0.4";
+export const APP_VERSION = "1.0.5";
 export const APP_STAGE = "beta";
 export const REPO_URL = "https://github.com/Darhaal/GulfOfTrump";
 /** The public demo site, the address its sitemap and robots.txt give search engines. */
@@ -28,6 +28,8 @@ export const DEMO_HEADER = "x-got-demo";
 export const isDesktopApp = () => typeof navigator !== "undefined" && /\bElectron\//.test(navigator.userAgent);
 
 export const DOWNLOAD_URL = `${REPO_URL}/releases/latest`;
+/** The game's page in the Microsoft Store: the same app, signed by Microsoft and updated by the Store. */
+export const STORE_URL = "https://apps.microsoft.com/detail/9n07jx2chmw0";
 export const CHATGPT_USAGE_URL = "https://chatgpt.com/settings/usage";
 /** Orders the player may give in one turn; the server enforces the same cap. */
 export const MAX_ORDERS = 12;

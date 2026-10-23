@@ -3,6 +3,8 @@
 // next one will take, and which quotes to show without repeating any until
 // all have been seen.
 
+const path = require("node:path");
+
 /** Until a start has been timed, the server is expected to answer in this long. */
 const FIRST_GUESS_MS = 8000;
 
@@ -62,9 +64,31 @@ function localeOf(systemLocale) {
   return lang === "uk" ? "uk" : lang === "ru" || lang === "be" ? "ru" : "en";
 }
 
-/** A quote in a language, falling back to English where a line is missing. */
-function quoteIn(quote, locale) {
-  return { text: quote.text?.[locale] || quote.text?.en || "", name: quote.name?.[locale] || quote.name?.en || "", year: quote.year };
+/** A language's quotes and tips, as `npm run quotes` writes them for the game: public/quotes/<locale>.json. */
+function linesFile(publicDir, locale) {
+  return path.join(publicDir, "quotes", `${locale}.json`);
 }
 
-module.exports = { FIRST_GUESS_MS, startupProgress, nextEstimate, pickQuotes, localeOf, quoteIn };
+/** A file of the public folder by the path the page would load it by ("/portraits/x.webp"); never one outside it. */
+function publicFile(publicDir, webPath) {
+  const parts = String(webPath ?? "").split("/").filter((part) => part && part !== "." && part !== "..");
+  return parts.length ? path.join(publicDir, ...parts) : null;
+}
+
+/** How long a line stays: ten seconds and half a second a word, at most forty (src/lib/quotes.ts readMs, the same). */
+function readMs(text) {
+  const words = String(text ?? "").trim().split(/\s+/).filter(Boolean).length;
+  return Math.min(40_000, 10_000 + words * 500);
+}
+
+/** Two lists by turns, a first, then b, then a…; whichever is longer runs on at the end. */
+function interleave(a, b) {
+  const out = [];
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    if (i < a.length) out.push(a[i]);
+    if (i < b.length) out.push(b[i]);
+  }
+  return out;
+}
+
+module.exports = { FIRST_GUESS_MS, startupProgress, nextEstimate, pickQuotes, localeOf, linesFile, publicFile, interleave, readMs };

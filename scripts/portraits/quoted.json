@@ -1,0 +1,2443 @@
+[
+ {
+  "id": "abraham-lincoln",
+  "qid": "Q91",
+  "name": {
+   "en": "Abraham Lincoln",
+   "ru": "Авраам Линкольн",
+   "uk": "Авраам Лінкольн"
+  },
+  "gender": "male",
+  "born": 1809,
+  "died": 1865,
+  "image": "Abraham Lincoln O-77 matte collodion print.jpg"
+ },
+ {
+  "id": "adam-smith",
+  "qid": "Q9381",
+  "name": {
+   "en": "Adam Smith",
+   "ru": "Адам Смит",
+   "uk": "Адам Сміт"
+  },
+  "gender": "male",
+  "born": 1723,
+  "died": 1790,
+  "image": "AdamSmith.jpg"
+ },
+ {
+  "id": "aesop",
+  "qid": "Q43423",
+  "name": {
+   "en": "Aesop",
+   "ru": "Эзоп",
+   "uk": "Езоп"
+  },
+  "gender": "male",
+  "born": -620,
+  "died": -564,
+  "image": "Aesop pushkin01.jpg"
+ },
+ {
+  "id": "albert-camus",
+  "qid": "Q34670",
+  "name": {
+   "en": "Albert Camus",
+   "ru": "Альбер Камю",
+   "uk": "Альбер Камю"
+  },
+  "gender": "male",
+  "born": 1913,
+  "died": 1960,
+  "image": "Albert Camus, gagnant de prix Nobel, portrait en buste, posé au bureau, faisant face à gauche, cigarette de tabagisme.jpg"
+ },
+ {
+  "id": "albert-einstein",
+  "qid": "Q937",
+  "name": {
+   "en": "Albert Einstein",
+   "ru": "Альберт Эйнштейн",
+   "uk": "Альберт Ейнштейн"
+  },
+  "gender": "male",
+  "born": 1879,
+  "died": 1955,
+  "image": "Albert Einstein Head cleaned.jpg"
+ },
+ {
+  "id": "aldous-huxley",
+  "qid": "Q81447",
+  "name": {
+   "en": "Aldous Huxley",
+   "ru": "Олдос Хаксли",
+   "uk": "Олдос Хакслі"
+  },
+  "gender": "male",
+  "born": 1894,
+  "died": 1963,
+  "image": "Aldous Huxley 1947.png"
+ },
+ {
+  "id": "alexander-griboyedov",
+  "qid": "Q15001",
+  "name": {
+   "en": "Alexander Griboyedov",
+   "ru": "Александр Грибоедов",
+   "uk": "Олександр Грибоєдов"
+  },
+  "gender": "male",
+  "born": 1795,
+  "died": 1829,
+  "image": "Ivan Nikolayevich Kramskoi - Portrait of Alexander Sergeyevich Griboyedov, 1873.jpg"
+ },
+ {
+  "id": "alexander-herzen",
+  "qid": "Q201221",
+  "name": {
+   "en": "Alexander Herzen",
+   "ru": "Александр Герцен",
+   "uk": "Олександр Герцен"
+  },
+  "gender": "male",
+  "born": 1812,
+  "died": 1870,
+  "image": "Personnalités des arts et des lettres - Alexandre Herzen.jpg",
+  "crop": [
+   0.3,
+   0.1,
+   0.36
+  ],
+  "face": [
+   0.5,
+   0.3
+  ]
+ },
+ {
+  "id": "alexander-pushkin",
+  "qid": "Q7200",
+  "name": {
+   "en": "Alexander Pushkin",
+   "ru": "Александр Пушкин",
+   "uk": "Олександр Пушкін"
+  },
+  "gender": "male",
+  "born": 1799,
+  "died": 1837,
+  "image": "Kiprensky Pushkin.jpg"
+ },
+ {
+  "id": "alexis-de-tocqueville",
+  "qid": "Q140694",
+  "name": {
+   "en": "Alexis de Tocqueville",
+   "ru": "Алексис де Токвиль",
+   "uk": "Алексіс де Токвіль"
+  },
+  "gender": "male",
+  "born": 1805,
+  "died": 1859,
+  "image": "Alexis de Tocqueville (Théodore Chassériau - Versailles).jpg"
+ },
+ {
+  "id": "ambrose-bierce",
+  "qid": "Q191050",
+  "name": {
+   "en": "Ambrose Bierce",
+   "ru": "Амброз Бирс",
+   "uk": "Амброз Бірс"
+  },
+  "gender": "male",
+  "born": 1842,
+  "died": 1914,
+  "image": "Ambrose Bierce portrait by John Herbert Evelyn Partington (retouched).jpg",
+  "crop": [
+   0.2,
+   0,
+   0.6
+  ],
+  "face": [
+   0.53,
+   0.25
+  ]
+ },
+ {
+  "id": "antoine-de-saint-exupery",
+  "qid": "Q2908",
+  "name": {
+   "en": "Antoine de Saint-Exupéry",
+   "ru": "Антуан де Сент-Экзюпери",
+   "uk": "Антуан де Сент-Екзюпері"
+  },
+  "gender": "male",
+  "born": 1900,
+  "died": 1944,
+  "image": "Antoine de Saint-Euxpery (1920).jpg"
+ },
+ {
+  "id": "anton-chekhov",
+  "qid": "Q5685",
+  "name": {
+   "en": "Anton Chekhov",
+   "ru": "Антон Чехов",
+   "uk": "Антон Чехов"
+  },
+  "gender": "male",
+  "born": 1860,
+  "died": 1904,
+  "image": "Anton Chekhov with bow-tie sepia image.jpg"
+ },
+ {
+  "id": "aristotle",
+  "qid": "Q868",
+  "name": {
+   "en": "Aristotle",
+   "ru": "Аристотель",
+   "uk": "Арістотель"
+  },
+  "gender": "male",
+  "born": -384,
+  "died": -322,
+  "image": "Aristotle Altemps Inv8575.jpg"
+ },
+ {
+  "id": "arthur-schopenhauer",
+  "qid": "Q38193",
+  "name": {
+   "en": "Arthur Schopenhauer",
+   "ru": "Артур Шопенгауэр",
+   "uk": "Артур Шопенгауер"
+  },
+  "gender": "male",
+  "born": 1788,
+  "died": 1860,
+  "image": "Arthur Schopenhauer by J Schäfer, 1859b.jpg"
+ },
+ {
+  "id": "baruch-spinoza",
+  "qid": "Q35802",
+  "name": {
+   "en": "Baruch Spinoza",
+   "ru": "Бенедикт Спиноза",
+   "uk": "Бенедикт Спіноза"
+  },
+  "gender": "male",
+  "born": 1632,
+  "died": 1677,
+  "image": "Spinoza.jpg"
+ },
+ {
+  "id": "benjamin-disraeli",
+  "qid": "Q82006",
+  "name": {
+   "en": "Benjamin Disraeli",
+   "ru": "Бенджамин Дизраэли",
+   "uk": "Бенджамін Дізраелі"
+  },
+  "gender": "male",
+  "born": 1804,
+  "died": 1881,
+  "image": "Benjamin Disraeli (1804–1881) cropped.png",
+  "crop": [
+   0.22,
+   0.02,
+   0.58
+  ],
+  "face": [
+   0.48,
+   0.33
+  ]
+ },
+ {
+  "id": "benjamin-franklin",
+  "qid": "Q34969",
+  "name": {
+   "en": "Benjamin Franklin",
+   "ru": "Бенджамин Франклин",
+   "uk": "Бенджамін Франклін"
+  },
+  "gender": "male",
+  "born": 1706,
+  "died": 1790,
+  "image": "Joseph Siffrein Duplessis - Benjamin Franklin - Google Art Project.jpg"
+ },
+ {
+  "id": "bertolt-brecht",
+  "qid": "Q38757",
+  "name": {
+   "en": "Bertolt Brecht",
+   "ru": "Бертольт Брехт",
+   "uk": "Бертольт Брехт"
+  },
+  "gender": "male",
+  "born": 1898,
+  "died": 1956,
+  "image": "Bundesarchiv Bild 183-W0409-300, Bertolt Brecht.jpg"
+ },
+ {
+  "id": "bertrand-russell",
+  "qid": "Q33760",
+  "name": {
+   "en": "Bertrand Russell",
+   "ru": "Бертран Рассел",
+   "uk": "Бертран Расселл"
+  },
+  "gender": "male",
+  "born": 1872,
+  "died": 1970,
+  "image": "Bertrand Russell photo.jpg"
+ },
+ {
+  "id": "blaise-pascal",
+  "qid": "Q1290",
+  "name": {
+   "en": "Blaise Pascal",
+   "ru": "Блез Паскаль",
+   "uk": "Блез Паскаль"
+  },
+  "gender": "male",
+  "born": 1623,
+  "died": 1662,
+  "image": "Blaise Pascal Versailles.JPG"
+ },
+ {
+  "id": "c-s-lewis",
+  "qid": "Q9204",
+  "name": {
+   "en": "C. S. Lewis",
+   "ru": "Клайв Стейплз Льюис",
+   "uk": "Клайв Стейплз Льюїс"
+  },
+  "gender": "male",
+  "born": 1898,
+  "died": 1963,
+  "image": "CS Lewis photo on dust jacket.jpg"
+ },
+ {
+  "id": "carl-sagan",
+  "qid": "Q410",
+  "name": {
+   "en": "Carl Sagan",
+   "ru": "Карл Саган",
+   "uk": "Карл Саган"
+  },
+  "gender": "male",
+  "born": 1934,
+  "died": 1996,
+  "image": "Carl Sagan Planetary Society.JPG"
+ },
+ {
+  "id": "carl-von-clausewitz",
+  "qid": "Q76430",
+  "name": {
+   "en": "Carl von Clausewitz",
+   "ru": "Карл фон Клаузевиц",
+   "uk": "Карл фон Клаузевіц"
+  },
+  "gender": "male",
+  "born": 1780,
+  "died": 1831,
+  "image": "Clausewitz.jpg"
+ },
+ {
+  "id": "charles-dickens",
+  "qid": "Q5686",
+  "name": {
+   "en": "Charles Dickens",
+   "ru": "Чарльз Диккенс",
+   "uk": "Чарлз Діккенс"
+  },
+  "gender": "male",
+  "born": 1812,
+  "died": 1870,
+  "image": "Dickens Gurney head.jpg"
+ },
+ {
+  "id": "cicero",
+  "qid": "Q1541",
+  "name": {
+   "en": "Cicero",
+   "ru": "Цицерон",
+   "uk": "Цицерон"
+  },
+  "gender": "male",
+  "born": -106,
+  "died": -43,
+  "image": "Bust of Cicero (1st-cent. BC) - Palazzo Nuovo - Musei Capitolini - Rome 2016.jpg"
+ },
+ {
+  "id": "confucius",
+  "qid": "Q4604",
+  "name": {
+   "en": "Confucius",
+   "ru": "Конфуций",
+   "uk": "Конфуцій"
+  },
+  "gender": "male",
+  "born": -551,
+  "died": -479,
+  "image": "Confucius, fresco from a Western Han tomb of Dongping County, Shandong province, China.jpg",
+  "photo": "Konfuzius-1770.jpg",
+  "crop": [
+   0.12,
+   0.03,
+   0.6
+  ],
+  "face": [
+   0.52,
+   0.25
+  ]
+ },
+ {
+  "id": "dag-hammarskjold",
+  "qid": "Q1267",
+  "name": {
+   "en": "Dag Hammarskjöld",
+   "ru": "Даг Хаммаршёльд",
+   "uk": "Даг Гаммаршельд"
+  },
+  "gender": "male",
+  "born": 1905,
+  "died": 1961,
+  "image": "Dag Hammarskjöld.jpg"
+ },
+ {
+  "id": "demosthenes",
+  "qid": "Q117253",
+  "name": {
+   "en": "Demosthenes",
+   "ru": "Демосфен",
+   "uk": "Демосфен"
+  },
+  "gender": "male",
+  "born": -384,
+  "died": -322,
+  "image": "Demosthenes orator Louvre.jpg"
+ },
+ {
+  "id": "diogenes",
+  "qid": "Q59180",
+  "name": {
+   "en": "Diogenes",
+   "ru": "Диоген",
+   "uk": "Діоген"
+  },
+  "gender": "male",
+  "born": -400,
+  "died": -323,
+  "image": "Diogenes-statue-Sinop-enhanced.jpg",
+  "crop": [
+   0.25,
+   0,
+   0.42
+  ],
+  "face": [
+   0.52,
+   0.22
+  ]
+ },
+ {
+  "id": "dorothy-parker",
+  "qid": "Q270707",
+  "name": {
+   "en": "Dorothy Parker",
+   "ru": "Дороти Паркер",
+   "uk": "Дороті Паркер"
+  },
+  "gender": "female",
+  "born": 1893,
+  "died": 1967,
+  "image": "Young Dorothy Parker.jpg"
+ },
+ {
+  "id": "douglas-adams",
+  "qid": "Q42",
+  "name": {
+   "en": "Douglas Adams",
+   "ru": "Дуглас Адамс",
+   "uk": "Дуглас Адамс"
+  },
+  "gender": "male",
+  "born": 1952,
+  "died": 2001,
+  "image": "Douglas adams portrait.jpg",
+  "crop": [
+   0.43,
+   0,
+   0.51
+  ],
+  "face": [
+   0.55,
+   0.4
+  ]
+ },
+ {
+  "id": "dwight-d-eisenhower",
+  "qid": "Q9916",
+  "name": {
+   "en": "Dwight D. Eisenhower",
+   "ru": "Дуайт Эйзенхауэр",
+   "uk": "Двайт Ейзенхауер"
+  },
+  "gender": "male",
+  "born": 1890,
+  "died": 1969,
+  "image": "Dwight D. Eisenhower, official photo portrait, May 29, 1959.jpg"
+ },
+ {
+  "id": "edmund-burke",
+  "qid": "Q165792",
+  "name": {
+   "en": "Edmund Burke",
+   "ru": "Эдмунд Бёрк",
+   "uk": "Едмунд Берк"
+  },
+  "gender": "male",
+  "born": 1729,
+  "died": 1797,
+  "image": "Sir Joshua Reynolds - Edmund Burke, 1729 - 1797. Statesman, orator and author - PG 2362 - National Galleries of Scotland.jpg"
+ },
+ {
+  "id": "eleanor-roosevelt",
+  "qid": "Q83396",
+  "name": {
+   "en": "Eleanor Roosevelt",
+   "ru": "Элеонора Рузвельт",
+   "uk": "Елеонора Рузвельт"
+  },
+  "gender": "female",
+  "born": 1884,
+  "died": 1962,
+  "image": "Eleanor Roosevelt at the United Nations, circa 1946-1947 (3x4 cropped).jpg"
+ },
+ {
+  "id": "epictetus",
+  "qid": "Q183144",
+  "name": {
+   "en": "Epictetus",
+   "ru": "Эпиктет",
+   "uk": "Епіктет"
+  },
+  "gender": "male",
+  "born": 50,
+  "died": 138,
+  "image": "Epictetus from L. Annaei Senecae philosophi Opera, 1605, title page detail.png"
+ },
+ {
+  "id": "epicurus",
+  "qid": "Q43216",
+  "name": {
+   "en": "Epicurus",
+   "ru": "Эпикур",
+   "uk": "Епікур"
+  },
+  "gender": "male",
+  "born": -342,
+  "died": -270,
+  "image": "Epikouros BM 1843.jpg"
+ },
+ {
+  "id": "erasmus",
+  "qid": "Q43499",
+  "name": {
+   "en": "Erasmus",
+   "ru": "Эразм Роттердамский",
+   "uk": "Еразм Роттердамський"
+  },
+  "gender": "male",
+  "born": 1466,
+  "died": 1536,
+  "image": "Holbein-erasmus.jpg"
+ },
+ {
+  "id": "erich-maria-remarque",
+  "qid": "Q47293",
+  "name": {
+   "en": "Erich Maria Remarque",
+   "ru": "Эрих Мария Ремарк",
+   "uk": "Еріх Марія Ремарк"
+  },
+  "gender": "male",
+  "born": 1898,
+  "died": 1970,
+  "image": "Bundesarchiv Bild 183-R04034, Erich Maria Remarque (cropped).jpg"
+ },
+ {
+  "id": "ernest-hemingway",
+  "qid": "Q23434",
+  "name": {
+   "en": "Ernest Hemingway",
+   "ru": "Эрнест Хемингуэй",
+   "uk": "Ернест Гемінгвей"
+  },
+  "gender": "male",
+  "born": 1899,
+  "died": 1961,
+  "image": "ErnestHemingway.jpg"
+ },
+ {
+  "id": "francis-bacon",
+  "qid": "Q37388",
+  "name": {
+   "en": "Francis Bacon",
+   "ru": "Фрэнсис Бэкон",
+   "uk": "Френсіс Бекон"
+  },
+  "gender": "male",
+  "born": 1561,
+  "died": 1626,
+  "image": "Somer Francis Bacon.jpg"
+ },
+ {
+  "id": "franz-kafka",
+  "qid": "Q905",
+  "name": {
+   "en": "Franz Kafka",
+   "ru": "Франц Кафка",
+   "uk": "Франц Кафка"
+  },
+  "gender": "male",
+  "born": 1883,
+  "died": 1924,
+  "image": "Franz Kafka, 1923.jpg"
+ },
+ {
+  "id": "frederick-the-great",
+  "qid": "Q33550",
+  "name": {
+   "en": "Frederick the Great",
+   "ru": "Фридрих Великий",
+   "uk": "Фрідріх Великий"
+  },
+  "gender": "male",
+  "born": 1712,
+  "died": 1786,
+  "image": "Friedrich der Große (1781 or 1786) - Google Art Project.jpg"
+ },
+ {
+  "id": "friedrich-hayek",
+  "qid": "Q1325",
+  "name": {
+   "en": "Friedrich Hayek",
+   "ru": "Фридрих Хайек",
+   "uk": "Фрідріх Гаєк"
+  },
+  "gender": "male",
+  "born": 1899,
+  "died": 1992,
+  "image": "Friedrich Hayek portrait.jpg"
+ },
+ {
+  "id": "friedrich-nietzsche",
+  "qid": "Q9358",
+  "name": {
+   "en": "Friedrich Nietzsche",
+   "ru": "Фридрих Ницше",
+   "uk": "Фрідріх Ніцше"
+  },
+  "gender": "male",
+  "born": 1844,
+  "died": 1900,
+  "image": "Nietzsche187a.jpg"
+ },
+ {
+  "id": "friedrich-schiller",
+  "qid": "Q22670",
+  "name": {
+   "en": "Friedrich Schiller",
+   "ru": "Фридрих Шиллер",
+   "uk": "Фрідріх Шиллер"
+  },
+  "gender": "male",
+  "born": 1759,
+  "died": 1805,
+  "image": "Friedrich Schiller by Ludovike Simanowiz.jpg"
+ },
+ {
+  "id": "fyodor-dostoevsky",
+  "qid": "Q991",
+  "name": {
+   "en": "Fyodor Dostoevsky",
+   "ru": "Фёдор Достоевский",
+   "uk": "Федір Достоєвський"
+  },
+  "gender": "male",
+  "born": 1821,
+  "died": 1881,
+  "image": "Vasily Perov - Портрет Ф.М.Достоевского - Google Art Project.jpg"
+ },
+ {
+  "id": "fyodor-tyutchev",
+  "qid": "Q37217",
+  "name": {
+   "en": "Fyodor Tyutchev",
+   "ru": "Фёдор Тютчев",
+   "uk": "Федір Тютчев"
+  },
+  "gender": "male",
+  "born": 1803,
+  "died": 1873,
+  "image": "Tiutchev.jpg"
+ },
+ {
+  "id": "g-k-chesterton",
+  "qid": "Q183167",
+  "name": {
+   "en": "G. K. Chesterton",
+   "ru": "Гилберт Кит Честертон",
+   "uk": "Гілберт Кіт Честертон"
+  },
+  "gender": "male",
+  "born": 1874,
+  "died": 1936,
+  "image": "Gilbert Chesterton.jpg"
+ },
+ {
+  "id": "george-bernard-shaw",
+  "qid": "Q19185",
+  "name": {
+   "en": "George Bernard Shaw",
+   "ru": "Бернард Шоу",
+   "uk": "Бернард Шоу"
+  },
+  "gender": "male",
+  "born": 1856,
+  "died": 1950,
+  "image": "George Bernard Shaw.jpg"
+ },
+ {
+  "id": "george-orwell",
+  "qid": "Q3335",
+  "name": {
+   "en": "George Orwell",
+   "ru": "Джордж Оруэлл",
+   "uk": "Джордж Орвелл"
+  },
+  "gender": "male",
+  "born": 1903,
+  "died": 1950,
+  "image": "George Orwell, c. 1940 (41928180381).jpg"
+ },
+ {
+  "id": "georges-clemenceau",
+  "qid": "Q171730",
+  "name": {
+   "en": "Georges Clemenceau",
+   "ru": "Жорж Клемансо",
+   "uk": "Жорж Клемансо"
+  },
+  "gender": "male",
+  "born": 1841,
+  "died": 1929,
+  "image": "Georges Clemenceau par Nadar.jpg"
+ },
+ {
+  "id": "goethe",
+  "qid": "Q5879",
+  "name": {
+   "en": "Johann Wolfgang von Goethe",
+   "ru": "Иоганн Вольфганг Гёте",
+   "uk": "Йоганн Вольфганг Гете"
+  },
+  "gender": "male",
+  "born": 1749,
+  "died": 1832,
+  "image": "Goethe (Stieler 1828).jpg"
+ },
+ {
+  "id": "golda-meir",
+  "qid": "Q42992",
+  "name": {
+   "en": "Golda Meir",
+   "ru": "Голда Меир",
+   "uk": "Голда Меїр"
+  },
+  "gender": "female",
+  "born": 1898,
+  "died": 1978,
+  "image": "Golda Meir 03265u-2 (cropped).jpg"
+ },
+ {
+  "id": "h-g-wells",
+  "qid": "Q42511",
+  "name": {
+   "en": "H. G. Wells",
+   "ru": "Герберт Уэллс",
+   "uk": "Герберт Веллс"
+  },
+  "gender": "male",
+  "born": 1866,
+  "died": 1946,
+  "image": "H.G. Wells by Beresford.jpg"
+ },
+ {
+  "id": "h-l-mencken",
+  "qid": "Q439204",
+  "name": {
+   "en": "H. L. Mencken",
+   "ru": "Генри Луис Менкен",
+   "uk": "Генрі Луїс Менкен"
+  },
+  "gender": "male",
+  "born": 1880,
+  "died": 1956,
+  "image": "H-L-Mencken-1928.jpg"
+ },
+ {
+  "id": "hannah-arendt",
+  "qid": "Q60025",
+  "name": {
+   "en": "Hannah Arendt",
+   "ru": "Ханна Арендт",
+   "uk": "Ганна Арендт"
+  },
+  "gender": "female",
+  "born": 1906,
+  "died": 1975,
+  "image": "Hannah Arendt auf dem 1. Kulturkritikerkongress, Barbara Niggl Radloff, FM-2019-1-5-9-16 (cropped).jpg"
+ },
+ {
+  "id": "hegel",
+  "qid": "Q9235",
+  "name": {
+   "en": "Hegel",
+   "ru": "Гегель",
+   "uk": "Гегель"
+  },
+  "gender": "male",
+  "born": 1770,
+  "died": 1831,
+  "image": "Jakob Schlesinger - Hegel 1831.jpg"
+ },
+ {
+  "id": "heinrich-heine",
+  "qid": "Q44403",
+  "name": {
+   "en": "Heinrich Heine",
+   "ru": "Генрих Гейне",
+   "uk": "Генріх Гейне"
+  },
+  "gender": "male",
+  "born": 1797,
+  "died": 1856,
+  "image": "Heinrich Heine.PNG"
+ },
+ {
+  "id": "henry-david-thoreau",
+  "qid": "Q131149",
+  "name": {
+   "en": "Henry David Thoreau",
+   "ru": "Генри Дэвид Торо",
+   "uk": "Генрі Девід Торо"
+  },
+  "gender": "male",
+  "born": 1817,
+  "died": 1862,
+  "image": "Benjamin D. Maxham - Henry David Thoreau - Restored - greyscale - straightened.jpg"
+ },
+ {
+  "id": "henry-kissinger",
+  "qid": "Q66107",
+  "name": {
+   "en": "Henry Kissinger",
+   "ru": "Генри Киссинджер",
+   "uk": "Генрі Кіссинджер"
+  },
+  "gender": "male",
+  "born": 1923,
+  "died": 2023,
+  "image": "Henry A. Kissinger, U.S. Secretary of State, 1973-1977.jpg"
+ },
+ {
+  "id": "heraclitus",
+  "qid": "Q41155",
+  "name": {
+   "en": "Heraclitus",
+   "ru": "Гераклит",
+   "uk": "Геракліт"
+  },
+  "gender": "male",
+  "born": -535,
+  "died": -470,
+  "image": "Ca' Rezzonico - Eraclito 1705 - Giuseppe Torretti.jpg"
+ },
+ {
+  "id": "herodotus",
+  "qid": "Q26825",
+  "name": {
+   "en": "Herodotus",
+   "ru": "Геродот",
+   "uk": "Геродот"
+  },
+  "gender": "male",
+  "born": -484,
+  "died": -425,
+  "image": "Marble bust of Herodotos MET DT11742 (cropped).jpg"
+ },
+ {
+  "id": "honore-de-balzac",
+  "qid": "Q9711",
+  "name": {
+   "en": "Honoré de Balzac",
+   "ru": "Оноре де Бальзак",
+   "uk": "Оноре де Бальзак"
+  },
+  "gender": "male",
+  "born": 1799,
+  "died": 1850,
+  "image": "Honoré de Balzac (1842) detail.jpg"
+ },
+ {
+  "id": "horace",
+  "qid": "Q6197",
+  "name": {
+   "en": "Horace",
+   "ru": "Гораций",
+   "uk": "Горацій"
+  },
+  "gender": "male",
+  "born": -65,
+  "died": -8,
+  "image": "Quintus Horatius Flaccus.jpg",
+  "crop": [
+   0.3,
+   0.33,
+   0.42
+  ],
+  "face": [
+   0.5,
+   0.3
+  ]
+ },
+ {
+  "id": "hryhorii-skovoroda",
+  "qid": "Q336803",
+  "name": {
+   "en": "Hryhorii Skovoroda",
+   "ru": "Григорий Сковорода",
+   "uk": "Григорій Сковорода"
+  },
+  "gender": "male",
+  "born": 1722,
+  "died": 1794,
+  "image": "Григорий Сковорода.jpg"
+ },
+ {
+  "id": "ibn-khaldun",
+  "qid": "Q9294",
+  "name": {
+   "en": "Ibn Khaldun",
+   "ru": "Ибн Хальдун",
+   "uk": "Ібн Хальдун"
+  },
+  "gender": "male",
+  "born": 1332,
+  "died": 1406,
+  "image": "Bust of Ibn Khaldun (Casbah of Bejaia, Algeria).jpg"
+ },
+ {
+  "id": "ilf-and-petrov",
+  "qid": "Q262816",
+  "name": {
+   "en": "Ilf and Petrov",
+   "ru": "Ильф и Петров",
+   "uk": "Ільф і Петров"
+  },
+  "gender": "male",
+  "image": "Ilf Petrov.jpg",
+  "noPortrait": true
+ },
+ {
+  "id": "immanuel-kant",
+  "qid": "Q9312",
+  "name": {
+   "en": "Immanuel Kant",
+   "ru": "Иммануил Кант",
+   "uk": "Іммануїл Кант"
+  },
+  "gender": "male",
+  "born": 1724,
+  "died": 1804,
+  "image": "Immanuel Kant - Gemaelde 2.jpg"
+ },
+ {
+  "id": "indira-gandhi",
+  "qid": "Q1149",
+  "name": {
+   "en": "Indira Gandhi",
+   "ru": "Индира Ганди",
+   "uk": "Індіра Ганді"
+  },
+  "gender": "female",
+  "born": 1917,
+  "died": 1984,
+  "image": "Indira Gandhi official portrait.png"
+ },
+ {
+  "id": "isaac-asimov",
+  "qid": "Q34981",
+  "name": {
+   "en": "Isaac Asimov",
+   "ru": "Айзек Азимов",
+   "uk": "Айзек Азімов"
+  },
+  "gender": "male",
+  "born": 1920,
+  "died": 1992,
+  "image": "Isaac.Asimov01.jpg"
+ },
+ {
+  "id": "isaiah-berlin",
+  "qid": "Q205162",
+  "name": {
+   "en": "Isaiah Berlin",
+   "ru": "Исайя Берлин",
+   "uk": "Ісайя Берлін"
+  },
+  "gender": "male",
+  "born": 1909,
+  "died": 1997,
+  "image": "IsaiahBerlin1983.jpg"
+ },
+ {
+  "id": "ivan-franko",
+  "qid": "Q332462",
+  "name": {
+   "en": "Ivan Franko",
+   "ru": "Иван Франко",
+   "uk": "Іван Франко"
+  },
+  "gender": "male",
+  "born": 1856,
+  "died": 1916,
+  "image": "Іван Якович Франко.jpg"
+ },
+ {
+  "id": "ivan-kotliarevsky",
+  "qid": "Q455246",
+  "name": {
+   "en": "Ivan Kotliarevsky",
+   "ru": "Иван Котляревский",
+   "uk": "Іван Котляревський"
+  },
+  "gender": "male",
+  "born": 1769,
+  "died": 1838,
+  "image": "Іван Котляревський cropped.jpg"
+ },
+ {
+  "id": "ivan-turgenev",
+  "qid": "Q42831",
+  "name": {
+   "en": "Ivan Turgenev",
+   "ru": "Иван Тургенев",
+   "uk": "Іван Тургенєв"
+  },
+  "gender": "male",
+  "born": 1818,
+  "died": 1883,
+  "image": "Turgenev by Repin.jpg"
+ },
+ {
+  "id": "j-r-r-tolkien",
+  "qid": "Q892",
+  "name": {
+   "en": "J. R. R. Tolkien",
+   "ru": "Дж. Р. Р. Толкин",
+   "uk": "Дж. Р. Р. Толкін"
+  },
+  "gender": "male",
+  "born": 1892,
+  "died": 1973,
+  "image": "J. R. R. Tolkien, ca. 1925.jpg"
+ },
+ {
+  "id": "james-madison",
+  "qid": "Q11813",
+  "name": {
+   "en": "James Madison",
+   "ru": "Джеймс Мэдисон",
+   "uk": "Джеймс Медісон"
+  },
+  "gender": "male",
+  "born": 1751,
+  "died": 1836,
+  "image": "James Madison.jpg"
+ },
+ {
+  "id": "jean-de-la-fontaine",
+  "qid": "Q49496",
+  "name": {
+   "en": "Jean de La Fontaine",
+   "ru": "Жан де Лафонтен",
+   "uk": "Жан де Лафонтен"
+  },
+  "gender": "male",
+  "born": 1621,
+  "died": 1695,
+  "image": "Henri Millot - Jean de La Fontaine - A II 792 - Finnish National Gallery.jpg"
+ },
+ {
+  "id": "jean-jacques-rousseau",
+  "qid": "Q6527",
+  "name": {
+   "en": "Jean-Jacques Rousseau",
+   "ru": "Жан-Жак Руссо",
+   "uk": "Жан-Жак Руссо"
+  },
+  "gender": "male",
+  "born": 1712,
+  "died": 1778,
+  "image": "Jean-Jacques Rousseau (painted portrait).jpg"
+ },
+ {
+  "id": "jerome-k-jerome",
+  "qid": "Q218698",
+  "name": {
+   "en": "Jerome K. Jerome",
+   "ru": "Джером Клапка Джером",
+   "uk": "Джером Клапка Джером"
+  },
+  "gender": "male",
+  "born": 1859,
+  "died": 1927,
+  "image": "Jerome K. Jerome 02.jpg"
+ },
+ {
+  "id": "john-f-kennedy",
+  "qid": "Q9696",
+  "name": {
+   "en": "John F. Kennedy",
+   "ru": "Джон Кеннеди",
+   "uk": "Джон Кеннеді"
+  },
+  "gender": "male",
+  "born": 1917,
+  "died": 1963,
+  "image": "John F. Kennedy, White House color photo portrait.jpg"
+ },
+ {
+  "id": "john-kenneth-galbraith",
+  "qid": "Q186042",
+  "name": {
+   "en": "John Kenneth Galbraith",
+   "ru": "Джон Кеннет Гэлбрейт",
+   "uk": "Джон Кеннет Гелбрейт"
+  },
+  "gender": "male",
+  "born": 1908,
+  "died": 2006,
+  "image": "John Kenneth Galbraith from the back cover of \"The Affluent Society\".jpeg"
+ },
+ {
+  "id": "john-locke",
+  "qid": "Q9353",
+  "name": {
+   "en": "John Locke",
+   "ru": "Джон Локк",
+   "uk": "Джон Локк"
+  },
+  "gender": "male",
+  "born": 1632,
+  "died": 1704,
+  "image": "JohnLocke.png"
+ },
+ {
+  "id": "john-maynard-keynes",
+  "qid": "Q9317",
+  "name": {
+   "en": "John Maynard Keynes",
+   "ru": "Джон Мейнард Кейнс",
+   "uk": "Джон Мейнард Кейнс"
+  },
+  "gender": "male",
+  "born": 1883,
+  "died": 1946,
+  "image": "Keynes 1933.jpg"
+ },
+ {
+  "id": "john-stuart-mill",
+  "qid": "Q50020",
+  "name": {
+   "en": "John Stuart Mill",
+   "ru": "Джон Стюарт Милль",
+   "uk": "Джон Стюарт Мілль"
+  },
+  "gender": "male",
+  "born": 1806,
+  "died": 1873,
+  "image": "John Stuart Mill by London Stereoscopic Company, c1870.jpg"
+ },
+ {
+  "id": "jonathan-swift",
+  "qid": "Q41166",
+  "name": {
+   "en": "Jonathan Swift",
+   "ru": "Джонатан Свифт",
+   "uk": "Джонатан Свіфт"
+  },
+  "gender": "male",
+  "born": 1667,
+  "died": 1745,
+  "image": "Jonathan Swift by Charles Jervas detail.jpg"
+ },
+ {
+  "id": "jorge-luis-borges",
+  "qid": "Q909",
+  "name": {
+   "en": "Jorge Luis Borges",
+   "ru": "Хорхе Луис Борхес",
+   "uk": "Хорхе Луїс Борхес"
+  },
+  "gender": "male",
+  "born": 1899,
+  "died": 1986,
+  "image": "Jorge Luis Borges 1951, by Grete Stern (full).jpg",
+  "crop": [
+   0.3,
+   0,
+   0.5
+  ],
+  "face": [
+   0.55,
+   0.25
+  ]
+ },
+ {
+  "id": "joseph-brodsky",
+  "qid": "Q862",
+  "name": {
+   "en": "Joseph Brodsky",
+   "ru": "Иосиф Бродский",
+   "uk": "Йосип Бродський"
+  },
+  "gender": "male",
+  "born": 1940,
+  "died": 1996,
+  "image": "Joseph Brodsky 1988.jpg",
+  "crop": [
+   0.25,
+   0.08,
+   0.5
+  ],
+  "face": [
+   0.55,
+   0.3
+  ]
+ },
+ {
+  "id": "joseph-heller",
+  "qid": "Q208101",
+  "name": {
+   "en": "Joseph Heller",
+   "ru": "Джозеф Хеллер",
+   "uk": "Джозеф Геллер"
+  },
+  "gender": "male",
+  "born": 1923,
+  "died": 1999,
+  "image": "Joseph Heller circa 1979.jpg"
+ },
+ {
+  "id": "julius-caesar",
+  "qid": "Q1048",
+  "name": {
+   "en": "Julius Caesar",
+   "ru": "Юлий Цезарь",
+   "uk": "Юлій Цезар"
+  },
+  "gender": "male",
+  "born": -100,
+  "died": -44,
+  "image": "Retrato de Julio César (26724093101) (cropped).jpg"
+ },
+ {
+  "id": "juvenal",
+  "qid": "Q193800",
+  "name": {
+   "en": "Juvenal",
+   "ru": "Ювенал",
+   "uk": "Ювенал"
+  },
+  "gender": "male",
+  "born": 55,
+  "died": 200,
+  "image": "Juvenal portrait.jpg"
+ },
+ {
+  "id": "karel-capek",
+  "qid": "Q155855",
+  "name": {
+   "en": "Karel Čapek",
+   "ru": "Карел Чапек",
+   "uk": "Карел Чапек"
+  },
+  "gender": "male",
+  "born": 1890,
+  "died": 1938,
+  "image": "Karel Čapek podepisuje první výtisky Povětroně, Pestrý týden 27.1.1934.jpg"
+ },
+ {
+  "id": "karl-marx",
+  "qid": "Q9061",
+  "name": {
+   "en": "Karl Marx",
+   "ru": "Карл Маркс",
+   "uk": "Карл Маркс"
+  },
+  "gender": "male",
+  "born": 1818,
+  "died": 1883,
+  "image": "Karl Marx 001 restored.jpg",
+  "crop": [
+   0.28,
+   0.03,
+   0.55
+  ],
+  "face": [
+   0.55,
+   0.31
+  ]
+ },
+ {
+  "id": "karl-popper",
+  "qid": "Q81244",
+  "name": {
+   "en": "Karl Popper",
+   "ru": "Карл Поппер",
+   "uk": "Карл Поппер"
+  },
+  "gender": "male",
+  "born": 1902,
+  "died": 1994,
+  "image": "Karl Popper.jpg"
+ },
+ {
+  "id": "kofi-annan",
+  "qid": "Q1254",
+  "name": {
+   "en": "Kofi Annan",
+   "ru": "Кофи Аннан",
+   "uk": "Кофі Аннан"
+  },
+  "gender": "male",
+  "born": 1938,
+  "died": 2018,
+  "image": "Kofi Annan 2012 (cropped).jpg"
+ },
+ {
+  "id": "kozma-prutkov",
+  "qid": "Q1784989",
+  "name": {
+   "en": "Kozma Prutkov",
+   "ru": "Козьма Прутков",
+   "uk": "Козьма Прутков"
+  },
+  "gender": "male",
+  "born": 1803,
+  "died": 1863,
+  "image": "Kozma Prutkov by L M Zhemchuzhnikov.jpg"
+ },
+ {
+  "id": "kurt-vonnegut",
+  "qid": "Q49074",
+  "name": {
+   "en": "Kurt Vonnegut",
+   "ru": "Курт Воннегут",
+   "uk": "Курт Воннегут"
+  },
+  "gender": "male",
+  "born": 1922,
+  "died": 2007,
+  "image": "Kurt Vonnegut by Bernard Gotfryd (1965).jpg",
+  "crop": [
+   0.22,
+   0.03,
+   0.55
+  ],
+  "face": [
+   0.55,
+   0.3
+  ]
+ },
+ {
+  "id": "la-rochefoucauld",
+  "qid": "Q273708",
+  "name": {
+   "en": "François de La Rochefoucauld",
+   "ru": "Франсуа де Ларошфуко",
+   "uk": "Франсуа де Ларошфуко"
+  },
+  "gender": "male",
+  "born": 1613,
+  "died": 1680,
+  "image": "François de La Rochefoucauld.jpg"
+ },
+ {
+  "id": "laozi",
+  "qid": "Q9333",
+  "name": {
+   "en": "Laozi",
+   "ru": "Лао-цзы",
+   "uk": "Лао-цзи"
+  },
+  "gender": "male",
+  "born": -579,
+  "died": -500,
+  "image": "Zhang Lu-Laozi Riding an Ox (cropped).jpg",
+  "photo": "Lao Tzu - Project Gutenberg eText 15250.jpg",
+  "crop": [
+   0.2,
+   0.02,
+   0.6
+  ],
+  "face": [
+   0.5,
+   0.25
+  ]
+ },
+ {
+  "id": "lee-kuan-yew",
+  "qid": "Q131248",
+  "name": {
+   "en": "Lee Kuan Yew",
+   "ru": "Ли Куан Ю",
+   "uk": "Лі Куан Ю"
+  },
+  "gender": "male",
+  "born": 1923,
+  "died": 2015,
+  "image": "Lee Kuan Yew.jpg"
+ },
+ {
+  "id": "leo-tolstoy",
+  "qid": "Q7243",
+  "name": {
+   "en": "Leo Tolstoy",
+   "ru": "Лев Толстой",
+   "uk": "Лев Толстой"
+  },
+  "gender": "male",
+  "born": 1828,
+  "died": 1910,
+  "image": "L.N.Tolstoy Prokudin-Gorsky.jpg",
+  "crop": [
+   0.45,
+   0.2,
+   0.4
+  ],
+  "face": [
+   0.5,
+   0.3
+  ]
+ },
+ {
+  "id": "leon-trotsky",
+  "qid": "Q33391",
+  "name": {
+   "en": "Leon Trotsky",
+   "ru": "Лев Троцкий",
+   "uk": "Лев Троцький"
+  },
+  "gender": "male",
+  "born": 1879,
+  "died": 1940,
+  "image": "León trotski 1924 color.jpg"
+ },
+ {
+  "id": "lesya-ukrainka",
+  "qid": "Q298033",
+  "name": {
+   "en": "Lesya Ukrainka",
+   "ru": "Леся Украинка",
+   "uk": "Леся Українка"
+  },
+  "gender": "female",
+  "born": 1871,
+  "died": 1913,
+  "image": "Lesya Ukrainka 1901 (facecrop).jpg"
+ },
+ {
+  "id": "lina-kostenko",
+  "qid": "Q274302",
+  "name": {
+   "en": "Lina Kostenko",
+   "ru": "Лина Костенко",
+   "uk": "Ліна Костенко"
+  },
+  "gender": "female",
+  "born": 1930,
+  "image": "Lina Kostenko (cropped).jpg"
+ },
+ {
+  "id": "lord-acton",
+  "qid": "Q311778",
+  "name": {
+   "en": "Lord Acton",
+   "ru": "Лорд Актон",
+   "uk": "Лорд Актон"
+  },
+  "gender": "male",
+  "born": 1834,
+  "died": 1902,
+  "image": "Picture of John Dalberg-Acton, 1st Baron Acton.jpg"
+ },
+ {
+  "id": "mahatma-gandhi",
+  "qid": "Q1001",
+  "name": {
+   "en": "Mahatma Gandhi",
+   "ru": "Махатма Ганди",
+   "uk": "Махатма Ганді"
+  },
+  "gender": "male",
+  "born": 1869,
+  "died": 1948,
+  "image": "Mahatma-Gandhi, studio, 1931.jpg"
+ },
+ {
+  "id": "marcus-aurelius",
+  "qid": "Q1430",
+  "name": {
+   "en": "Marcus Aurelius",
+   "ru": "Марк Аврелий",
+   "uk": "Марк Аврелій"
+  },
+  "gender": "male",
+  "born": 121,
+  "died": 180,
+  "image": "Marcus Aurelius Louvre MR561 n02.jpg"
+ },
+ {
+  "id": "margaret-thatcher",
+  "qid": "Q7416",
+  "name": {
+   "en": "Margaret Thatcher",
+   "ru": "Маргарет Тэтчер",
+   "uk": "Маргарет Тетчер"
+  },
+  "gender": "female",
+  "born": 1925,
+  "died": 2013,
+  "image": "Margaret Thatcher (1983).jpg"
+ },
+ {
+  "id": "mark-twain",
+  "qid": "Q7245",
+  "name": {
+   "en": "Mark Twain",
+   "ru": "Марк Твен",
+   "uk": "Марк Твен"
+  },
+  "gender": "male",
+  "born": 1835,
+  "died": 1910,
+  "image": "MarkTwain.LOC.jpg"
+ },
+ {
+  "id": "martin-luther-king",
+  "qid": "Q8027",
+  "name": {
+   "en": "Martin Luther King Jr.",
+   "ru": "Мартин Лютер Кинг",
+   "uk": "Мартін Лютер Кінг"
+  },
+  "gender": "male",
+  "born": 1929,
+  "died": 1968,
+  "image": "The Rev. Dr. Martin Luther King Jr. Color Portrait (high quality).jpg"
+ },
+ {
+  "id": "mencius",
+  "qid": "Q188903",
+  "name": {
+   "en": "Mencius",
+   "ru": "Мэн-цзы",
+   "uk": "Мен-цзи"
+  },
+  "gender": "male",
+  "born": -372,
+  "died": -289,
+  "image": "Half Portraits of the Great Sage and Virtuous Men of Old - Meng Ke (孟軻).jpg"
+ },
+ {
+  "id": "michel-de-montaigne",
+  "qid": "Q41568",
+  "name": {
+   "en": "Michel de Montaigne",
+   "ru": "Мишель де Монтень",
+   "uk": "Мішель де Монтень"
+  },
+  "gender": "male",
+  "born": 1533,
+  "died": 1592,
+  "image": "Montaigne-Dumonstier.jpg"
+ },
+ {
+  "id": "miguel-de-cervantes",
+  "qid": "Q5682",
+  "name": {
+   "en": "Miguel de Cervantes",
+   "ru": "Мигель де Сервантес",
+   "uk": "Мігель де Сервантес"
+  },
+  "gender": "male",
+  "born": 1547,
+  "died": 1616,
+  "image": "Cervantes Jáuregui.jpg"
+ },
+ {
+  "id": "mikhail-bulgakov",
+  "qid": "Q835",
+  "name": {
+   "en": "Mikhail Bulgakov",
+   "ru": "Михаил Булгаков",
+   "uk": "Михайло Булгаков"
+  },
+  "gender": "male",
+  "born": 1891,
+  "died": 1940,
+  "image": "Михаил-Булгаков.jpg"
+ },
+ {
+  "id": "mikhail-lermontov",
+  "qid": "Q46599",
+  "name": {
+   "en": "Mikhail Lermontov",
+   "ru": "Михаил Лермонтов",
+   "uk": "Михайло Лермонтов"
+  },
+  "gender": "male",
+  "born": 1814,
+  "died": 1841,
+  "image": "Mikhail lermontov.jpg"
+ },
+ {
+  "id": "milan-kundera",
+  "qid": "Q93166",
+  "name": {
+   "en": "Milan Kundera",
+   "ru": "Милан Кундера",
+   "uk": "Мілан Кундера"
+  },
+  "gender": "male",
+  "born": 1929,
+  "died": 2023,
+  "image": "Milan Kundera redux.jpg"
+ },
+ {
+  "id": "milton-friedman",
+  "qid": "Q47426",
+  "name": {
+   "en": "Milton Friedman",
+   "ru": "Милтон Фридман",
+   "uk": "Мілтон Фрідман"
+  },
+  "gender": "male",
+  "born": 1912,
+  "died": 2006,
+  "image": "Portrait Of Milton Friedman (cropped).jpg"
+ },
+ {
+  "id": "moliere",
+  "qid": "Q687",
+  "name": {
+   "en": "Molière",
+   "ru": "Мольер",
+   "uk": "Мольєр"
+  },
+  "gender": "male",
+  "born": 1622,
+  "died": 1673,
+  "image": "Pierre Mignard - Portrait de Jean-Baptiste Poquelin dit Molière (1622-1673) - Google Art Project (cropped).jpg"
+ },
+ {
+  "id": "montesquieu",
+  "qid": "Q15975",
+  "name": {
+   "en": "Montesquieu",
+   "ru": "Монтескьё",
+   "uk": "Монтеск'є"
+  },
+  "gender": "male",
+  "born": 1689,
+  "died": 1755,
+  "image": "Montesquieu 1.png"
+ },
+ {
+  "id": "mustafa-kemal-ataturk",
+  "qid": "Q5152",
+  "name": {
+   "en": "Mustafa Kemal Atatürk",
+   "ru": "Мустафа Кемаль Ататюрк",
+   "uk": "Мустафа Кемаль Ататюрк"
+  },
+  "gender": "male",
+  "born": 1881,
+  "died": 1938,
+  "image": "Atatürk Kemal.jpg"
+ },
+ {
+  "id": "napoleon",
+  "qid": "Q517",
+  "name": {
+   "en": "Napoleon",
+   "ru": "Наполеон",
+   "uk": "Наполеон"
+  },
+  "gender": "male",
+  "born": 1769,
+  "died": 1821,
+  "image": "Jacques-Louis David - The Emperor Napoleon in His Study at the Tuileries - Google Art Project.jpg",
+  "crop": [
+   0.3,
+   0.06,
+   0.42
+  ],
+  "face": [
+   0.5,
+   0.25
+  ]
+ },
+ {
+  "id": "nelson-mandela",
+  "qid": "Q8023",
+  "name": {
+   "en": "Nelson Mandela",
+   "ru": "Нельсон Мандела",
+   "uk": "Нельсон Мандела"
+  },
+  "gender": "male",
+  "born": 1918,
+  "died": 2013,
+  "image": "Nelson Mandela 1994.jpg"
+ },
+ {
+  "id": "niccolo-machiavelli",
+  "qid": "Q1399",
+  "name": {
+   "en": "Niccolò Machiavelli",
+   "ru": "Никколо Макиавелли",
+   "uk": "Нікколо Макіавеллі"
+  },
+  "gender": "male",
+  "born": 1469,
+  "died": 1527,
+  "image": "Portrait of Niccolò Machiavelli by Santi di Tito.jpg",
+  "crop": [
+   0.2,
+   0,
+   0.6
+  ],
+  "face": [
+   0.5,
+   0.25
+  ]
+ },
+ {
+  "id": "nikolai-gogol",
+  "qid": "Q43718",
+  "name": {
+   "en": "Nikolai Gogol",
+   "ru": "Николай Гоголь",
+   "uk": "Микола Гоголь"
+  },
+  "gender": "male",
+  "born": 1809,
+  "died": 1852,
+  "image": "N.Gogol by F.Moller (1840, Tretyakov gallery).jpg"
+ },
+ {
+  "id": "omar-khayyam",
+  "qid": "Q35900",
+  "name": {
+   "en": "Omar Khayyám",
+   "ru": "Омар Хайям",
+   "uk": "Омар Хаям"
+  },
+  "gender": "male",
+  "born": 1048,
+  "died": 1131,
+  "image": "Omar Khayyam2.JPG"
+ },
+ {
+  "id": "oscar-wilde",
+  "qid": "Q30875",
+  "name": {
+   "en": "Oscar Wilde",
+   "ru": "Оскар Уайльд",
+   "uk": "Оскар Вайлд"
+  },
+  "gender": "male",
+  "born": 1854,
+  "died": 1900,
+  "image": "Oscar Wilde by Napoleon Sarony. Three-quarter-length photograph, seated.jpg"
+ },
+ {
+  "id": "otto-von-bismarck",
+  "qid": "Q8442",
+  "name": {
+   "en": "Otto von Bismarck",
+   "ru": "Отто фон Бисмарк",
+   "uk": "Отто фон Бісмарк"
+  },
+  "gender": "male",
+  "born": 1815,
+  "died": 1898,
+  "image": "Bundesarchiv Bild 146-2005-0057, Otto von Bismarck.jpg"
+ },
+ {
+  "id": "plato",
+  "qid": "Q859",
+  "name": {
+   "en": "Plato",
+   "ru": "Платон",
+   "uk": "Платон"
+  },
+  "gender": "male",
+  "born": -428,
+  "died": -348,
+  "image": "Plato Silanion Musei Capitolini MC1377.jpg"
+ },
+ {
+  "id": "plutarch",
+  "qid": "Q41523",
+  "name": {
+   "en": "Plutarch",
+   "ru": "Плутарх",
+   "uk": "Плутарх"
+  },
+  "gender": "male",
+  "born": 40,
+  "died": 120,
+  "image": "Plutarch of Chaeronea-03.jpg",
+  "crop": [
+   0.2,
+   0,
+   0.6
+  ],
+  "face": [
+   0.5,
+   0.3
+  ]
+ },
+ {
+  "id": "publilius-syrus",
+  "qid": "Q363375",
+  "name": {
+   "en": "Publilius Syrus",
+   "ru": "Публилий Сир",
+   "uk": "Публілій Сір"
+  },
+  "gender": "male",
+  "born": -100,
+  "died": -100
+ },
+ {
+  "id": "pyotr-stolypin",
+  "qid": "Q138487",
+  "name": {
+   "en": "Pyotr Stolypin",
+   "ru": "Пётр Столыпин",
+   "uk": "Петро Столипін"
+  },
+  "gender": "male",
+  "born": 1862,
+  "died": 1911,
+  "image": "Pyotr Stolypin LOC 07327.jpg"
+ },
+ {
+  "id": "rabindranath-tagore",
+  "qid": "Q7241",
+  "name": {
+   "en": "Rabindranath Tagore",
+   "ru": "Рабиндранат Тагор",
+   "uk": "Рабіндранат Тагор"
+  },
+  "gender": "male",
+  "born": 1861,
+  "died": 1941,
+  "image": "Rabindranath Tagore in 1909.jpg"
+ },
+ {
+  "id": "ralph-waldo-emerson",
+  "qid": "Q48226",
+  "name": {
+   "en": "Ralph Waldo Emerson",
+   "ru": "Ральф Уолдо Эмерсон",
+   "uk": "Ральф Волдо Емерсон"
+  },
+  "gender": "male",
+  "born": 1803,
+  "died": 1882,
+  "image": "Ralph Waldo Emerson ca1857 retouched.jpg"
+ },
+ {
+  "id": "richard-feynman",
+  "qid": "Q39246",
+  "name": {
+   "en": "Richard Feynman",
+   "ru": "Ричард Фейнман",
+   "uk": "Річард Фейнман"
+  },
+  "gender": "male",
+  "born": 1918,
+  "died": 1988,
+  "image": "RichardFeynman-PaineMansionWoods1984 copyrightTamikoThiel bw.jpg"
+ },
+ {
+  "id": "ronald-reagan",
+  "qid": "Q9960",
+  "name": {
+   "en": "Ronald Reagan",
+   "ru": "Рональд Рейган",
+   "uk": "Рональд Рейган"
+  },
+  "gender": "male",
+  "born": 1911,
+  "died": 2004,
+  "image": "Ronald Reagan 1981 presidential portrait.jpg"
+ },
+ {
+  "id": "rudyard-kipling",
+  "qid": "Q34743",
+  "name": {
+   "en": "Rudyard Kipling",
+   "ru": "Редьярд Киплинг",
+   "uk": "Редьярд Кіплінг"
+  },
+  "gender": "male",
+  "born": 1865,
+  "died": 1936,
+  "image": "Kipling nd.jpg"
+ },
+ {
+  "id": "rumi",
+  "qid": "Q43347",
+  "name": {
+   "en": "Rumi",
+   "ru": "Руми",
+   "uk": "Румі"
+  },
+  "gender": "male",
+  "born": 1207,
+  "died": 1273,
+  "image": "Mevlana-celaleddin-i-rumi-1.jpg",
+  "crop": [
+   0.1,
+   0.12,
+   0.7
+  ],
+  "face": [
+   0.55,
+   0.25
+  ]
+ },
+ {
+  "id": "saadi",
+  "qid": "Q170302",
+  "name": {
+   "en": "Saadi",
+   "ru": "Саади",
+   "uk": "Сааді"
+  },
+  "gender": "male",
+  "born": 1210,
+  "died": 1292,
+  "image": "The poet Sa`di (detail) with his friends in the orchard at night, from Prince Baysunghur's Rose Garden (Gulistan) by Sa`di.jpg",
+  "crop": [
+   0.28,
+   0.08,
+   0.5
+  ],
+  "face": [
+   0.5,
+   0.3
+  ]
+ },
+ {
+  "id": "sallust",
+  "qid": "Q7170",
+  "name": {
+   "en": "Sallust",
+   "ru": "Саллюстий",
+   "uk": "Саллюстій"
+  },
+  "gender": "male",
+  "born": -86,
+  "died": -35,
+  "image": "Salluste (cropped).jpg",
+  "crop": [
+   0.22,
+   0.03,
+   0.55
+  ],
+  "face": [
+   0.5,
+   0.3
+  ]
+ },
+ {
+  "id": "saltykov-shchedrin",
+  "qid": "Q211785",
+  "name": {
+   "en": "Mikhail Saltykov-Shchedrin",
+   "ru": "Михаил Салтыков-Щедрин",
+   "uk": "Михайло Салтиков-Щедрін"
+  },
+  "gender": "male",
+  "born": 1826,
+  "died": 1889,
+  "image": "Kramskoj - saltykov-schedrin.jpg"
+ },
+ {
+  "id": "samuel-johnson",
+  "qid": "Q183266",
+  "name": {
+   "en": "Samuel Johnson",
+   "ru": "Сэмюэл Джонсон",
+   "uk": "Семюел Джонсон"
+  },
+  "gender": "male",
+  "born": 1709,
+  "died": 1784,
+  "image": "Samuel Johnson by Joshua Reynolds.jpg"
+ },
+ {
+  "id": "seneca",
+  "qid": "Q2054",
+  "name": {
+   "en": "Seneca",
+   "ru": "Сенека",
+   "uk": "Сенека"
+  },
+  "gender": "male",
+  "born": -4,
+  "died": 65,
+  "image": "Duble herma of Socrates and Seneca Antikensammlung Berlin 07.jpg"
+ },
+ {
+  "id": "sergei-dovlatov",
+  "qid": "Q141114",
+  "name": {
+   "en": "Sergei Dovlatov",
+   "ru": "Сергей Довлатов",
+   "uk": "Сергій Довлатов"
+  },
+  "gender": "male",
+  "born": 1941,
+  "died": 1990
+ },
+ {
+  "id": "socrates",
+  "qid": "Q913",
+  "name": {
+   "en": "Socrates",
+   "ru": "Сократ",
+   "uk": "Сократ"
+  },
+  "gender": "male",
+  "born": -470,
+  "died": -399,
+  "image": "Socrates Louvre.jpg"
+ },
+ {
+  "id": "soren-kierkegaard",
+  "qid": "Q6512",
+  "name": {
+   "en": "Søren Kierkegaard",
+   "ru": "Сёрен Кьеркегор",
+   "uk": "Серен К'єркегор"
+  },
+  "gender": "male",
+  "born": 1813,
+  "died": 1855,
+  "image": "Søren Kierkegaard (1813-1855) - (cropped).jpg"
+ },
+ {
+  "id": "stanislaw-jerzy-lec",
+  "qid": "Q165680",
+  "name": {
+   "en": "Stanisław Jerzy Lec",
+   "ru": "Станислав Ежи Лец",
+   "uk": "Станіслав Єжи Лец"
+  },
+  "gender": "male",
+  "born": 1909,
+  "died": 1966,
+  "image": "Stanislaw J. Lec.jpg"
+ },
+ {
+  "id": "sun-tzu",
+  "qid": "Q37151",
+  "name": {
+   "en": "Sun Tzu",
+   "ru": "Сунь-цзы",
+   "uk": "Сунь-цзи"
+  },
+  "gender": "male",
+  "born": -544,
+  "died": -496,
+  "image": "吴司马孙武.jpg"
+ },
+ {
+  "id": "tacitus",
+  "qid": "Q2161",
+  "name": {
+   "en": "Tacitus",
+   "ru": "Тацит",
+   "uk": "Тацит"
+  },
+  "gender": "male",
+  "born": 55,
+  "died": 120,
+  "image": "Tacitus, Cornelius (50 - 116).jpg"
+ },
+ {
+  "id": "talleyrand",
+  "qid": "Q160499",
+  "name": {
+   "en": "Talleyrand",
+   "ru": "Талейран",
+   "uk": "Талейран"
+  },
+  "gender": "male",
+  "born": 1754,
+  "died": 1839,
+  "image": "Charles Maurice de Talleyrand-Périgord by François Gérard, 1808.jpg",
+  "crop": [
+   0.27,
+   0.15,
+   0.36
+  ],
+  "face": [
+   0.5,
+   0.32
+  ]
+ },
+ {
+  "id": "taras-shevchenko",
+  "qid": "Q134958",
+  "name": {
+   "en": "Taras Shevchenko",
+   "ru": "Тарас Шевченко",
+   "uk": "Тарас Шевченко"
+  },
+  "gender": "male",
+  "born": 1814,
+  "died": 1861,
+  "image": "Т. Г. Шевченко. Квітень 1859.jpg"
+ },
+ {
+  "id": "terry-pratchett",
+  "qid": "Q46248",
+  "name": {
+   "en": "Terry Pratchett",
+   "ru": "Терри Пратчетт",
+   "uk": "Террі Пратчетт"
+  },
+  "gender": "male",
+  "born": 1948,
+  "died": 2015,
+  "image": "10.12.12TerryPratchettByLuigiNovi1.jpg"
+ },
+ {
+  "id": "theodore-roosevelt",
+  "qid": "Q33866",
+  "name": {
+   "en": "Theodore Roosevelt",
+   "ru": "Теодор Рузвельт",
+   "uk": "Теодор Рузвельт"
+  },
+  "gender": "male",
+  "born": 1858,
+  "died": 1919,
+  "image": "Theodore Roosevelt by the Pach Bros.jpg"
+ },
+ {
+  "id": "thomas-hobbes",
+  "qid": "Q37621",
+  "name": {
+   "en": "Thomas Hobbes",
+   "ru": "Томас Гоббс",
+   "uk": "Томас Гоббс"
+  },
+  "gender": "male",
+  "born": 1588,
+  "died": 1679,
+  "image": "Thomas Hobbes (portrait).jpg"
+ },
+ {
+  "id": "thomas-jefferson",
+  "qid": "Q11812",
+  "name": {
+   "en": "Thomas Jefferson",
+   "ru": "Томас Джефферсон",
+   "uk": "Томас Джефферсон"
+  },
+  "gender": "male",
+  "born": 1743,
+  "died": 1826,
+  "image": "Official Presidential portrait of Thomas Jefferson (by Rembrandt Peale, 1800)(cropped).jpg"
+ },
+ {
+  "id": "thomas-more",
+  "qid": "Q42544",
+  "name": {
+   "en": "Thomas More",
+   "ru": "Томас Мор",
+   "uk": "Томас Мор"
+  },
+  "gender": "male",
+  "born": 1478,
+  "died": 1535,
+  "image": "Hans Holbein, the Younger - Sir Thomas More - Google Art Project.jpg"
+ },
+ {
+  "id": "thucydides",
+  "qid": "Q41683",
+  "name": {
+   "en": "Thucydides",
+   "ru": "Фукидид",
+   "uk": "Фукідід"
+  },
+  "gender": "male",
+  "born": -460,
+  "died": -395,
+  "image": "Thucydides pushkin01.jpg"
+ },
+ {
+  "id": "umberto-eco",
+  "qid": "Q12807",
+  "name": {
+   "en": "Umberto Eco",
+   "ru": "Умберто Эко",
+   "uk": "Умберто Еко"
+  },
+  "gender": "male",
+  "born": 1932,
+  "died": 2016,
+  "image": "Italiaanse schrijver Umberto Eco , kop, Bestanddeelnr 932-9758.jpg"
+ },
+ {
+  "id": "vasily-kliuchevsky",
+  "qid": "Q379584",
+  "name": {
+   "en": "Vasily Klyuchevsky",
+   "ru": "Василий Ключевский",
+   "uk": "Василь Ключевський"
+  },
+  "gender": "male",
+  "born": 1841,
+  "died": 1911,
+  "image": "Vasily Klyuchevsky 2.jpg"
+ },
+ {
+  "id": "vasyl-stus",
+  "qid": "Q426509",
+  "name": {
+   "en": "Vasyl Stus",
+   "ru": "Василий Стус",
+   "uk": "Василь Стус"
+  },
+  "gender": "male",
+  "born": 1938,
+  "died": 1985,
+  "image": "Stus KGB photo 1980 (cropped).jpg"
+ },
+ {
+  "id": "vasyl-symonenko",
+  "qid": "Q1970954",
+  "name": {
+   "en": "Vasyl Symonenko",
+   "ru": "Василий Симоненко",
+   "uk": "Василь Симоненко"
+  },
+  "gender": "male",
+  "born": 1935,
+  "died": 1963,
+  "image": "Stamp of Ukraine s1421 (cropped).jpg"
+ },
+ {
+  "id": "vegetius",
+  "qid": "Q4298",
+  "name": {
+   "en": "Vegetius",
+   "ru": "Вегеций",
+   "uk": "Вегецій"
+  },
+  "gender": "male",
+  "born": 400,
+  "died": 450,
+  "image": "Publius Flavius Vegetius Renatus - DPLA - acf9274ab8e54ff66a708908b7b969d8.jpg",
+  "noPortrait": true
+ },
+ {
+  "id": "viacheslav-chornovil",
+  "qid": "Q2084848",
+  "name": {
+   "en": "Viacheslav Chornovil",
+   "ru": "Вячеслав Чорновол",
+   "uk": "В'ячеслав Чорновіл"
+  },
+  "gender": "male",
+  "born": 1937,
+  "died": 1999,
+  "image": "НДУ 3 Чорновіл Вячеслав Максимович.jpg"
+ },
+ {
+  "id": "victor-hugo",
+  "qid": "Q535",
+  "name": {
+   "en": "Victor Hugo",
+   "ru": "Виктор Гюго",
+   "uk": "Віктор Гюго"
+  },
+  "gender": "male",
+  "born": 1802,
+  "died": 1885,
+  "image": "Victor Hugo by Étienne Carjat 1876 - full.jpg"
+ },
+ {
+  "id": "viktor-chernomyrdin",
+  "qid": "Q190884",
+  "name": {
+   "en": "Viktor Chernomyrdin",
+   "ru": "Виктор Черномырдин",
+   "uk": "Віктор Черномирдін"
+  },
+  "gender": "male",
+  "born": 1938,
+  "died": 2010,
+  "image": "ЧЕРНОМЫРДИН Виктор Степанович.jpg"
+ },
+ {
+  "id": "vladimir-lenin",
+  "qid": "Q1394",
+  "name": {
+   "en": "Vladimir Lenin",
+   "ru": "Владимир Ленин",
+   "uk": "Володимир Ленін"
+  },
+  "gender": "male",
+  "born": 1870,
+  "died": 1924,
+  "image": "Vladímir Lenin (fotografía coloreada).jpg"
+ },
+ {
+  "id": "volodymyr-vynnychenko",
+  "qid": "Q2494143",
+  "name": {
+   "en": "Volodymyr Vynnychenko",
+   "ru": "Владимир Винниченко",
+   "uk": "Володимир Винниченко"
+  },
+  "gender": "male",
+  "born": 1880,
+  "died": 1951,
+  "image": "Vynnychenko.jpg"
+ },
+ {
+  "id": "voltaire",
+  "qid": "Q9068",
+  "name": {
+   "en": "Voltaire",
+   "ru": "Вольтер",
+   "uk": "Вольтер"
+  },
+  "gender": "male",
+  "born": 1694,
+  "died": 1778,
+  "image": "Nicolas de Largillière - Portrait de Voltaire (1694-1778) en 1718 - P208 - musée Carnavalet - 5 (cropped).jpg"
+ },
+ {
+  "id": "will-rogers",
+  "qid": "Q457840",
+  "name": {
+   "en": "Will Rogers",
+   "ru": "Уилл Роджерс",
+   "uk": "Вілл Роджерс"
+  },
+  "gender": "male",
+  "born": 1879,
+  "died": 1935,
+  "image": "Will Rogers 1922.jpg"
+ },
+ {
+  "id": "william-shakespeare",
+  "qid": "Q692",
+  "name": {
+   "en": "William Shakespeare",
+   "ru": "Уильям Шекспир",
+   "uk": "Вільям Шекспір"
+  },
+  "gender": "male",
+  "born": 1564,
+  "died": 1616,
+  "image": "Shakespeare.jpg"
+ },
+ {
+  "id": "willy-brandt",
+  "qid": "Q2514",
+  "name": {
+   "en": "Willy Brandt",
+   "ru": "Вилли Брандт",
+   "uk": "Віллі Брандт"
+  },
+  "gender": "male",
+  "born": 1913,
+  "died": 1992,
+  "image": "Bundesarchiv B 145 Bild-F057884-0009, Willy Brandt.jpg"
+ },
+ {
+  "id": "yevgeny-shvarts",
+  "qid": "Q268111",
+  "name": {
+   "en": "Yevgeny Schwartz",
+   "ru": "Евгений Шварц",
+   "uk": "Євген Шварц"
+  },
+  "gender": "male",
+  "born": 1896,
+  "died": 1958
+ },
+ {
+  "id": "yevhen-malaniuk",
+  "qid": "Q2506724",
+  "name": {
+   "en": "Yevhen Malaniuk",
+   "ru": "Евгений Маланюк",
+   "uk": "Євген Маланюк"
+  },
+  "gender": "male",
+  "born": 1897,
+  "died": 1968,
+  "image": "Jevhen Malanjuk.jpg"
+ },
+ {
+  "id": "yitzhak-rabin",
+  "qid": "Q34060",
+  "name": {
+   "en": "Yitzhak Rabin",
+   "ru": "Ицхак Рабин",
+   "uk": "Іцхак Рабин"
+  },
+  "gender": "male",
+  "born": 1922,
+  "died": 1995,
+  "image": "Flickr - Israel Defense Forces - Life of Lt. Gen. Yitzhak Rabin, 7th IDF Chief of Staff in photos (11).jpg"
+ },
+ {
+  "id": "zhuangzi",
+  "qid": "Q47739",
+  "name": {
+   "en": "Zhuangzi",
+   "ru": "Чжуан-цзы",
+   "uk": "Чжуан-цзи"
+  },
+  "gender": "male",
+  "born": -369,
+  "died": -288,
+  "image": "Zhuangzi.png",
+  "noPortrait": true
+ }
+]

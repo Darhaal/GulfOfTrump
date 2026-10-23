@@ -1,6 +1,6 @@
 // The screenshots of the game on the demo's front page, in the README and in
 // the Microsoft Store listing: one 1950 game as the United States, two turns
-// into the Korean War (scripts/screens/1950-usa.json), in English and the
+// into the Korean War (scripts/screens/1950-usa.gotsave), in English and the
 // light theme.
 //
 // Runs against a production build with the offline game master, so it costs
@@ -10,18 +10,20 @@
 //   node scripts/screens.mjs                  (SCREENS_URL, default http://127.0.0.1:3000)
 //
 // It writes public/screens/1950/*.jpg, and with SCREENS_STORE=<folder> the
-// Store's PNGs, 1600×1000, into that folder. The window is 1440×900 drawn at
-// 1600×1000, so one side panel shows beside the map as on most screens;
-// panels are cut to the panel at twice the pixels, so they stay sharp on
-// phones and retina screens. On failure it leaves the window in
-// screens-failure.png.
+// Store's PNGs, 1600×1000, into that folder (desktop/store-screens/, kept out
+// of git). The window is 1440×900 drawn at 1600×1000, so one side panel shows
+// beside the map as on most screens; panels are cut to the panel at twice the
+// pixels, so they stay sharp on phones and retina screens. On failure it
+// leaves the window in screens-failure.png.
 //
-// The save is written by scripts/screens/make-save.ts through the engine:
-// run `npx vitest run --config scripts/screens/vitest.config.mts` again when
-// the game's state changes shape. Needs Playwright with Chromium, which the
-// project does not depend on, as scripts/smoke.mjs does:
-// `npm i --no-save playwright && npx playwright install chromium`
-// (SCREENS_CHROMIUM points it at another Chromium, such as an installed Chrome).
+// The save is written and sealed by scripts/screens/make-save.ts through the
+// engine: run `npx vitest run --config scripts/screens/vitest.config.mts`
+// again when the game's state changes shape. It is imported through the home
+// page as a player imports one, so it must be a sealed .gotsave. Needs
+// Playwright with Chromium, which the project does not depend on, as
+// scripts/smoke.mjs does: `npm i --no-save playwright && npx playwright
+// install chromium` (SCREENS_CHROMIUM points it at another Chromium, such as
+// chrome-headless-shell).
 
 import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
@@ -30,7 +32,7 @@ import { chromium } from "playwright";
 
 const BASE = (process.env.SCREENS_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
 const ROOT = path.resolve(import.meta.dirname, "..");
-const SAVE = path.join(ROOT, "scripts", "screens", "1950-usa.json");
+const SAVE = path.join(ROOT, "scripts", "screens", "1950-usa.gotsave");
 const OUT = path.join(ROOT, "public", "screens", "1950");
 const STORE = process.env.SCREENS_STORE;
 const VIEWPORT = { width: 1440, height: 900 };
@@ -96,7 +98,15 @@ async function step(name, run) {
 }
 
 const leftPanel = (p) => p.locator("main > aside").first();
+const rightPanel = (p) => p.locator("main > aside").last();
 const dialog = (p) => p.locator("[role=dialog]");
+
+/** Nothing under the mouse or in focus: no tooltip, no lit button. */
+async function still(p) {
+  await p.mouse.move(8, VIEWPORT.height - 8);
+  await p.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
+  await p.waitForTimeout(500);
+}
 
 /** The whole big window, for the site. */
 const whole = (name) => big.screenshot({ path: path.join(OUT, `${name}.jpg`), type: "jpeg", quality: QUALITY });
@@ -105,15 +115,22 @@ const store = async (name) => {
   if (STORE) await big.screenshot({ path: path.join(STORE, `${name}.png`), type: "png" });
 };
 
-/** A panel picture from an aside of the sharp window, from an element in it down (or from the top of its content). */
-async function panel(name, aside, from) {
+/**
+ * A panel picture from an aside of the sharp window, from an element in it
+ * down with a margin above it (or from the top of its content). The panels
+ * share one scroller, so a panel opened after another starts where that one
+ * was left unless it is scrolled.
+ */
+async function panel(name, aside, from, margin = 18) {
   const box = await aside.boundingBox();
-  const content = await aside.locator(":scope > div").last().boundingBox();
+  const scroller = aside.locator(":scope > div").last();
+  const content = await scroller.boundingBox();
   if (from) {
     await from.evaluate((el) => el.scrollIntoView({ block: "start" }));
-    await sharp.waitForTimeout(250);
-  }
-  const top = from ? Math.max(content.y, (await from.boundingBox()).y - 18) : content.y;
+    await scroller.evaluate((el, by) => el.scrollBy(0, -by), margin);
+  } else await scroller.evaluate((el) => el.scrollTo(0, 0));
+  await sharp.waitForTimeout(250);
+  const top = from ? Math.max(content.y, (await from.boundingBox()).y - margin) : content.y;
   const clip = { x: box.x + Math.max(0, (box.width - PANEL.width) / 2), y: top, width: Math.min(PANEL.width, box.width), height: Math.min(PANEL.height, box.y + box.height - top) };
   await sharp.screenshot({ path: path.join(OUT, `${name}.jpg`), type: "jpeg", quality: QUALITY, clip });
 }
@@ -136,7 +153,7 @@ async function openLeft(id) {
   await big.waitForTimeout(700);
 }
 async function closeLeft(p) {
-  const open = p.locator('[data-tour^="tab-"][aria-pressed="true"]');
+  const open = p.locator('nav [data-tour^="tab-"][aria-pressed="true"]');
   if (await open.count()) await open.click();
   await p.waitForTimeout(500);
 }
@@ -147,10 +164,8 @@ async function korea(p, closer = true) {
   await p.waitForTimeout(900);
   if (!closer) return;
   await p.locator('button[aria-label="Zoom in"]').click();
-  // Nothing under the mouse or in focus: no tooltip, no lit button.
-  await p.mouse.move(8, VIEWPORT.height - 8);
-  await p.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
-  await p.waitForTimeout(900);
+  await still(p);
+  await p.waitForTimeout(400);
 }
 
 /** A point of the window where a click lands on the province, as near its middle as can be. */
@@ -190,6 +205,7 @@ try {
 
   await step("the turn's chronicle", async () => {
     await openLeft("chronicle");
+    await still(big);
     await whole("turn");
     await store("02-turn");
   });
@@ -228,33 +244,84 @@ try {
     await big.waitForTimeout(400);
   });
 
-  await step("a minister and his report", async () => {
+  await step("the cabinet and a minister's report", async () => {
     await openLeft("cabinet");
-    for (const p of [big, sharp]) await leftPanel(p).locator("button:visible", { hasText: /Johnson/ }).first().click();
-    await big.waitForTimeout(700);
+    // The eight ministries, the Secretary of Defense picked: his portrait ringed, his view of the last turn below.
+    const tile = (p) => leftPanel(p).locator('button[title^="Louis A. Johnson"]');
+    for (const p of [big, sharp]) {
+      await tile(p).click();
+      await still(p);
+    }
+    const grid = (p) => tile(p).locator("xpath=..");
     current = sharp;
-    await panel("cabinet", leftPanel(sharp), leftPanel(sharp).locator("button:visible", { hasText: /Johnson/ }).first());
+    // A margin narrower than the gap below the leader's card.
+    await panel("cabinet", leftPanel(sharp), grid(sharp), 14);
     current = big;
+    await grid(big).evaluate((el) => {
+      el.scrollIntoView({ block: "start" });
+      el.closest(".overflow-y-auto")?.scrollBy(0, -14);
+    });
+    await big.waitForTimeout(300);
     await store("06-cabinet");
   });
 
-  await step("parliament", async () => {
+  await step("a sitting of the House", async () => {
     await openLeft("politics");
-    await panel("parliament", leftPanel(sharp));
+    // The whole window, for the Store: the sitting over the game.
+    await leftPanel(big).getByRole("button", { name: "Back to the sitting" }).click();
+    await dialog(big).waitFor();
+    await still(big);
     await store("08-parliament");
+    await big.keyboard.press("Escape");
+    // For the site, the sitting as on a phone, one panel wide: the motion, the government's speech and the answers to it.
+    current = sharp;
+    await leftPanel(sharp).getByRole("button", { name: "Back to the sitting" }).click();
+    await dialog(sharp).waitFor();
+    await sharp.setViewportSize({ width: PANEL.width, height: 1000 });
+    // Square corners, so the sheet's top is cut like a panel's rather than showing the dimmed game in its corners.
+    const square = await sharp.addStyleTag({ content: "[role=dialog]{border-radius:0!important}" });
+    await sharp.waitForTimeout(900);
+    await dialog(sharp)
+      .locator("[class*='max-h-[48vh]']")
+      .evaluate((el) => {
+        const mine = [...el.children].find((row) => row.querySelector("[class*='bg-ink']"));
+        el.scrollTop += mine ? mine.getBoundingClientRect().top - el.getBoundingClientRect().top - 8 : el.scrollHeight;
+      });
+    await still(sharp);
+    const box = await dialog(sharp).boundingBox();
+    await sharp.screenshot({ path: path.join(OUT, "parliament.jpg"), type: "jpeg", quality: QUALITY, clip: { x: box.x, y: box.y, width: PANEL.width, height: PANEL.height } });
+    await square.evaluate((el) => el.remove());
+    await sharp.keyboard.press("Escape");
+    await sharp.setViewportSize(VIEWPORT);
+    await sharp.waitForTimeout(900);
+    current = big;
   });
 
-  await step("the economy", async () => {
+  await step("the budget", async () => {
     await openLeft("economy");
-    await panel("economy", leftPanel(sharp));
+    const debt = (p) => leftPanel(p).locator("section", { hasText: "Debt and reserves" }).first();
+    current = sharp;
+    // A margin narrower than the gap above the section, so the card above is not cut into the picture.
+    await panel("economy", leftPanel(sharp), debt(sharp), 12);
+    current = big;
+    await debt(big).evaluate((el) => el.scrollIntoView({ block: "center" }));
+    await still(big);
     await store("07-economy");
   });
 
-  await step("acts of state", async () => {
-    await openLeft("state");
-    await leftPanel(sharp).locator("button:visible", { hasText: /^Acts/ }).first().click();
-    await sharp.waitForTimeout(500);
-    await panel("state", leftPanel(sharp));
+  await step("the army", async () => {
+    await openLeft("army");
+    await still(sharp);
+    await panel("army", leftPanel(sharp));
+    await leftPanel(big).locator(":scope > div").last().evaluate((el) => el.scrollTo(0, 0));
+    await still(big);
+    await store("10-army");
+  });
+
+  await step("science", async () => {
+    await openLeft("science");
+    await still(sharp);
+    await panel("science", leftPanel(sharp));
   });
 
   await step("the maps", async () => {
@@ -262,6 +329,7 @@ try {
     await korea(big, false);
     await big.locator('button[aria-label="Resources"]').click();
     await big.waitForTimeout(1200);
+    await still(big);
     await store("05-modes");
     // Korea beside each map's legend, in the map's lower left corner.
     const map = await big.locator("svg[aria-label='World map']").boundingBox();
@@ -278,10 +346,27 @@ try {
     for (const mode of ["Resources", "Transport", "Population", "Terrain"]) {
       await big.locator(`button[aria-label="${mode}"]`).click();
       await big.waitForTimeout(1200);
+      await still(big);
       tiles.push(await big.screenshot({ type: "png", clip: tile }));
     }
     const img = (b) => `<img src="${dataUrl(b)}" width="${TILE.width}" height="${TILE.height}">`;
     await compose("modes", { width: TILE.width * 2, height: TILE.height * 2 }, `<div style="display:grid;grid-template-columns:repeat(2,${TILE.width}px)">${tiles.map(img).join("")}</div>`);
+    await big.locator('button[aria-label="Political"]').click();
+  });
+
+  await step("the world as Britain sees it", async () => {
+    // The diplomatic map for a country picked on it: the United Kingdom, its empire, its allies and its foes, with its government beside.
+    await big.locator('button[aria-label="Show the whole world"]').click();
+    await big.waitForTimeout(900);
+    const spot = await pointIn(big, "gb-greater-london");
+    await big.mouse.click(spot.x, spot.y);
+    await big.waitForTimeout(700);
+    await rightPanel(big).getByRole("tab", { name: "Government", exact: true }).click();
+    await big.locator('button[aria-label="Diplomacy"]').click();
+    await big.waitForTimeout(1200);
+    await still(big);
+    await whole("diplomacy");
+    await store("09-diplomacy");
     await big.locator('button[aria-label="Political"]').click();
   });
 
@@ -292,28 +377,12 @@ try {
     const spot = await pointIn(sharp, "cn-liaoning");
     await sharp.mouse.click(spot.x, spot.y);
     await sharp.waitForTimeout(900);
-    // China's card in two pieces on the panel's own background: its name, then what Washington knows, down to its GDP.
-    const aside = sharp.locator("main > aside").last();
+    // China's card as Washington knows it: little known, and its economy and army as ranges of estimates.
+    const aside = rightPanel(sharp);
+    await aside.getByRole("tab", { name: "Economy", exact: true }).click();
+    await still(sharp);
     const name = aside.getByRole("heading", { name: "People's Republic of China", exact: true });
-    await name.evaluate((el) => el.scrollIntoView({ block: "start" }));
-    await sharp.waitForTimeout(300);
-    const box = await aside.boundingBox();
-    const x = box.x + (box.width - PANEL.width) / 2;
-    const head = await name.locator("xpath=../../..").boundingBox();
-    const known = await aside.getByText("Little known", { exact: true }).boundingBox();
-    const debt = await aside.getByText("Public debt", { exact: true }).first().boundingBox();
-    // The card above ends just over the name, so the margin is drawn rather than cut.
-    const margin = 18;
-    const top = { x, y: head.y, width: PANEL.width, height: head.height + 8 };
-    const rest = { x, y: known.y - 14, width: PANEL.width, height: Math.min(PANEL.height - margin - top.height, debt.y - 8 - (known.y - 14)) };
-    const background = await aside.evaluate((el) => getComputedStyle(el).backgroundColor);
-    const [a, b] = [await sharp.screenshot({ type: "png", clip: top }), await sharp.screenshot({ type: "png", clip: rest })];
-    const size = { width: PANEL.width * 2, height: PANEL.height * 2 };
-    await compose(
-      "foreign",
-      size,
-      `<div style="width:${size.width}px;height:${size.height}px;padding-top:${margin * 2}px;box-sizing:border-box;background:${background}"><img src="${dataUrl(a)}" width="${size.width}" height="${Math.round(top.height * 2)}"><img src="${dataUrl(b)}" width="${size.width}" height="${Math.round(rest.height * 2)}"></div>`,
-    );
+    await panel("foreign", aside, name.locator("xpath=../../.."));
   });
 
   console.log(`\nWritten to ${path.relative(ROOT, OUT)}${STORE ? ` and ${STORE}` : ""}.`);

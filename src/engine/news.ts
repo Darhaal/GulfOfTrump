@@ -1,6 +1,6 @@
 import { INSTITUTIONS } from "./funds";
 import { getScenario } from "./scenarios";
-import type { AppliedChange, ChronicleEntry, EventKind, GameEvent, GameState } from "./types";
+import type { AppliedChange, ChronicleEntry, EventKind, GameEvent, GameState, PlanKind, PolicyKind } from "./types";
 
 /**
  * The world's news, read from the chronicle: what the game master reported
@@ -53,6 +53,11 @@ const EVENT_SECTION: Record<EventKind, NewsSection> = {
 /** A bloc this large (a world body) is news for its members, but not part of each member's story. */
 const STORY_MEMBERS = 30;
 
+/** Where a plan's stages go: wars to the war pages, policies to the economy or politics, sanctions and trade to the economy, the rest to diplomacy. */
+const PLAN_SECTION: Partial<Record<PlanKind | "economy" | "politics", NewsSection>> = { war: "war", join: "war", economy: "economy", politics: "politics", sanction: "economy", deal: "economy", talks: "diplomacy" };
+/** Policies that are politics rather than the economy: the regime and the army. */
+const POLITICAL = new Set<PolicyKind>(["liberalise", "crackdown", "armament", "disarmament"]);
+
 interface Lookup {
   /** A war's sides, as recorded when it began or ended, else as it stands or as the scenario began it. */
   sides: (war: string) => string[];
@@ -94,10 +99,18 @@ function placeChange(c: AppliedChange, ctx: Lookup): Placed | null {
     case "plan":
     case "plan-end":
       // A plan's own thread: incident, tension, preparation, then the war or bloc it led to.
-      return { section: c.type === "war" || c.type === "join" ? "war" : "diplomacy", countries: [c.by, ...(c.target ? [c.target] : [])], topics: [`plan:${c.plan}`] };
+      return { section: PLAN_SECTION[c.type === "policy" ? (POLITICAL.has(c.policy ?? "infrastructure") ? "politics" : "economy") : c.type] ?? "diplomacy", countries: [c.by, ...(c.target ? [c.target] : [])], topics: [`plan:${c.plan}`] };
+    case "policy":
+      return { section: POLITICAL.has(c.policy) ? "politics" : "economy", countries: [c.country], topics: c.plan ? [`plan:${c.plan}`] : [] };
+    case "accord":
+      return { section: "diplomacy", countries: [c.by, c.with], topics: [...(c.plan ? [`plan:${c.plan}`] : []), ...(c.pact ? [`bloc:${c.pact}`] : [])] };
+    case "incident":
+      // An incident opens the thread of the plan it led to: the war, the sanctions, the talks.
+      return { section: c.what === "border" || c.what === "naval" || c.what === "airspace" ? "war" : "diplomacy", countries: [c.by, c.target], topics: c.plan ? [`plan:${c.plan}`] : [] };
     case "contest":
     case "repel":
-      return { section: "war", countries: [c.by, c.holder], topics: [] };
+      // The fronts' movements are the ministers' to tell, not the news'.
+      return null;
     case "alliance":
     case "alliance-ended": {
       const members = ctx.members(c.alliance);
@@ -113,7 +126,7 @@ function placeChange(c: AppliedChange, ctx: Lookup): Placed | null {
     case "invitation":
       return { section: "diplomacy", countries: [c.country], topics: [] };
     case "sanction":
-      return { section: "economy", countries: [c.by, c.against], topics: [] };
+      return { section: "economy", countries: [c.by, c.against], topics: c.plan ? [`plan:${c.plan}`] : [] };
     case "funds": {
       // The payer may be a country, a lender (the IMF, banks) or a bloc: only a country is a country, a bloc has its own story.
       const bloc = !ctx.isCountry(c.from) && !(INSTITUTIONS as readonly string[]).includes(c.from);

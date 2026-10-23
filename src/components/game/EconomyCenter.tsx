@@ -1,22 +1,22 @@
 "use client";
 
-import { ArrowDownLeft, ArrowUpRight, Ban, Check, FileSignature, Gem, Handshake, Landmark, Plus, Scale, Ship, TrendingDown, TrendingUp, Users, X } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Check, FileSignature, Gem, Handshake, Landmark, Scale, Ship, TrendingDown, TrendingUp, Users, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import Flag from "@/components/Flag";
 import { ui } from "@/components/ui/classes";
 import { formatDate } from "@/engine/calendar";
 import { interestOf, interestRate } from "@/engine/crises";
-import { capacity, dealsLeft, MAX_NEW_DEALS, TRADE_GOODS, type TradeOffer, tradeOffers, tradePosition, UNITS, volumeOf } from "@/engine/deals";
+import { dealsLeft, MAX_NEW_DEALS, type TradeOffer, tradeOffers, tradePosition, UNITS, volumeOf } from "@/engine/deals";
 import type { Accounts, WorldScale } from "@/engine/economy";
-import { sanctionCuts, tradeBooks } from "@/engine/trade";
-import type { Budget, GameState, MapRegion, Sanction, TradeDeal, TradeGood } from "@/engine/types";
+import { ADVISOR_POST } from "@/engine/government";
+import { tradeBooks } from "@/engine/trade";
+import type { Budget, GameState, MapRegion, TradeDeal, TradeGood } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
 import ProvisionPanel from "./ProvisionPanel";
 import ResourceLedger from "./ResourceLedger";
 
 const LINES = ["revenue", "army", "industry", "social", "other"] as const;
-const QUICK = ["war", "nationalise", "invest", "rationing", "bonds", "devalue", "austerity"] as const;
 
 interface EconomyCenterProps {
   state: GameState;
@@ -24,11 +24,8 @@ interface EconomyCenterProps {
   regions: Record<string, MapRegion> | null;
   disabled: boolean;
   onBudget: (budget: Budget) => void;
-  onSanction: (against: string, scope: Sanction["scope"] | null) => void;
-  onOrder: (order: string) => void;
   onSign: (offer: TradeOffer) => void;
   onDecline: (offer: TradeOffer) => void;
-  onPropose: (terms: Pick<TradeOffer, "partner" | "good" | "side" | "value" | "premium" | "years">) => void;
   onCancel: (id: string) => void;
 }
 
@@ -36,23 +33,19 @@ type Tab = "budget" | "trade" | "deals" | "resources" | "supply";
 
 /**
  * The economy in hand, in five tabs: the debt, the interest and the reserves
- * with the budget the government sets itself (it takes effect at once; the
- * next turn judges what it does) and the big economic decisions as orders;
- * who the country trades with and the sanctions it imposes and suffers; the
- * trade deals — the market's offers to sign, the deals in force, the
- * player's own proposals; the strategic resources; and how well the people
- * are supplied.
+ * with the budget the government sets itself, and the economy minister's
+ * latest proposal for it (asked on the advisor strip above the tab), which
+ * the player puts into the fields or not; who the
+ * country trades with; the trade deals – the market's offers to sign and
+ * the deals in force; the strategic resources; and how well the people are
+ * supplied. Sanctions and big decisions are the government's orders.
  */
-export default function EconomyCenter({ state, accounts, regions, disabled, onBudget, onSanction, onOrder, onSign, onDecline, onPropose, onCancel }: EconomyCenterProps) {
+export default function EconomyCenter({ state, accounts, regions, disabled, onBudget, onSign, onDecline, onCancel }: EconomyCenterProps) {
   const { t, text, money, locale } = useI18n();
   const [tab, setTab] = useState<Tab>("budget");
   const economy = state.countries[state.player]?.economy;
   const [draft, setDraft] = useState<Budget | null>(null);
-  const [target, setTarget] = useState("");
-  const [scope, setScope] = useState<Sanction["scope"]>("partial");
-  const [ordered, setOrdered] = useState<string | null>(null);
   const books = useMemo(() => (regions ? tradeBooks(state, regions) : null), [state, regions]);
-  const cuts = useMemo(() => (regions ? sanctionCuts(state, regions) : new Map<string, number>()), [state, regions]);
   const offers = useMemo(() => (regions ? tradeOffers(state, regions) : []), [state, regions]);
   const position = useMemo(() => (regions ? tradePosition(state, regions) : []), [state, regions]);
   if (!economy) return null;
@@ -61,18 +54,25 @@ export default function EconomyCenter({ state, accounts, regions, disabled, onBu
   const spending = budget.army + budget.industry + budget.social + budget.other;
   const gap = budget.revenue - spending;
   const share = (v: number) => `${Math.round((v / Math.max(0.01, economy.gdp)) * 1000) / 10}%`;
+  // What the debt and the reserves did since the last turn, from the turn's own snapshot of the books.
+  const last = state.chronicle.at(-1)?.economy?.before;
+  const moved = (now: number, then: number | undefined, good: "up" | "down") => {
+    if (then === undefined || Math.abs(now - then) < 0.005) return null;
+    const up = now > then;
+    return (
+      <span className={`ml-1 text-2xs font-bold ${up === (good === "up") ? "text-emerald-700" : "text-red-600"}`} title={t("econ.sinceTurn")}>
+        {up ? "+" : "−"}
+        {money(Math.abs(now - then))}
+      </span>
+    );
+  };
   const book = books?.get(state.player);
   const name = (tag: string) => text(state.countries[tag]?.name ?? tag);
-  const mine = (state.sanctions ?? []).filter((s) => s.by === state.player);
-  const against = (state.sanctions ?? []).filter((s) => s.against === state.player);
-  const others = Object.values(state.countries)
-    .filter((c) => c.tag !== state.player && !c.dormant && c.economy && !mine.some((s) => s.against === c.tag))
-    .sort((a, b) => text(a.name).localeCompare(text(b.name)));
-  const order = (key: (typeof QUICK)[number]) => {
-    const value = t(`econ.order.${key}` as MessageKey);
-    onOrder(value);
-    setOrdered(value);
-  };
+  // The latest budget the economy minister proposed in the cabinet's thread, unless it was applied or is the budget already.
+  const latest = [...(state.advice?.finance ?? [])].reverse().find((m) => m.from === "advisor" && m.budget);
+  const proposal = latest && !latest.applied ? latest.budget : undefined;
+  const shown = proposal && LINES.some((key) => Math.abs(proposal[key] - economy.budget[key]) >= 0.005) ? proposal : null;
+  const minister = state.officials?.find((o) => o.post === ADVISOR_POST.finance)?.name;
   const partners = (list: { tag: string; value: number; share: number }[]) => (
     <ul className="grid gap-1">
       {list.slice(0, 5).map((p) => (
@@ -88,8 +88,6 @@ export default function EconomyCenter({ state, accounts, regions, disabled, onBu
 
   return (
     <div className="flex flex-col gap-4">
-      {ordered && <p className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">{t("politics.ordered")}: {ordered}</p>}
-
       <div className="grid grid-cols-5 gap-0.5 rounded-xl bg-page p-1">
         {(
           [
@@ -140,6 +138,7 @@ export default function EconomyCenter({ state, accounts, regions, disabled, onBu
             <dt className="font-bold text-muted">{t("econ.debtLine")}</dt>
             <dd className="font-black tabular-nums text-ink">
               {money(economy.debt)} · {share(economy.debt)}
+              {moved(economy.debt, last?.debt, "down")}
             </dd>
           </div>
           <div className="flex items-baseline justify-between gap-2">
@@ -152,6 +151,7 @@ export default function EconomyCenter({ state, accounts, regions, disabled, onBu
             <dt className="font-bold text-muted">{t("econ.reservesLine")}</dt>
             <dd className="font-black tabular-nums text-ink">
               {money(economy.reserves)} · {share(economy.reserves)}
+              {moved(economy.reserves, last?.reserves, "up")}
             </dd>
           </div>
           <div className="flex items-baseline justify-between gap-2">
@@ -159,7 +159,6 @@ export default function EconomyCenter({ state, accounts, regions, disabled, onBu
             <dd className="font-black tabular-nums text-ink">{t("econ.pricesValue", { inflation: economy.inflation, jobless: economy.unemployment })}</dd>
           </div>
         </dl>
-        <p className="mt-1.5 text-2xs font-medium leading-snug text-muted">{t("econ.booksNote")}</p>
       </section>
       )}
 
@@ -194,7 +193,6 @@ export default function EconomyCenter({ state, accounts, regions, disabled, onBu
             {money(Math.abs(gap))} · {share(Math.abs(gap))}
           </span>
         </div>
-        <p className="mt-1 text-2xs font-medium text-muted">{state.budgetSet ? t("econ.changed") : t("econ.note")}</p>
         <div className="mt-2 flex gap-2">
           <button
             type="button"
@@ -215,6 +213,48 @@ export default function EconomyCenter({ state, accounts, regions, disabled, onBu
           )}
         </div>
       </section>
+      )}
+
+      {tab === "budget" && shown && (
+        <section className="grid gap-2 rounded-xl border border-line sheet p-3">
+          {shown && (
+            <div className="grid gap-1.5">
+              <div className={`${ui.label} flex items-center justify-between gap-2`}>
+                <span>{t("econ.proposal.title")}</span>
+                {minister && <span className="truncate normal-case tracking-normal text-muted">{minister}</span>}
+              </div>
+              {shown.reason && <p className="text-xs font-medium leading-relaxed text-ink">{shown.reason}</p>}
+              <dl className="grid gap-0.5 text-xs">
+                {LINES.map((key) => {
+                  const delta = shown[key] - economy.budget[key];
+                  return (
+                    <div key={key} className="flex items-baseline justify-between gap-2">
+                      <dt className="font-bold text-muted">{t(`econ.line.${key}` as MessageKey)}</dt>
+                      <dd className="font-black tabular-nums text-ink">
+                        {money(shown[key])}
+                        {Math.abs(delta) >= 0.005 && (
+                          <span className={`ml-1.5 text-2xs ${delta > 0 ? "text-emerald-700" : "text-red-600"}`}>
+                            {delta > 0 ? "+" : "−"}
+                            {money(Math.abs(delta))}
+                          </span>
+                        )}
+                      </dd>
+                    </div>
+                  );
+                })}
+              </dl>
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => setDraft({ revenue: shown.revenue, army: shown.army, industry: shown.industry, social: shown.social, other: shown.other })}
+                className={`${ui.secondary} px-3 py-2 text-xs`}
+              >
+                <Check className="h-4 w-4" />
+                {t("econ.proposal.apply")}
+              </button>
+            </div>
+          )}
+        </section>
       )}
 
       {tab === "trade" && book && (
@@ -246,79 +286,14 @@ export default function EconomyCenter({ state, accounts, regions, disabled, onBu
         </section>
       )}
 
-      {tab === "trade" && (
-      <section className="grid gap-2">
-        <div className={`${ui.label} flex items-center gap-1.5`}>
-          <Ban className="h-3.5 w-3.5" />
-          {t("econ.sanctions")}
-        </div>
-        {mine.length === 0 && <p className="text-xs font-medium text-muted">{t("econ.noSanctions")}</p>}
-        {mine.map((s) => (
-          <div key={s.against} className="flex items-center gap-2 rounded-xl bg-page px-2.5 py-2 text-xs">
-            <Flag tag={s.against} scenario={state.scenarioId} color={state.countries[s.against]?.color} size="sm" />
-            <span className="min-w-0 flex-1 truncate font-bold text-ink">{name(s.against)}</span>
-            <select value={s.scope} disabled={disabled} onChange={(e) => onSanction(s.against, e.target.value as Sanction["scope"])} className="rounded-lg border border-line bg-surface px-1.5 py-1 text-2xs font-bold text-ink">
-              <option value="partial">{t("econ.scope.partial")}</option>
-              <option value="full">{t("econ.scope.full")}</option>
-            </select>
-            <button type="button" disabled={disabled} onClick={() => onSanction(s.against, null)} className="text-2xs font-black uppercase tracking-wider text-muted hover:text-accent">
-              {t("econ.lift")}
-            </button>
-          </div>
-        ))}
-        <div className="flex gap-1.5">
-          <select value={target} onChange={(e) => setTarget(e.target.value)} className={`${ui.input} min-w-0 flex-1 py-2 text-xs`}>
-            <option value="">{t("econ.pick")}</option>
-            {others.map((c) => (
-              <option key={c.tag} value={c.tag}>
-                {text(c.name)}
-              </option>
-            ))}
-          </select>
-          <select value={scope} onChange={(e) => setScope(e.target.value as Sanction["scope"])} className={`${ui.input} w-28 py-2 text-xs`}>
-            <option value="partial">{t("econ.scope.partial")}</option>
-            <option value="full">{t("econ.scope.full")}</option>
-          </select>
-          <button
-            type="button"
-            disabled={disabled || !target}
-            onClick={() => {
-              onSanction(target, scope);
-              setTarget("");
-            }}
-            className={`${ui.secondary} shrink-0 px-2.5 py-2 text-xs`}
-            aria-label={t("econ.impose")}
-            title={t("econ.impose")}
-          >
-            <Plus className="h-4 w-4" />
-          </button>
-        </div>
-        {against.length > 0 && (
-          <div className="rounded-xl bg-red-50 p-2.5 text-xs">
-            <div className="mb-1 font-black text-red-700">{t("econ.against", { n: Math.round((cuts.get(state.player) ?? 0) * 100) })}</div>
-            <div className="flex flex-wrap gap-1.5">
-              {against.map((s) => (
-                <span key={s.by} className="inline-flex items-center gap-1 font-bold text-red-700">
-                  <Flag tag={s.by} scenario={state.scenarioId} color={state.countries[s.by]?.color} size="sm" />
-                  {name(s.by)} · {t(`econ.scope.${s.scope}` as MessageKey)}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-      </section>
-      )}
-
       {tab === "deals" && (
         <Deals
           state={state}
-          regions={regions}
           offers={offers}
           position={position}
           disabled={disabled}
           onSign={onSign}
           onDecline={onDecline}
-          onPropose={onPropose}
           onCancel={onCancel}
           name={name}
           money={money}
@@ -327,24 +302,6 @@ export default function EconomyCenter({ state, accounts, regions, disabled, onBu
         />
       )}
 
-      {tab === "budget" && (
-      <section className="grid gap-2">
-        <div className={ui.label}>{t("econ.decisions")}</div>
-        <div className="flex flex-wrap gap-1.5">
-          {QUICK.map((key) => (
-            <button
-              key={key}
-              type="button"
-              disabled={disabled}
-              onClick={() => order(key)}
-              className="rounded-lg border border-line bg-surface px-2.5 py-1.5 text-left text-xs font-semibold text-ink transition-colors hover:border-accent/30 disabled:opacity-50"
-            >
-              {t(`econ.quick.${key}` as MessageKey)}
-            </button>
-          ))}
-        </div>
-      </section>
-      )}
     </div>
   );
 }
@@ -369,16 +326,14 @@ const GOOD_TONE: Record<TradeGood, string> = {
   arms: "bg-red-100 text-red-800",
 };
 
-/** The market's offers this turn, the deals in force and the player's own proposals. */
+/** The market's offers this turn and the deals in force. */
 function Deals({
   state,
-  regions,
   offers,
   position,
   disabled,
   onSign,
   onDecline,
-  onPropose,
   onCancel,
   name,
   money,
@@ -386,33 +341,21 @@ function Deals({
   world,
 }: {
   state: GameState;
-  regions: Record<string, MapRegion> | null;
   offers: TradeOffer[];
   position: { good: TradeGood; balance: number; contracted: number }[];
   disabled: boolean;
   onSign: (offer: TradeOffer) => void;
   onDecline: (offer: TradeOffer) => void;
-  onPropose: EconomyCenterProps["onPropose"];
   onCancel: (id: string) => void;
   name: (tag: string) => string;
   money: (billions: number) => string;
   date: (iso: string) => string;
   world?: WorldScale;
 }) {
-  const { t, text } = useI18n();
+  const { t } = useI18n();
   const volume = useVolume(world);
-  const [side, setSide] = useState<"sell" | "buy">("sell");
-  const [good, setGood] = useState<TradeGood>(position[0]?.good ?? "grain");
-  const [partner, setPartner] = useState("");
-  const [value, setValue] = useState(1);
-  const [premium, setPremium] = useState(0);
-  const [years, setYears] = useState(2);
   const deals = (state.deals ?? []).filter((d) => d.status === "active" || d.status === "proposed");
   const left = dealsLeft(state);
-  const room = regions ? capacity(state, regions, good, side) : 0;
-  const countries = Object.values(state.countries)
-    .filter((c) => c.tag !== state.player && !c.dormant && c.economy)
-    .sort((a, b) => text(a.name).localeCompare(text(b.name)));
   const flag = (tag: string) => <Flag tag={tag} scenario={state.scenarioId} color={state.countries[tag]?.color} size="sm" />;
   const goodChip = (g: TradeGood) => <span className={`rounded-md px-1.5 py-0.5 text-2xs font-black uppercase tracking-wider ${GOOD_TONE[g]}`}>{t(`goods.${g}` as MessageKey)}</span>;
   const terms = (d: Pick<TradeDeal, "good" | "value" | "premium" | "years">) =>
@@ -428,7 +371,7 @@ function Deals({
         <p className={`text-2xs font-bold ${left ? "text-muted" : "text-amber-700"}`}>{left ? t("deals.left", { n: left, max: MAX_NEW_DEALS }) : t("deals.noneLeft")}</p>
         {offers.length === 0 && left > 0 && <p className="text-xs font-medium text-muted">{t("deals.noOffers")}</p>}
         {offers.map((o) => (
-          <div key={o.id} className="rounded-xl border border-line bg-surface p-3">
+          <div key={o.id} className="rounded-xl border border-line sheet p-3">
             <div className="flex items-start gap-2">
               <span className={`mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg ${o.side === "sell" ? "bg-emerald-50 text-emerald-700" : "bg-sky-50 text-sky-700"}`}>
                 {o.side === "sell" ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownLeft className="h-4 w-4" />}
@@ -515,71 +458,6 @@ function Deals({
         </section>
       )}
 
-      <section className="grid gap-2 rounded-xl bg-page p-3">
-        <div className={`${ui.label} flex items-center gap-1.5`}>
-          <Handshake className="h-3.5 w-3.5" />
-          {t("deals.propose")}
-        </div>
-        <div className="grid grid-cols-2 gap-1 rounded-lg bg-surface p-1">
-          {(["sell", "buy"] as const).map((v) => (
-            <button key={v} type="button" onClick={() => setSide(v)} className={`${ui.segment} ${side === v ? ui.segmentOn : ui.segmentOff}`}>
-              {t(v === "sell" ? "deals.sideSell" : "deals.sideBuy")}
-            </button>
-          ))}
-        </div>
-        <div className="grid grid-cols-2 gap-1.5">
-          <label className="grid gap-1 text-2xs font-bold text-muted">
-            {t("deals.good")}
-            <select value={good} onChange={(e) => setGood(e.target.value as TradeGood)} className={`${ui.input} py-2 text-xs`}>
-              {TRADE_GOODS.map((g) => (
-                <option key={g} value={g}>
-                  {t(`goods.${g}` as MessageKey)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="grid gap-1 text-2xs font-bold text-muted">
-            {t("deals.partner")}
-            <select value={partner} onChange={(e) => setPartner(e.target.value)} className={`${ui.input} py-2 text-xs`}>
-              <option value="">{t("deals.pickPartner")}</option>
-              {countries.map((c) => (
-                <option key={c.tag} value={c.tag}>
-                  {text(c.name)}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="grid grid-cols-3 gap-1.5">
-          <label className="grid gap-1 text-2xs font-bold text-muted">
-            {t("deals.value")}
-            <input type="number" min={0.01} step={0.1} value={value} onChange={(e) => setValue(Math.max(0, Number(e.target.value) || 0))} className={`${ui.input} px-2 py-2 text-xs tabular-nums`} />
-          </label>
-          <label className="grid gap-1 text-2xs font-bold text-muted">
-            {t("deals.priceLabel")}
-            <input type="number" min={-50} max={50} step={1} value={premium} onChange={(e) => setPremium(Number(e.target.value) || 0)} className={`${ui.input} px-2 py-2 text-xs tabular-nums`} />
-          </label>
-          <label className="grid gap-1 text-2xs font-bold text-muted">
-            {t("deals.yearsLabel")}
-            <input type="number" min={1} max={10} step={1} value={years} onChange={(e) => setYears(Math.max(1, Number(e.target.value) || 1))} className={`${ui.input} px-2 py-2 text-xs tabular-nums`} />
-          </label>
-        </div>
-        {volume(good, value, state.scenarioId) && <div className="text-2xs font-bold text-muted">{volume(good, value, state.scenarioId)}</div>}
-        <div className={`text-2xs font-bold ${room > 0 ? "text-muted" : "text-amber-700"}`}>{t("deals.capacity", { value: money(room) })}</div>
-        <button
-          type="button"
-          disabled={disabled || !partner || value <= 0 || room <= 0 || !left}
-          onClick={() => {
-            onPropose({ partner, good, side, value, premium, years });
-            setPartner("");
-          }}
-          className={`${ui.primary} px-3 py-2.5 text-xs`}
-        >
-          <Plus className="h-4 w-4" />
-          {t("deals.send")}
-        </button>
-        <p className="text-2xs font-medium text-muted">{t("deals.sendNote")}</p>
-      </section>
     </div>
   );
 }

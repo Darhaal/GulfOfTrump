@@ -2,14 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Bug, Cloud, CodeXml, Copy, Download, HardDrive, MoreHorizontal, Pencil, Play, Search, Trash2, Upload } from "lucide-react";
+import { ArrowRight, BookOpen, Bug, Cloud, CodeXml, Copy, Download, HardDrive, MoreHorizontal, Pencil, Play, Search, Store, Trash2, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
+import DownloadButton from "@/components/DownloadButton";
 import Flag from "@/components/Flag";
 import Dialog from "@/components/ui/Dialog";
 import { ui } from "@/components/ui/classes";
-import { APP_NAME, APP_VERSION, DOWNLOAD_URL, isDemo, ISSUES_URL, REPO_URL } from "@/constants/app";
+import { APP_NAME, APP_VERSION, DOWNLOAD_URL, isDemo, ISSUES_URL, REPO_URL, STORE_URL } from "@/constants/app";
 import { formatDate, yearOf } from "@/engine/calendar";
 import { SCENARIO_ORDER, SCENARIOS } from "@/engine/scenarios";
 import { parseGameState } from "@/engine/schema";
@@ -18,6 +19,7 @@ import { ABOUT } from "@/i18n/about";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
 import { downloadFile } from "@/lib/exports";
+import { openSave, SAVE_EXTENSION, saveFileName, sealSave, SaveFileError } from "@/lib/saveFile";
 import { deleteSave, duplicateSave, listSaves, loadSave, renameSave, writeSave, type ListedSave } from "@/lib/saves";
 import { useUser } from "@/lib/supabase";
 
@@ -42,8 +44,15 @@ const HOW = [
       { name: "cabinet", width: 760, height: 950 },
       { name: "parliament", width: 760, height: 950 },
       { name: "economy", width: 760, height: 950 },
+      { name: "army", width: 760, height: 950 },
+      { name: "science", width: 760, height: 950 },
       { name: "foreign", width: 760, height: 950 },
-      { name: "state", width: 760, height: 950 },
+    ],
+  },
+  {
+    cols: "md:grid-cols-[minmax(0,1.6fr)_minmax(0,0.8fr)]",
+    cards: [
+      { name: "diplomacy", width: 1600, height: 1000 },
       { name: "modes", width: 900, height: 1124 },
     ],
   },
@@ -111,7 +120,7 @@ function SaveMenu({ onRename, onDuplicate, onExport, onDelete }: { onRename: () 
         <MoreHorizontal className="h-4 w-4 text-muted group-hover:text-ink" />
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 top-full z-20 mt-1.5 w-52 rounded-xl border border-line bg-surface p-1.5 shadow-lg shadow-shade/10">
+        <div role="menu" className="absolute right-0 top-full z-20 mt-1.5 w-52 rounded-xl border border-line sheet p-1.5 shadow-lg shadow-shade/10">
           {item(Pencil, t("home.rename"), onRename)}
           {item(Copy, t("home.duplicate"), onDuplicate)}
           {item(Download, t("home.export"), onExport)}
@@ -124,7 +133,8 @@ function SaveMenu({ onRename, onDuplicate, onExport, onDelete }: { onRename: () 
 }
 
 /**
- * The front page: the last game to pick up, the dates to start from,
+ * The front page: the last game to pick up, the dates to start from, each
+ * on its scene painted in oil with the world of that day behind "More",
  * and every saved game — searched, sorted, filtered by date, renamed,
  * copied, downloaded, deleted, or brought in from a file.
  */
@@ -136,24 +146,26 @@ export default function HomeClient() {
   const [saves, setSaves] = useState<ListedSave[] | null>(null);
   const [toDelete, setToDelete] = useState<ListedSave | null>(null);
   const [toRename, setToRename] = useState<{ save: ListedSave; name: string } | null>(null);
-  const [importError, setImportError] = useState(false);
+  const [importError, setImportError] = useState<"notSave" | "tampered" | null>(null);
   const [dragging, setDragging] = useState(false);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("recent");
   const [era, setEra] = useState<ScenarioId | "all">("all");
+  const [story, setStory] = useState<ScenarioId | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const refresh = () => listSaves().then(setSaves, () => setSaves([]));
 
   useEffect(() => {
-    if (!ready) return;
+    // The public demo keeps no games, so it lists none.
+    if (!ready || demo) return;
     let alive = true;
     listSaves().then((list) => alive && setSaves(list), () => alive && setSaves([]));
     return () => {
       alive = false;
     };
-  }, [ready, user]);
+  }, [ready, user, demo]);
 
   /** What a save is called: the player's name for it, or its country and year. */
   const nameOf = (s: ListedSave) => s.title || `${text(s.playerName)} · ${yearOf(s.date)}`;
@@ -161,14 +173,15 @@ export default function HomeClient() {
   /** A save downloaded from the chronicle (here or on a friend's machine) goes back in as is. */
   const importSave = async (file: File | undefined) => {
     if (!file) return;
-    setImportError(false);
+    setImportError(null);
     try {
-      const state = parseGameState(JSON.parse(await file.text()));
-      if (!state) throw new Error("not a save");
+      // A sealed file opens only as it was exported; a plain one only from before sealed files.
+      const state = parseGameState(await openSave(await file.text()));
+      if (!state) throw new SaveFileError("notSave");
       await writeSave(state);
       router.push(`/play/${state.id}`);
-    } catch {
-      setImportError(true);
+    } catch (error) {
+      setImportError(error instanceof SaveFileError ? error.reason : "notSave");
     }
   };
 
@@ -176,7 +189,7 @@ export default function HomeClient() {
     const state = await loadSave(save.id);
     if (!state) return;
     const slug = (save.title ?? `${state.scenarioId}-${state.player}`).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "");
-    downloadFile(`gulf-of-trump-${slug}-turn-${state.turn}.json`, JSON.stringify(state, null, 1), "application/json");
+    downloadFile(saveFileName(slug, state.turn), await sealSave(state), "application/octet-stream");
   };
 
   const confirmDelete = async () => {
@@ -224,7 +237,6 @@ export default function HomeClient() {
             </span>
           </span>
         }
-        subtitle={t("app.openSource")}
       />
 
       <main className="mx-auto max-w-6xl px-4 pb-16">
@@ -239,6 +251,7 @@ export default function HomeClient() {
               <span className="text-accent">.</span>
             </h1>
             <p className="mt-4 max-w-2xl text-base md:text-lg font-medium text-muted">{t("app.tagline")}</p>
+            <DownloadButton variant="primary" why className="mt-6" />
             <div className="mt-6 flex flex-wrap gap-2">
               <a href="#dates" className={`${ui.secondary} px-4 py-2.5 text-sm`}>
                 {t("home.newGame")}
@@ -265,7 +278,7 @@ export default function HomeClient() {
               </figure>
             </a>
           )}
-          {last && (
+          {last && !demo && (
             <Link href={`/play/${last.id}`} className={`${ui.row} group flex flex-col gap-3 p-5 ${demo ? "lg:max-w-md" : ""}`}>
               <div className={ui.label}>{t("home.lastGame")}</div>
               <div className="flex items-center gap-3">
@@ -292,27 +305,44 @@ export default function HomeClient() {
             {SCENARIO_ORDER.map((id, i) => {
               const s = SCENARIOS[id];
               return (
-                <Link
+                <div
                   key={id}
-                  href={`/new/${id}`}
-                  className="group flex flex-col overflow-hidden rounded-[28px] border border-line bg-surface shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-accent/20 hover:shadow-xl hover:shadow-shade/5 animate-in fade-in slide-in-from-bottom-3"
+                  className="group flex flex-col overflow-hidden rounded-[28px] border border-line sheet shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-accent/20 hover:shadow-xl hover:shadow-shade/5 animate-in fade-in slide-in-from-bottom-3"
                   style={{ animationDelay: `${i * 70}ms`, animationFillMode: "both" }}
                 >
-                  <div className="relative bg-night px-5 pt-6 pb-5 text-white">
-                    <div className="text-6xl font-black tracking-tighter leading-none tabular-nums">{yearOf(s.startDate)}</div>
-                    <div className="mt-2 text-xs font-bold uppercase tracking-widest text-white/60">{formatDate(s.startDate, locale)}</div>
-                    <ArrowRight className="absolute right-5 top-6 h-5 w-5 text-white/40 transition-all group-hover:translate-x-1 group-hover:text-white" />
-                    <div className="mt-4 flex gap-1.5">
-                      {s.featured.slice(0, 6).map((tag) => (
-                        <Flag key={tag} tag={tag} scenario={id} color={s.countries[tag]?.color} size="md" className="border-white/20" />
-                      ))}
+                  {/* The date over its scene, painted in oil (npm run scenes); the scrim keeps the year readable. */}
+                  <Link href={`/new/${id}`} className="relative block overflow-hidden bg-night px-5 pt-6 pb-5 text-white">
+                    <Image
+                      src={`/scenes/${id}.webp`}
+                      alt=""
+                      fill
+                      unoptimized
+                      sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                      className="object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-linear-to-br from-night/85 via-night/50 to-night/15" />
+                    <div className="relative">
+                      <div className="text-6xl font-black tracking-tighter leading-none tabular-nums">{yearOf(s.startDate)}</div>
+                      <div className="mt-2 text-xs font-bold uppercase tracking-widest text-white/75">{formatDate(s.startDate, locale)}</div>
+                      <div className="mt-4 flex gap-1.5">
+                        {s.featured.slice(0, 6).map((tag) => (
+                          <Flag key={tag} tag={tag} scenario={id} color={s.countries[tag]?.color} size="md" className="border-white/20" />
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                    <ArrowRight className="absolute right-5 top-6 h-5 w-5 text-white/60 transition-all group-hover:translate-x-1 group-hover:text-white" />
+                  </Link>
                   <div className="flex flex-1 flex-col gap-2 p-5">
-                    <div className="text-lg font-black leading-tight text-ink">{text(s.title)}</div>
+                    <Link href={`/new/${id}`} className="text-lg font-black leading-tight text-ink transition-colors hover:text-accent">
+                      {text(s.title)}
+                    </Link>
                     <p className="text-sm font-medium text-muted">{text(s.tagline)}</p>
+                    <button type="button" onClick={() => setStory(id)} className={`${ui.secondary} mt-auto self-start px-3 py-1.5 text-xs`}>
+                      <BookOpen className="h-3.5 w-3.5" />
+                      {t("home.story")}
+                    </button>
                   </div>
-                </Link>
+                </div>
               );
             })}
           </div>
@@ -353,10 +383,16 @@ export default function HomeClient() {
             <div className="max-w-2xl">
               <h2 className="text-2xl font-black tracking-tight text-ink">{t("home.real.title")}</h2>
               <p className="mt-2 text-sm font-medium leading-relaxed text-muted">{t("home.real.body")}</p>
-              <a href={DOWNLOAD_URL} target="_blank" rel="noreferrer" className={`${ui.primary} mt-5 px-5 py-3 text-sm`}>
-                <Download className="h-4 w-4" />
-                {t("home.real.download")}
-              </a>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <a href={DOWNLOAD_URL} target="_blank" rel="noreferrer" className={`${ui.primary} px-5 py-3 text-sm`}>
+                  <Download className="h-4 w-4" />
+                  {t("home.real.download")}
+                </a>
+                <a href={STORE_URL} target="_blank" rel="noreferrer" className={`${ui.secondary} px-5 py-3 text-sm`}>
+                  <Store className="h-4 w-4" />
+                  {t("download.store")}
+                </a>
+              </div>
               <p className="mt-2 text-xs font-medium leading-relaxed text-muted">{t("home.real.unsigned")}</p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <a href={REPO_URL} target="_blank" rel="noreferrer" className={`${ui.secondary} px-4 py-2.5 text-xs`}>
@@ -372,136 +408,138 @@ export default function HomeClient() {
           </section>
         )}
 
-        <section
-          className={`mt-12 rounded-3xl transition-colors ${dragging ? "bg-accent/5 ring-2 ring-accent/40 ring-offset-8 ring-offset-page" : ""}`}
-          onDragOver={(e) => {
-            if (!e.dataTransfer.types.includes("Files")) return;
-            e.preventDefault();
-            setDragging(true);
-          }}
-          onDragLeave={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false);
-          }}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragging(false);
-            void importSave(e.dataTransfer.files?.[0]);
-          }}
-        >
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className={ui.label}>
-              {t("home.saves")}
-              {saves && saves.length > 0 && <span className="ml-2 rounded-md bg-page px-1.5 py-0.5 tabular-nums">{saves.length}</span>}
-            </h2>
-            <button type="button" onClick={() => fileInput.current?.click()} className={`${ui.secondary} px-3 py-2 text-xs`}>
-              <Upload className="h-3.5 w-3.5" />
-              {t("home.import")}
-            </button>
-            <input
-              ref={fileInput}
-              type="file"
-              accept="application/json,.json"
-              className="hidden"
-              onChange={(e) => {
-                void importSave(e.target.files?.[0]);
-                e.target.value = "";
-              }}
-            />
-          </div>
+        {/* Your games: the public demo keeps none, so it shows none. */}
+        {!demo && (
+          <section
+            className={`mt-12 rounded-3xl transition-colors ${dragging ? "bg-accent/5 ring-2 ring-accent/40 ring-offset-8 ring-offset-page" : ""}`}
+            onDragOver={(e) => {
+              if (!e.dataTransfer.types.includes("Files")) return;
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              void importSave(e.dataTransfer.files?.[0]);
+            }}
+          >
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 className={ui.label}>
+                {t("home.saves")}
+                {saves && saves.length > 0 && <span className="ml-2 rounded-md bg-page px-1.5 py-0.5 tabular-nums">{saves.length}</span>}
+              </h2>
+              <button type="button" onClick={() => fileInput.current?.click()} className={`${ui.secondary} px-3 py-2 text-xs`}>
+                <Upload className="h-3.5 w-3.5" />
+                {t("home.import")}
+              </button>
+              <input
+                ref={fileInput}
+                type="file"
+                accept={`${SAVE_EXTENSION},application/json,.json`}
+                className="hidden"
+                onChange={(e) => {
+                  void importSave(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
+            </div>
 
-          {saves && saves.length > 1 && (
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-              <label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-line bg-surface px-3 focus-within:border-ink sm:max-w-xs">
-                <Search className="h-4 w-4 shrink-0 text-muted" />
-                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("home.search")} className="w-full bg-transparent py-2 text-sm font-medium text-ink outline-none placeholder:text-muted" />
-              </label>
-              {eras.length > 1 && (
+            {saves && saves.length > 1 && (
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-line sheet px-3 focus-within:border-ink sm:max-w-xs">
+                  <Search className="h-4 w-4 shrink-0 text-muted" />
+                  <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("home.search")} className="w-full bg-transparent py-2 text-sm font-medium text-ink outline-none placeholder:text-muted" />
+                </label>
+                {eras.length > 1 && (
+                  <div className="flex gap-1 rounded-xl bg-page p-1">
+                    {(["all", ...eras] as const).map((id) => (
+                      <button key={id} type="button" onClick={() => setEra(id)} className={`${ui.segment} ${era === id ? ui.segmentOn : ui.segmentOff} tabular-nums`}>
+                        {id === "all" ? t("home.filter.all") : id}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <div className="flex gap-1 rounded-xl bg-page p-1">
-                  {(["all", ...eras] as const).map((id) => (
-                    <button key={id} type="button" onClick={() => setEra(id)} className={`${ui.segment} ${era === id ? ui.segmentOn : ui.segmentOff} tabular-nums`}>
-                      {id === "all" ? t("home.filter.all") : id}
+                  {(["recent", "turn", "name"] as const).map((id) => (
+                    <button key={id} type="button" onClick={() => setSort(id)} className={`${ui.segment} ${sort === id ? ui.segmentOn : ui.segmentOff}`}>
+                      {t(`home.sort.${id}`)}
                     </button>
                   ))}
                 </div>
-              )}
-              <div className="flex gap-1 rounded-xl bg-page p-1">
-                {(["recent", "turn", "name"] as const).map((id) => (
-                  <button key={id} type="button" onClick={() => setSort(id)} className={`${ui.segment} ${sort === id ? ui.segmentOn : ui.segmentOff}`}>
-                    {t(`home.sort.${id}`)}
-                  </button>
-                ))}
               </div>
-            </div>
-          )}
+            )}
 
-          {importError && <p className="mb-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-700">{t("home.importFailed")}</p>}
-          {shown === null ? (
-            <div className="h-20 animate-pulse rounded-2xl border border-line bg-surface" />
-          ) : saves!.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-1 rounded-3xl border-2 border-dashed border-line px-6 py-10 text-center text-sm font-medium text-muted">
-              {t("home.noSaves")}
-              <span className="text-xs">{t("home.dropHere")}</span>
-            </div>
-          ) : shown.length === 0 ? (
-            <p className="rounded-2xl border border-line bg-surface px-4 py-6 text-center text-sm font-medium text-muted">{t("home.nothingFound")}</p>
-          ) : (
-            <ul className="grid gap-3">
-              {shown.map((save) => (
-                <li key={save.id} className={`${ui.row} flex items-center gap-4 p-4`}>
-                  <div className="relative shrink-0">
-                    <Flag tag={save.player} scenario={save.scenarioId} size="xl" />
-                    <span className="absolute -bottom-2 -right-2 rounded-md bg-night px-1 text-[10px] font-black leading-4 text-white tabular-nums">{save.scenarioId}</span>
-                  </div>
-                  <Link href={`/play/${save.id}`} className="min-w-0 flex-1">
-                    <div className="truncate font-black text-ink">{nameOf(save)}</div>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-muted">
-                      {save.title && <span className="font-bold text-ink/70">{text(save.playerName)}</span>}
-                      <span className="tabular-nums">{formatDate(save.date, locale)}</span>
-                      <span>{t("home.turn", { n: save.turn })}</span>
-                      <span>{t("home.updated", { when: ago(save.updatedAt) })}</span>
-                      {save.sources.includes("local") && (
-                        <span className="inline-flex items-center gap-1" title={t("home.local")}>
-                          <HardDrive className="h-3 w-3" />
-                          <span className="max-sm:hidden">{t("home.local")}</span>
-                        </span>
-                      )}
-                      {save.sources.includes("cloud") && (
-                        <span className="inline-flex items-center gap-1" title={t("home.cloud")}>
-                          <Cloud className="h-3 w-3" />
-                          <span className="max-sm:hidden">{t("home.cloud")}</span>
-                        </span>
-                      )}
+            {importError && <p className="mb-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-700">{t(importError === "tampered" ? "home.importTampered" : "home.importFailed")}</p>}
+            {shown === null ? (
+              <div className="h-20 animate-pulse rounded-2xl border border-line sheet" />
+            ) : saves!.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-1 rounded-3xl border-2 border-dashed border-line px-6 py-10 text-center text-sm font-medium text-muted">
+                {t("home.noSaves")}
+                <span className="text-xs">{t("home.dropHere")}</span>
+              </div>
+            ) : shown.length === 0 ? (
+              <p className="rounded-2xl border border-line sheet px-4 py-6 text-center text-sm font-medium text-muted">{t("home.nothingFound")}</p>
+            ) : (
+              <ul className="grid gap-3">
+                {shown.map((save) => (
+                  <li key={save.id} className={`${ui.row} flex items-center gap-4 p-4`}>
+                    <div className="relative shrink-0">
+                      <Flag tag={save.player} scenario={save.scenarioId} size="xl" />
+                      <span className="absolute -bottom-2 -right-2 rounded-md bg-night px-1 text-[10px] font-black leading-4 text-white tabular-nums">{save.scenarioId}</span>
                     </div>
-                  </Link>
-                  <SaveMenu
-                    onRename={() => setToRename({ save, name: save.title ?? "" })}
-                    onDuplicate={async () => {
-                      await duplicateSave(save.id, t("home.copyOf", { name: nameOf(save) }));
-                      await refresh();
-                    }}
-                    onExport={() => void exportSave(save)}
-                    onDelete={() => setToDelete(save)}
-                  />
-                  <Link href={`/play/${save.id}`} className={`${ui.primary} px-4 py-2.5 text-xs max-sm:px-3`}>
-                    <Play className="h-4 w-4" />
-                    <span className="max-sm:hidden">{t("home.play")}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+                    <Link href={`/play/${save.id}`} className="min-w-0 flex-1">
+                      <div className="truncate font-black text-ink">{nameOf(save)}</div>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-muted">
+                        {save.title && <span className="font-bold text-ink/70">{text(save.playerName)}</span>}
+                        <span className="tabular-nums">{formatDate(save.date, locale)}</span>
+                        <span>{t("home.turn", { n: save.turn })}</span>
+                        <span>{t("home.updated", { when: ago(save.updatedAt) })}</span>
+                        {save.sources.includes("local") && (
+                          <span className="inline-flex items-center gap-1" title={t("home.local")}>
+                            <HardDrive className="h-3 w-3" />
+                            <span className="max-sm:hidden">{t("home.local")}</span>
+                          </span>
+                        )}
+                        {save.sources.includes("cloud") && (
+                          <span className="inline-flex items-center gap-1" title={t("home.cloud")}>
+                            <Cloud className="h-3 w-3" />
+                            <span className="max-sm:hidden">{t("home.cloud")}</span>
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                    <SaveMenu
+                      onRename={() => setToRename({ save, name: save.title ?? "" })}
+                      onDuplicate={async () => {
+                        await duplicateSave(save.id, t("home.copyOf", { name: nameOf(save) }));
+                        await refresh();
+                      }}
+                      onExport={() => void exportSave(save)}
+                      onDelete={() => setToDelete(save)}
+                    />
+                    <Link href={`/play/${save.id}`} className={`${ui.primary} px-4 py-2.5 text-xs max-sm:px-3`}>
+                      <Play className="h-4 w-4" />
+                      <span className="max-sm:hidden">{t("home.play")}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
 
         <footer className="mt-16 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-6 text-xs font-medium text-muted">
           <span>
             {APP_NAME} {t("app.stage")} {APP_VERSION} · MIT ·{" "}
-            <Link href="/about" className="inline-flex items-center gap-2 align-middle font-bold text-ink hover:text-accent">
-              {/* eslint-disable-next-line @next/next/no-img-element -- a small static portrait */}
-              <img src="/about/artem-okhten-oil.webp" alt="" width={24} height={30} className="h-[30px] w-6 rounded-md border border-line object-cover" />
+            <Link href="/about" className="font-bold text-ink hover:text-accent">
               {t("home.madeBy", { name: ABOUT[locale].authorName })}
             </Link>
           </span>
-          <span className="flex items-center gap-4">
+          <span className="flex flex-wrap items-center gap-4">
+            <DownloadButton variant="link" />
             <Link href="/about" className="hover:text-accent">
               {t("nav.about")}
             </Link>
@@ -515,6 +553,44 @@ export default function HomeClient() {
           </span>
         </footer>
       </main>
+
+      <Dialog
+        open={story !== null}
+        onClose={() => setStory(null)}
+        wide
+        title={story ? text(SCENARIOS[story].title) : ""}
+        footer={
+          story && (
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <DownloadButton />
+              <Link href={`/new/${story}`} className={`${ui.primary} px-4 py-2.5 text-sm`}>
+                {t("home.story.choose")}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          )
+        }
+      >
+        {story && (
+          <>
+            <div className="relative overflow-hidden rounded-2xl bg-night text-white">
+              <Image src={`/scenes/${story}.webp`} alt="" width={720} height={432} unoptimized className="h-auto w-full" />
+              <div className="absolute inset-0 bg-linear-to-t from-night/80 via-night/10 to-transparent" />
+              <div className="absolute bottom-4 left-5">
+                <div className="text-4xl font-black tracking-tighter leading-none tabular-nums">{yearOf(SCENARIOS[story].startDate)}</div>
+                <div className="mt-1.5 text-xs font-bold uppercase tracking-widest text-white/75">{formatDate(SCENARIOS[story].startDate, locale)}</div>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 text-sm font-medium leading-relaxed text-ink">
+              {text(SCENARIOS[story].story)
+                .split(/\n\s*\n/)
+                .map((paragraph, i) => (
+                  <p key={i}>{paragraph}</p>
+                ))}
+            </div>
+          </>
+        )}
+      </Dialog>
 
       <Dialog
         open={toDelete !== null}

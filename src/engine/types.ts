@@ -3,7 +3,6 @@ import type { BlocKind } from "./foreign";
 import type { ResourceEntry, ResourceType } from "./resources";
 import type { Town } from "./towns";
 import type { LawId, Laws } from "./laws";
-import type { ActDraft } from "./acts";
 
 /**
  * The game's data model. Everything the model (the LLM) may change lives in
@@ -71,7 +70,10 @@ export interface Scenario {
   startDate: string;
   defaultStep: TimeStep;
   title: Localized;
+  /** One sentence under the title on the front page. */
   tagline: Localized;
+  /** The world on the start date, in about three paragraphs (blank lines between), behind the front page's "More". */
+  story: Localized;
   briefing: Localized;
   /** English background for the model: what is happening on the start date. */
   context: string;
@@ -179,6 +181,8 @@ export interface CountryState {
   arsenal?: Arsenal;
   /** Its foreign course, kept by the engine for the countries that matter (engine/relations.ts). */
   course?: Course;
+  /** Policies at work and trade agreements' gains (engine/policies.ts); missing when none. */
+  programmes?: Programme[];
 }
 
 export type Gender = "male" | "female";
@@ -201,8 +205,8 @@ export interface Rulers {
   lead: number;
 }
 
-/** How a game treats real history after the start date: its own course, or history as a strong tendency. */
-export const GAME_MODES = ["free", "historical"] as const;
+/** How a game treats real history after the start date: history as a strong tendency, or its own course. The first is what a new game offers. */
+export const GAME_MODES = ["historical", "free"] as const;
 export type GameMode = (typeof GAME_MODES)[number];
 
 export const AIM_KINDS = ["reclaim", "expand", "protect", "security", "recover"] as const;
@@ -233,7 +237,7 @@ export interface Tie {
   trade?: number;
 }
 
-export const DEED_KINDS = ["attacked", "joined-enemy", "came-to-aid", "stood-aside", "left-bloc", "sanctioned", "aided", "allied", "made-peace", "broke-pact", "occupied"] as const;
+export const DEED_KINDS = ["attacked", "joined-enemy", "came-to-aid", "stood-aside", "left-bloc", "sanctioned", "aided", "allied", "made-peace", "broke-pact", "occupied", "provoked"] as const;
 export type DeedKind = (typeof DEED_KINDS)[number];
 
 /** Something another country did that a government remembers. */
@@ -260,14 +264,51 @@ export interface Course {
   set: { date: string; how: "start" | "election" | "coup" | "leader" };
 }
 
-export const PLAN_KINDS = ["war", "join", "bloc", "leave", "peace"] as const;
-/** Attack a country; enter a war under way; found or join a bloc; leave one; seek peace. */
+export const PLAN_KINDS = ["war", "join", "bloc", "leave", "peace", "policy", "sanction", "deal", "talks"] as const;
+/**
+ * Attack a country; enter a war under way; found or join a bloc; leave one; seek peace (the strategic plans);
+ * a policy at home; sanctions on another government or lifting them; a trade agreement; talks to ease a quarrel (the peaceful ones, engine/policies.ts).
+ */
 export type PlanKind = (typeof PLAN_KINDS)[number];
+
+/** The strategic plans, kept by the governments that matter. */
+export const STRATEGIC_KINDS: readonly PlanKind[] = ["war", "join", "bloc", "leave", "peace"];
+
+export const POLICY_KINDS = ["infrastructure", "industry", "technology", "market", "austerity", "stimulus", "armament", "disarmament", "liberalise", "crackdown"] as const;
+/** A government's policy at home (engine/policies.ts): programmes of building, industry and science; economic reform, austerity, stimulus; arming or cutting the army; opening the regime or tightening it. */
+export type PolicyKind = (typeof POLICY_KINDS)[number];
+
+/** A policy at work after its adoption, or a trade agreement's gains: what the engine applies each turn until it runs out (engine/policies.ts). */
+export interface Programme {
+  /** The plan that adopted it (or the agreement's bloc). */
+  id: string;
+  kind: PolicyKind | "trade";
+  since: string;
+  until: string;
+  /** A trade agreement: the partner. */
+  with?: string;
+  /** A trade agreement: the growth it adds, points a year. */
+  gain?: number;
+  /** Budget lines it added, as shares of GDP, taken back when it ends. */
+  lines?: Partial<Record<"army" | "industry" | "social" | "other", number>>;
+}
+
+export const INCIDENT_KINDS = ["border", "airspace", "naval", "spy", "expulsion", "cyber", "trade", "minority"] as const;
+/** A border clash, an airspace violation, a naval incident, a spy scandal, diplomats expelled, a cyber attack, a trade dispute, clashes over a minority. */
+export type IncidentKind = (typeof INCIDENT_KINDS)[number];
+
+export const INCIDENT_CAUSES = ["claim", "rivalry", "blocs", "sanctions", "regimes", "war-nearby", "tension"] as const;
+/** What set two states against each other: a claim on land, distrust and tension, rival blocs, sanctions, opposed regimes next door, a war nearby, tension alone. */
+export type IncidentCause = (typeof INCIDENT_CAUSES)[number];
+
+export const INCIDENT_ANSWERS = ["escalate", "sanction", "talks", "none"] as const;
+/** The answer an incident drew: a war plan, sanctions, talks, or protests alone. */
+export type IncidentAnswer = (typeof INCIDENT_ANSWERS)[number];
 
 export const PLAN_STAGES = ["incident", "tension", "decision", "preparation", "action"] as const;
 export type PlanStage = (typeof PLAN_STAGES)[number];
 
-export const PLAN_CAUSES = ["claim", "ambition", "treaty", "threat", "incident", "weariness", "new-government", "opportunity", "seeded"] as const;
+export const PLAN_CAUSES = ["claim", "ambition", "treaty", "threat", "incident", "weariness", "new-government", "opportunity", "seeded", "economy", "politics", "trade", "tension"] as const;
 export type PlanCause = (typeof PLAN_CAUSES)[number];
 
 export const PLAN_ENDS = ["carried-out", "compromise", "refused", "outmatched", "unrest", "government", "target-gone", "overtaken"] as const;
@@ -290,6 +331,12 @@ export interface Plan {
   side?: "attackers" | "defenders";
   /** Bloc: what it founds. */
   blocKind?: "alliance" | "pact";
+  /** Policy: which. */
+  policy?: PolicyKind;
+  /** Sanction: lift the sanctions instead of imposing them. */
+  lift?: boolean;
+  /** What led to it: the incident ("i12-1") or plan it answers. */
+  origin?: string;
   cause: PlanCause;
   stage: PlanStage;
   since: string;
@@ -323,6 +370,37 @@ export interface Arsenal {
   got?: Partial<Record<WeaponKind, number>>;
   /** It has atomic weapons. */
   nuclear?: boolean;
+  /** Its soldiers by training, thousands, adding up to the economy's (engine/army.ts); missing in older saves until step 17. */
+  men?: ArmyMen;
+  /** The player's: its armies as the game master last described them. */
+  organisation?: ArmyOrganisation;
+}
+
+/** Soldiers by training, thousands: career soldiers, conscripts already trained, recruits still in training. */
+export interface ArmyMen {
+  pro: number;
+  trained: number;
+  recruits: number;
+}
+
+/** One of the player's armies, fleets or air forces, as the game master described it. */
+export interface Formation {
+  name: string;
+  kind: "front" | "army" | "corps" | "fleet" | "air" | "reserve";
+  divisions: number;
+  commander?: string;
+  /** Where it fights or stands, in words. */
+  theatre?: string;
+  /** The provinces it stands in. */
+  provinces: string[];
+  note?: string;
+}
+
+/** The player's army organisation and when it was described. */
+export interface ArmyOrganisation {
+  date: string;
+  turn: number;
+  formations: Formation[];
 }
 
 /** Where the player's government directs its research (engine/research.ts). */
@@ -412,7 +490,7 @@ export interface Protest {
   grew?: number;
 }
 
-export const OFFICIAL_POSTS = ["head", "government", "chief", "military", "finance", "foreign", "interior", "intelligence", "science", "bank"] as const;
+export const OFFICIAL_POSTS = ["head", "government", "chief", "military", "finance", "industry", "foreign", "interior", "intelligence", "science", "bank"] as const;
 export type OfficialPost = (typeof OFFICIAL_POSTS)[number];
 
 /** A person in the player's government (engine/government.ts). */
@@ -596,6 +674,8 @@ export interface PlayerRole {
   person?: Person & { title?: string };
   /** The opposition's movement. */
   movement?: Movement;
+  /** The player's own words on who they are, which party or movement they lead and whose side they take; the game master names them from it. */
+  about?: string;
   /** Since when the player has held this role. */
   since: string;
   /** Chosen at the start; left with after the fall of their government; or won by taking power. */
@@ -619,10 +699,22 @@ export interface RegionState {
   taken?: string[];
   /** People now, thousands, once the game has moved them from the map's start figure. */
   pop?: number;
+  /** Taken in a war and left behind by the front: it counts as its holder's until a peace (engine/occupation.ts). */
+  behind?: boolean;
 }
 
 /** What the map draws of a province: kept per turn so the past can be drawn again (engine/history.ts). */
 export type RegionBorder = Pick<RegionState, "owner" | "controller" | "contested" | "held">;
+
+/** What a war has cost one of its sides since it began (engine/warLosses.ts). */
+export interface WarLosses {
+  /** Soldiers killed, thousands. */
+  killed: number;
+  /** Soldiers wounded, thousands. */
+  wounded: number;
+  /** Weapons lost in this war, by kind (rifles in thousands, the rest in pieces). */
+  arms?: Partial<Record<WeaponKind, number>>;
+}
 
 export interface War {
   id: string;
@@ -632,6 +724,8 @@ export interface War {
   since: string;
   /** A ceasefire in force until a date; the war resumes when it runs out. */
   truce?: { until: string; terms?: Text };
+  /** What the war has cost each country that fights it; missing in a save from before the record was kept. */
+  losses?: Record<string, WarLosses>;
 }
 
 export interface Alliance {
@@ -733,16 +827,6 @@ export interface Bill {
   note?: string;
 }
 
-/** A message in the conversation with the chief of staff about acts of state. */
-export interface LegalMessage {
-  from: "player" | "advisor";
-  text: string;
-  date: string;
-  turn: number;
-  /** The acts drafted with an answer. */
-  drafts?: ActDraft[];
-}
-
 /** The pillars a government stands on, and how loyal each is, 0–100. */
 export const PILLARS = ["army", "police", "security", "elites"] as const;
 export type Pillar = (typeof PILLARS)[number];
@@ -763,6 +847,82 @@ export interface Politics {
   parties: Party[];
   plots: Plot[];
   lastElection?: { date: string; results: { party: string; share: number; seats?: number }[]; note?: string };
+  /** Sittings of parliament the player held on a motion, the latest last (engine/parliament.ts). */
+  sessions?: Session[];
+  /** Talks the player held with protest leaders and plotters, the latest last (engine/talks.ts). */
+  talks?: Talk[];
+}
+
+/** What a sitting of parliament votes on: a change of one law, a bill or amendment in the player's words, or a motion of state. */
+export const MOTION_KINDS = ["law", "bill", "constitution", "confidence", "election", "postpone", "emergency"] as const;
+export type MotionKind = (typeof MOTION_KINDS)[number];
+
+export interface Motion {
+  kind: MotionKind;
+  /** The bill or amendment in the player's words; for a law, what it says beyond the change. */
+  text: string;
+  /** For a change of law: which law and its new option (engine/laws.ts). */
+  law?: string;
+  option?: string;
+}
+
+export interface SessionLine {
+  speaker: string;
+  /** The party the speaker speaks for, by id; none for the chair or an independent. */
+  party?: string;
+  text: string;
+  /** The player's own speech. */
+  player?: boolean;
+}
+
+export interface SessionVote {
+  for: number;
+  against: number;
+  abstain: number;
+  /** The seats the motion needed. */
+  need: number;
+  parties: { party: string; for: number; against: number; abstain: number }[];
+}
+
+/** A sitting of parliament on one motion: the speeches, how they swayed the parties, and the vote. */
+export interface Session {
+  id: string;
+  motion: Motion;
+  transcript: SessionLine[];
+  /** How far the speeches moved each party, by id, -0.35 to 0.35 (engine/parliament.ts). */
+  sway: Record<string, number>;
+  status: "open" | "passed" | "failed";
+  vote?: SessionVote;
+  date: string;
+  turn: number;
+}
+
+export const TALK_RESULTS = ["deal", "concession", "split", "betrayal", "none"] as const;
+export type TalkResult = (typeof TALK_RESULTS)[number];
+
+export interface TalkLine {
+  speaker: string;
+  text: string;
+  player?: boolean;
+}
+
+/** Talks with the leaders of a protest at home or with plotters the government knows of. */
+export interface Talk {
+  id: string;
+  with: "protest" | "plot";
+  /** The protest's or the plot's id. */
+  target: string;
+  /** What they are about: the protest's or the plot's title. */
+  title: string;
+  /** Who speaks for the other side. */
+  counterpart: string;
+  transcript: TalkLine[];
+  status: "open" | "done";
+  result?: TalkResult;
+  /** What was agreed or what went wrong, for the game master. */
+  note?: string;
+  date: string;
+  turn: number;
 }
 
 /** A special operation planned in a ministry. */
@@ -790,6 +950,8 @@ export interface DirectiveStatus {
   status: "progress" | "done" | "failed";
   note: string;
   text?: string;
+  /** A special operation, not a plain task: the orders panel lists these; missing before it did. */
+  operation?: boolean;
 }
 
 /** A minister's view of a turn, one paragraph in their own voice, given once the turn is played. */
@@ -853,6 +1015,8 @@ export interface Summit {
   agreements?: string[];
   /** The turn in which the player held it, for that turn's game master. */
   heldTurn?: number;
+  /** A session of a bloc the player's order called: the bloc's id. */
+  bloc?: string;
 }
 
 export const EVENT_KINDS = ["war", "diplomacy", "politics", "economy", "military", "disaster", "other"] as const;
@@ -869,6 +1033,8 @@ export interface GameEvent {
 export type AppliedChange =
   | { kind: "annex"; region: string; from: string; to: string }
   | { kind: "occupy"; region: string; from: string; to: string }
+  /** The front moved on from land `to` took from `from`: it counts as `to`'s until a peace. */
+  | { kind: "behind"; region: string; from: string; to: string }
   | { kind: "liberate"; region: string; from: string; to: string }
   | { kind: "contest"; region: string; by: string; holder: string; held?: number; was?: number }
   | { kind: "repel"; region: string; by: string; holder: string }
@@ -899,15 +1065,21 @@ export type AppliedChange =
   | { kind: "repression"; event: Repression }
   | { kind: "movement"; change: "named" | "released"; name: string }
   | { kind: "population"; country: string; deaths: number; refugees: number; to?: string; cause: string }
-  | { kind: "sanction"; by: string; against: string; change: "partial" | "full" | "lifted" }
+  | { kind: "sanction"; by: string; against: string; change: "partial" | "full" | "lifted"; plan?: string }
   | { kind: "deal"; partner: string; good: TradeGood; side: "sell" | "buy"; value: number; change: "signed" | "rejected" | "broken" | "ended"; note?: string }
   | { kind: "funds"; from: string; to: string; amount: number; type: "grant" | "loan" | "aid" | "arms" | "reparations" | "bribe"; note?: string }
   | { kind: "law"; law: LawId; from?: string; to: string }
   | { kind: "bill"; title: string; change: "passed" | "failed"; note?: string }
   | { kind: "identity"; what: "name" | "color" | "place"; from?: string; to: Text }
   | { kind: "budget"; country: string }
-  | { kind: "plan"; plan: string; type: PlanKind; by: string; target?: string; stage: PlanStage }
-  | { kind: "plan-end"; plan: string; type: PlanKind; by: string; target?: string; how: "failed" | "faded"; why: PlanEnd }
+  | { kind: "plan"; plan: string; type: PlanKind; by: string; target?: string; stage: PlanStage; policy?: PolicyKind; lift?: boolean }
+  | { kind: "plan-end"; plan: string; type: PlanKind; by: string; target?: string; how: "failed" | "faded"; why: PlanEnd; policy?: PolicyKind; lift?: boolean }
+  /** A government adopts a policy at home (engine/policies.ts). */
+  | { kind: "policy"; country: string; policy: PolicyKind; plan?: string }
+  /** Talks between two governments end in an accord: tension eases (engine/policies.ts). */
+  | { kind: "accord"; by: string; with: string; plan?: string; pact?: string }
+  /** An incident between two states, and the answer it drew (engine/incidents.ts); `plan`: the plan it led to. */
+  | { kind: "incident"; id: string; by: string; target: string; what: IncidentKind; why: IncidentCause; answer: IncidentAnswer; plan?: string }
   // A breakthrough ("done", `ahead`: years before history), a direction's setback, lucky turn or share shifted (`shift` points); "started" and "stopped" are old projects in old saves.
   | { kind: "research"; project: string; change: "started" | "stopped" | "done" | "setback" | "lucky" | "focus"; shift?: number; ahead?: number }
   | { kind: "captured"; by: string; from: string; arms: WeaponKind; n: number }
@@ -1014,6 +1186,8 @@ export interface GameState {
   deputies?: Deputy[];
   /** The government's private conversations with deputies, by deputy id. */
   deputyAdvice?: Record<string, AdviceMessage[]>;
+  /** Short biographies of the leader and ministers, by person (engine/bios.ts) and language. */
+  bios?: Record<string, Partial<Record<Locale, string>>>;
   /** The government's own plots inside its ministries, deputies against their chiefs. */
   intrigues?: Intrigue[];
   /** The player's appointments since the last turn. */
@@ -1028,8 +1202,6 @@ export interface GameState {
   placeNames?: Record<string, Localized>;
   /** Laws and decrees the government put forward, decided or not. */
   bills?: Bill[];
-  /** The conversation with the chief of staff about acts of state. */
-  legal?: LegalMessage[];
   /** The budget the player set since the last turn. */
   budgetSet?: BudgetDecision;
   /** Standing tasks of the ministries. */

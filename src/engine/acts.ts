@@ -1,17 +1,17 @@
 import { z } from "zod";
 import { isHexColor } from "./colors";
 import { applyLaws, LAW_IDS, lawsShape, type Laws, startLaws } from "./laws";
-import type { AppliedChange, Bill, GameState, Localized, Politics } from "./types";
+import { en } from "./text";
+import type { AppliedChange, Bill, GameState, Localized, Politics, Proclamation } from "./types";
 
 /**
- * Acts of state drafted in conversation. The leader tells the chief of
- * staff what to proclaim or enact and why; the chief answers in character
- * and drafts each act — a new name for the country or a city (in three
- * languages), a colour on the map, a law or a decree — with the public's
- * expected reaction, judged on the reasons given. A proclamation waits
- * for the end of the turn; a bill or decree goes before the game master,
- * who decides by the votes (or, for a decree, whether it stands). A passed
- * act changes the laws it names, and the reaction moves unrest.
+ * Acts of state. A new name for the country or one of its cities, or a new
+ * colour on the maps of the world, comes from the player's orders: the turn's
+ * game master answers such an order in "acts" (in three languages, with how
+ * the country takes it) and the engine proclaims what checks out when the turn
+ * ends (engine/identity.ts). Laws change by the game master's word on the laws
+ * in force, or as bills and decrees that wait for a verdict: a passed act
+ * changes the laws it names, and its reaction moves unrest.
  */
 
 const text = (max: number) => z.string().trim().min(1).max(max);
@@ -23,57 +23,99 @@ const reaction = z
 
 export const VOTES = ["majority", "twothirds", "decree"] as const;
 
-/** One act the chief of staff drafts. */
-const actShape = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("rename"), target: text(80), names: localized, reaction }),
-  z.object({ kind: z.literal("color"), color: z.string().trim(), reaction }),
-  z.object({ kind: z.literal("law"), title: text(200), text: z.string().trim().max(1500).default(""), laws: lawsShape, vote: z.enum(VOTES).catch("majority").default("majority"), reaction }),
-]);
+const renameShape = z.object({ kind: z.literal("rename"), target: text(80), names: localized, reaction });
+const colorShape = z.object({ kind: z.literal("color"), color: z.string().trim(), reaction });
+/** A law or decree drafted for a vote: what it says, the laws it changes, the vote it needs, how the country takes it. */
+export const LawDraftSchema = z.object({ kind: z.literal("law"), title: text(200), text: z.string().trim().max(1500).default(""), laws: lawsShape, vote: z.enum(VOTES).catch("majority").default("majority"), reaction });
 
-/** The chief of staff's answer: what they say, and the acts they drafted. */
-export const ActReplySchema = z.object({
-  answer: text(4000),
-  acts: z.array(actShape.catch(null as never)).max(12).catch([]).default([]),
-});
-export type ActReply = z.infer<typeof ActReplySchema>;
-export type ActDraft = ActReply["acts"][number];
+/** One act of state: a new name, a new colour, or a law. */
+export type ActDraft = z.infer<typeof renameShape> | z.infer<typeof colorShape> | z.infer<typeof LawDraftSchema>;
+export type LawDraft = Extract<ActDraft, { kind: "law" }>;
+
+/** The acts a turn's game master answers the player's orders with (merged into OutcomeSchema as `acts`); a malformed one is dropped. */
+export const actsField = z
+  .array(z.discriminatedUnion("kind", [renameShape, colorShape]).nullable().catch(null))
+  .max(8)
+  .catch([])
+  .default([]);
+export type TurnAct = Exclude<z.infer<typeof actsField>[number], null>;
 
 /** Reactions within reason: a single act moves unrest by at most this much either way. */
 const REACTION = { min: -10, max: 20 };
 export const boundReaction = (r: { unrest: number; note: string }) => ({ unrest: Math.round(Math.max(REACTION.min, Math.min(REACTION.max, r.unrest))), note: r.note });
 
-/** How many drafts one answer brings. */
-const MAX_DRAFTS = 4;
+/** How many acts one turn may bring. */
+const MAX_ACTS = 4;
 
-/** The acts that point at things that exist: the country, a known city, a real colour. */
-export function keepActs(reply: ActReply, cities: string[]): ActDraft[] {
-  return reply.acts
-    .filter(Boolean)
-    .filter((a) => (a.kind === "rename" ? a.target === "country" || cities.includes(a.target) : a.kind === "color" ? isHexColor(a.color) : true))
-    .slice(0, MAX_DRAFTS)
-    .map((a) => ({ ...a, reaction: boundReaction(a.reaction) }));
+/**
+ * Orders that ask for an act of state: a new name for the country or a city,
+ * or a new colour on the maps, in any of the game's languages. Without one,
+ * a turn brings no acts, whatever its answer says.
+ */
+const ASKS_FOR_ACTS = /renam|re-nam|new name|call (it|the|our)|colou?r|переимен|назва|назов|имен[уо]|перейменув|наймен|ім'я|цвет|перекрас|колір|кольор|перефарб/i;
+export const asksForActs = (orders: string[] | undefined) => (orders ?? []).some((o) => ASKS_FOR_ACTS.test(o));
+
+/** A city the player may rename: its key on the map and every name it goes by now (any language, any era). */
+export interface CityName {
+  key: string;
+  names: string[];
 }
 
-/** How many messages with the chief of staff a save keeps, and the model sees. */
-export const MAX_LEGAL = 40;
-export const LEGAL_HISTORY = 8;
+/**
+ * The acts a turn's answer brings, checked against the state: only when an
+ * order asks for one; a rename of the country, or of one of the player's
+ * cities named by any of its names; a real colour that is not the current
+ * one; one of each at most, with the reaction within reason. An opposition
+ * movement does not govern, and proclaims nothing.
+ */
+export function sanitizeActs(state: GameState, acts: z.infer<typeof actsField>, options: { orders?: string[]; cities?: CityName[]; opposition?: boolean }): { acts: TurnAct[]; dropped: number } {
+  const given = acts.filter((a): a is TurnAct => Boolean(a));
+  if (options.opposition || !asksForActs(options.orders)) return { acts: [], dropped: given.length };
+  const country = state.countries[state.player];
+  const byName = new Map<string, string>();
+  for (const c of options.cities ?? []) for (const n of [c.key, ...c.names]) byName.set(n.trim().toLowerCase(), c.key);
+  const seen = new Set<string>();
+  const out: TurnAct[] = [];
+  for (const a of given) {
+    let act: TurnAct | null = null;
+    if (a.kind === "color") {
+      const color = a.color.toLowerCase();
+      if (isHexColor(color) && color !== country?.color.toLowerCase()) act = { ...a, color };
+    } else {
+      const target = a.target.trim().toLowerCase();
+      const key = target === "country" || (country && target === en(country.name).toLowerCase()) ? "country" : byName.get(target);
+      if (key) act = { ...a, target: key };
+    }
+    const id = act ? (act.kind === "color" ? "color" : `rename:${act.target}`) : "";
+    if (!act || seen.has(id) || out.length >= MAX_ACTS) continue;
+    seen.add(id);
+    out.push({ ...act, reaction: boundReaction(act.reaction) });
+  }
+  return { acts: out, dropped: given.length - out.length };
+}
 
-/** The conversation goes into the save, the drafts with the answer. */
-export function addLegal(state: GameState, question: string, reply: { answer: string; acts: ActDraft[] }, now = new Date()): GameState {
-  const thread = state.legal ?? [];
-  return {
-    ...state,
-    legal: [
-      ...thread,
-      { from: "player" as const, text: question, date: state.date, turn: state.turn },
-      { from: "advisor" as const, text: reply.answer, date: state.date, turn: state.turn, ...(reply.acts.length ? { drafts: reply.acts } : {}) },
-    ].slice(-MAX_LEGAL),
-    updatedAt: now.toISOString(),
-  };
+/** The acts as a proclamation, to take effect when the turn ends (engine/identity.ts). */
+export function proclamationOf(acts: TurnAct[]): Proclamation | undefined {
+  const p: Proclamation = {};
+  const reactions: NonNullable<Proclamation["reactions"]> = {};
+  for (const a of acts) {
+    if (a.kind === "color") {
+      p.color = a.color;
+      reactions.color = a.reaction;
+    } else if (a.target === "country") {
+      p.name = a.names;
+      reactions.name = a.reaction;
+    } else {
+      p.places = { ...(p.places ?? {}), [a.target]: a.names };
+      reactions[`place:${a.target}`] = a.reaction;
+    }
+  }
+  if (!p.name && !p.color && !p.places) return undefined;
+  return { ...p, reactions };
 }
 
 /** A drafted law put before parliament (or signed as a decree): it waits for the game master's verdict. */
-export function proposeBill(state: GameState, draft: Extract<ActDraft, { kind: "law" }>, now = new Date()): GameState {
+export function proposeBill(state: GameState, draft: LawDraft, now = new Date()): GameState {
   const id = `bill-${state.turn}-${(state.bills?.length ?? 0) + 1}`;
   const laws = startLaws(draft.laws);
   const bill: Bill = {

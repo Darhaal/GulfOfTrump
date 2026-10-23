@@ -2,7 +2,9 @@ import { addYears, lostShares, yearsBetween } from "./abroad";
 import { roll } from "./dice";
 import { STEP_YEARS } from "./economy";
 import { endWar } from "./foreign";
+import { applyIncidents, castIncidents, describeIncidents, incidentParties, WAR_PLANS, type Incident } from "./incidents";
 import { countryName } from "./names";
+import { acceptChance, enactPeaceful, endProgrammes, isPeaceful, openPeaceful, PEACEFUL_ACTION, PEACEFUL_LADDER, peacefulRates, peacefulWhat, settlePeaceful } from "./policies";
 import {
   actorsOf,
   addTension,
@@ -26,7 +28,8 @@ import {
 } from "./relations";
 import { INTENTIONS, type IntentionSeeds, type PlanSeed } from "./scenarios/intentions";
 import { en, same } from "./text";
-import type { Aim, Alliance, AppliedChange, GameEvent, GameMode, GameState, Localized, MapRegion, Plan, PlanEnd, PlanKind, PlanStage, Scenario, ScenarioId, War } from "./types";
+import { STRATEGIC_KINDS } from "./types";
+import type { Aim, Alliance, AppliedChange, GameEvent, GameMode, GameState, Localized, MapIndex, MapRegion, Plan, PlanEnd, PlanKind, PlanStage, Scenario, ScenarioId, War } from "./types";
 
 /**
  * Countries with intentions. Every government that matters keeps plans that
@@ -44,12 +47,12 @@ import type { Aim, Alliance, AppliedChange, GameEvent, GameMode, GameState, Loca
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
-/** Live plans at once, besides allies called by a treaty. */
+/** Live strategic plans at once, besides allies called by a treaty; peaceful plans are capped by country (engine/policies.ts). */
 export const MAX_LIVE = 16;
 /** Ended plans stay this many turns, for the panel. */
 const KEEP_ENDED = 4;
-/** Live war plans at once, by era. */
-const WAR_PLANS: Record<ScenarioId, number> = { "1914": 6, "1939": 8, "1950": 4, "1964": 4, "1991": 4, "1999": 4, "2014": 4, "2022": 4 };
+/** A strategic plan: war, a war entered, a bloc, leaving one, peace. */
+export const isStrategic = (p: Pick<Plan, "kind">) => STRATEGIC_KINDS.includes(p.kind);
 /** New war plans a year for a government with a motive, before its appetite, reach and means. */
 const ERA_WAR: Record<ScenarioId, number> = { "1914": 0.35, "1939": 0.45, "1950": 0.25, "1964": 0.25, "1991": 0.15, "1999": 0.12, "2014": 0.12, "2022": 0.15 };
 /** The shortest mobilisation of each era, years. */
@@ -62,6 +65,7 @@ const LADDER: Record<PlanKind, PlanStage[]> = {
   join: ["tension", "decision", "preparation", "action"],
   leave: ["decision", "action"],
   peace: ["decision", "action"],
+  ...PEACEFUL_LADDER,
 };
 
 /** The stages a kind of plan climbs, for the panel's step bar. */
@@ -121,6 +125,17 @@ function motive(state: GameState, p: Pick<Plan, "by" | "target" | "cause">): num
   }
   if (p.cause === "seeded" || p.cause === "incident") m = Math.max(m, 1);
   return clamp(m, 0.3, 2);
+}
+
+/**
+ * Whether a military bloc's members would refuse a country: one at war, or one
+ * with a claim it means (weight 50 or more) on a strong state outside the bloc
+ * – a member that would drag them into its own war.
+ */
+function unwelcome(w: World, tag: string, bloc: Alliance): boolean {
+  if (!isMilitary(bloc)) return false;
+  if (enemiesOf(w.state, tag).size > 0) return true;
+  return (w.state.countries[tag]?.course?.aims ?? []).some((a) => (a.kind === "reclaim" || a.kind === "expand") && a.weight >= 50 && a.target && !bloc.members.includes(a.target) && strength(w, a.target) >= 0.1);
 }
 
 /** Those who would stand by a country: its military allies and the governments that guard it. */
@@ -185,7 +200,8 @@ function rates(w: World, p: Plan, at: string): { min: number; advance: number; f
         case "decision": {
           const compromise = 0.4 + (ratio > 2 && alliesOf(state, p.target).size === 0 ? 0.6 : 0) + 2 * trade;
           // A hawkish government misjudges the odds: it sees itself outmatched later than a cautious one.
-          const outmatched = ratio < 0.7 * clamp(1 - (hawk - 50) / 100, 0.5, 1.3) ? 2 : 0;
+          // Hopelessly outmatched (a great alliance behind the target), even a hawk backs down.
+          const outmatched = ratio < 0.35 ? 10 : ratio < 0.7 * clamp(1 - (hawk - 50) / 100, 0.5, 1.3) ? 2 : 0;
           return { min: 0, advance: 6 * due, fade: (compromise + outmatched) * slow, why: outmatched > compromise ? "outmatched" : "compromise" };
         }
         case "preparation":
@@ -221,6 +237,11 @@ function rates(w: World, p: Plan, at: string): { min: number; advance: number; f
       return p.stage === "decision" ? { min: 0, advance: 4 * due, fade: 2 * slow, why: "compromise" } : stay;
     case "peace":
       return p.stage === "decision" ? { min: 0, advance: 8 * (1 - hawk / 100) * due, fade: slow, why: "government" } : stay;
+    case "policy":
+    case "sanction":
+    case "deal":
+    case "talks":
+      return peacefulRates(state, p);
     case "bloc": {
       const threat = p.target ? tieOf(state, p.by, p.target).threat : 50;
       switch (p.stage) {
@@ -289,12 +310,15 @@ function settle(w: World, p: Plan): PlanEnd | null {
       if (p.bloc) {
         const bloc = state.alliances.find((a) => a.id === p.bloc);
         if (!bloc) return "target-gone";
-        return bloc.members.includes(p.by) ? "overtaken" : null;
+        if (bloc.members.includes(p.by)) return "overtaken";
+        return unwelcome(w, p.by, bloc) ? "refused" : null;
       }
       const partners = (p.partners ?? []).filter((x) => stands(w, x));
       if (!partners.length) return "target-gone";
       return partners.every((x) => allied(state, p.by, x)) ? "overtaken" : null;
     }
+    default:
+      return settlePeaceful(state, p, (tag) => stands(w, tag));
   }
 }
 
@@ -307,10 +331,11 @@ function walk(w: World, plan: Plan, steps: number, dt: number, lost: Map<string,
   if (settled) return { ...move, end: { how: howFor(settled), why: settled, date: state.date } };
   const reachAction = (date: string) => {
     move.acts = date;
-    if (p.kind !== "peace") return;
-    const chance = peaceChance(state, p, lost);
+    if (p.kind !== "peace" && p.kind !== "deal" && p.kind !== "talks") return;
+    // The other side's yes: to peace, to a trade agreement, to talks.
+    const chance = p.kind === "peace" ? peaceChance(state, p, lost) : acceptChance(state, p);
     if (chance === undefined) return;
-    move.accepted = roll(state.seed ?? state.id, state.turn, `peace:${p.id}`) < chance;
+    move.accepted = roll(state.seed ?? state.id, state.turn, `${p.kind === "peace" ? "peace" : "accept"}:${p.id}`) < chance;
     if (!move.accepted) move.end = { how: "failed", why: "refused", date };
   };
   if (p.stage === "action") reachAction(state.date);
@@ -449,23 +474,26 @@ function names(state: GameState, tag: string): Localized {
 export function warName(state: GameState, a: string, b: string): Localized {
   const x = names(state, a);
   const y = names(state, b);
-  return { en: `${x.en}–${y.en} War`, ru: `${x.ru} — ${y.ru}`, uk: `${x.uk} — ${y.uk}` };
+  return { en: `${x.en}–${y.en} War`, ru: `${x.ru} – ${y.ru}`, uk: `${x.uk} – ${y.uk}` };
 }
 
 /** The name the engine gives a bloc the game master did not name, the same way. */
 export function blocName(state: GameState, kind: "alliance" | "pact", members: string[]): Localized {
   const list = members.map((m) => names(state, m));
   const join = (l: keyof Localized, by: string) => list.map((x) => x[l]).join(by);
-  return { en: `${join("en", "–")} ${kind === "alliance" ? "Alliance" : "Pact"}`, ru: join("ru", " — "), uk: join("uk", " — ") };
+  return { en: `${join("en", "–")} ${kind === "alliance" ? "Alliance" : "Pact"}`, ru: join("ru", " – "), uk: join("uk", " – ") };
 }
 
-const change = (p: Plan, stage: PlanStage): AppliedChange => ({ kind: "plan", plan: p.id, type: p.kind, by: p.by, ...(p.target ? { target: p.target } : {}), stage });
+const change = (p: Plan, stage: PlanStage): AppliedChange => ({ kind: "plan", plan: p.id, type: p.kind, by: p.by, ...(p.target ? { target: p.target } : {}), stage, ...(p.policy ? { policy: p.policy } : {}), ...(p.lift ? { lift: true } : {}) });
+
+/** Whether a plan's stages and failures are news: every strategic plan, a peaceful one of a government that matters or aimed at the player; the light tier's are told only when they act. */
+const told = (state: GameState, p: Plan) => isStrategic(p) || Boolean(state.countries[p.by]?.course) || p.target === state.player;
 
 /** A plan ends: kept a few turns for the panel; a failure or a fade is news, and an ally that stood aside is remembered. */
 function endPlan(next: GameState, p: Plan, end: { how: "done" | "failed" | "faded"; why: PlanEnd; date: string }, turn: number, applied: AppliedChange[]): void {
   p.end = { date: end.date, turn, how: end.how, why: end.why };
-  if (end.how === "done") return;
-  applied.push({ kind: "plan-end", plan: p.id, type: p.kind, by: p.by, ...(p.target ? { target: p.target } : {}), how: end.how, why: end.why });
+  if (end.how === "done" || !told(next, p)) return;
+  applied.push({ kind: "plan-end", plan: p.id, type: p.kind, by: p.by, ...(p.target ? { target: p.target } : {}), how: end.how, why: end.why, ...(p.policy ? { policy: p.policy } : {}), ...(p.lift ? { lift: true } : {}) });
   if (p.kind === "join" && end.why === "refused" && p.cause === "treaty" && p.side) {
     const war = next.wars.find((x) => x.id === p.war);
     for (const m of war?.[p.side] ?? []) if (allied(next, m, p.by) || next.countries[p.by]?.course?.aims.some((a) => a.kind === "protect" && a.target === m)) remember(next, m, p.by, "stood-aside", -25, end.date);
@@ -552,9 +580,21 @@ function carryOut(next: GameState, p: Plan, move: PlanMove, ctx: { turn: number;
       if (!war) return "carried-out";
       // Peace with the player's government is the player's to make.
       if (move.accepted !== true) return "refused";
+      // The side that asked for terms pays for them: what the other side holds of its land, the other keeps. The game
+      // master's own peace (warsEnded with its annexations) is not touched; this is the peace the answer left out.
+      const asking = war.attackers.includes(p.by) ? war.attackers : war.defenders;
+      const granting = asking === war.attackers ? war.defenders : war.attackers;
+      for (const [id, r] of Object.entries(next.regions).sort((a, b) => a[0].localeCompare(b[0]))) {
+        if (!asking.includes(r.owner) || !granting.includes(r.controller)) continue;
+        applied.push({ kind: "annex", region: id, from: r.owner, to: r.controller });
+        r.owner = r.controller;
+        delete r.behind;
+      }
       endWar(next, war, applied);
       return "carried-out";
     }
+    default:
+      return enactPeaceful(next, p, { turn: ctx.turn, when, accepted: move.accepted }, made, applied);
   }
 }
 
@@ -575,7 +615,7 @@ export function carryOutPlans(next: GameState, moves: PlanMove[], ctx: { turn: n
       p.stage = s.stage;
       p.moved = s.date;
       if (s.stage === "preparation" && p.target) addTension(next, p.target, p.by, 25);
-      if (s.stage !== "action" && shownStage(p) === s.stage && s.stage !== "incident") applied.push(change(p, s.stage));
+      if (s.stage !== "action" && shownStage(p) === s.stage && s.stage !== "incident" && told(next, p)) applied.push(change(p, s.stage));
     }
     if (move.refused?.length) {
       for (const x of move.refused) if (allied(next, p.by, x)) remember(next, p.by, x, "stood-aside", -15, move.passed.at(-1)?.date ?? ctx.from);
@@ -648,11 +688,18 @@ function fromSeed(state: GameState, seed: PlanSeed, date: string, holders: Set<s
 }
 
 /** Courses for the countries that matter and have none yet: a new great power, a country at war, a planner. */
+/** The countries that keep a course: those that matter (relations.ts actorsOf), and those the date gives a quarrel or an aim of their own, however small. */
+function courseHolders(state: GameState, power: Map<string, number>): string[] {
+  const seeds = INTENTIONS[state.scenarioId];
+  const seeded = [...Object.keys(seeds.aims), ...Object.keys(seeds.trust ?? {})].filter((tag) => power.has(tag) && tag !== state.player && !state.countries[tag]?.exile);
+  return [...new Set([...actorsOf(state, power), ...seeded])].sort();
+}
+
 function ensureCourses(state: GameState, power: Map<string, number>): boolean {
   const seeds = INTENTIONS[state.scenarioId];
   let added = false;
   let occupied: ReturnType<typeof occupiedBy> | undefined;
-  for (const tag of [...actorsOf(state, power)].sort()) {
+  for (const tag of courseHolders(state, power)) {
     const c = state.countries[tag];
     if (!c || c.course || tag === state.player) continue;
     c.course = freshCourse(state, tag, seededFor(state, seeds, tag), state.date, (occupied ??= occupiedBy(state)));
@@ -671,7 +718,7 @@ export function seedIntentions<T extends GameState>(state: T, scenario: Pick<Sce
   const needsPlans = state.plans === undefined;
   const holders = landHolders(state);
   const power = powers(state, holders);
-  const missing = [...actorsOf(state, power)].some((tag) => tag !== state.player && state.countries[tag] && !state.countries[tag].course);
+  const missing = courseHolders(state, power).some((tag) => state.countries[tag] && !state.countries[tag].course);
   if (!needsPlans && !missing && !opts.map && (!opts.mode || state.mode === opts.mode)) return state;
   const next = structuredClone(state);
   if (opts.mode) next.mode = opts.mode;
@@ -700,6 +747,10 @@ interface OpenContext {
   changed: string[];
   /** Each country's share of its people under others' rule, 0–1. */
   lost: Map<string, number>;
+  /** The period's incidents, cast before it (engine/incidents.ts). */
+  incidents: Incident[];
+  /** The map's provinces, for the light tier's neighbours. */
+  map: Record<string, MapRegion> | null;
 }
 
 /**
@@ -720,7 +771,7 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
   const dice = (key: string) => roll(next.seed ?? next.id, ctx.turn, key);
   const live = () => plans.filter((p) => !p.end);
   const busy = (by: string, kind: PlanKind) => live().some((p) => p.by === by && p.kind === kind);
-  const room = () => live().filter((p) => p.cause !== "treaty").length < MAX_LIVE;
+  const room = () => live().filter((p) => p.cause !== "treaty" && isStrategic(p)).length < MAX_LIVE;
   const course = (tag: string) => (tag === player ? undefined : next.countries[tag]?.course);
   const open = (fields: Omit<Plan, "id" | "since" | "moved">, id?: string): Plan => {
     const plan: Plan = { id: id ?? `p${ctx.turn}-${plans.filter((p) => p.id.startsWith(`p${ctx.turn}-`)).length + 1}`, ...fields, since: ctx.to, moved: ctx.to };
@@ -733,6 +784,22 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
   const actors = [...actorsOf(next, ctx.power)].filter((t) => course(t)).sort();
   /** A side's principal: its strongest member, whose peace ends the war. */
   const principal = (side: string[]) => [...side].sort((a, b) => (ctx.power.get(b) ?? 0) - (ctx.power.get(a) ?? 0) || a.localeCompare(b))[0];
+
+  // The period's incidents land first: tension, memory, and the plan each answer opens (a war plan only while there is room for one).
+  applyIncidents(
+    next,
+    ctx.incidents,
+    {
+      date: ctx.to,
+      open: (fields) => {
+        if (fields.by === player || !next.countries[fields.by] || (fields.target && !next.countries[fields.target])) return null;
+        if (fields.kind === "war" && (!room() || busy(fields.by, "war") || live().filter((p) => p.kind === "war").length >= WAR_PLANS[era] || allied(next, fields.by, fields.target!))) return null;
+        if (fields.kind !== "war" && live().some((p) => p.by === fields.by && p.kind === fields.kind && p.target === fields.target)) return null;
+        return open(fields);
+      },
+    },
+    applied,
+  );
 
   // A new government judges the plans it inherited.
   for (const tag of ctx.changed) {
@@ -863,7 +930,7 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
     for (const [other, t] of Object.entries(c.ties)) if (t.tension >= 60 && t.trust <= -30 && !targets.has(other)) targets.set(other, { cause: "incident", m: t.tension / 50 });
     let best: { target: string; cause: Plan["cause"]; rate: number } | null = null;
     for (const [target, { cause, m }] of [...targets].sort((a, b) => a[0].localeCompare(b[0]))) {
-      if (target === tag || !stands(w, target) || allied(next, tag, target) || warBetween(next, tag, target)) continue;
+      if (target === tag || !stands(w, target) || allied(next, tag, target) || warBetween(next, tag, target) || balance(w, tag, target, []) < 0.35) continue;
       const f = clamp(balance(w, tag, target, []) - 0.3, 0.1, 1.5);
       const rate = ERA_WAR[era] * mode * clamp(Math.max(m, motive(next, { by: tag, target, cause })), 0.3, 2) * (c.hawk / 50) * (c.reach / 50) * f;
       if (!best || rate > best.rate) best = { target, cause, rate };
@@ -893,7 +960,7 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
         return tieOf(next, tag, lead).trust >= 10;
       });
     if (existing) {
-      open({ kind: "bloc", by: tag, target: threat, bloc: existing.id, cause: "threat", stage: "tension" });
+      if (!unwelcome(w, tag, existing)) open({ kind: "bloc", by: tag, target: threat, bloc: existing.id, cause: "threat", stage: "tension" });
       continue;
     }
     const partners = actors
@@ -920,6 +987,9 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
       }
     }
   }
+
+  // Peaceful decisions, for every government with land: policies at home, sanctions, trade agreements, talks (engine/policies.ts).
+  openPeaceful(next, { turn: ctx.turn, to: ctx.to, years: ctx.years, power: ctx.power, holders: ctx.holders, map: ctx.map, changed: ctx.changed, dice, open });
 }
 
 /**
@@ -931,7 +1001,7 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
 export function advanceIntentions(
   before: GameState,
   next: GameState,
-  ctx: { turn: number; from: string; to: string; years: number; regions: Record<string, MapRegion> | null; events: GameEvent[] },
+  ctx: { turn: number; from: string; to: string; years: number; regions: Record<string, MapRegion> | null; events: GameEvent[]; incidents?: Incident[] },
   applied: AppliedChange[],
 ): void {
   if (!next.plans) return;
@@ -943,10 +1013,21 @@ export function advanceIntentions(
   // Courses are judged at the end of the period.
   const at = next.date;
   next.date = ctx.to;
+  // Programmes that ran out end before new ones are weighed.
+  endProgrammes(next, ctx.to);
   ensureCourses(next, power);
+  // A state an incident draws into a war plan or talks keeps a course from now on, as any state in a plan does.
+  const incidents = ctx.incidents ?? [];
+  const seeds = INTENTIONS[next.scenarioId];
+  let occupied: ReturnType<typeof occupiedBy> | undefined;
+  for (const tag of [...new Set(incidents.flatMap(incidentParties))].sort()) {
+    const c = next.countries[tag];
+    if (!c || c.course || tag === next.player || !holders.has(tag)) continue;
+    c.course = freshCourse(next, tag, seededFor(next, seeds, tag), ctx.to, (occupied ??= occupiedBy(next)));
+  }
   const changed = newGovernments(next, ctx.from);
   refreshCourses(next, ctx.regions, power);
-  openPlans(before, next, { turn: ctx.turn, from: ctx.from, to: ctx.to, years: ctx.years, power, holders, raised, changed, lost: lostShares(next, ctx.regions) }, applied);
+  openPlans(before, next, { turn: ctx.turn, from: ctx.from, to: ctx.to, years: ctx.years, power, holders, raised, changed, lost: lostShares(next, ctx.regions), incidents, map: ctx.regions }, applied);
   next.date = at;
   next.plans = next.plans.filter((p) => !p.end || ctx.turn - p.end.turn < KEEP_ENDED);
 }
@@ -970,6 +1051,10 @@ const STAGE_TEXT: Record<PlanKind, Partial<Record<PlanStage, string>>> = {
   },
   leave: { decision: "DECISION, secret: the government weighs leaving" },
   peace: { decision: "DECISION, secret: the government weighs asking for terms" },
+  policy: { decision: "weighed in secret", preparation: "drafted and debated in the open" },
+  sanction: { tension: "threatened" },
+  deal: { preparation: "negotiated" },
+  talks: { preparation: "talks under way" },
 };
 
 const CAUSE_TEXT: Record<Plan["cause"], string> = {
@@ -982,6 +1067,10 @@ const CAUSE_TEXT: Record<Plan["cause"], string> = {
   "new-government": "a new government",
   opportunity: "opportunity",
   seeded: "where things stood on the start date",
+  economy: "the state of its economy",
+  politics: "politics at home",
+  trade: "trade",
+  tension: "tension between them",
 };
 
 const END_TEXT: Record<PlanEnd, string> = {
@@ -1001,9 +1090,9 @@ const END_TEXT: Record<PlanEnd, string> = {
  * rest by how far along it is; and the sharpest tensions between
  * governments, and those turning inward from the wars of their friends.
  */
-export function describeIntentions(state: GameState, name: (tag: string) => string): string[] {
+export function describeIntentions(state: GameState, name: (tag: string) => string, map?: Pick<MapIndex, "regions" | "neighbors"> | null): string[] {
   if (!state.plans) return [];
-  const live = state.plans.filter((p) => !p.end);
+  const live = state.plans.filter((p) => !p.end && isStrategic(p));
   const moves = new Map(castPlans(state).map((m) => [m.plan, m]));
   const who = (tag: string) => `${name(tag)} [${tag}]`;
   const warLabel = (id: string | undefined) => {
@@ -1047,28 +1136,32 @@ export function describeIntentions(state: GameState, name: (tag: string) => stri
       case "peace":
         what = `seeks peace with ${who(p.target ?? "?")} in ${warLabel(p.war)}`;
         break;
+      default:
+        what = peacefulWhat(p, who);
     }
     let now: string;
-    if (m?.end) now = m.end.how === "failed" ? `FAILS this period (${END_TEXT[m.end.why]}) — tell why` : `FADES this period (${END_TEXT[m.end.why]}) — tell how tension eased`;
+    if (m?.end) now = m.end.how === "failed" ? `FAILS this period (${END_TEXT[m.end.why]}) – tell why` : `FADES this period (${END_TEXT[m.end.why]}) – tell how tension eased`;
     else if (stage === "action") {
       const on = m?.acts ? ` on ${m.acts}` : "";
       const allies = (p.partners ?? []).filter((x) => !m?.refused?.includes(x));
       switch (p.kind) {
         case "war":
-          now = `ACTION${on}: the war begins — put it in warsStarted with attackers ${[p.by, ...allies].join(", ")} and defenders ${p.target}`;
+          now = `ACTION${on}: the war begins – put it in warsStarted with attackers ${[p.by, ...allies].join(", ")} and defenders ${p.target}`;
           break;
         case "join":
-          now = `ACTION${on}: it enters the war — put it in warsJoined (war ${p.war}, side ${p.side})`;
+          now = `ACTION${on}: it enters the war – put it in warsJoined (war ${p.war}, side ${p.side})`;
           break;
         case "bloc":
-          now = p.bloc ? `ACTION${on}: it joins — put it in alliancesJoined` : `ACTION${on}: the treaty is signed — put it in alliancesFormed (kind ${p.blocKind ?? "alliance"}, members ${[p.by, ...allies].join(", ")})`;
+          now = p.bloc ? `ACTION${on}: it joins – put it in alliancesJoined` : `ACTION${on}: the treaty is signed – put it in alliancesFormed (kind ${p.blocKind ?? "alliance"}, members ${[p.by, ...allies].join(", ")})`;
           break;
         case "leave":
-          now = `ACTION${on}: it leaves — put it in alliancesLeft`;
+          now = `ACTION${on}: it leaves – put it in alliancesLeft`;
           break;
         case "peace":
-          now = m?.accepted === undefined ? `ACTION${on}: it asks the player's government for terms; the player's orders decide` : `ACTION${on}: both sides agree to make peace — end the war in warsEnded (or a truce), with what the terms annex`;
+          now = m?.accepted === undefined ? `ACTION${on}: it asks the player's government for terms; the player's orders decide` : `ACTION${on}: both sides agree to make peace – end the war in warsEnded (or a truce), with what the terms annex`;
           break;
+        default:
+          now = `ACTION${on}`;
       }
     } else now = STAGE_TEXT[p.kind][stage] ?? stage.toUpperCase();
     const refused = m?.refused?.length ? `; ${m.refused.map(who).join(", ")} refuse${m.refused.length === 1 ? "s" : ""} to take part` : "";
@@ -1086,23 +1179,57 @@ export function describeIntentions(state: GameState, name: (tag: string) => stri
     .filter((c) => c.course && c.course.reach < 30 && !belligerents.has(c.tag) && [...belligerents].some((b) => allied(state, c.tag, b) || (c.course!.ties[b]?.trust ?? 0) >= 30))
     .sort((a, b) => (power.get(b.tag) ?? 0) - (power.get(a.tag) ?? 0))
     .slice(0, 4);
-  if (!lines.length && !tensions.length && !inward.length) return [];
-  const out = ["", "INTENTIONS ABROAD (the engine's plans and the stage each reaches this period, already decided — tell them in the story; wars, war entries and military alliances or pacts among other governments come only from here, any other is dropped):"];
+  const peaceful = describePeaceful(state, moves, power, who);
+  const incidents = describeIncidents(castIncidents(state, map?.regions, map?.neighbors), name);
+  if (!lines.length && !tensions.length && !inward.length && !peaceful.length && !incidents.length) return [];
+  const out = ["", "INTENTIONS ABROAD (the engine's plans and the stage each reaches this period, already decided – tell them in the story; wars, war entries and military alliances or pacts among other governments come only from here, any other is dropped):"];
   out.push(...(lines.length ? lines : ["- no plan is under way"]));
+  out.push(...incidents, ...peaceful);
   if (tensions.length) out.push(`SHARPEST TENSIONS (tension, trust): ${tensions.map((x) => `${x.a} → ${x.b} ${x.tension}, ${x.trust}`).join("; ")}`);
   if (inward.length) out.push(`TURNED INWARD (crisis or weariness: they help their friends at war less): ${inward.map((c) => `${who(c.tag)} reach ${c.course!.reach}`).join("; ")}`);
   return out;
 }
 
-/** What other governments do in the open, for the ministers who watch abroad: plans past the secret decision, those touching the player first. */
+/**
+ * The period's peaceful moves that matter, in one line: what is adopted,
+ * imposed, signed or agreed, what comes into the open, what fails – those
+ * touching the player first, then by the strength of who moves.
+ */
+function describePeaceful(state: GameState, moves: Map<string, PlanMove>, power: Map<string, number>, who: (tag: string) => string): string[] {
+  const items: { p: Plan; m: PlanMove; rank: number }[] = [];
+  for (const p of state.plans ?? []) {
+    const m = moves.get(p.id);
+    if (p.end || !m || isStrategic(p)) continue;
+    const acts = m.stage === "action" && !m.end;
+    const fails = m.end && m.end.how !== "done" && told(state, p);
+    const opens = !m.end && m.passed.some((s) => shownStage(p) === s.stage && s.stage !== "action") && Boolean(state.countries[p.by]?.course);
+    if (!acts && !fails && !opens) continue;
+    const mine = p.target === state.player || p.by === state.player;
+    items.push({ p, m, rank: (mine ? 0 : 3) + (acts ? 0 : fails ? 1 : 2) - (power.get(p.by) ?? 0) });
+  }
+  if (!items.length) return [];
+  const shown = items.sort((a, b) => a.rank - b.rank || a.p.id.localeCompare(b.p.id)).slice(0, 8);
+  const text = shown.map(({ p, m }) => {
+    const kind = p.kind as keyof typeof PEACEFUL_ACTION;
+    const action = p.kind === "sanction" && p.lift ? "LIFTED" : PEACEFUL_ACTION[kind];
+    const what = p.kind === "sanction" ? `sanctions on ${who(p.target ?? "?")}` : peacefulWhat(p, who);
+    const now = m.stage === "action" && !m.end ? `${action}${m.acts ? ` ${m.acts}` : ""}` : m.end ? `fails (${END_TEXT[m.end.why]})` : (STAGE_TEXT[p.kind][m.stage] ?? m.stage);
+    return `${who(p.by)}: ${what} ${now}${p.origin?.startsWith("i") ? " (after the incident)" : ""}`;
+  });
+  return [`PEACEFUL MOVES (also the engine's and decided; it applies their effects to budgets, growth, regimes, sanctions and trade agreements – tell the notable ones in a phrase and put none of them in your answer): ${text.join("; ")}`];
+}
+
+/** What other governments do in the open, for the ministers who watch abroad: plans past the secret decision, those touching the player first, then strategic ones, then the strongest governments' peaceful ones. */
 export function describeVisiblePlans(state: GameState, name: (tag: string) => string): string[] {
-  const visible = (state.plans ?? []).filter((p) => !p.end && shownStage(p));
+  const visible = (state.plans ?? []).filter((p) => !p.end && shownStage(p) && told(state, p));
   if (!visible.length) return [];
   const mine = (p: Plan) => p.target === state.player || p.partners?.includes(state.player);
+  const power = powers(state);
+  const who = (tag: string) => `${name(tag)} [${tag}]`;
   const lines = visible
-    .sort((a, b) => Number(mine(b)) - Number(mine(a)))
+    .sort((a, b) => Number(mine(b)) - Number(mine(a)) || Number(isStrategic(b)) - Number(isStrategic(a)) || (power.get(b.by) ?? 0) - (power.get(a.by) ?? 0) || a.id.localeCompare(b.id))
     .slice(0, 8)
-    .map((p) => `- ${name(p.by)} [${p.by}]: ${p.kind}${p.target ? ` → ${name(p.target)} [${p.target}]` : ""}, ${shownStage(p)} since ${p.moved}`);
+    .map((p) => (isPeaceful(p.kind) ? `- ${who(p.by)}: ${peacefulWhat(p, who)}, ${STAGE_TEXT[p.kind][shownStage(p)!] ?? shownStage(p)} since ${p.moved}` : `- ${who(p.by)}: ${p.kind}${p.target ? ` → ${who(p.target)}` : ""}, ${shownStage(p)} since ${p.moved}`));
   return ["", "OTHER GOVERNMENTS' VISIBLE MOVES (what anyone can see; secret decisions are not here):", ...lines];
 }
 
@@ -1118,6 +1245,6 @@ export function describeCourse(state: GameState, tag: string, name: (tag: string
   const deeds = c.memory.filter((m) => m.by === state.player);
   if (deeds.length) lines.push(`- you remember of the player's government: ${deeds.map((d) => `${d.what} (${d.date})`).join("; ")}`);
   const own = (state.plans ?? []).filter((p) => !p.end && p.by === tag);
-  if (own.length) lines.push(`- your plans: ${own.map((p) => `${p.kind}${p.target ? ` against ${name(p.target)}` : ""}${p.partners?.length ? ` with ${p.partners.map(name).join(", ")}` : ""}, ${p.stage}`).join("; ")}`);
+  if (own.length) lines.push(`- your plans: ${own.map((p) => (isPeaceful(p.kind) ? `${peacefulWhat(p, name)}, ${p.stage}` : `${p.kind}${p.target ? ` against ${name(p.target)}` : ""}${p.partners?.length ? ` with ${p.partners.map(name).join(", ")}` : ""}, ${p.stage}`)).join("; ")}`);
   return lines;
 }

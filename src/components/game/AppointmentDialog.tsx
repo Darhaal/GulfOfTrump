@@ -140,7 +140,7 @@ export default function AppointmentDialog({ state, post, busy, disabled, onClose
             <section className="grid gap-2">
               <div className={ui.label}>{t("appoint.candidates")}</div>
               {candidates.map((c) => (
-                <article key={c.name} className="grid gap-1.5 rounded-xl border border-line bg-surface p-3">
+                <article key={c.name} className="grid gap-1.5 rounded-xl border border-line sheet p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="text-sm font-black text-ink">{c.name}</div>
@@ -210,7 +210,7 @@ export default function AppointmentDialog({ state, post, busy, disabled, onClose
             {thread.length > 0 && (
               <ChatScroll watch={`${advisor}-${thread.length}-${asking}`} className="max-h-60">
                 {thread.map((m, i) => (
-                  <div key={i} className={`max-w-[92%] rounded-2xl px-3 py-2 text-xs ${m.from === "player" ? "ml-auto rounded-br-md bg-ink text-on-ink" : "rounded-bl-md border border-line bg-surface text-ink"}`}>
+                  <div key={i} className={`max-w-[92%] rounded-2xl px-3 py-2 text-xs ${m.from === "player" ? "ml-auto rounded-br-md bg-ink text-on-ink" : "rounded-bl-md border border-line sheet text-ink"}`}>
                     <div className={`mb-0.5 text-2xs font-black uppercase tracking-widest ${m.from === "player" ? "text-on-ink/60" : "text-muted"}`}>{m.from === "player" ? t("diplomacy.you") : nameOf(advisor)}</div>
                     <p className="whitespace-pre-wrap font-medium leading-relaxed">{m.text}</p>
                   </div>

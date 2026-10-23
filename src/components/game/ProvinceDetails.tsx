@@ -101,7 +101,7 @@ export default function ProvinceDetails({
           )}
         {fact(<Ruler className="h-3.5 w-3.5" />, t("province.area"), t("province.areaValue", { n: province.area.toLocaleString(locale) }))}
         {fact(<TrainFront className="h-3.5 w-3.5" />, t("province.rail"), t(`rail.${railLevel(province)}` as MessageKey))}
-        {fact(<Anchor className="h-3.5 w-3.5" />, province.coastal ? t("province.coastal") : t("province.inland"), province.coastal ? "✓" : "—")}
+        {fact(<Anchor className="h-3.5 w-3.5" />, province.coastal ? t("province.coastal") : t("province.inland"), province.coastal ? "✓" : "–")}
         {province.city && fact(<Building2 className="h-3.5 w-3.5" />, t("province.city"), province.city)}
         {resources.length > 0 && (
           <div className="rounded-xl bg-page px-3 py-2 text-xs">

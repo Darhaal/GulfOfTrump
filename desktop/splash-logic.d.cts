@@ -6,7 +6,7 @@ export function startupProgress(phase: StartupPhase, elapsedMs: number, expected
 export function nextEstimate(previousMs: number, actualMs: number): number;
 export function pickQuotes(ids: string[], seen: string[] | undefined, count: number, random?: () => number): { picked: string[]; seen: string[] };
 export function localeOf(systemLocale: string | undefined): QuoteLocale;
-export function quoteIn(
-  quote: { text?: Partial<Record<QuoteLocale, string>>; name?: Partial<Record<QuoteLocale, string>>; year?: number },
-  locale: QuoteLocale,
-): { text: string; name: string; year: number | undefined };
+export function linesFile(publicDir: string, locale: QuoteLocale): string;
+export function publicFile(publicDir: string, webPath: string | undefined): string | null;
+export function interleave<A, B>(a: A[], b: B[]): (A | B)[];
+export function readMs(text: string): number;

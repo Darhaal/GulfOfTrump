@@ -40,7 +40,7 @@ export default function Dialog({ open, onClose, title, children, footer, wide, h
         role="dialog"
         aria-modal="true"
         tabIndex={-1}
-        className={`relative w-full ${huge ? "sm:max-w-4xl" : wide ? "sm:max-w-2xl" : "sm:max-w-md"} max-h-[92vh] flex flex-col bg-surface border border-line rounded-t-[24px] sm:rounded-[24px] shadow-2xl shadow-shade/10 outline-none animate-in fade-in zoom-in-95 duration-200`}
+        className={`relative w-full ${huge ? "sm:max-w-4xl" : wide ? "sm:max-w-2xl" : "sm:max-w-md"} max-h-[92vh] flex flex-col sheet border border-line rounded-t-[24px] sm:rounded-[24px] shadow-2xl shadow-shade/10 outline-none animate-in fade-in zoom-in-95 duration-200`}
       >
         <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-3 border-b border-divider">
           <div className="text-lg font-black text-ink tracking-tight leading-tight">{title}</div>

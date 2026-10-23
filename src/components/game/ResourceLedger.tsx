@@ -55,7 +55,7 @@ export default function ResourceLedger({ accounts, economy }: { accounts: Accoun
         const made = accounts.production[type] ?? 0;
         const need = accounts.need[type] ?? 0;
         const per = accounts.world?.perPoint[type];
-        const real = (points: number) => (per ? amount(points * per, type) : "—");
+        const real = (points: number) => (per ? amount(points * per, type) : "–");
         const s = resourceState(accounts, type);
         const scale = Math.max(made, need, 0.01);
         const surplus = made - need;

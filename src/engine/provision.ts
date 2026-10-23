@@ -1,5 +1,6 @@
 import { grainBooks, type GrainBook } from "./deals";
 import { type Accounts, nationalAccounts, RICH_INCOME, socialNorm } from "./economy";
+import { countsFor } from "./occupation";
 import { peopleIn } from "./population";
 import { harvestBonus, medicineBonus } from "./researchEffects";
 import type { ResourceType } from "./resources";
@@ -84,12 +85,13 @@ export function provisionOf(state: ProvisionState, tag: string, map: Record<stri
   const e = country?.economy;
   if (!e) return null;
   // The land: how many of its people live under someone else's guns or on a front, and how rich it is.
+  // Land the front has left behind is its captor's to feed (engine/occupation.ts).
   let people = 0;
   let held = 0;
   let front = 0;
   let richness = 0;
   for (const [id, r] of Object.entries(state.regions)) {
-    if (r.owner !== tag) continue;
+    if (countsFor(r) !== tag) continue;
     const p = map[id];
     const n = peopleIn(r, p);
     people += n;

@@ -149,7 +149,7 @@ const ROWS: Record<string, Row> = {
   palau: ["Палау", "Палау", "Palau"],
   palestine: ["Палестина", "Палестина", "Palestine"],
   panama: ["Панама", "Панама", "Panama"],
-  "papua-new-guinea": ["Папуа — Новая Гвинея", "Папуа Нова Гвінея", "Papua New Guinea"],
+  "papua-new-guinea": ["Папуа – Новая Гвинея", "Папуа Нова Гвінея", "Papua New Guinea"],
   paraguay: ["Парагвай", "Парагвай", "Paraguay"],
   persia: ["Персия", "Персія", "Persia"],
   peru: ["Перу", "Перу", "Peru"],

@@ -6,6 +6,11 @@ The leaders and ministers of the game, painted in oil by `npm run portraits`
 - **Who:** `scripts/portraits/people.json` — every leader of the eight start
   dates and the key ministers of the main countries, each with a Wikidata id.
   The script reads each person's picture (P18) and sex (P21) from Wikidata.
+  `scripts/portraits/quoted.json` holds the writers and thinkers quoted while
+  a turn is written who are not the game's people; `npm run portraits --
+  --quoted` paints them the same way (an old painting, bust or engraving for
+  the ancients) and credits them here, but they stay out of the engine's
+  index.
 - **Which photographs:** only those Commons gives a free licence — public
   domain, CC0, CC BY, CC BY-SA or the Open Government Licence. Nothing under
   NC, ND, GFDL alone or fair use.

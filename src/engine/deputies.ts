@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type AdviceMessage, type AdviceReply, type AdvisorId, MAX_ADVICE } from "./advisors";
+import { type AdviceMessage, type AdviceReply, type AdvisorId, MAX_ADVICE, swayOf } from "./advisors";
 import { roll } from "./dice";
 import { STEP_YEARS } from "./economy";
 import { officialAt } from "./government";
@@ -415,7 +415,14 @@ export function addDeputyAdvice(state: GameState, deputyId: string, question: st
   const thread = state.deputyAdvice?.[deputyId] ?? [];
   const asked: AdviceMessage = { from: "player", text: question, date: state.date, turn: state.turn };
   const answered: AdviceMessage = { from: "advisor", text: reply.answer, date: state.date, turn: state.turn };
-  return { ...state, deputyAdvice: { ...state.deputyAdvice, [deputyId]: [...thread, asked, answered].slice(-MAX_ADVICE) }, updatedAt: now.toISOString() };
+  // A word in private may win the deputy over or put them off, as with a minister.
+  const mood = swayOf(state.deputies?.find((d) => d.id === deputyId), reply, state.turn);
+  return {
+    ...state,
+    deputyAdvice: { ...state.deputyAdvice, [deputyId]: [...thread, asked, answered].slice(-MAX_ADVICE) },
+    ...(mood && state.deputies ? { deputies: state.deputies.map((d) => (d.id === deputyId ? { ...d, mood } : d)) } : {}),
+    updatedAt: now.toISOString(),
+  };
 }
 
 /** A save from before deputies: empty lists, so a ministry's people can be asked after. */

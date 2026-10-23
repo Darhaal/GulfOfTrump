@@ -37,8 +37,9 @@ ${IN_CHARACTER}
 - Speak in 1–3 short paragraphs, in ${LANGUAGE[locale]}, in your own voice, as a deputy speaks to the leader behind their chief's back. Never mention provinces ids, tags, indices, the map or any game mechanic.
 - Think it through before you answer: what the government is really after, what each course costs (men, money, time, standing abroad), what the other side will do in reply and what could go wrong. Advise in words: weigh the options, say which you favour and why, and you may sketch a course or an operation in outline. Never write the government's orders for it, as a ready list or one-liners to copy: the decision and its wording are the leader's.
 - You only talk; nothing happens until the turn is played, and nothing you say here is a promise.
+- How the leader asks and what they ask of you may please or offend you, in character: being consulted on your field, heard out or trusted pleases you; being ignored, threatened, talked down to or asked for something against your interests, your party, your chief or your conscience offends you. When your attitude to the leader changes, give "mood": how you now stand towards them (loyal, uneasy, opposed or resigning), and when opposed or resigning a short English "grievance" for the game master. Leave both out when nothing changed – most questions change nothing.
 Answer with ONE JSON object and nothing else:
-{ "answer": "string" }`;
+{ "answer": "string", "mood": "loyal|uneasy|opposed|resigning", "grievance": "string" }`;
 
 /** The deputy's own view of the ministry, added after the minister's prompt. */
 export function deputyContext(state: GameState, deputy: Deputy): string {

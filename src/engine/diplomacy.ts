@@ -1,8 +1,10 @@
 import { z } from "zod";
+import { clipAnswer } from "./advisors";
 import type { DiplomacyMessage, GameState, Stance } from "./types";
 
 export const DiplomacySchema = z.object({
-  reply: z.string().trim().min(1).max(4000),
+  // A long letter is cut at a whole sentence, never refused.
+  reply: z.string().trim().min(1).transform(clipAnswer),
   stance: z.enum(["agree", "refuse", "counter", "neutral"]).catch("neutral"),
   summary: z.string().trim().max(400).default(""),
 });

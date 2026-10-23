@@ -368,6 +368,9 @@ export function applyPolitics(current: Politics, change: PoliticsChange | undefi
       : current.lastElection
         ? { lastElection: current.lastElection }
         : {}),
+    // Sittings and talks held between turns stay on record (engine/parliament.ts, engine/talks.ts).
+    ...(current.sessions ? { sessions: current.sessions } : {}),
+    ...(current.talks ? { talks: current.talks } : {}),
   };
 }
 

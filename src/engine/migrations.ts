@@ -1,8 +1,9 @@
 import { seedDomestic } from "./abroad";
+import { seedMen } from "./army";
 import { seedArsenals } from "./arsenal";
 import { ensureDeputies } from "./deputies";
 import { recolor } from "./colors";
-import { seedEconomies } from "./economy";
+import { boundEconomies, seedEconomies } from "./economy";
 import { ensureWorldBodies, fillBlocKinds, fillTreaties } from "./foreign";
 import { seedIntentions } from "./intentions";
 import { settleFronts } from "./outcome";
@@ -82,6 +83,21 @@ const MIGRATIONS: Migration[] = [
     what: "Research directions instead of projects: the default split, each direction as far ahead as the save's projects took it (unfinished ones by their progress), an unfinished bomb as the atomic programme, finished projects kept as breakthroughs.",
     run: (s) => migrateResearch(s),
   },
+  {
+    n: 17,
+    what: "Soldiers by training for every army: career soldiers, trained conscripts and recruits, by the split of the era and, for the player, the conscription law.",
+    run: (s) => seedMen(s),
+  },
+  {
+    n: 21,
+    what: "An eighth ministry, industry, split from the economy: in a game begun before it the post stays vacant until someone is appointed, and the economy (still the finance ministry underneath) keeps its minister, directives and conversations.",
+    run: (s) => s,
+  },
+  {
+    n: 22,
+    what: "Peaceful plans (policies, sanctions, trade agreements, talks), programmes at work and incidents: a save from before them has none, and the first turn opens them.",
+    run: (s) => s,
+  },
 ];
 
 /** The number of the last step: what a new game starts at. */
@@ -114,5 +130,7 @@ export function refreshSave(state: GameState, scenario: Scenario): GameState {
   const seeds = scenario.alliances;
   // Politics abroad, the ministers' interests and the courses of the countries that matter fill in on every load as well as by steps 7, 9 and 10: a save an older build wrote back has lost them.
   // Leader lines are read into people on every load too (step 13), so a portrait added later reaches an old save.
-  return withPeople(seedIntentions(seedInterests(seedDomestic(fillTreaties(ensureWorldBodies(recolor(state), seeds), seeds), scenario)), scenario));
+  // An economy edited outside the game is brought back within what any country could have by this date (engine/economy.ts).
+  const years = (Date.parse(state.date) - Date.parse(scenario.startDate)) / (365.25 * 86_400_000);
+  return boundEconomies(withPeople(seedIntentions(seedInterests(seedDomestic(fillTreaties(ensureWorldBodies(recolor(state), seeds), seeds), scenario)), scenario)), years);
 }

@@ -1,6 +1,6 @@
 # Gulf of Trump
 
-![Version](https://img.shields.io/badge/version-1.0.4--beta-blue.svg) ![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Node](https://img.shields.io/badge/node-%E2%89%A522.12-339933.svg)
+[![Microsoft Store](https://img.shields.io/badge/Microsoft%20Store-Get%20it-0078D4.svg)](https://apps.microsoft.com/detail/9n07jx2chmw0) ![Version](https://img.shields.io/badge/version-1.0.5--beta-blue.svg) ![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Node](https://img.shields.io/badge/node-%E2%89%A522.12-339933.svg)
 
 An alternate-history grand strategy game where a language model is the game
 master. Pick a turning point of the 20th or 21st century, pick any country,
@@ -16,17 +16,24 @@ front of every turn.
 
 > **Beta. A sandbox: no goals and no victory screen — your country, your
 > plan.** Eight dates; about 2,700 provinces with terrain, people, resources and
-> railways, and fronts that run between the towns each side holds; an
-> economy for every country with trade, sanctions and trade deals; a
-> government of named ministers; parties, a parliament and the street;
-> alliances, summits and sessions of the UN. Single player.
+> railways, and fronts that run between the towns each side holds; an army
+> counted piece by piece; an economy for every country with trade, sanctions
+> and trade deals; seven directions of research racing history; eight
+> ministries led by the real ministers of the day; parties, a parliament and
+> the street; letters to any government, summits and sessions of the UN.
+> Single player.
 
 | | | |
 |---|---|---|
-| ![The Secretary of Defense, his interests and his report after the turn](public/screens/1950/cabinet.jpg) | ![The House of Representatives seat by seat](public/screens/1950/parliament.jpg) | ![A budget in dollars of 1950](public/screens/1950/economy.jpg) |
-| **Ministers of the day** with interests of their own, who report after each turn | **Politics at home:** parties, elections, laws that need votes | **An economy that keeps its books**, in money of the day |
-| ![China under fog of war: its figures as Washington estimates them](public/screens/1950/foreign.jpg) | ![Acts of state: a law drafted for Congress](public/screens/1950/state.jpg) | ![Resources, transport, people and terrain over Korea](public/screens/1950/modes.jpg) |
-| **Other countries as you know them:** wars, blocs and, under fog of war, estimates | **Acts of state:** rename the country or a city, rewrite a law | **Six maps** of about 2,700 provinces |
+| ![The cabinet's eight ministries and the Secretary of Defense's view of the turn](public/screens/1950/cabinet.jpg) | ![A sitting of the House of Representatives on the Defense Production Act](public/screens/1950/parliament.jpg) | ![Debt, reserves and a budget in dollars of 1950](public/screens/1950/economy.jpg) |
+| **Ministers of the day** in eight ministries, with interests of their own, who report after each turn | **Politics at home:** parties, elections, sittings where you speak for your bills | **An economy that keeps its books**, in money of the day |
+| ![The Secretary of Defense above the army: soldiers by training and weapons in service](public/screens/1950/army.jpg) | ![Research by direction, against the years of history](public/screens/1950/science.jpg) | ![China under fog of war: its economy and army as Washington estimates them](public/screens/1950/foreign.jpg) |
+| **An army counted piece by piece**, with its armies and fronts | **Research racing history** in seven directions | **Other countries as you know them:** wars, pacts and, under fog of war, estimates |
+
+| | |
+|---|---|
+| ![The diplomatic map for the United Kingdom: its empire, its allies and its enemies in Korea](public/screens/1950/diplomacy.jpg) | ![Resources, transport, people and terrain over Korea](public/screens/1950/modes.jpg) |
+| **The world as any country sees it** on the diplomatic map | **Seven maps** of about 2,700 provinces |
 
 Any turn can be shared as a picture, and the whole game replayed as a
 timelapse video of its borders:
@@ -163,7 +170,12 @@ project folder, AES-256-GCM encrypted. Details and limits: [docs/security.md](do
 
 ## Running it
 
-**Windows:** download `GulfOfTrump-Setup-….exe` from the
+**Windows, the easy way:** get it from the
+[Microsoft Store](https://apps.microsoft.com/detail/9n07jx2chmw0), then sign in
+with ChatGPT in Settings. The Store version is signed by Microsoft and updated
+by the Store.
+
+**Windows, the installer:** download `GulfOfTrump-Setup-….exe` from the
 [latest release](https://github.com/Darhaal/GulfOfTrump/releases/latest), install it and
 sign in with ChatGPT in Settings. The app updates itself. It is not signed
 yet, so Windows SmartScreen may warn about it: *More info* → *Run anyway*.

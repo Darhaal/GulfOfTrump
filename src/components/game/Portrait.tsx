@@ -54,7 +54,7 @@ export default function Portrait({
       unoptimized
       loading="lazy"
       onError={() => portrait && setFailed(portrait)}
-      className={`${s.cls} shrink-0 border border-line bg-night object-cover object-top ${className}`}
+      className={`${s.cls} shrink-0 border border-line/50 bg-night object-cover object-top ${className}`}
     />
   );
 }

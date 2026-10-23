@@ -33,7 +33,7 @@ export async function availableModels(): Promise<ModelInfo[]> {
 }
 
 export async function complete(request: CompletionRequest): Promise<string> {
-  if (request.demo || isMockEnabled()) return mockComplete(request.instructions, request.input, request.onDelta, request.locale);
+  if (request.demo || isMockEnabled()) return mockComplete(request.instructions, request.input, request.onDelta, request.locale, request.signal);
   const token = await accessToken();
   let model = request.model;
   if (!model) {

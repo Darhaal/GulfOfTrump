@@ -8,7 +8,7 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin", "cyr
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
-  title: { default: `${APP_NAME} — alternate-history strategy`, template: `%s · ${APP_NAME}` },
+  title: { default: `${APP_NAME} – alternate-history strategy`, template: `%s · ${APP_NAME}` },
   description: "Open-source alternate-history grand strategy where a language model is the game master. Plays on your own ChatGPT plan.",
   applicationName: APP_NAME,
   // The demo site is there to be found; a game on someone's own computer is nothing for search engines.
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#F8FAFC",
+  themeColor: "#F5F0E6",
   width: "device-width",
   initialScale: 1,
 };

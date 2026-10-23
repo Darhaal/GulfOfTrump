@@ -11,16 +11,29 @@
 -->
 <style>
   :root {
-    --page: #F8FAFC; --surface: #FFFFFF; --line: #E6E1DC; --ink: #1A1F26; --muted: #8A9099; --accent: #C2410C;
+    --page: #F5F0E6; --surface: #FCF9F3; --line: #E2D8C8; --ink: #1E1B17; --muted: #847B70; --accent: #C2410C;
+    /*
+     * The game's paper (public/paper), copied beside the app's server: next to
+     * this page in desktop/ while developing, one folder up from the archive
+     * once installed. Whichever is missing simply draws nothing; with neither,
+     * the page is plain ivory.
+     */
+    --paper: url("server/public/paper/light.webp"), url("../server/public/paper/light.webp");
+    --wash: rgba(252, 249, 243, 0.62); --shadow: rgba(58, 40, 24, 0.1); --shadow-deep: rgba(58, 40, 24, 0.22);
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --page: #0E1116; --surface: #161A20; --line: #2A3038; --ink: #E8EAED; --muted: #8C949F; --accent: #F97316; color-scheme: dark; }
+    :root {
+      --page: #12100D; --surface: #1B1815; --line: #342E27; --ink: #ECE6DC; --muted: #9C9387; --accent: #F97316;
+      --paper: url("server/public/paper/dark.webp"), url("../server/public/paper/dark.webp");
+      --wash: rgba(27, 24, 21, 0.45); --shadow: rgba(0, 0, 0, 0.35); --shadow-deep: rgba(0, 0, 0, 0.5);
+      color-scheme: dark;
+    }
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
   body {
-    background: var(--page); color: var(--ink);
+    background-color: var(--page); background-image: var(--paper); background-size: 512px 512px; color: var(--ink);
     font: 500 14px/1.5 "Segoe UI", system-ui, sans-serif;
     display: grid; grid-template-rows: 1fr auto; overflow: hidden;
     -webkit-user-select: none; user-select: none; cursor: default;
@@ -33,15 +46,22 @@
   .brand h1 span { color: var(--accent); }
   figure.quote {
     margin: 0; min-height: 168px; display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: center;
-    padding: 22px 26px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface);
-    box-shadow: 0 10px 30px rgba(26, 31, 38, 0.08); transition: opacity 0.6s ease;
+    padding: 22px 26px; border: 1px solid var(--line); border-radius: 22px;
+    background-color: var(--surface); background-image: linear-gradient(var(--wash), var(--wash)), var(--paper);
+    background-size: 100% 100%, 512px 512px, 512px 512px;
+    box-shadow: 0 10px 30px var(--shadow); transition: opacity 0.9s ease;
   }
   figure.quote.fading { opacity: 0; }
+  /* A gentle change: the line fades out over the box's 0.9 s before the next fades in. */
   figure.quote.bare { grid-template-columns: 1fr; }
-  .portrait { width: 96px; height: 120px; border-radius: 14px; object-fit: cover; border: 1px solid var(--line); box-shadow: 0 6px 18px rgba(26, 31, 38, 0.18); }
+  /* The game's mirror frame (Portrait.tsx): an oval arch on top, soft corners below. */
+  .portrait { width: 96px; height: 120px; border-radius: 50% 50% 14px 14px / 40% 40% 14px 14px; object-fit: cover; object-position: top; border: 1px solid var(--line); box-shadow: 0 6px 18px var(--shadow-deep); }
   figure.quote.bare .portrait { display: none; }
   blockquote { margin: 0; font: italic 400 19px/1.45 Georgia, "Times New Roman", serif; }
   blockquote::before { content: "\201C"; color: var(--accent); font-size: 32px; line-height: 0; margin-right: 4px; vertical-align: -10px; }
+  /* The author's tips are advice, not quotations: upright, without the mark. */
+  figure.quote.tip blockquote { font: 500 17px/1.5 "Segoe UI", system-ui, sans-serif; }
+  figure.quote.tip blockquote::before { content: none; }
   figcaption { margin-top: 10px; font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
   .progress { display: grid; gap: 10px; }
   .bar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
@@ -50,7 +70,7 @@
   #pct { font-variant-numeric: tabular-nums; }
   footer { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px 18px; font-size: 12px; color: var(--muted); }
   .made { display: flex; align-items: center; gap: 10px; font-weight: 700; }
-  .made img { width: 30px; height: 38px; border-radius: 8px; object-fit: cover; border: 1px solid var(--line); }
+  .made img { width: 30px; height: 38px; border-radius: 50% 50% 8px 8px / 40% 40% 8px 8px; object-fit: cover; object-position: top; border: 1px solid var(--line); }
   .made b { color: var(--ink); }
   #version { font-variant-numeric: tabular-nums; }
 </style>
@@ -94,7 +114,8 @@
     box.classList.add("fading");
     setTimeout(() => {
       $("text").textContent = q.text;
-      $("who").textContent = `${q.name}, ${q.year}`;
+      $("who").textContent = q.when ? `${q.name}, ${q.when}` : q.name;
+      box.classList.toggle("tip", Boolean(q.tip));
       const img = $("portrait");
       if (q.portrait) {
         img.onerror = () => box.classList.add("bare");
@@ -104,12 +125,15 @@
         box.classList.add("bare");
       }
       box.classList.remove("fading");
-    }, shown < 0 ? 0 : 600);
+    }, shown < 0 ? 0 : 900);
     shown = next;
+    // Each line stays as long as it takes to read (q.ms, from splash-logic.cjs), then the next fades in.
+    clearTimeout(timer);
+    if (quotes.length > 1) timer = setTimeout(() => showQuote((shown + 1) % quotes.length), q.ms || 12000);
   }
 
   window.splash = {
-    /** Everything but the bar, once: { quotes: [{ text, name, year, portrait }], madeBy: { line, portrait }, version, status }. */
+    /** Everything but the bar, once: { quotes: [{ text, name, when?, portrait, tip?, ms }] (quotes and the author's tips by turns, each shown ms), madeBy: { line, portrait }, version, status }. */
     setup(data) {
       quotes = Array.isArray(data.quotes) ? data.quotes : [];
       if (data.madeBy) {
@@ -128,11 +152,7 @@
       }
       $("version").textContent = data.version ?? "";
       if (data.status) $("status").textContent = data.status;
-      if (quotes.length) {
-        showQuote(0);
-        clearInterval(timer);
-        if (quotes.length > 1) timer = setInterval(() => showQuote((shown + 1) % quotes.length), 9000);
-      }
+      if (quotes.length) showQuote(0);
     },
     /** The bar's share (0–1) and the phase's words. */
     progress(share, status) {

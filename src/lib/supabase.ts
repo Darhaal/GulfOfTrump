@@ -118,5 +118,5 @@ export async function signOut() {
 
 export function displayName(user: User): string {
   const meta = user.user_metadata as { full_name?: string; name?: string } | undefined;
-  return meta?.full_name || meta?.name || user.email || "—";
+  return meta?.full_name || meta?.name || user.email || "–";
 }

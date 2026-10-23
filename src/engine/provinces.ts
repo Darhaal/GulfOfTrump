@@ -1,6 +1,7 @@
 import { neighbors as topoNeighbors } from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
 import { countryColor } from "./colors";
+import { countsFor } from "./occupation";
 import { peopleIn } from "./population";
 import { countryName } from "./names";
 import { titleCase } from "./text";
@@ -46,11 +47,14 @@ export function railLevel(region: Pick<MapRegion, "rail" | "area"> | undefined):
   return density >= 40 ? "dense" : density >= 15 ? "moderate" : "sparse";
 }
 
-/** People (thousands) in each owner's provinces now. */
+/** Each country's people now, thousands: its own provinces and those the front has left behind in its hands (engine/occupation.ts). */
 export function peopleByOwner(regions: Record<string, RegionState>, index: MapIndex | null | undefined): Map<string, number> {
   const out = new Map<string, number>();
   if (!index) return out;
-  for (const [id, r] of Object.entries(regions)) out.set(r.owner, (out.get(r.owner) ?? 0) + peopleIn(r, index.regions[id]));
+  for (const [id, r] of Object.entries(regions)) {
+    const by = countsFor(r);
+    out.set(by, (out.get(by) ?? 0) + peopleIn(r, index.regions[id]));
+  }
   return out;
 }
 

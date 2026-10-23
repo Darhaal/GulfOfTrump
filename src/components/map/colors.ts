@@ -1,4 +1,5 @@
 import type { ResourceType } from "@/engine/resources";
+import type { Side } from "@/engine/sides";
 import type { Terrain } from "@/engine/types";
 
 /**
@@ -56,6 +57,19 @@ export const RESOURCE_COLORS: Record<ResourceType, string> = {
 
 /** Grey land of the resource and transport maps: a theme token, light or dark. */
 export const QUIET_LAND = "var(--map-quiet)";
+
+/** The diplomatic view's colours, theme tokens: the country it is about, allies green, enemies red, pacts and truces muted. */
+export const SIDE_FILL: Record<Side, string> = {
+  self: "var(--map-self)",
+  ally: "var(--map-ally)",
+  partner: "var(--map-partner)",
+  pact: "var(--map-pact)",
+  truce: "var(--map-pact)",
+  enemy: "var(--map-enemy)",
+};
+
+/** A country's colour in the diplomatic view: by its side, or the quiet land when it has none. */
+export const sideFill = (side: Side | undefined) => (side ? SIDE_FILL[side] : QUIET_LAND);
 
 /** A resource's colour laid over the grey land, deeper with output (0–10). */
 export function resourceTint(color: string, output: number, floor = 30): string {
