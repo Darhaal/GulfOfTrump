@@ -65,8 +65,10 @@ try {
   });
 
   await step("the first-run tour shows and can be skipped", async () => {
-    await button("Skip the tour").click();
-    await page.getByText("Skip the tour").waitFor({ state: "detached" });
+    // The tour's close button is an icon, named by its label.
+    const skip = page.getByRole("button", { name: "Skip the tour" });
+    await skip.click();
+    await skip.waitFor({ state: "detached" });
   });
 
   await step("an order is written and the turn plays", async () => {
@@ -75,13 +77,15 @@ try {
     await button(/^End turn$/).first().click();
     await dialog().getByText("Turn report").waitFor();
     await dialog().getByText("This is the demo", { exact: false }).first().waitFor();
-    await dialog().locator("button", { hasText: "Back to the map" }).click();
+    await dialog().locator("button", { hasText: "Back to the game" }).click();
   });
 
-  for (const tab of ["Chronicle", "Cabinet", "Politics", "State", "Foreign policy", "Economy", "Orders", "Diplomacy", "Country"]) {
+  // The rail's tabs, by their tour ids: the names wrap ("Domestic politics") and change with the language.
+  for (const tab of ["chronicle", "cabinet", "politics", "foreign", "economy", "army", "science", "orders"]) {
     await step(`the ${tab} panel opens`, async () => {
-      await button(new RegExp(`^${tab}$`)).first().click();
-      await page.waitForTimeout(300);
+      const button = page.locator(`[data-tour="tab-${tab}"]`).first();
+      await button.click();
+      await page.waitForFunction((id) => document.querySelector(`[data-tour="tab-${id}"]`)?.getAttribute("aria-pressed") === "true", tab);
     });
   }
 
@@ -120,7 +124,7 @@ try {
       await mapDrawn();
       await button(/^End turn$/).first().click();
       await dialog().getByText("Turn report").waitFor();
-      await dialog().locator("button", { hasText: "Back to the map" }).click();
+      await dialog().locator("button", { hasText: "Back to the game" }).click();
     });
   }
 
