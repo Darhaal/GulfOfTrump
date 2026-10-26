@@ -16,7 +16,8 @@ permissions:
 jobs:
   smoke:
     name: Interface smoke test
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.56 has no Chromium for ubuntu-latest's 26.04 yet.
+    runs-on: ubuntu-24.04
     env:
       # The smoke test never sends anonymous statistics (docs/telemetry.md).
       NEXT_PUBLIC_GOT_TELEMETRY: "off"
