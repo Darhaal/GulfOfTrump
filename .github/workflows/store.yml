@@ -38,7 +38,8 @@ jobs:
       - name: Build the Store package
         run: npm run desktop -- --store ${{ inputs.test-identity && '--test-identity' || '' }}
         env:
-          # Google sign-in and cloud saves; empty builds the app without them.
+          # Google sign-in, cloud saves and opt-in anonymous statistics
+          # (docs/telemetry.md); empty builds the app without them.
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 

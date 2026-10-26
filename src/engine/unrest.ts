@@ -171,8 +171,8 @@ export function applyOverthrow(
     return;
   }
   const player: CountryState = next.countries[next.player];
-  // A player in opposition is not the government: its fall changes who governs, and the player stays where they are (engine/role.ts).
-  if (next.role?.kind === "opposition") {
+  // A player in opposition, a minister or a general is not the government: its fall changes who governs, and the player stays where they are (engine/role.ts, engine/fate.ts).
+  if (next.role && next.role.kind !== "leader") {
     if (overthrow.leader) player.leader = overthrow.leader;
     if (overthrow.government) player.government = overthrow.government;
     next.protests = (next.protests ?? []).filter((p) => p.country);

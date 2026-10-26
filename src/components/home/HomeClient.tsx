@@ -2,33 +2,39 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Bug, Cloud, CodeXml, Copy, Download, HardDrive, MoreHorizontal, Pencil, Play, Search, Store, Trash2, Upload } from "lucide-react";
+import { ArrowRight, BookOpen, Bug, Cloud, CodeXml, Copy, Download, FolderOpen, HardDrive, Loader2, MoreHorizontal, Pencil, Play, Search, Store, Trash2, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import DownloadButton from "@/components/DownloadButton";
 import Flag from "@/components/Flag";
+import StartPills from "@/components/home/StartPills";
+import { TutorialPreparing } from "@/components/home/TutorialStart";
 import Dialog from "@/components/ui/Dialog";
 import { ui } from "@/components/ui/classes";
 import { APP_NAME, APP_VERSION, DOWNLOAD_URL, isDemo, ISSUES_URL, REPO_URL, STORE_URL } from "@/constants/app";
-import { formatDate, yearOf } from "@/engine/calendar";
-import { SCENARIO_ORDER, SCENARIOS } from "@/engine/scenarios";
+import { formatDate, formatDayMonth, yearOf } from "@/engine/calendar";
+import { getScenario, newGamePath, SCENARIO_ORDER, startsOf } from "@/engine/scenarios";
 import { parseGameState } from "@/engine/schema";
-import type { ScenarioId } from "@/engine/types";
+import { newGameId } from "@/engine/setup";
+import type { ScenarioId, StartVariant } from "@/engine/types";
 import { ABOUT } from "@/i18n/about";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
 import { downloadFile } from "@/lib/exports";
+import { openPlayed, PLAYED_GAMES, type PlayedGame } from "@/lib/played";
 import { openSave, SAVE_EXTENSION, saveFileName, sealSave, SaveFileError } from "@/lib/saveFile";
 import { deleteSave, duplicateSave, listSaves, loadSave, renameSave, writeSave, type ListedSave } from "@/lib/saves";
 import { useUser } from "@/lib/supabase";
+import { isFirstVisit, startTutorial } from "@/lib/tutorial";
 
 type Sort = "recent" | "turn" | "name";
 
 /**
- * The public demo's tour of the game, screenshots of one 1950 game in
- * public/screens/1950. Each row's columns follow its pictures' proportions, so
- * the pictures in a row come out the same height.
+ * The public demo's tour of the game, screenshots of four games – 1939,
+ * 1914, 1964 and 2022 – in public/screens (scripts/screens.mjs). Each row's
+ * columns follow its pictures' proportions, so the pictures in a row come out
+ * the same height.
  */
 const HOW = [
   {
@@ -136,7 +142,9 @@ function SaveMenu({ onRename, onDuplicate, onExport, onDelete }: { onRename: () 
  * The front page: the last game to pick up, the dates to start from, each
  * on its scene painted in oil with the world of that day behind "More",
  * and every saved game — searched, sorted, filtered by date, renamed,
- * copied, downloaded, deleted, or brought in from a file.
+ * copied, downloaded, deleted, or brought in from a file. The played games
+ * the site ships (lib/played.ts) open from here: on the demo first of all,
+ * as "Open a played game"; in the app, quietly below the player's own games.
  */
 export default function HomeClient() {
   const { t, text, locale } = useI18n();
@@ -151,11 +159,37 @@ export default function HomeClient() {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("recent");
   const [era, setEra] = useState<ScenarioId | "all">("all");
-  const [story, setStory] = useState<ScenarioId | null>(null);
+  // The start chosen on each date's card (the date's own day until another is picked), and the story open behind "More".
+  const [starts, setStarts] = useState<Partial<Record<ScenarioId, StartVariant | null>>>({});
+  const startOf = (id: ScenarioId) => starts[id] ?? null;
+  const [story, setStory] = useState<{ id: ScenarioId; start: StartVariant | null } | null>(null);
+  const storyScenario = story ? getScenario(story.id, story.start) : null;
   const fileInput = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  // The played game being opened, and whether the last one failed to open.
+  const [opening, setOpening] = useState<string | null>(null);
+  const [playedFailed, setPlayedFailed] = useState(false);
 
   const refresh = () => listSaves().then(setSaves, () => setSaves([]));
+
+  // A player's first visit opens the tutorial instead of this page (lib/tutorial.ts); if it cannot be set up, the page stays.
+  const [launching, setLaunching] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    isFirstVisit()
+      .then(async (first) => {
+        if (!alive || !first) return;
+        setLaunching(true);
+        const id = await startTutorial();
+        if (alive) router.replace(`/play/${id}`);
+      })
+      .catch(() => alive && setLaunching(false));
+    return () => {
+      alive = false;
+    };
+    // Decided once, when the page opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     // The public demo keeps no games, so it lists none.
@@ -184,6 +218,37 @@ export default function HomeClient() {
       setImportError(error instanceof SaveFileError ? error.reason : "notSave");
     }
   };
+
+  /**
+   * A played game in the visitor's language. The demo opens the game itself,
+   * kept in memory only (a reload opens it again from its file). The app adds
+   * a copy to the player's games, so a game played on from an earlier
+   * opening stays as it was; the copy keeps the game's dice.
+   */
+  const openPlayedGame = async (game: PlayedGame) => {
+    setOpening(game.file);
+    setPlayedFailed(false);
+    try {
+      const state = await openPlayed(game, locale);
+      const now = new Date().toISOString();
+      const opened = demo ? state : { ...state, id: newGameId(), seed: state.seed ?? state.id, createdAt: now, updatedAt: now };
+      await writeSave(opened);
+      router.push(`/play/${opened.id}`);
+    } catch {
+      setPlayedFailed(true);
+      setOpening(null);
+    }
+  };
+
+  /** The country a played game is played as, in the interface language. */
+  const playedName = (game: PlayedGame) => text(getScenario(game.scenarioId).countries[game.player]?.name) || game.player;
+  /** The days a played game covers: "1–15 September 1939", "24 February – 24 November 2022" (the day comes first in all three languages). */
+  const playedPeriod = (game: PlayedGame) => {
+    const to = formatDate(game.to, locale);
+    if (game.from.slice(0, 7) === game.to.slice(0, 7)) return `${Number(game.from.slice(8, 10))}–${to}`;
+    return `${yearOf(game.from) === yearOf(game.to) ? formatDayMonth(game.from, locale) : formatDate(game.from, locale)} – ${to}`;
+  };
+  const playedError = playedFailed && <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-700">{t("played.failed")}</p>;
 
   const exportSave = async (save: ListedSave) => {
     const state = await loadSave(save.id);
@@ -227,6 +292,7 @@ export default function HomeClient() {
 
   return (
     <div className="min-h-screen">
+      {launching && <TutorialPreparing />}
       <AppHeader
         title={
           <span className="flex items-center gap-2">
@@ -253,6 +319,12 @@ export default function HomeClient() {
             <p className="mt-4 max-w-2xl text-base md:text-lg font-medium text-muted">{t("app.tagline")}</p>
             <DownloadButton variant="primary" why className="mt-6" />
             <div className="mt-6 flex flex-wrap gap-2">
+              {demo && (
+                <a href="#played" className={`${ui.secondary} px-4 py-2.5 text-sm`}>
+                  <FolderOpen className="h-4 w-4" />
+                  {t("played.title")}
+                </a>
+              )}
               <a href="#dates" className={`${ui.secondary} px-4 py-2.5 text-sm`}>
                 {t("home.newGame")}
                 <ArrowRight className="h-4 w-4" />
@@ -269,7 +341,7 @@ export default function HomeClient() {
             <a href="#how" className="group block min-w-0 lg:row-span-2">
               <figure>
                 <div className={`${ui.card} overflow-hidden shadow-xl shadow-shade/10 transition-all duration-300 group-hover:-translate-y-1 group-hover:border-accent/20`}>
-                  <Image src="/screens/1950/turn.jpg" alt={t("home.how.turn.title")} width={1600} height={1000} unoptimized priority className="h-auto w-full" />
+                  <Image src="/screens/turn.jpg" alt={t("home.how.turn.title")} width={1600} height={1000} unoptimized priority className="h-auto w-full" />
                 </div>
                 <figcaption className="mt-2.5 flex items-center gap-1.5 px-1 text-xs font-bold text-muted transition-colors group-hover:text-accent">
                   {t("home.hero.caption")}
@@ -298,20 +370,67 @@ export default function HomeClient() {
           )}
         </section>
 
+        {demo && (
+          // The games already played come first: what the game does is in their chronicles, not in a turn of the offline game master.
+          <section id="played" className="mb-14 scroll-mt-20">
+            <h2 className={`${ui.label} mb-1`}>{t("played.title")}</h2>
+            <p className="mb-4 max-w-3xl text-sm font-medium text-muted">{t("played.lead")}</p>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {PLAYED_GAMES.map((game) => {
+                const scenario = getScenario(game.scenarioId);
+                return (
+                  <button
+                    key={game.file}
+                    type="button"
+                    onClick={() => void openPlayedGame(game)}
+                    disabled={opening !== null}
+                    aria-busy={opening === game.file}
+                    className={`${ui.row} flex flex-col gap-3 p-5 text-left disabled:cursor-wait`}
+                  >
+                    <span className="flex items-center gap-3">
+                      <Flag tag={game.player} scenario={game.scenarioId} color={scenario.countries[game.player]?.color} size="xl" />
+                      <span className="min-w-0">
+                        <span className="block truncate text-lg font-black leading-tight text-ink">{playedName(game)}</span>
+                        <span className="mt-0.5 block text-xs font-medium text-muted tabular-nums">{playedPeriod(game)}</span>
+                      </span>
+                    </span>
+                    <span className="text-sm font-medium leading-relaxed text-muted">{t(game.line)}</span>
+                    <span className="mt-auto flex items-center justify-between gap-2 pt-1">
+                      <span className={ui.label}>{t("home.turn", { n: game.turn })}</span>
+                      <span className={`${ui.primary} px-3 py-2 text-xs`}>
+                        {opening === game.file ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FolderOpen className="h-3.5 w-3.5" />}
+                        {t("played.open")}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {playedError}
+            {/* Before a game is opened: who plays on from its last turn, and where the real game master is. */}
+            <div className="mt-4 flex flex-col gap-2 rounded-2xl bg-accent/10 px-4 py-3 text-xs font-medium leading-relaxed text-ink">
+              <p className="max-w-3xl">{t("played.offline")}</p>
+              <DownloadButton variant="link" />
+            </div>
+          </section>
+        )}
+
         <section id="dates" className="scroll-mt-20">
           <h2 className={`${ui.label} mb-1`}>{t("home.chooseDate")}</h2>
           <p className="mb-4 text-sm text-muted font-medium">{t("home.chooseDateHint")}</p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {SCENARIO_ORDER.map((id, i) => {
-              const s = SCENARIOS[id];
+              const start = startOf(id);
+              const s = getScenario(id, start);
+              const href = newGamePath(id, start);
               return (
                 <div
                   key={id}
                   className="group flex flex-col overflow-hidden rounded-[28px] border border-line sheet shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-accent/20 hover:shadow-xl hover:shadow-shade/5 animate-in fade-in slide-in-from-bottom-3"
                   style={{ animationDelay: `${i * 70}ms`, animationFillMode: "both" }}
                 >
-                  {/* The date over its scene, painted in oil (npm run scenes); the scrim keeps the year readable. */}
-                  <Link href={`/new/${id}`} className="relative block overflow-hidden bg-night px-5 pt-6 pb-5 text-white">
+                  {/* The date over its scene, painted in oil (npm run scenes); the scrim keeps the year readable. The whole scene is the link, the start pills sit above it. */}
+                  <div className="relative overflow-hidden bg-night px-5 pt-6 pb-5 text-white">
                     <Image
                       src={`/scenes/${id}.webp`}
                       alt=""
@@ -321,23 +440,26 @@ export default function HomeClient() {
                       className="object-cover transition-transform duration-700 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-linear-to-br from-night/85 via-night/50 to-night/15" />
-                    <div className="relative">
+                    <Link href={href} aria-label={`${text(s.title)} · ${formatDate(s.startDate, locale)}`} className="absolute inset-0 z-10" />
+                    <div className="pointer-events-none relative z-20">
                       <div className="text-6xl font-black tracking-tighter leading-none tabular-nums">{yearOf(s.startDate)}</div>
-                      <div className="mt-2 text-xs font-bold uppercase tracking-widest text-white/75">{formatDate(s.startDate, locale)}</div>
+                      <StartPills id={id} value={start} onChange={(v) => setStarts((all) => ({ ...all, [id]: v }))} className="pointer-events-auto mt-3" />
                       <div className="mt-4 flex gap-1.5">
                         {s.featured.slice(0, 6).map((tag) => (
                           <Flag key={tag} tag={tag} scenario={id} color={s.countries[tag]?.color} size="md" className="border-white/20" />
                         ))}
                       </div>
                     </div>
-                    <ArrowRight className="absolute right-5 top-6 h-5 w-5 text-white/60 transition-all group-hover:translate-x-1 group-hover:text-white" />
-                  </Link>
+                    <ArrowRight className="pointer-events-none absolute right-5 top-6 z-20 h-5 w-5 text-white/60 transition-all group-hover:translate-x-1 group-hover:text-white" />
+                  </div>
                   <div className="flex flex-1 flex-col gap-2 p-5">
-                    <Link href={`/new/${id}`} className="text-lg font-black leading-tight text-ink transition-colors hover:text-accent">
+                    <Link href={href} className="text-lg font-black leading-tight text-ink transition-colors hover:text-accent">
                       {text(s.title)}
                     </Link>
-                    <p className="text-sm font-medium text-muted">{text(s.tagline)}</p>
-                    <button type="button" onClick={() => setStory(id)} className={`${ui.secondary} mt-auto self-start px-3 py-1.5 text-xs`}>
+                    <p key={start ?? "day"} className="text-sm font-medium text-muted animate-in fade-in duration-300">
+                      {text(s.tagline)}
+                    </p>
+                    <button type="button" onClick={() => setStory({ id, start })} className={`${ui.secondary} mt-auto self-start px-3 py-1.5 text-xs`}>
                       <BookOpen className="h-3.5 w-3.5" />
                       {t("home.story")}
                     </button>
@@ -358,7 +480,7 @@ export default function HomeClient() {
                   {cards.map(({ name, width, height }) => (
                     <figure key={name} className={`${ui.card} flex flex-col overflow-hidden`}>
                       <Image
-                        src={`/screens/1950/${name}.jpg`}
+                        src={`/screens/${name}.jpg`}
                         alt={t(`home.how.${name}.title` as MessageKey)}
                         width={width}
                         height={height}
@@ -488,7 +610,9 @@ export default function HomeClient() {
                   <li key={save.id} className={`${ui.row} flex items-center gap-4 p-4`}>
                     <div className="relative shrink-0">
                       <Flag tag={save.player} scenario={save.scenarioId} size="xl" />
-                      <span className="absolute -bottom-2 -right-2 rounded-md bg-night px-1 text-[10px] font-black leading-4 text-white tabular-nums">{save.scenarioId}</span>
+                      <span title={formatDate(getScenario(save.scenarioId, save.variant).startDate, locale)} className="absolute -bottom-2 -right-2 rounded-md bg-night px-1 text-[10px] font-black leading-4 text-white tabular-nums">
+                        {save.scenarioId}
+                      </span>
                     </div>
                     <Link href={`/play/${save.id}`} className="min-w-0 flex-1">
                       <div className="truncate font-black text-ink">{nameOf(save)}</div>
@@ -531,9 +655,33 @@ export default function HomeClient() {
           </section>
         )}
 
+        {!demo && (
+          // The played games as examples, below the player's own: each opens as a copy among them.
+          <section className="mt-10">
+            <h2 className={`${ui.label} mb-1`}>{t("played.examples")}</h2>
+            <p className="mb-3 text-xs font-medium text-muted">{t("played.examplesHint")}</p>
+            <div className="flex flex-wrap gap-2">
+              {PLAYED_GAMES.map((game) => (
+                <button
+                  key={game.file}
+                  type="button"
+                  onClick={() => void openPlayedGame(game)}
+                  disabled={opening !== null}
+                  title={`${playedPeriod(game)} · ${t(game.line)}`}
+                  className={`${ui.secondary} px-3 py-2 text-xs`}
+                >
+                  {opening === game.file ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Flag tag={game.player} scenario={game.scenarioId} size="sm" />}
+                  {playedName(game)} · {yearOf(game.from)}
+                </button>
+              ))}
+            </div>
+            {playedError}
+          </section>
+        )}
+
         <footer className="mt-16 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-6 text-xs font-medium text-muted">
           <span>
-            {APP_NAME} {t("app.stage")} {APP_VERSION} · MIT ·{" "}
+            {APP_NAME} {t("app.stage")} {APP_VERSION} · AGPL-3.0 ·{" "}
             <Link href="/about" className="font-bold text-ink hover:text-accent">
               {t("home.madeBy", { name: ABOUT[locale].authorName })}
             </Link>
@@ -558,31 +706,44 @@ export default function HomeClient() {
         open={story !== null}
         onClose={() => setStory(null)}
         wide
-        title={story ? text(SCENARIOS[story].title) : ""}
+        title={storyScenario ? text(storyScenario.title) : ""}
         footer={
           story && (
             <div className="flex flex-wrap items-center justify-end gap-2">
               <DownloadButton />
-              <Link href={`/new/${story}`} className={`${ui.primary} px-4 py-2.5 text-sm`}>
-                {t("home.story.choose")}
+              <Link href={newGamePath(story.id, story.start)} className={`${ui.primary} px-4 py-2.5 text-sm`}>
+                {t(storyScenario?.player ? "tutorial.begin" : "home.story.choose")}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
           )
         }
       >
-        {story && (
+        {story && storyScenario && (
           <>
             <div className="relative overflow-hidden rounded-2xl bg-night text-white">
-              <Image src={`/scenes/${story}.webp`} alt="" width={720} height={432} unoptimized className="h-auto w-full" />
+              <Image src={`/scenes/${story.id}.webp`} alt="" width={720} height={432} unoptimized className="h-auto w-full" />
               <div className="absolute inset-0 bg-linear-to-t from-night/80 via-night/10 to-transparent" />
               <div className="absolute bottom-4 left-5">
-                <div className="text-4xl font-black tracking-tighter leading-none tabular-nums">{yearOf(SCENARIOS[story].startDate)}</div>
-                <div className="mt-1.5 text-xs font-bold uppercase tracking-widest text-white/75">{formatDate(SCENARIOS[story].startDate, locale)}</div>
+                <div className="text-4xl font-black tracking-tighter leading-none tabular-nums">{yearOf(storyScenario.startDate)}</div>
+                {startsOf(story.id).length > 1 ? (
+                  // The story of the start chosen on the card, and the other a click away; the card follows the choice.
+                  <StartPills
+                    id={story.id}
+                    value={story.start}
+                    onChange={(v) => {
+                      setStory({ id: story.id, start: v });
+                      setStarts((all) => ({ ...all, [story.id]: v }));
+                    }}
+                    className="mt-2.5"
+                  />
+                ) : (
+                  <div className="mt-1.5 text-xs font-bold uppercase tracking-widest text-white/75">{formatDate(storyScenario.startDate, locale)}</div>
+                )}
               </div>
             </div>
-            <div className="mt-4 grid gap-3 text-sm font-medium leading-relaxed text-ink">
-              {text(SCENARIOS[story].story)
+            <div key={story.start ?? "day"} className="mt-4 grid gap-3 text-sm font-medium leading-relaxed text-ink animate-in fade-in duration-300">
+              {text(storyScenario.story)
                 .split(/\n\s*\n/)
                 .map((paragraph, i) => (
                   <p key={i}>{paragraph}</p>

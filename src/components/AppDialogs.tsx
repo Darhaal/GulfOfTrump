@@ -25,6 +25,9 @@ export function openAppDialog(which: AppDialog | null) {
   for (const l of listeners) l();
 }
 
+/** The popup open now, if any: the tutorial's guide steps aside for it. */
+export const useAppDialog = () => useSyncExternalStore(subscribe, () => current, () => null);
+
 /** While a popup's contents load. */
 function Loading() {
   return (

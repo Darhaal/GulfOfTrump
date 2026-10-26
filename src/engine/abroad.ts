@@ -7,7 +7,7 @@ import { programmeShift } from "./programmes";
 import { provisionBooks, provisionOf } from "./provision";
 import { REGIMES } from "./scenarios/regimes";
 import { en } from "./text";
-import type { AppliedChange, CountryState, Domestic, Economy, GameState, MapRegion, RegimeKind, Scenario, ScenarioId } from "./types";
+import type { AppliedChange, Because, BecauseKind, CountryState, Domestic, Economy, GameState, MapRegion, RegimeKind, Scenario, ScenarioId } from "./types";
 
 /**
  * Politics in every country the player does not play, kept by the engine
@@ -154,6 +154,9 @@ export function coupRisk(d: Pick<Domestic, "regime" | "stability" | "support">, 
   let risk = COUP_BASE[d.regime] * COUP_ERA[ctx.era];
   // A settled democracy is all but safe; a shaky one is not.
   risk *= d.regime === "democracy" ? Math.max(0.05, (75 - d.stability) / 15) : 1 + Math.max(0, 60 - d.stability) / 14;
+  // Coups follow trouble: a steady state whose government is not unpopular and whose economy grows seldom sees the army
+  // move (the statistics runs had Malaysia, Tanzania and Angola fall at stability 57 and support 50, 22 coups in a decade).
+  if (d.regime !== "democracy" && d.stability >= 55 && d.support >= 45 && (!ctx.economy || ctx.economy.growth > 0)) risk *= 0.4;
   if (d.support < 30) risk *= 1.3;
   if (ctx.economy && ctx.economy.growth <= -3) risk *= 1.5;
   if (ctx.economy && ctx.economy.inflation >= 50) risk *= 1.5;
@@ -300,6 +303,30 @@ function stabilityTarget(state: GameState, tag: string, d: Domestic, lost: numbe
   return clamp(t, 5, 95);
 }
 
+/**
+ * Why a government fell to a coup or lost an election, for the news and the
+ * game master: the worst of a slump, soaring prices, ground lost in a war, a
+ * war dragging on, long years in power, an unpopular government or (for a
+ * coup) a shaky state. Nothing when nothing stands out.
+ */
+export function fallBecause(state: GameState, tag: string, d: Domestic, ctx: { lost: number; to: string; start: string; vote: boolean }): Because | undefined {
+  const e = state.countries[tag]?.economy;
+  const wars = warsOf(state, tag);
+  const warYears = wars.length ? Math.max(0, yearsBetween(wars.map((w) => w.since).sort()[0], ctx.to)) : 0;
+  const tenure = d.changed ? yearsBetween(d.changed.date, ctx.to) : yearsBetween(ctx.start, ctx.to) + fixed(`tenure:${state.scenarioId}:${tag}`) * 4;
+  const parts: [BecauseKind, number][] = [
+    ["slump", e ? Math.max(-e.growth / 3, (e.unemployment - 9) / 8) : 0],
+    ["inflation", e ? (e.inflation - (ctx.vote ? 10 : 20)) / 25 : 0],
+    ["defeat", ctx.lost / 0.1],
+    ["war", warYears / 2],
+    ["tenure", ctx.vote ? (tenure - 6) / 6 : 0],
+    ["weak", (40 - d.support) / 20],
+    ["unrest", ctx.vote ? 0 : (45 - d.stability) / 20],
+  ];
+  const [kind, score] = parts.reduce((best, x) => (x[1] > best[1] ? x : best), parts[0]);
+  return score >= 0.5 ? { kind } : undefined;
+}
+
 interface AbroadContext {
   to: string;
   years: number;
@@ -358,8 +385,10 @@ export function applyAbroad(next: GameState, events: AbroadEvent[], ctx: AbroadC
     const c = next.countries[e.country];
     const d = c?.domestic;
     if (!c || !d) continue;
+    // What brought the government down, or near it, for the news: the slump, prices, the war, years in power.
+    const because = e.kind === "coup" || !e.kept ? fallBecause(next, e.country, d, { lost: lost.get(e.country) ?? 0, to: ctx.to, start, vote: e.kind === "election" }) : undefined;
     if (e.kind === "coup") {
-      applied.push({ kind: "coup", country: e.country, succeeded: e.succeeded });
+      applied.push({ kind: "coup", country: e.country, succeeded: e.succeeded, ...(because ? { because } : {}) });
       if (e.succeeded) {
         c.domestic = {
           regime: "military",
@@ -375,7 +404,7 @@ export function applyAbroad(next: GameState, events: AbroadEvent[], ctx: AbroadC
       }
       continue;
     }
-    applied.push({ kind: "vote", country: e.country, kept: e.kept, date: e.date });
+    applied.push({ kind: "vote", country: e.country, kept: e.kept, date: e.date, ...(because ? { because } : {}) });
     const term = d.term ?? TERM[d.regime];
     let nextElection = addYears(e.date, term);
     while (nextElection <= ctx.to) nextElection = addYears(nextElection, term);
@@ -388,14 +417,25 @@ export function applyAbroad(next: GameState, events: AbroadEvent[], ctx: AbroadC
   }
 }
 
+/** A fall's reason in a word or two, for the game master. */
+const FALL_EN: Partial<Record<BecauseKind, string>> = { slump: "after a slump", inflation: "soaring prices", defeat: "defeats in war", war: "a long war", tenure: "years in power", weak: "unpopular", unrest: "unrest" };
+
 /** The countries a turn should be told about: what the dice decided, and the shakiest governments that matter. */
 export function describeAbroad(state: GameState, name: (tag: string) => string, map?: Record<string, MapRegion> | null): string[] {
   const events = castAbroad(state, map);
   const lines: string[] = [];
+  const lost = lostShares(state, map);
   if (events.length) {
     const who = (e: AbroadEvent) => `${name(e.country)} [${e.country}]`;
-    const coups = events.flatMap((e) => (e.kind === "coup" ? [`${who(e)} ${e.succeeded ? "succeeds" : "fails"}`] : []));
-    const votes = (kept: boolean) => events.flatMap((e) => (e.kind === "election" && e.kept === kept ? [`${who(e)} ${e.date}`] : []));
+    // What brought each down, in a word, so the story can say why.
+    const start = state.chronicle[0]?.from ?? state.date;
+    const why = (e: AbroadEvent) => {
+      const d = state.countries[e.country]?.domestic;
+      const b = d ? fallBecause(state, e.country, d, { lost: lost.get(e.country) ?? 0, to: state.date, start, vote: e.kind === "election" }) : undefined;
+      return b && FALL_EN[b.kind] ? ` (${FALL_EN[b.kind]})` : "";
+    };
+    const coups = events.flatMap((e) => (e.kind === "coup" ? [`${who(e)} ${e.succeeded ? "succeeds" : "fails"}${why(e)}`] : []));
+    const votes = (kept: boolean) => events.flatMap((e) => (e.kind === "election" && e.kept === kept ? [`${who(e)} ${e.date}${kept ? "" : why(e)}`] : []));
     lines.push("POLITICS ELSEWHERE THIS PERIOD (the engine's dice, already cast: each must happen in the story; name the new leader of every government that falls in leaders):");
     if (coups.length) lines.push(`- coups: ${coups.join("; ")}`);
     if (votes(false).length) lines.push(`- governments that LOSE national elections: ${votes(false).join("; ")}`);
@@ -407,7 +447,6 @@ export function describeAbroad(state: GameState, name: (tag: string) => string, 
     (c) => c.tag !== state.player && !c.leader && c.domestic?.changed && c.domestic.changed.how !== "leader" && !c.exile && (c.dormant || owners.has(c.tag)),
   );
   if (unnamed.length) lines.push(`NEW GOVERNMENTS WITHOUT A NAMED LEADER (name them in leaders): ${unnamed.map((c) => `${name(c.tag)} [${c.tag}]`).join(", ")}`);
-  const lost = lostShares(state, map);
   const income = incomes(state, map);
   const shaky = Object.values(state.countries)
     .filter((c) => c.tag !== state.player && c.domestic && !c.dormant && c.economy)

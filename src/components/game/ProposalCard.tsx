@@ -2,6 +2,7 @@
 
 import { Check } from "lucide-react";
 import { ui } from "@/components/ui/classes";
+import DoneButton from "@/components/ui/DoneButton";
 import { pendingProposal } from "@/engine/advice";
 import type { AdviceMessage, AdvisorId } from "@/engine/advisors";
 import { BOMB_SHARE, bombStatus } from "@/engine/research";
@@ -12,19 +13,17 @@ import { useI18n } from "@/i18n/useI18n";
 const BUDGET_LINES = ["revenue", "army", "industry", "social", "other"] as const;
 
 /**
- * A change a minister proposes in their answer – the research split, what
- * industry builds first for the army, the budget – as a card with what it
- * changes and "Apply". Nothing changes until the player clicks it; the
+ * A change a minister proposes in their answer – the research split or the
+ * budget – as a card with what it changes and "Apply". Nothing changes until the player clicks it; the
  * engine then checks it again against the state (engine/advice.ts). Once
- * applied, or when it is in force already, the card says so.
+ * applied, or when it is in force already, the button says so.
  */
 export default function ProposalCard({ state, advisor, message, disabled, onApply }: { state: GameState; advisor: AdvisorId; message: AdviceMessage; disabled: boolean; onApply: () => void }) {
   const { t, money } = useI18n();
   const pending = pendingProposal(state, advisor, message);
   const research = message.proposal?.research;
-  const focus = message.proposal?.focus;
   const budget = message.budget;
-  if (!research && !focus && !budget) return null;
+  if (!research && !budget) return null;
 
   const now = state.research?.shares;
   const changed = research ? RESEARCH_DIRECTIONS.filter((d) => !now || now[d] !== research[d]) : [];
@@ -49,12 +48,6 @@ export default function ProposalCard({ state, advisor, message, disabled, onAppl
             ))}
           </ul>
           {stopsBomb && <p className="mt-1 text-2xs font-bold text-amber-700">{t("research.bomb.share", { n: BOMB_SHARE })}</p>}
-        </>
-      )}
-      {focus && (
-        <>
-          <div className={`${ui.label} mb-1`}>{t("advisor.proposal.focus")}</div>
-          <p className="text-2xs font-bold">{focus.length ? focus.map((k) => t(`arms.kind.${k}` as MessageKey)).join(", ") : t("advisor.proposal.focusNone")}</p>
         </>
       )}
       {budget && (
@@ -82,17 +75,16 @@ export default function ProposalCard({ state, advisor, message, disabled, onAppl
           </dl>
         </>
       )}
-      {pending ? (
-        <button type="button" onClick={onApply} disabled={disabled} className={`${ui.primary} mt-2 w-full px-3 py-1.5 text-2xs`}>
-          <Check className="h-3.5 w-3.5" />
-          {t("advisor.apply")}
-        </button>
-      ) : (
-        <div className={`mt-2 flex items-center gap-1 text-2xs font-black uppercase tracking-wider ${message.applied ? "text-emerald-700" : "text-muted"}`}>
-          <Check className="h-3 w-3" />
-          {t(message.applied ? "advisor.applied" : "advisor.inForce")}
-        </div>
-      )}
+      <DoneButton
+        icon={Check}
+        label={t("advisor.apply")}
+        doneLabel={t(message.applied ? "advisor.applied" : "advisor.inForce")}
+        done={!pending}
+        disabled={disabled}
+        onAct={onApply}
+        className={`${ui.primary} mt-2 w-full px-3 py-1.5 text-2xs`}
+        doneClassName={`${ui.done} mt-2 w-full justify-center gap-1.5 rounded-xl px-3 py-1.5 text-2xs uppercase tracking-wide`}
+      />
     </div>
   );
 }

@@ -34,7 +34,8 @@ jobs:
       - name: Build the installer
         run: npm run desktop
         env:
-          # Google sign-in and cloud saves; empty builds the app without them.
+          # Google sign-in, cloud saves and opt-in anonymous statistics
+          # (docs/telemetry.md); empty builds the app without them.
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 

@@ -3,9 +3,9 @@ import type { z } from "zod";
 import { extractJson, withoutNulls } from "@/engine/json";
 import type { Locale } from "@/engine/types";
 import { accessToken } from "./chatgpt/oauth";
-import { listModels, streamText, type InputMessage, type ModelInfo } from "./chatgpt/responses";
+import { listModels, streamText, type InputMessage, type ModelInfo, type Usage } from "./chatgpt/responses";
 import { AiError } from "./errors";
-import { isMockEnabled, mockComplete } from "./mock";
+import { isMockEnabled, mockComplete, streamOut } from "./mock";
 
 export interface CompletionRequest {
   /** A model slug from the account's list; the first listed one when absent. */
@@ -18,6 +18,14 @@ export interface CompletionRequest {
   demo?: boolean;
   /** The interface language, for the stand-in's texts. */
   locale?: Locale;
+  /** Told the model and the tokens of each answer (counts only, for telemetry); the stand-in is "demo". */
+  onUsage?: (usage: Usage) => void;
+  /**
+   * An answer written in advance (the tutorial's first turns, engine/tutorial.ts):
+   * streamed as the model's would be and read through the same schema; no
+   * model is asked and no account is needed. "tutorial" in telemetry.
+   */
+  scripted?: string;
 }
 
 const MODEL_CACHE_MS = 10 * 60_000;
@@ -33,7 +41,16 @@ export async function availableModels(): Promise<ModelInfo[]> {
 }
 
 export async function complete(request: CompletionRequest): Promise<string> {
-  if (request.demo || isMockEnabled()) return mockComplete(request.instructions, request.input, request.onDelta, request.locale, request.signal);
+  if (request.scripted !== undefined) {
+    const text = await streamOut(request.scripted, request.onDelta);
+    request.onUsage?.({ model: "tutorial" });
+    return text;
+  }
+  if (request.demo || isMockEnabled()) {
+    const text = await mockComplete(request.instructions, request.input, request.onDelta, request.locale, request.signal);
+    request.onUsage?.({ model: "demo" });
+    return text;
+  }
   const token = await accessToken();
   let model = request.model;
   if (!model) {

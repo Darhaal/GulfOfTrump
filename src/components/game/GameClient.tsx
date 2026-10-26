@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { Briefcase, Clapperboard, Coins, Crosshair, Download, Flag as ReportIcon, FlaskConical, Globe, Image as ImageIcon, Landmark, Loader2, MapPin, Megaphone, MessageSquare, PanelLeftClose, Play, ScrollText, Swords, TriangleAlert, Users } from "lucide-react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Briefcase, Clapperboard, Coins, Crosshair, Download, Flag as ReportIcon, FlaskConical, Globe, IdCard, Image as ImageIcon, Landmark, Loader2, MapPin, Megaphone, MessageSquare, PanelLeftClose, Play, ScrollText, Swords, TriangleAlert, Users } from "lucide-react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import AppHeader from "@/components/AppHeader";
 import DownloadButton from "@/components/DownloadButton";
 import Flag from "@/components/Flag";
 import WorldMap from "@/components/map/WorldMap";
 import { changedRegions } from "@/components/map/overlays";
 import Dialog from "@/components/ui/Dialog";
+import ResizeHandle from "@/components/ui/ResizeHandle";
 import { ui } from "@/components/ui/classes";
 import { addStep, formatDate, yearOf } from "@/engine/calendar";
 import { CONTENT_REPORT_URL, isDemo, MAX_ORDERS as MAX_TURN_ORDERS } from "@/constants/app";
@@ -20,7 +21,6 @@ import { addAdvice, type AdvisorId } from "@/engine/advisors";
 import { countryCrises } from "@/engine/crises";
 import { nationalAccounts, seedEconomies, setBudget } from "@/engine/economy";
 import { setArmyOrganisation } from "@/engine/army";
-import { setFocus as setArmsFocus } from "@/engine/arsenal";
 import { setShares } from "@/engine/research";
 import { cancelDeal, declineOffer, signOffer } from "@/engine/deals";
 import EconomyCenter from "./EconomyCenter";
@@ -31,8 +31,11 @@ import { applyOutcome, ownedRegions, type HomePart, type WorldPart } from "@/eng
 import { completeOutcome, missingStages, pendingFor, previewEntry, storyCarry, turnKey, type PendingTurn, type TurnStage } from "@/engine/stages";
 import { isMigrated, migrateSave, refreshSave } from "@/engine/migrations";
 import { peopleByOwner, provinceName } from "@/engine/provinces";
-import { intoOpposition, isOpposition, withCountry } from "@/engine/role";
-import { getScenario } from "@/engine/scenarios";
+import { goAbroad, intoExile, intoOpposition, isOpposition, returnHome, withCountry } from "@/engine/role";
+import { afterFall, awaitingChoice, resign, withdrawResignation } from "@/engine/fate";
+import { governs, isFigure } from "@/engine/figures";
+import { canWriteLetters } from "@/engine/exile";
+import { scenarioOf } from "@/engine/scenarios";
 import { peopleScale } from "@/engine/setup";
 import type { ChronicleEntry, GameState, Locale, Motion, OfficialPost, Summit, Talk, TimeStep } from "@/engine/types";
 import { errorKey, useI18n } from "@/i18n/useI18n";
@@ -44,16 +47,19 @@ import SessionDialog from "./politics/SessionDialog";
 import TalkDialog from "./politics/TalkDialog";
 import { addBio, bioKey, bioOf } from "@/engine/bios";
 import { seedInterests } from "@/engine/interests";
-import { applyMinisterReport, reportsDue, type MinisterReport } from "@/engine/reports";
+import { applyMinisterReport, chooseVoices, reportsDue, voicesFrom, type MinisterReport } from "@/engine/reports";
+import { societyEstimates, societyOf } from "@/engine/society";
 import LiveSummitDialog from "./LiveSummitDialog";
 import { ADVISOR_POST, appoint, type Candidate } from "@/engine/government";
 import { addDeputyAdvice, startDeputies } from "@/engine/deputies";
 import { useMap } from "@/lib/maps";
-import { usePreference } from "@/lib/preferences";
+import { openPlayed, playedById, playedGameOf } from "@/lib/played";
+import { readPreference, usePreference } from "@/lib/preferences";
 import { chronicleMarkdown, downloadFile } from "@/lib/exports";
 import { saveFileName, sealSave } from "@/lib/saveFile";
 import { loadSave, writeSave } from "@/lib/saves";
 import { clearPendingTurn, readPendingTurn, writePendingTurn } from "@/lib/pendingTurn";
+import { trackError, turnTally, useGameTelemetry } from "@/lib/telemetry/game";
 import { readNewTurn } from "@/lib/voice/speaker";
 import VoiceLayer from "@/components/voice/VoiceLayer";
 import { useGameMaster } from "@/lib/gameMaster";
@@ -62,14 +68,22 @@ import { PortraitYear } from "./Portrait";
 import CountryDetails from "./CountryDetails";
 import LeaderButton from "./LeaderButton";
 import OppositionPanel from "./OppositionPanel";
+import FigurePanel from "./FigurePanel";
 import DefeatDialog from "./DefeatDialog";
+import FallDialog from "./FallDialog";
+import ResignButton from "./ResignButton";
 import AdvisorStrip from "./AdvisorStrip";
 import { tabAdvisors } from "./advisorTabs";
 import CabinetPanel, { type ReportStatus } from "./CabinetPanel";
 import ForeignPanel, { type ForeignSection } from "./ForeignPanel";
 import { closeSummit, dueSessions, speakAtSummit } from "@/engine/foreign";
 import PoliticsPanel from "./PoliticsPanel";
-import Tour, { tourSeen } from "./Tour";
+import Tour, { Guide, GUIDE_STEPS, markTourSeen, tourSeen, type GuideStep } from "./Tour";
+import { openAppDialog } from "@/components/AppDialogs";
+import { TUTORIAL_SUGGESTIONS } from "@/engine/scenarios/tutorial";
+import { isTutorial, scriptedNow, scriptedTurn } from "@/engine/tutorial";
+import { finishTutorial, readGuide, writeGuide } from "@/lib/tutorial";
+import { useRouter } from "next/navigation";
 import SummitDialog from "./SummitDialog";
 import OperationsPanel from "./OperationsPanel";
 import OrdersPanel from "./OrdersPanel";
@@ -84,7 +98,7 @@ import TurnReport from "./TurnReport";
 import WorldNews from "./WorldNews";
 
 /** Panels that open on the left, from the rail; the right side shows the selection. */
-type LeftPanel = "orders" | "opposition" | "chronicle" | "cabinet" | "politics" | "foreign" | "economy" | "army" | "science";
+type LeftPanel = "orders" | "opposition" | "post" | "chronicle" | "cabinet" | "politics" | "foreign" | "economy" | "army" | "science";
 type RightTab = "country";
 
 interface Busy {
@@ -99,6 +113,15 @@ interface Busy {
   /** For a turn: the stages still being written (engine/stages.ts). */
   stages?: TurnStage[];
 }
+
+/**
+ * The left panel's width, dragged by its edge: never narrower than its two
+ * rows of ministers need, never so wide that the map is left less than its
+ * zoom buttons need (the 30rem in the panel's CSS cap is MAP_MIN).
+ */
+const LEFT_MIN = 320;
+const LEFT_MAX = 720;
+const MAP_MIN = 480;
 
 function Elapsed({ since }: { since: number }) {
   const { t } = useI18n();
@@ -120,7 +143,12 @@ export default function GameClient({ id }: { id: string }) {
   const { t, text, locale } = useI18n();
   const [model] = usePreference("model");
   // ChatGPT, or the offline demo the player chose (lib/gameMaster.ts).
-  const { status, ready: aiReady } = useGameMaster();
+  const { status, ready: aiReady, chatgpt, setDemo } = useGameMaster();
+  const router = useRouter();
+  // The tutorial's guide (Tour.tsx): its step in this game, and what it puts into the orders and the letter boxes.
+  const [guide, setGuide] = useState<GuideStep | null>(null);
+  const [orderFill, setOrderFill] = useState<{ text: string; n: number } | null>(null);
+  const [letterDraft, setLetterDraft] = useState<{ target: string; text: string; n: number } | null>(null);
   const [choosingMaster, setChoosingMaster] = useState(false);
   const [state, setState] = useState<GameState | null>(null);
   const [missing, setMissing] = useState(false);
@@ -170,6 +198,16 @@ export default function GameClient({ id }: { id: string }) {
   const leftScroll = useRef<HTMLDivElement>(null);
   const rightScroll = useRef<HTMLDivElement>(null);
   const heldScroll = useRef<{ left: number; right: number } | null>(null);
+  // The left panel's width as the player left it ("" for the breakpoint's); the drag itself moves it without a render.
+  const [savedLeftWidth, setSavedLeftWidth] = usePreference("leftWidth");
+  const leftWidth = Number(savedLeftWidth) ? Math.min(LEFT_MAX, Math.max(LEFT_MIN, Number(savedLeftWidth))) : null;
+  const leftPanel = useRef<HTMLElement>(null);
+  const mapPanel = useRef<HTMLElement>(null);
+  const leftWidest = () => {
+    const panel = leftPanel.current?.offsetWidth ?? 0;
+    const map = mapPanel.current?.offsetWidth ?? 0;
+    return Math.min(LEFT_MAX, panel + map - MAP_MIN);
+  };
   useLayoutEffect(() => {
     const held = heldScroll.current;
     if (!held) return;
@@ -185,6 +223,8 @@ export default function GameClient({ id }: { id: string }) {
   // The turn under way: the stages that landed, and its report before it is applied.
   const pendingTurn = useRef<PendingTurn | null>(null);
   const [preview, setPreview] = useState<ChronicleEntry | null>(null);
+  // Anonymous statistics, once the player said yes (lib/telemetry): the game opened, the panels and requests used.
+  useGameTelemetry(state, { panel: left, request: busy?.kind ?? null, timelapse, picture: picture !== null });
 
   useEffect(() => {
     latest.current = state;
@@ -193,23 +233,56 @@ export default function GameClient({ id }: { id: string }) {
 
   useEffect(() => {
     let alive = true;
-    loadSave(id).then((s) => {
-      if (!alive) return;
-      if (s) {
-        // The save's migrations that need no map run now, the rest once the map is here.
-        const scenario = getScenario(s.scenarioId);
-        setState(refreshSave(migrateSave(s, { scenario }), scenario));
-        setSelected(s.player);
-        setTouring(!tourSeen());
-      } else setMissing(true);
-    });
+    // A played game the site ships (lib/played.ts) opens from its file when it is not stored: on the demo a reload brings it back as it was.
+    const played = playedById(id);
+    loadSave(id)
+      .then((s) => s ?? (played ? openPlayed(played, readPreference("locale")).catch(() => null) : null))
+      .then((s) => {
+        if (!alive) return;
+        if (s) {
+          // The save's migrations that need no map run now, the rest once the map is here.
+          const scenario = scenarioOf(s);
+          setState(refreshSave(migrateSave(s, { scenario }), scenario));
+          setSelected(s.player);
+          // The tutorial has its guide instead of the tour, from the step it was left at.
+          setTouring(!tourSeen() && !isTutorial(s));
+          const step = isTutorial(s) ? readGuide(s.id) : "off";
+          setGuide(step === "off" ? null : GUIDE_STEPS.find((g) => g === step) ?? "welcome");
+        } else setMissing(true);
+      });
     return () => {
       alive = false;
     };
   }, [id]);
 
-  const scenario = state ? getScenario(state.scenarioId) : null;
+  const scenario = state ? scenarioOf(state) : null;
   const { map } = useMap(scenario?.map ?? null);
+
+  /** The guide moves to a step, remembered for this game; the first order's step opens the orders. */
+  const guideTo = useCallback(
+    (step: GuideStep) => {
+      setGuide(step);
+      writeGuide(id, step);
+      if (step === "order") setLeft("orders");
+      // A suggestion is put in once: the next step starts with empty boxes of its own.
+      setOrderFill(null);
+    },
+    [id],
+  );
+  /** Out of the tutorial: to the front page, which shows from now on. Its game stays among the saves. */
+  const skipTutorial = () => {
+    finishTutorial();
+    writeGuide(id, "off");
+    setGuide(null);
+    router.push("/");
+  };
+  /** The tutorial done: the tour it replaces is behind the player too. */
+  const finishGuide = () => {
+    finishTutorial();
+    markTourSeen();
+    writeGuide(id, "off");
+    setGuide(null);
+  };
   // The people a province had when the game began: a map drawn for a later year is scaled to the start date (engine/setup.ts).
   const startScale = useMemo(() => (scenario && map ? peopleScale(scenario, Object.values(map.index.regions)) : null), [scenario, map]);
 
@@ -249,6 +322,7 @@ export default function GameClient({ id }: { id: string }) {
   };
 
   const explain = (error: unknown) => {
+    trackError(error instanceof ApiError ? error.code : "client_error");
     if (error instanceof ApiError) {
       if (error.code === "cancelled") return null;
       const key = errorKey(error.code);
@@ -342,9 +416,11 @@ export default function GameClient({ id }: { id: string }) {
       setBusy((b) => (b ? { ...b, stages: missingStages(pending.parts) } : b));
     };
     setBusy({ kind: "turn", chars: 0, startedAt: Date.now(), controller, stages: missingStages(pending.parts) });
+    const tally = turnTally(base, model);
     try {
       if (!pending.parts.story) {
-        const { part } = await playTurnStage(base, orders, "story", { locale, model, signal: controller.signal, onProgress: (chars) => setBusy((b) => (b ? { ...b, chars } : b)) });
+        const { part, usage } = await playTurnStage(base, orders, "story", { locale, model, signal: controller.signal, onProgress: (chars) => setBusy((b) => (b ? { ...b, chars } : b)) });
+        tally.add(usage);
         pending.parts.story = part;
         readNewTurn(previewEntry(base, orders, pending.parts), locale);
       }
@@ -354,7 +430,8 @@ export default function GameClient({ id }: { id: string }) {
       const rest = (["world", "home"] as const).filter((stage) => !pending.parts[stage]);
       const settled = await Promise.allSettled(
         rest.map(async (stage) => {
-          const { part } = await playTurnStage(base, orders, stage, { locale, model, signal: controller.signal, onProgress: () => {}, story });
+          const { part, usage } = await playTurnStage(base, orders, stage, { locale, model, signal: controller.signal, onProgress: () => {}, story });
+          tally.add(usage);
           if (stage === "world") pending.parts.world = part as WorldPart;
           else pending.parts.home = part as HomePart;
           landed();
@@ -366,16 +443,20 @@ export default function GameClient({ id }: { id: string }) {
       if (!outcome) throw new ApiError("network_error", "The turn is incomplete.", true);
       pendingTurn.current = null;
       clearPendingTurn(base.id);
-      const next = applyOutcome(base, outcome, orders, new Date(), map?.index.regions ?? null, map?.index.neighbors ?? null);
+      const applied = applyOutcome(base, outcome, orders, new Date(), map?.index.regions ?? null, map?.index.neighbors ?? null);
+      // As many ministers report on their own as Settings asks, the most touched by the turn first (engine/reports.ts).
+      const next = chooseVoices(applied, applied.turn - 1, voicesFrom(readPreference("reports")));
       const entry = next.chronicle[next.chronicle.length - 1];
       // Reports written for an earlier try at this turn belong to another outcome.
       for (const [key, r] of arrived.current) if (r.turn >= entry.turn) arrived.current.delete(key);
       update(next, true);
+      tally.end();
       setSummitQueue(entry.summits ?? []);
       setAutoLive(dueSessions(next, addStep(next.date, next.step))[0]?.id ?? null);
       setReport(entry);
       if (!next.defeat || next.defeat.continued) void writeReports(entry.turn, reportsDue(entry), true);
     } catch (error) {
+      tally.end(error);
       // The unfinished report closes; it opens again when the turn is played on.
       setReport((r) => (r && r.turn === base.turn && !base.chronicle.some((e) => e.turn === r.turn) ? null : r));
       const message = explain(error);
@@ -716,6 +797,13 @@ export default function GameClient({ id }: { id: string }) {
     () => (state && fogOn(state) && selected && selected !== state.player && state.countries[selected] ? foreignView(state, selected, { borders, map: map?.index.regions }) : undefined),
     [state, selected, borders, map],
   );
+  // The selected country's people (engine/society.ts); another country under fog of war as estimates.
+  const society = useMemo(() => {
+    if (!state || !map || !selected) return undefined;
+    const s = societyOf(state, map.index.regions, selected);
+    if (!s) return undefined;
+    return fogView ? { society: s, estimates: societyEstimates(state, selected, s, fogView.knowledge.score), level: fogView.knowledge.level } : { society: s };
+  }, [state, map, selected, fogView]);
   // The map's diplomatic view: the selected country's friends and foes, or the player's when none is picked.
   const diplomacy = useMemo(() => {
     if (!state) return null;
@@ -755,13 +843,25 @@ export default function GameClient({ id }: { id: string }) {
   const nextDate = addStep(state.date, state.step);
   // A save from before exile has no mark of it; a country with no land of its own is in exile all the same.
   const exile = player.exile ?? (ownedRegions(state, state.player) === 0 && !player.dormant ? { since: state.date } : undefined);
-  const lost = Boolean(state.defeat && !state.defeat.continued);
+  // A fallen government or a fallen person waits on the player's choice (engine/fate.ts).
+  const lost = awaitingChoice(state);
   const selectedCountry = selected ? state.countries[selected] : null;
-  // A player in opposition does not govern: no cabinet, and the state's panels are only to look at (engine/role.ts).
+  // A player in opposition, a minister or a general does not govern: no cabinet, and the state's panels are only to look at (engine/role.ts, engine/figures.ts).
   const opposition = isOpposition(state);
+  const figure = isFigure(state);
+  const ruling = governs(state);
+  // Letters to governments: the government's, the movement's contacts abroad, the foreign minister's (engine/exile.ts).
+  const letters = canWriteLetters(state);
+  // A played game (lib/played.ts) says in the demo strip which turns were written for it and who plays on from there.
+  const played = playedGameOf(state);
+  // The tutorial's first turns, and what is asked before them, are written in advance (engine/tutorial.ts): they need no game master.
+  const written = scriptedNow(state);
+  const canPlay = aiReady || written;
+  const demoNote = played ? t(isDemo() ? "played.banner" : "played.bannerLocal", { date: formatDate(played.to, locale) }) : written ? t("tutorial.note") : undefined;
   const allTabs: { id: LeftPanel; label: string; icon: typeof ScrollText }[] = [
     { id: "orders", label: t("game.tab.orders"), icon: ScrollText },
     { id: "opposition", label: t("game.tab.opposition"), icon: Megaphone },
+    { id: "post", label: t("game.tab.post"), icon: IdCard },
     { id: "chronicle", label: t("game.tab.chronicle"), icon: Swords },
     { id: "cabinet", label: t("game.tab.cabinet"), icon: Briefcase },
     { id: "politics", label: t("game.tab.politics"), icon: Landmark },
@@ -770,7 +870,9 @@ export default function GameClient({ id }: { id: string }) {
     { id: "army", label: t("game.tab.army"), icon: Crosshair },
     { id: "science", label: t("game.tab.science"), icon: FlaskConical },
   ];
-  const leftTabs = allTabs.filter((tab) => (opposition ? tab.id !== "cabinet" : tab.id !== "opposition"));
+  // Each role its own panel: the opposition's, a minister's or a general's post, or the leader's cabinet.
+  const ownTab: LeftPanel = opposition ? "opposition" : figure ? "post" : "cabinet";
+  const leftTabs = allTabs.filter((tab) => !(["opposition", "post", "cabinet"] as LeftPanel[]).includes(tab.id) || tab.id === ownTab);
   // A panel the role no longer has (the opposition's after taking power, the cabinet after a fall) gives way to the orders.
   const leftNow: LeftPanel | null = left && !leftTabs.some((tab) => tab.id === left) ? "orders" : left;
   // Talks with governments live in the foreign policy panel.
@@ -783,7 +885,7 @@ export default function GameClient({ id }: { id: string }) {
   };
 
   const endTurnButton = (className: string) => (
-    <button type="button" data-tour="end-turn" onClick={aiReady ? endTurn : () => setChoosingMaster(true)} disabled={Boolean(busy) || lost || !status} className={`${ui.primary} ${className}`}>
+    <button type="button" data-tour="end-turn" onClick={canPlay ? endTurn : () => setChoosingMaster(true)} disabled={Boolean(busy) || lost || (!status && !written)} className={`${ui.primary} ${className}`}>
       {busy?.kind === "turn" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
       {t("game.endTurn")}
     </button>
@@ -793,6 +895,7 @@ export default function GameClient({ id }: { id: string }) {
     <div className="flex h-dvh flex-col overflow-hidden">
       <AppHeader
         back="/"
+        demoNote={demoNote}
         title={
           <span className="flex items-center gap-2">
             <Flag tag={state.player} scenario={state.scenarioId} color={player.color} />
@@ -805,6 +908,7 @@ export default function GameClient({ id }: { id: string }) {
                 setRight("country");
               }}
               onOpposition={() => setLeft("opposition")}
+              onPost={() => setLeft("post")}
             />
           </span>
         }
@@ -823,7 +927,7 @@ export default function GameClient({ id }: { id: string }) {
         }
       />
       {player.economy && (
-        <ResourceBar economy={player.economy} accounts={accounts?.get(state.player)} crises={crises} era={state.scenarioId} unrest={state.politics?.unrest} />
+        <ResourceBar economy={player.economy} accounts={accounts?.get(state.player)} crises={crises} era={state.scenarioId} unrest={state.politics?.unrest} before={state.chronicle.at(-1)?.economy?.before} />
       )}
 
       <main className="flex min-h-0 flex-1 flex-col lg:flex-row">
@@ -845,7 +949,23 @@ export default function GameClient({ id }: { id: string }) {
         </nav>
 
         {leftNow && (
-          <aside className="order-3 flex min-h-0 flex-1 flex-col paper lg:order-none lg:w-[360px] lg:flex-none lg:border-r lg:border-line xl:w-[380px]">
+          <aside
+            ref={leftPanel}
+            style={leftWidth ? ({ "--left-w": `${leftWidth}px` } as CSSProperties) : undefined}
+            className="order-3 flex min-h-0 flex-1 flex-col paper lg:relative lg:order-none lg:w-[var(--left-w,360px)] lg:max-w-[calc(100vw_-_4.5rem_-_30rem)] lg:flex-none lg:border-r lg:border-line xl:w-[var(--left-w,380px)] 2xl:max-w-[calc(100vw_-_4.5rem_-_400px_-_30rem)]"
+          >
+            <ResizeHandle
+              label={t("panel.resize")}
+              hint={t("panel.resize.hint")}
+              min={LEFT_MIN}
+              max={leftWidest}
+              onResize={(width) => leftPanel.current?.style.setProperty("--left-w", `${width}px`)}
+              onCommit={(width) => setSavedLeftWidth(String(width))}
+              onReset={() => {
+                leftPanel.current?.style.removeProperty("--left-w");
+                setSavedLeftWidth("");
+              }}
+            />
             <div className="hidden items-center justify-between border-b border-line sheet px-4 py-2.5 lg:flex">
               <span className={ui.label}>{leftTabs.find((x) => x.id === leftNow)?.label}</span>
               <button type="button" onClick={() => setLeft(null)} title={t("panel.close")} aria-label={t("panel.close")} className="rounded-lg p-1 text-muted hover:bg-page hover:text-ink">
@@ -853,13 +973,13 @@ export default function GameClient({ id }: { id: string }) {
               </button>
             </div>
             <div ref={leftScroll} className="min-h-0 flex-1 overflow-y-auto p-4">
-            {!opposition && !lost && tabAdvisors(leftNow).length > 0 && (
+            {ruling && !lost && tabAdvisors(leftNow).length > 0 && (
               <AdvisorStrip
                 key={leftNow}
                 state={state}
                 advisors={tabAdvisors(leftNow)}
                 busy={busy?.kind === "advice" && busy.advisor ? { advisor: busy.advisor, chars: busy.chars } : null}
-                askDisabled={!aiReady || Boolean(busy)}
+                askDisabled={!canPlay || Boolean(busy)}
                 disabled={Boolean(busy)}
                 setupBusy={busy?.kind === "politics"}
                 onAsk={ask}
@@ -876,9 +996,10 @@ export default function GameClient({ id }: { id: string }) {
                 disabled={Boolean(busy)}
                 onChange={(draft) => update({ ...state, draft, updatedAt: new Date().toISOString() })}
                 onStanding={(standing) => update({ ...state, standing, updatedAt: new Date().toISOString() })}
+                fill={orderFill}
                 operationsCount={(state.directives ?? []).filter((d) => d.operation).length}
                 operations={
-                  opposition ? undefined : (
+                  !ruling ? undefined : (
                     <OperationsPanel
                       state={state}
                       disabled={Boolean(busy)}
@@ -1007,19 +1128,33 @@ export default function GameClient({ id }: { id: string }) {
               <OppositionPanel
                 state={state}
                 disabled={Boolean(busy) || lost}
-                onOrder={(order) => {
-                  if (state.draft.includes(order) || state.draft.length + (state.standing?.length ?? 0) >= MAX_TURN_ORDERS) return;
-                  update({ ...state, draft: [...state.draft, order], updatedAt: new Date().toISOString() });
+                onOrder={addOrder}
+                onAbroad={() => update(goAbroad(state), true)}
+                onReturn={() => update(returnHome(state), true)}
+                onLetters={() => {
+                  setForeignSection("talks");
+                  setLeft("foreign");
                 }}
+                onResign={() => update(resign(state), true)}
+                onStay={() => update(withdrawResignation(state), true)}
               />
             )}
-            {leftNow === "cabinet" && !opposition && (
+            {leftNow === "post" && figure && (
+              <FigurePanel
+                state={state}
+                disabled={Boolean(busy) || lost}
+                onOrder={addOrder}
+                onResign={() => update(resign(state), true)}
+                onStay={() => update(withdrawResignation(state), true)}
+              />
+            )}
+            {leftNow === "cabinet" && ruling && (
               <CabinetPanel
                 key={consult?.n ?? 0}
                 prefill={consult ?? undefined}
                 state={state}
                 busy={busy?.kind === "advice" && busy.advisor ? { chars: busy.chars, advisor: busy.advisor } : null}
-                disabled={!aiReady}
+                disabled={!canPlay}
                 onAsk={ask}
                 onAddOrder={addOrder}
                 onApply={(advisor, at) => update(applyProposal(state, advisor, at), true)}
@@ -1032,7 +1167,7 @@ export default function GameClient({ id }: { id: string }) {
                 onFind={candidatesFor}
                 onAppoint={(post, person, note) => update(appoint(state, post, person, note), true)}
                 reporting={reporting}
-                onRequestReport={lost || !aiReady ? undefined : (ministry) => void writeReports(state.chronicle.at(-1)?.turn ?? 0, [ministry])}
+                onRequestReport={lost || !(aiReady || scriptedTurn(state, state.chronicle.at(-1)?.turn ?? 0)) ? undefined : (ministry) => void writeReports(state.chronicle.at(-1)?.turn ?? 0, [ministry])}
                 bioStatus={bioStatus}
                 onRequestBio={(name) => void requestBioFor(name)}
               />
@@ -1058,7 +1193,7 @@ export default function GameClient({ id }: { id: string }) {
                 state={state}
                 accounts={accounts?.get(state.player)}
                 regions={map?.index.regions ?? null}
-                disabled={Boolean(busy) || opposition}
+                disabled={Boolean(busy) || !ruling}
                 onBudget={(budget) => update(setBudget(state, budget), true)}
                 onSign={(offer) => map && update(signOffer(state, offer.id, map.index.regions), true)}
                 onDecline={(offer) => update(declineOffer(state, offer), true)}
@@ -1070,9 +1205,10 @@ export default function GameClient({ id }: { id: string }) {
                 state={state}
                 accounts={accounts?.get(state.player)}
                 regions={map?.index.regions}
-                disabled={Boolean(busy) || lost || opposition}
+                index={map?.index ?? null}
+                // A general commands the army: orders to its formations are theirs to give (engine/figures.ts).
+                disabled={Boolean(busy) || lost || !(ruling || state.role?.kind === "general")}
                 learning={busy?.kind === "army"}
-                onFocus={(kinds) => update(setArmsFocus(state, kinds), true)}
                 onLearn={() => void describeArmy()}
                 onShowRegions={(regions) => setFocus({ key: Date.now(), regions })}
                 onOrder={(order) => {
@@ -1085,14 +1221,14 @@ export default function GameClient({ id }: { id: string }) {
             {leftNow === "science" && (
               <SciencePanel
                 state={state}
-                disabled={Boolean(busy) || lost || opposition}
+                disabled={Boolean(busy) || lost || !ruling}
                 onShares={(shares) => update({ ...setShares(state, shares), updatedAt: new Date().toISOString() }, true)}
               />
             )}
             {leftNow === "foreign" && (
               <ForeignPanel
                 state={state}
-                disabled={Boolean(busy) || opposition}
+                disabled={Boolean(busy) || !ruling}
                 onPropose={(proposal) => update({ ...state, proposals: [...(state.proposals ?? []), proposal], updatedAt: new Date().toISOString() })}
                 onWithdraw={(id) => update({ ...state, proposals: (state.proposals ?? []).filter((p) => p.id !== id), updatedAt: new Date().toISOString() })}
                 onSchedule={(summit) => update({ ...state, summits: [...(state.summits ?? []), summit], updatedAt: new Date().toISOString() })}
@@ -1101,12 +1237,14 @@ export default function GameClient({ id }: { id: string }) {
                 section={foreignSection}
                 onSection={setForeignSection}
                 places={map ? (id) => (map.index.regions[id] ? provinceName(map.index.regions[id], locale) : id) : undefined}
+                index={map?.index ?? null}
                 talkTarget={diplomacyTarget}
                 onTalkTarget={setDiplomacyTarget}
                 talking={busy?.kind === "diplomacy" ? busy : null}
-                canTalk={aiReady}
-                talksOff={opposition}
+                canTalk={canPlay}
+                talksOff={!letters}
                 onSend={send}
+                letterDraft={letterDraft}
               />
             )}
 
@@ -1114,10 +1252,11 @@ export default function GameClient({ id }: { id: string }) {
           </aside>
         )}
 
-        <section data-tour="map" className="relative order-1 h-[42vh] shrink-0 border-b border-line lg:order-none lg:h-auto lg:min-w-0 lg:flex-1 lg:border-b-0">
+        <section ref={mapPanel} data-tour="map" className="relative order-1 h-[42vh] shrink-0 border-b border-line lg:order-none lg:h-auto lg:min-w-0 lg:flex-1 lg:border-b-0">
           {map ? (
             <WorldMap
-              controls={<TurnLength step={state.step} disabled={Boolean(busy)} onStep={(step: TimeStep) => update({ ...state, step, updatedAt: new Date().toISOString() })} />}
+              // The tutorial's written turns are a week each.
+              controls={<TurnLength step={state.step} disabled={Boolean(busy) || written} onStep={(step: TimeStep) => update({ ...state, step, updatedAt: new Date().toISOString() })} />}
               topology={map.topology}
               regions={state.regions}
               countries={state.countries}
@@ -1139,7 +1278,7 @@ export default function GameClient({ id }: { id: string }) {
                   return;
                 }
                 // With the talks open, a country picked on the map is the one to write to; the panel stays.
-                if (leftNow === "foreign" && foreignSection === "talks" && !opposition && tag !== state.player) {
+                if (leftNow === "foreign" && foreignSection === "talks" && letters && tag !== state.player) {
                   setDiplomacyTarget(tag);
                   setSelected(tag);
                   setSelectedProvince(province);
@@ -1170,7 +1309,7 @@ export default function GameClient({ id }: { id: string }) {
             </div>
           )}
 
-          {!aiReady && status && (
+          {!canPlay && status && !guide && (
             <div className="absolute inset-x-3 bottom-3 z-20 flex flex-wrap items-center gap-3 rounded-2xl border border-amber-500/40 sheet p-3 shadow-lg sm:right-auto">
               <span className="text-sm font-bold text-ink">{t("game.needAi")}</span>
               <GameMasterOffer compact />
@@ -1277,6 +1416,7 @@ export default function GameClient({ id }: { id: string }) {
                 plans={state.plans ?? []}
                 player={state.player}
                 view={fogView}
+                society={society}
                 laws={selectedCountry.tag === state.player ? (state.politics?.laws ?? null) : undefined}
                 provinceKey={selectedProvince}
                 province={
@@ -1291,7 +1431,7 @@ export default function GameClient({ id }: { id: string }) {
                   ) : undefined
                 }
                 footer={
-                  selectedCountry.tag !== state.player && !opposition && (
+                  (selectedCountry.tag !== state.player && letters && (
                     <button
                       type="button"
                       onClick={() => {
@@ -1304,7 +1444,18 @@ export default function GameClient({ id }: { id: string }) {
                       <MessageSquare className="h-4 w-4" />
                       {t("country.message")}
                     </button>
-                  )
+                  )) ||
+                  // The leader may step down: it happens as the next turn is played (engine/fate.ts).
+                  (selectedCountry.tag === state.player && ruling && !lost && (
+                    <ResignButton
+                      resigning={Boolean(state.role?.resigning)}
+                      disabled={Boolean(busy)}
+                      label={t("leader.resign")}
+                      body={t("leader.resign.body")}
+                      onResign={() => update(resign(state), true)}
+                      onStay={() => update(withdrawResignation(state), true)}
+                    />
+                  ))
                 }
               />
             )}
@@ -1357,11 +1508,56 @@ export default function GameClient({ id }: { id: string }) {
         onClose={() => setTalksOpen(null)}
       />
 
+      {guide && isTutorial(state) && (
+        <Guide
+          step={guide}
+          progress={{
+            draft: state.draft.length,
+            played: state.chronicle.length,
+            turnBusy: busy?.kind === "turn",
+            reportOpen: report !== null,
+            left: leftNow,
+            advice: Object.values(state.advice ?? {}).reduce((n, thread) => n + (thread ?? []).filter((m) => m.from === "player").length, 0),
+            letters: Object.values(state.diplomacy).reduce((n, thread) => n + thread.filter((m) => m.from === "player").length, 0),
+            ready: aiReady,
+          }}
+          briefing={text(scenario.briefing)}
+          country={text(player.name)}
+          chatgpt={chatgpt}
+          suggestions={{
+            order: TUTORIAL_SUGGESTIONS.order[locale],
+            question: TUTORIAL_SUGGESTIONS.question[locale],
+            letter: TUTORIAL_SUGGESTIONS.letter.text[locale],
+            ideas: TUTORIAL_SUGGESTIONS.ideas.map((idea) => idea[locale]),
+          }}
+          onStep={guideTo}
+          onUse={(what, value = "") => {
+            if (what === "order") {
+              setLeft("orders");
+              setOrderFill({ text: value, n: Date.now() });
+            } else if (what === "question") {
+              setConsult((c) => ({ advisor: "military", question: value, n: (c?.n ?? 0) + 1 }));
+              setLeft("cabinet");
+            } else if (what === "letter") {
+              const to = TUTORIAL_SUGGESTIONS.letter.to;
+              setDiplomacyTarget(to);
+              setSelected(to);
+              setForeignSection("talks");
+              setLeft("foreign");
+              setLetterDraft({ target: to, text: value, n: Date.now() });
+            } else if (what === "signIn") openAppDialog("settings");
+            else setDemo(true);
+          }}
+          onSkip={skipTutorial}
+          onFinish={finishGuide}
+        />
+      )}
+
       {touring && (
         <Tour
           scenario={state.scenarioId}
           country={text(player.name)}
-          opposition={opposition}
+          opposition={!ruling}
           onClose={() => setTouring(false)}
         />
       )}
@@ -1375,10 +1571,24 @@ export default function GameClient({ id }: { id: string }) {
           update(intoOpposition(state), true);
           setLeft("opposition");
         }}
+        onExile={() => {
+          update(intoExile(state), true);
+          setLeft("opposition");
+        }}
+      />
+
+      <FallDialog
+        state={state}
+        onChoose={(choice) => {
+          const next = afterFall(state, choice);
+          update(next, true);
+          setLeft(next.role?.kind === "opposition" ? "opposition" : next.role?.kind === "leader" ? "orders" : "post");
+        }}
       />
 
       <Dialog
         open={report !== null && !rereading && !lost}
+        tourId="report"
         onClose={() => {
           setReport(null);
           setPulse((p) => p + 1);

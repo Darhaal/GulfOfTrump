@@ -49,11 +49,16 @@ export function holdsElections(state: Pick<GameState, "politics" | "scenarioId" 
   return kind === "democracy" || kind === "limited";
 }
 
-/** The motions the player can bring now: none without a parliament that sits, no elections where there are none. */
+/**
+ * The motions the player can bring now: none without a parliament that sits,
+ * no elections where there are none. A bill first – what a parliament sits
+ * for most and the form's first choice – then the other laws, the motions of
+ * government and the elections, the state of emergency last.
+ */
 export function availableMotions(state: Pick<GameState, "politics" | "scenarioId" | "player">): MotionKind[] {
   if (!state.politics?.parliament) return [];
   const elections = holdsElections(state);
-  return (["law", "bill", "constitution", "confidence", "election", "postpone", "emergency"] as const).filter((k) => (k === "election" || k === "postpone" ? elections : true));
+  return (["bill", "law", "constitution", "confidence", "election", "postpone", "emergency"] as const).filter((k) => (k === "election" || k === "postpone" ? elections : true));
 }
 
 /** Which way a law's change leans on the parties' three axes: +1 toward the closed end of its options. */

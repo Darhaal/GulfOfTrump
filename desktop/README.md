@@ -47,7 +47,7 @@ Microsoft Store copy is updated by the Store instead
 An NSIS installer (`electron-builder.yml` → `nsis`) that asks, in order:
 
 1. the language — English, Russian or Ukrainian;
-2. a welcome, then the MIT licence;
+2. a welcome, then the licence (AGPL-3.0);
 3. for whom — this user, or everyone on the computer (asks for admin rights);
 4. the folder;
 5. the shortcuts — on the desktop, in the Start menu, both on by default

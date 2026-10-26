@@ -1,6 +1,8 @@
 import { roll } from "./dice";
 import { STEP_YEARS } from "./economy";
-import { bondsOf, landHolders, occupiedBy, powers, remember, addTension, tieOf, warBetween } from "./relations";
+import { homeFront, type HomeFront } from "./politics";
+import { lensOf, standoffOf, type Lens } from "./standoffs";
+import { bondsOf, goodwillOf, landHolders, occupiedBy, powers, remember, addTension, tieOf, warBetween } from "./relations";
 import { countryCentres, distanceKm } from "./trade";
 import type { AppliedChange, GameState, IncidentAnswer, IncidentCause, IncidentKind, MapRegion, Plan, RegimeKind, ScenarioId } from "./types";
 
@@ -40,6 +42,18 @@ const SEVERITY: Record<IncidentKind, [number, number]> = {
   minority: [20, 8],
 };
 const HAWK_BASE: Record<RegimeKind, number> = { democracy: 35, limited: 45, party: 50, autocracy: 55, military: 65 };
+
+/**
+ * Incidents a period may hold, a backstop against a burst: two a month, a
+ * dozen a year. One a month (the old cap) dropped about a quarter of the
+ * incidents the friction model cast in the monthly 2022 runs – the same tense
+ * pairs again and again (Armenia and Azerbaijan, Russia and Poland, the two
+ * Koreas). One state is in one incident a period at most; the game master is
+ * told the most relevant few (describeIncidents).
+ */
+export const incidentCap = (years: number) => Math.max(2, Math.ceil(12 * years));
+/** Incidents the game master is told one by one; the rest are counted. */
+const TOLD = 3;
 
 export interface Incident {
   id: string;
@@ -129,6 +143,16 @@ export function castIncidents(state: GameState, map?: Record<string, MapRegion> 
   const tradeBloc = (a: string, b: string) => state.alliances.some((x) => x.kind === "trade" && x.members.length < 60 && x.members.includes(a) && x.members.includes(b));
   const livePlans = (state.plans ?? []).filter((p) => !p.end);
   const warPlans = livePlans.filter((p) => p.kind === "war").length;
+  // Politics at home steer the answers (engine/politics.ts homeFront).
+  const homes = new Map<string, HomeFront>();
+  const home = (tag: string): HomeFront => {
+    let h = homes.get(tag);
+    if (!h) homes.set(tag, (h = homeFront(state, tag)));
+    return h;
+  };
+  const diversion = (tag: string) => (home(tag).votes ? 1 : 1 + 0.8 * home(tag).trouble);
+  let lens: Lens | undefined;
+  const appetite = (tag: string) => (home(tag).votes ? 1 - 0.6 * home(tag).trouble : 1 + 0.5 * home(tag).trouble);
 
   const found: { a: string; b: string; score: number; why: IncidentCause; f: number; n: number; claimA: number; claimB: number }[] = [];
   for (const [key, [a, b]] of [...pairs].sort((x, y) => x[0].localeCompare(y[0]))) {
@@ -167,7 +191,7 @@ export function castIncidents(state: GameState, map?: Record<string, MapRegion> 
     const why = parts.sort((p, q) => q[1] - p[1])[0][0];
     found.push({ a, b, score: x / chance, why, f, n, claimA, claimB });
   }
-  const cap = Math.max(1, Math.ceil(5 * years));
+  const cap = incidentCap(years);
   const busy = new Set<string>();
   const out: Incident[] = [];
   let planned = warPlans;
@@ -177,9 +201,9 @@ export function castIncidents(state: GameState, map?: Record<string, MapRegion> 
     busy.add(i.a);
     busy.add(i.b);
     const key = `${i.a}|${i.b}`;
-    // The more hawkish side, and the one with a claim, provokes more often.
-    const wa = (hawkOf(state, i.a) / 50) * (i.claimA ? 1.5 : 1);
-    const wb = (hawkOf(state, i.b) / 50) * (i.claimB ? 1.5 : 1);
+    // The more hawkish side, and the one with a claim, provokes more often; so does an autocracy in trouble at home, looking for a quarrel abroad.
+    const wa = (hawkOf(state, i.a) / 50) * (i.claimA ? 1.5 : 1) * diversion(i.a);
+    const wb = (hawkOf(state, i.b) / 50) * (i.claimB ? 1.5 : 1) * diversion(i.b);
     const [by, target] = dice(`incident-by:${key}`) < wa / (wa + wb) ? [i.a, i.b] : [i.b, i.a];
     const sea = !coast || (coast.has(i.a) && coast.has(i.b));
     const land = neighbors ? borders.has(key) : i.n >= 85;
@@ -196,11 +220,12 @@ export function castIncidents(state: GameState, map?: Record<string, MapRegion> 
         const claim = claimOf(s, o);
         if (s === state.player || livePlans.some((p) => p.kind === "war" && p.by === s) || ((bonds.enemies.get(s)?.size ?? 0) > 0 && !claim)) continue;
         const motive = clamp(Math.max(claim / 50, (tieOf(state, s, o).tension + (s === target ? severity : severity * 0.6)) / 50), 0.3, 2);
-        const backers = [...(bonds.allies.get(o) ?? none)].filter((x) => x !== s && !(bonds.allies.get(s) ?? none).has(x)).reduce((sum, x) => sum + (power.get(x) ?? 0), 0);
-        const ratio = ((power.get(s) ?? 0) * Math.max(0.3, i.n / 100)) / Math.max(0.01, (power.get(o) ?? 0) + 0.7 * backers);
+        // The balance with everyone who would stand by each side (engine/standoffs.ts), the distance as the map measures it.
+        const balance = standoffOf((lens ??= lensOf(state, power)), { by: s, target: o });
+        const ratio = (balance.ratio / Math.max(0.3, tieOf(state, s, o).near / 100)) * Math.max(0.3, i.n / 100);
         // Against a target a great alliance stands behind, nobody marches.
         if (ratio < 0.35) continue;
-        const w = (hawkOf(state, s) / 50) * motive * clamp(ratio - 0.3, 0.1, 1.5) * ESCALATE[era];
+        const w = ((hawkOf(state, s) / 50) * motive * clamp(ratio - 0.3, 0.1, 1.5) * ESCALATE[era] * appetite(s)) / goodwillOf(state, s, o);
         if (!best || w > best.w) best = { side: s, w };
       }
       if (best) options.push({ answer: "escalate", responder: best.side, w: best.w });
@@ -208,13 +233,17 @@ export function castIncidents(state: GameState, map?: Record<string, MapRegion> 
     if (target !== state.player && !(state.sanctions ?? []).some((s) => s.by === target && s.against === by)) {
       const democracy = state.countries[target]?.domestic?.regime === "democracy";
       const weight = (state.countries[target]?.economy?.gdp ?? 0) >= 0.3 * (state.countries[by]?.economy?.gdp ?? 0) ? 1 : 0.3;
-      options.push({ answer: "sanction", responder: target, w: (democracy ? 0.5 : 0.2) * weight });
+      // Sanctions that cost trade are the last thing a government in trouble at home wants.
+      const costly = clamp((tieOf(state, target, by).trade ?? 0) / 15, 0, 1);
+      options.push({ answer: "sanction", responder: target, w: (democracy ? 0.5 : 0.2) * weight * (1 - home(target).trouble * (0.3 + 0.5 * costly)) });
     }
     if (by !== state.player && target !== state.player) {
       const dove = hawkOf(state, by) <= hawkOf(state, target) ? by : target;
       const trade = Math.max(tieOf(state, by, target).trade ?? 0, tieOf(state, target, by).trade ?? 0);
       const pact = bonds.pacts.get(by)?.has(target) ? 0.3 : 0;
-      options.push({ answer: "talks", responder: dove, w: 0.45 * clamp(2 - (hawkOf(state, by) + hawkOf(state, target)) / 100, 0.3, 1.6) * (1 + trade / 20) + pact });
+      // Where votes count, a government in trouble at home would rather talk than quarrel.
+      const calm = home(dove).votes ? 1 + 0.6 * home(dove).trouble : 1;
+      options.push({ answer: "talks", responder: dove, w: (0.45 * clamp(2 - (hawkOf(state, by) + hawkOf(state, target)) / 100, 0.3, 1.6) * (1 + trade / 20) + pact) * calm });
     }
     const total = options.reduce((s, o) => s + o.w, 0);
     let x = dice(`incident-answer:${key}`) * total;
@@ -305,9 +334,37 @@ const WHY_EN: Record<IncidentCause, string> = {
   tension: "tension",
 };
 
-/** The period's incidents for the turn's game master, in one line. */
-export function describeIncidents(incidents: Incident[], name: (tag: string) => string): string[] {
-  if (!incidents.length) return [];
+/** Who an incident matters to: the player, the player's neighbours, the great powers. */
+export interface Relevance {
+  player: string;
+  near: ReadonlySet<string>;
+  great: ReadonlySet<string>;
+}
+
+/**
+ * The period's incidents for the turn's game master, in one line: those
+ * touching the player first, then its neighbours', the great powers' and
+ * those that start a march to war, at most TOLD; the rest in a count. The
+ * engine applies them all.
+ */
+export function describeIncidents(all: Incident[], name: (tag: string) => string, rel?: Relevance): string[] {
+  if (!all.length) return [];
+  const rank = (i: Incident) => {
+    const tags = [i.by, i.target];
+    if (rel && tags.includes(rel.player)) return 0;
+    let r = 4;
+    if (rel && tags.some((t) => rel.near.has(t))) r -= 2;
+    if (rel && tags.some((t) => rel.great.has(t))) r -= 1;
+    if (i.answer === "escalate") r -= 1.5;
+    else if (i.answer !== "none") r -= 0.5;
+    return r;
+  };
+  const incidents = all
+    .map((i, n) => ({ i, n }))
+    .sort((a, b) => rank(a.i) - rank(b.i) || a.n - b.n)
+    .slice(0, TOLD)
+    .map((x) => x.i);
+  const more = all.length - incidents.length;
   const answer = (i: Incident) => {
     const who = i.responder ? `${name(i.responder)} [${i.responder}]` : "";
     switch (i.answer) {
@@ -322,5 +379,6 @@ export function describeIncidents(incidents: Incident[], name: (tag: string) => 
     }
   };
   const list = incidents.map((i) => `${name(i.by)} [${i.by}] → ${name(i.target)} [${i.target}]: ${KIND_EN[i.what]} (${WHY_EN[i.why]}); ${answer(i)}`);
-  return [`INCIDENTS THIS PERIOD (the engine's dice, already cast – show each in the story with its answer): ${list.join("; ")}`];
+  const rest = more > 0 ? `; and ${more} lesser incident${more === 1 ? "" : "s"} elsewhere (mention in passing at most)` : "";
+  return [`INCIDENTS THIS PERIOD (the engine's dice, already cast – show each in the story with its answer): ${list.join("; ")}${rest}`];
 }

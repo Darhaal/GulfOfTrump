@@ -1,10 +1,10 @@
 {
   "name": "gulf-of-trump",
   "productName": "Gulf of Trump",
-  "version": "1.0.5-beta",
+  "version": "1.0.6-beta",
   "description": "Alternate-history grand strategy where a language model is the game master. Plays on your own ChatGPT plan.",
   "author": "Artem Okhten",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "private": true,
   "main": "main.cjs",
   "scripts": {

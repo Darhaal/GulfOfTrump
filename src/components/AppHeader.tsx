@@ -20,10 +20,12 @@ interface AppHeaderProps {
   actions?: ReactNode;
   /** Buttons at the right end, after settings: the game's flag for reporting the game master's text. */
   trailing?: ReactNode;
+  /** The demo strip's words on this screen instead of the general ones: a played game says which turns were written for it (lib/played.ts). */
+  demoNote?: string;
 }
 
 /** The sticky header of every screen: back button, title, actions, AI status, about and settings (as popups). */
-export default function AppHeader({ title, subtitle, back, actions, trailing }: AppHeaderProps) {
+export default function AppHeader({ title, subtitle, back, actions, trailing, demoNote }: AppHeaderProps) {
   const { t } = useI18n();
   const [demoChosen] = usePreference("demo");
   return (
@@ -53,7 +55,7 @@ export default function AppHeader({ title, subtitle, back, actions, trailing }: 
       <UpdateToast />
       {isDemo() && (
         <div className="border-t border-line bg-accent/10 px-4 py-1.5 text-center text-2xs font-bold text-ink">
-          {t("demo.banner")}{" "}
+          {demoNote ?? t("demo.banner")}{" "}
           <a href={DOWNLOAD_URL} target="_blank" rel="noreferrer" className="whitespace-nowrap text-accent underline-offset-2 hover:underline">
             {t("download.windows")}
           </a>
@@ -62,7 +64,7 @@ export default function AppHeader({ title, subtitle, back, actions, trailing }: 
       {/* The player chose the offline demo in this app (lib/gameMaster.ts). */}
       {!isDemo() && demoChosen === "1" && (
         <div className="border-t border-line bg-accent/10 px-4 py-1.5 text-center text-2xs font-bold text-ink">
-          {t("demo.local")}{" "}
+          {demoNote ?? t("demo.local")}{" "}
           <button type="button" onClick={() => openAppDialog("settings")} className="whitespace-nowrap text-accent underline-offset-2 hover:underline">
             {t("demo.signIn")}
           </button>

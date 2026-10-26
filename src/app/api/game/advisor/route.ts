@@ -2,8 +2,9 @@ import { ADVISOR_HISTORY, ADVISORS, AdviceSchema, type AdvisorId } from "@/engin
 import { deputyById, ministryOfDeputy } from "@/engine/deputies";
 import { deputyContext, DEPUTY_INSTRUCTIONS } from "@/engine/deputyPrompts";
 import { ADVISOR_INSTRUCTIONS, buildAdvisorPrompt } from "@/engine/prompts";
-import { getScenario } from "@/engine/scenarios";
+import { scenarioOf } from "@/engine/scenarios";
 import { en } from "@/engine/text";
+import { scriptedAdvice, scriptedNow } from "@/engine/tutorial";
 import { wantsDemo } from "@/server/demo";
 import { rejectNonLocal } from "@/server/guard";
 import { completeJson } from "@/server/llm";
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
     .map((m) => `[${m.date}] ${m.from === "player" ? "The government" : "You"}: ${m.text}`)
     .join("\n");
 
-  const index = await loadMapIndex(getScenario(state.scenarioId).map);
+  const index = await loadMapIndex(scenarioOf(state).map);
   return ndjsonResponse(request, async ({ signal, progress }) => {
     let chars = 0;
     const reply = await completeJson(
@@ -59,6 +60,8 @@ export async function POST(request: Request) {
         ],
         signal,
         onDelta: (delta) => progress((chars += delta.length)),
+        // In the tutorial's first turns the minister's answer is written in advance (engine/tutorial.ts).
+        scripted: scriptedNow(state) && !deputy ? JSON.stringify(scriptedAdvice(advisor, locale)) : undefined,
       },
       AdviceSchema,
     );

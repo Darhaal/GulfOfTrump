@@ -1,4 +1,5 @@
-// An interface smoke test: the pages open, a game starts, a turn plays, the
+// An interface smoke test: a first visit opens the tutorial, its written turn
+// plays and it can be skipped and started again; the pages open, a game starts, a turn plays, the
 // panels and dialogs open — with no error on the page or in its console.
 //
 // Runs against a server that is already up with the offline game master,
@@ -26,6 +27,10 @@ page.on("pageerror", (e) => errors.push(`page error: ${e.message}`));
 page.on("console", (m) => {
   if (m.type() === "error") errors.push(`console: ${m.text()}`);
 });
+// The smoke test never sends anonymous statistics (src/lib/telemetry).
+page.on("request", (r) => {
+  if (r.url().includes("/rest/v1/telemetry_events")) errors.push(`telemetry sent: ${r.url()}`);
+});
 page.setDefaultTimeout(30_000);
 
 async function step(name, run) {
@@ -47,12 +52,59 @@ const button = (text) => page.locator("button:visible", { hasText: text });
 const dialog = () => page.locator("[role=dialog]");
 const mapDrawn = () => page.waitForFunction(() => document.querySelectorAll("svg[aria-label='World map'] path[data-region]").length > 1000, null, { timeout: 60_000 });
 
+// English from the first page on, and anonymous statistics declined, so their question never
+// covers the page (a build without Supabase, as in CI, does not ask at all). Nothing else is
+// stored before the first visit: it is a new player's.
+await page.addInitScript(() => {
+  localStorage.setItem("got_locale", "en");
+  localStorage.setItem("got_telemetry", "off");
+});
+const guide = (title) => page.locator("[role=dialog]", { hasText: title });
+
 try {
-  await step("the front page opens in English", async () => {
+  await step("a first visit opens the tutorial as Ukraine, its guide on the briefing", async () => {
     await page.goto(`${BASE}/`);
-    await page.evaluate(() => localStorage.setItem("got_locale", "en"));
+    await page.waitForURL(/\/play\//);
+    await mapDrawn();
+    await guide("You lead Ukraine").waitFor();
+    await button(/^Begin$/).click();
+    await guide("The map").waitFor();
+    await button(/^Next$/).click();
+  });
+
+  await step("the tutorial's first order is offered, added, and its written turn plays", async () => {
+    await guide("Your first order").waitFor();
+    await button(/^Use this$/).click();
+    await page.locator("[data-tour='orders-input'] textarea").first().waitFor();
+    await button("Add order").click();
+    await guide("End the turn").waitFor();
+    await button(/^End turn$/).first().click();
+    await dialog().getByText("Turn report").waitFor();
+    // Written in advance: no game master was asked.
+    await dialog().getByText("Kyiv holds the first week").first().waitFor();
+    await guide("The report").waitFor();
+    await dialog().locator("button", { hasText: "Back to the game" }).click();
+    await guide("The front moved").waitFor();
+  });
+
+  await step("the tutorial is skipped to the front page, which then stays", async () => {
+    await button(/^Skip tutorial$/).click();
+    await page.waitForURL(`${BASE}/`);
+    await page.locator("a[href^='/new/']").first().waitFor();
     await page.reload();
     await page.locator("a[href^='/new/']").first().waitFor();
+    await page.waitForTimeout(1500);
+    if (new URL(page.url()).pathname !== "/") throw new Error(`the front page went to ${page.url()}`);
+  });
+
+  await step("the tutorial starts again from the 2022 card", async () => {
+    await page.locator("button[data-start='tutorial']").click();
+    await page.locator("a[href='/new/2022/tutorial']").last().click();
+    await page.waitForURL(/\/play\//);
+    await mapDrawn();
+    await guide("You lead Ukraine").waitFor();
+    await button(/^Skip tutorial$/).click();
+    await page.waitForURL(`${BASE}/`);
   });
 
   await step(`a new game as ${COUNTRY} in ${SCENARIO}`, async () => {
@@ -137,9 +189,21 @@ try {
     await page.setViewportSize({ width: 1600, height: 900 });
   });
 
+  await step("a played game opens from the front page and plays on", async () => {
+    await page.goto(`${BASE}/`);
+    await button(/^Ukraine · 2022$/).click();
+    await page.waitForURL(/\/play\//);
+    await mapDrawn();
+    await page.locator("header").getByText("Unbroken").first().waitFor();
+    await button(/^End turn$/).first().click();
+    await dialog().getByText("Turn report").waitFor();
+    await dialog().locator("button", { hasText: "Back to the game" }).click();
+  });
+
   await step("the settings and about pages open", async () => {
     await page.goto(`${BASE}/settings`);
     await page.getByText("Sign in with ChatGPT").or(page.getByText("Offline mock")).first().waitFor();
+    await page.getByText("Anonymous statistics").first().waitFor();
     await page.goto(`${BASE}/about`);
     await page.locator("main").first().waitFor();
   });

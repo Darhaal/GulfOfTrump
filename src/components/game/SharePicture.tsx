@@ -9,7 +9,7 @@ import { canvasPng, drawTurnPicture, homeLand, pageFont, preparedMap } from "@/c
 import { APP_NAME } from "@/constants/app";
 import { formatDate } from "@/engine/calendar";
 import { regionsAfter } from "@/engine/history";
-import { getScenario } from "@/engine/scenarios";
+import { scenarioOf } from "@/engine/scenarios";
 import type { ChronicleEntry, GameState } from "@/engine/types";
 import { useI18n } from "@/i18n/useI18n";
 import { downloadBlob } from "@/lib/exports";
@@ -41,7 +41,7 @@ export default function SharePicture({ state, entry, topology, onClose }: { stat
       const map = preparedMap(topology);
       const regions = regionsAfter(state, entry.turn);
       const changed = changedRegions(entry.applied).filter((id) => regions[id]);
-      const scenario = getScenario(state.scenarioId);
+      const scenario = scenarioOf(state);
       drawTurnPicture(el, map, {
         regions,
         color: (tag) => state.countries[tag]?.color,

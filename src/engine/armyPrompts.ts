@@ -1,6 +1,7 @@
 import { divisionsOf, maxDivisions, menOf } from "./army";
 import { arsenalLine, enemiesOf } from "./arsenal";
 import { yearOf } from "./calendar";
+import { describeFigureSetup } from "./figures";
 import { peopleIn } from "./population";
 import { LANGUAGE } from "./prompts";
 import { en } from "./text";
@@ -39,6 +40,8 @@ export function buildArmyPrompt(state: GameState, index: Pick<MapIndex, "regions
     `SOLDIERS: ${troops} thousand – ${Math.round(men.pro)} career, ${Math.round(men.trained)} trained conscripts, ${Math.round(men.recruits)} recruits still in training`,
     `FIELD STRENGTH: about ${field} divisions or division equivalents; at most ${maxDivisions(troops, year)}`,
     `WEAPONS: ${arsenalLine(c?.arsenal) || "none recorded"}`,
+    // The player's general commands a formation of their own: the answer names them its commander (engine/figures.ts).
+    ...(state.role?.kind === "general" ? describeFigureSetup(state).map((l) => `${l} Name them the commander of that formation.`) : []),
   ];
 
   const enemies = enemiesOf(state).get(tag) ?? new Set<string>();

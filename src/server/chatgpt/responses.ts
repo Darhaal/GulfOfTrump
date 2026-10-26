@@ -13,6 +13,23 @@ export interface StreamRequest {
   input: InputMessage[];
   signal?: AbortSignal;
   onDelta?: (delta: string) => void;
+  /** The model and the tokens one answer took, as `response.completed` reports them (counts only, for telemetry). */
+  onUsage?: (usage: Usage) => void;
+}
+
+/** What one answer cost: the model, and its tokens when the server says. */
+export interface Usage {
+  model?: string;
+  input?: number;
+  output?: number;
+}
+
+const count = (value: unknown) => (typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.round(value) : undefined);
+
+/** Adds one answer's usage to a running total (a turn's stages, a repaired answer). */
+export function addUsage(total: Usage, usage: Usage): Usage {
+  const sum = (a?: number, b?: number) => (a === undefined && b === undefined ? undefined : (a ?? 0) + (b ?? 0));
+  return { model: usage.model ?? total.model, input: sum(total.input, usage.input), output: sum(total.output, usage.output) };
 }
 
 /** The game's dashes are short (–): a long one (—) the model writes is shortened as it streams. */
@@ -80,7 +97,7 @@ export async function streamText(token: string, request: StreamRequest): Promise
           .map((line) => line.slice(5).trimStart())
           .join("\n");
         if (!data || data === "[DONE]") continue;
-        let event: { type?: string; delta?: unknown; response?: { error?: unknown }; error?: unknown };
+        let event: { type?: string; delta?: unknown; response?: { error?: unknown; usage?: { input_tokens?: unknown; output_tokens?: unknown } }; error?: unknown };
         try {
           event = JSON.parse(data);
         } catch {
@@ -98,6 +115,8 @@ export async function streamText(token: string, request: StreamRequest): Promise
         } else if (event.type === "response.incomplete") {
           throw new AiError("response_incomplete", "ChatGPT stopped before finishing. Try again.", true);
         } else if (event.type === "response.completed") {
+          const usage = event.response?.usage;
+          request.onUsage?.({ model: request.model, input: count(usage?.input_tokens), output: count(usage?.output_tokens) });
           completed = true;
           break;
         }

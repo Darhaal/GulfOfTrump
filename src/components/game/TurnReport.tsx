@@ -4,7 +4,7 @@ import { Banknote, Check, CircleDashed, Flag, Handshake, Landmark, Loader2, News
 import { useState } from "react";
 import { ui } from "@/components/ui/classes";
 import SpeakButton from "@/components/voice/SpeakButton";
-import { formatDate, yearOf } from "@/engine/calendar";
+import { formatDate, formatMonth, yearOf } from "@/engine/calendar";
 import { turnSpeechId } from "@/lib/voice/speaker";
 import { turnSpeech } from "@/lib/voice/text";
 import { regionLabel } from "@/engine/provinces";
@@ -111,7 +111,7 @@ export default function TurnReport({
   /** A turn not yet applied: the stages still being written (engine/stages.ts); what changed and the economy come with the turn. */
   pending?: TurnStage[];
 }) {
-  const { t, text, locale, money, people } = useI18n();
+  const { t, text, locale, moneyMoved, people } = useI18n();
   // Views come after the turn; the ministers still owing one, and the quiet ones, show what became of their directives meanwhile.
   const reports = entry.reports ?? [];
   const unheard = (entry.briefs ?? []).filter((b) => !reports.some((r) => r.ministry === b.ministry));
@@ -121,10 +121,11 @@ export default function TurnReport({
   const economy = entry.economy;
   const economyLines = economy
     ? [
-        economy.before.gdp !== economy.after.gdp && t("report.gdp", { from: money(economy.before.gdp), to: money(economy.after.gdp) }),
-        economy.before.debt !== economy.after.debt && t("report.debt", { from: money(economy.before.debt), to: money(economy.after.debt) }),
-        economy.before.reserves !== economy.after.reserves && t("report.reserves", { from: money(economy.before.reserves), to: money(economy.after.reserves) }),
-        economy.before.troops !== economy.after.troops && t("report.troops", { from: people(economy.before.troops), to: people(economy.after.troops) }),
+        // Enough decimals to see a weekly turn move a large economy, and the change itself (moneyChange).
+        economy.before.gdp !== economy.after.gdp && t("report.gdp", moneyMoved(economy.before.gdp, economy.after.gdp)),
+        economy.before.debt !== economy.after.debt && t("report.debt", moneyMoved(economy.before.debt, economy.after.debt)),
+        economy.before.reserves !== economy.after.reserves && t("report.reserves", moneyMoved(economy.before.reserves, economy.after.reserves)),
+        economy.before.troops !== economy.after.troops && t("report.troops", { from: people(economy.before.troops), to: people(economy.after.troops), delta: `${economy.after.troops > economy.before.troops ? "+" : "−"}${people(Math.abs(economy.after.troops - economy.before.troops))}` }),
         economy.before.people !== undefined && economy.after.people !== undefined && Math.abs(economy.after.people - economy.before.people) >= 1 && t("report.people", { from: people(economy.before.people), to: people(economy.after.people), delta: `${economy.after.people > economy.before.people ? "+" : "−"}${people(Math.abs(economy.after.people - economy.before.people))}` }),
       ].filter((line): line is string => Boolean(line))
     : [];
@@ -196,6 +197,8 @@ export default function TurnReport({
                     )}
                   </div>
                   {v?.note && <p className="mt-1 pl-6 text-xs font-medium text-muted">{v.note}</p>}
+                  {/* A ministry held by a disloyal faction carried it out half-heartedly (engine/intrigue.ts). */}
+                  {v?.obstructed && v.by && <p className="mt-0.5 pl-6 text-2xs font-bold text-amber-700">{t("verdict.obstructed", { title: text(ADVISOR_TITLES[v.by]) })}</p>}
                 </li>
               );
             })}
@@ -219,13 +222,13 @@ export default function TurnReport({
             ))}
             {notable.map((c, i) => (
               <li key={`n${i}`} className="rounded-lg bg-page px-3 py-1.5 text-xs font-bold text-ink">
-                {describeChange(c, state, t, text, region, (iso) => formatDate(iso, locale))}
+                {describeChange(c, state, t, text, region, (iso) => formatDate(iso, locale), (iso) => formatMonth(iso, locale))}
               </li>
             ))}
             {allStats &&
               folded.map((c, i) => (
                 <li key={`f${i}`} className="rounded-lg px-3 py-1 text-xs font-medium text-muted">
-                  {describeChange(c, state, t, text, region, (iso) => formatDate(iso, locale))}
+                  {describeChange(c, state, t, text, region, (iso) => formatDate(iso, locale), (iso) => formatMonth(iso, locale))}
                 </li>
               ))}
           </ul>

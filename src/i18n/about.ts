@@ -58,7 +58,7 @@ const en: AboutContent = {
   authorBio: "Applied Mathematics at Florida Tech, full-stack and machine-learning engineer, founder of Okhten Group LLC. Gulf of Trump is built in the open – ideas, bug reports and pull requests are welcome.",
   contact: "Write to me",
   licenseTitle: "Open source",
-  license: "The code is under the MIT License; the map data under GPL-3.0. ChatGPT is a trademark of OpenAI; this project is not affiliated with OpenAI or Pax Historia.",
+  license: "The code is under the GNU AGPL-3.0 (up to version 1.0.5, MIT); the map data under GPL-3.0. The name Gulf of Trump and its logo are the author's trademarks. ChatGPT is a trademark of OpenAI; this project is not affiliated with OpenAI or Pax Historia.",
 };
 
 const ru: AboutContent = {
@@ -97,7 +97,7 @@ const ru: AboutContent = {
   authorBio: "Прикладная математика во Florida Tech, full-stack и ML-инженер, основатель Okhten Group LLC. Gulf of Trump делается открыто – идеи, баг-репорты и pull request'ы приветствуются.",
   contact: "Написать мне",
   licenseTitle: "Открытый код",
-  license: "Код – под лицензией MIT, данные карты – под GPL-3.0. ChatGPT – товарный знак OpenAI; проект не связан с OpenAI и Pax Historia.",
+  license: "Код – под лицензией GNU AGPL-3.0 (до версии 1.0.5 – MIT), данные карты – под GPL-3.0. Название Gulf of Trump и логотип – товарные знаки автора. ChatGPT – товарный знак OpenAI; проект не связан с OpenAI и Pax Historia.",
 };
 
 const uk: AboutContent = {
@@ -136,7 +136,7 @@ const uk: AboutContent = {
   authorBio: "Прикладна математика у Florida Tech, full-stack та ML-інженер, засновник Okhten Group LLC. Gulf of Trump робиться відкрито – ідеї, баг-репорти й pull request'и вітаються.",
   contact: "Написати мені",
   licenseTitle: "Відкритий код",
-  license: "Код – під ліцензією MIT, дані мапи – під GPL-3.0. ChatGPT – торговельна марка OpenAI; проєкт не пов'язаний з OpenAI та Pax Historia.",
+  license: "Код – під ліцензією GNU AGPL-3.0 (до версії 1.0.5 – MIT), дані мапи – під GPL-3.0. Назва Gulf of Trump і логотип – торговельні марки автора. ChatGPT – торговельна марка OpenAI; проєкт не пов'язаний з OpenAI та Pax Historia.",
 };
 
 export const ABOUT: Record<Locale, AboutContent> = { en, ru, uk };

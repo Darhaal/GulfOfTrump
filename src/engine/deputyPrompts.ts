@@ -1,6 +1,7 @@
 import { ADVISOR_PERSONAS, type AdvisorId } from "./advisors";
 import { deputiesOf, deputyPersona, MAX_DEPUTIES } from "./deputies";
 import { officialAt, officialLine } from "./government";
+import { factionLineFor } from "./intrigue";
 import { buildPoliticsPrompt, IN_CHARACTER, LANGUAGE } from "./prompts";
 import type { Deputy, GameState, Locale, OfficialPost } from "./types";
 
@@ -48,5 +49,7 @@ export function deputyContext(state: GameState, deputy: Deputy): string {
     "",
     "YOU ARE NOT THE MINISTER: the sections above titled YOUR MINISTRY'S DIRECTIVES and YOUR LAST REPORT are your chief's, which you know from inside the ministry.",
     ...(colleagues.length ? ["", "THE OTHER DEPUTIES:", ...colleagues.map((d) => `- ${d.name}, ${d.title}`)] : []),
+    // The deputy's own faction, rivals and plot in the cabinet (engine/intrigue.ts).
+    ...factionLineFor(state, deputy.name),
   ].join("\n");
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { formatDate } from "@/engine/calendar";
+import { formatDate, formatMonth } from "@/engine/calendar";
 import { regionLabel } from "@/engine/provinces";
 import type { GameState, Locale, MapIndex, Text } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
@@ -52,7 +52,7 @@ export function chronicleMarkdown(state: GameState, index: MapIndex | null, loca
     if (listed.length) {
       lines.push("");
       lines.push(`### ${t("game.changes")}`);
-      for (const c of sortChanges(listed)) lines.push(`- ${describeChange(c, state, t, text, (id) => regionLabel(id, index, locale), (iso) => formatDate(iso, locale))}`);
+      for (const c of sortChanges(listed)) lines.push(`- ${describeChange(c, state, t, text, (id) => regionLabel(id, index, locale), (iso) => formatDate(iso, locale), (iso) => formatMonth(iso, locale))}`);
     }
     if (e.events.length) {
       lines.push("");

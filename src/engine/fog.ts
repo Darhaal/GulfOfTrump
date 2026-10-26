@@ -2,7 +2,7 @@ import { coupRiskIn, incomes, lostShares } from "./abroad";
 import { roll } from "./dice";
 import { officialAt } from "./government";
 import { intelligenceBonus } from "./researchEffects";
-import type { GameState, Localized, MapIndex, MapRegion, RegimeKind } from "./types";
+import type { GameState, Localized, MapIndex, MapRegion, OfficialPost, PlayerRole, RegimeKind } from "./types";
 
 /**
  * Fog of war: the player sees other countries as its government would know
@@ -17,7 +17,7 @@ import type { GameState, Localized, MapIndex, MapRegion, RegimeKind } from "./ty
  */
 
 export type KnowledgeLevel = "full" | "good" | "partial" | "poor";
-export type KnowledgeReason = "open" | "closed" | "ally" | "pact" | "bloc" | "enemy" | "sanctions" | "border" | "agents" | "service-good" | "service-weak" | "signals-good" | "signals-weak" | "talks";
+export type KnowledgeReason = "open" | "closed" | "ally" | "pact" | "bloc" | "enemy" | "sanctions" | "border" | "agents" | "service-good" | "service-weak" | "signals-good" | "signals-weak" | "talks" | "post-good" | "post-weak";
 
 export interface Knowledge {
   /** 0–100: how much of the country's real state the player's government knows. */
@@ -46,6 +46,26 @@ const SERVICE = 5;
 const TALKS = 5;
 const MIN_SCORE = 5;
 const MAX_SCORE = 95;
+
+/**
+ * What a player who does not lead sees from their post (engine/figures.ts):
+ * the foreign ministry's cables and the intelligence service's reports more,
+ * the ministries far from the world less; a general little of politics; an
+ * opposition only what the press prints, a little more from abroad.
+ */
+const POST_SIGHT: Partial<Record<OfficialPost, number>> = { foreign: 10, intelligence: 15, chief: 5, interior: -5, industry: -5, science: -10 };
+export function postSight(role: PlayerRole | undefined): number {
+  if (!role || role.kind === "leader") return 0;
+  if (role.kind === "opposition") return role.movement?.kind === "exile" ? -5 : -15;
+  if (role.kind === "general") return -5;
+  return role.post ? (POST_SIGHT[role.post] ?? 0) : 0;
+}
+/** Armies are a soldier's business: a general and the general staff know them better, an opposition worse. */
+export function armySight(role: PlayerRole | undefined): number {
+  if (role?.kind === "general") return 20;
+  if (role?.kind === "minister" && role.post === "military") return 10;
+  return role?.kind === "opposition" ? -10 : 0;
+}
 
 /** Below this a government's support and stability are unknown. */
 export const POLITICS_SEEN = 35;
@@ -101,7 +121,7 @@ function watched(state: Pick<GameState, "directives" | "countries">, tag: string
   });
 }
 
-type KnowledgeState = Pick<GameState, "player" | "countries" | "alliances" | "wars" | "sanctions" | "directives" | "officials" | "diplomacy"> & Partial<Pick<GameState, "research" | "date">>;
+type KnowledgeState = Pick<GameState, "player" | "countries" | "alliances" | "wars" | "sanctions" | "directives" | "officials" | "diplomacy"> & Partial<Pick<GameState, "research" | "date" | "role">>;
 
 /** How much the player's government knows of one country. `borders` is borderingPlayer's result, when the map has loaded. */
 export function knowledgeOf(state: KnowledgeState, tag: string, borders?: Set<string>): Knowledge {
@@ -133,6 +153,9 @@ export function knowledgeOf(state: KnowledgeState, tag: string, borders?: Set<st
   const signals = state.research?.tech && state.date ? intelligenceBonus({ research: state.research, date: state.date }) : 0;
   if (signals) parts.push([signals > 0 ? "signals-good" : "signals-weak", signals]);
   if ((state.diplomacy[tag] ?? []).some((m) => m.from === "them")) parts.push(["talks", TALKS]);
+  // A player who does not lead sees what their post lets them see.
+  const sight = postSight(state.role);
+  if (sight) parts.push([sight > 0 ? "post-good" : "post-weak", sight]);
 
   const score = Math.max(MIN_SCORE, Math.min(MAX_SCORE, base + parts.reduce((sum, [, d]) => sum + d, 0)));
   // The kind of government first, then the rest by how much they weigh.
@@ -226,7 +249,7 @@ export function foreignView(state: ViewState, tag: string, ctx: ViewContext = {}
     view.gdp = estimate(c.economy.gdp, k, state, `${tag}:gdp`);
     view.growth = estimateRate(c.economy.growth, k, 8, state, `${tag}:growth`);
     view.debt = estimate(c.economy.debt, k, state, `${tag}:debt`);
-    view.troops = estimate(c.economy.troops, k - ARMY_SECRECY, state, `${tag}:troops`);
+    view.troops = estimate(c.economy.troops, k - ARMY_SECRECY + armySight(state.role), state, `${tag}:troops`);
   }
   const d = c?.domestic;
   if (d && k >= POLITICS_SEEN) {
@@ -269,7 +292,7 @@ export function describeFog(state: GameState, index: Pick<MapIndex, "neighbors" 
   }
   const lines = [
     "",
-    "FOG OF WAR — what the player's government knows of other countries. The figures above are the truth, for you alone. In the narrative, the events and the ministers' reports, give foreign figures as the player's government would learn them — estimates, published statistics, intelligence, rumours — and never reveal what it cannot know: a closed government's real support and stability, a coup in the making, an army's exact strength. Intelligence work, defectors, a captured document or events this period may uncover them; then say how they were learned.",
+    `FOG OF WAR — what ${state.role && state.role.kind !== "leader" ? "the player knows from their post" : "the player's government knows"} of other countries. The figures above are the truth, for you alone. In the narrative, the events and the ministers' reports, give foreign figures as the player's government would learn them — estimates, published statistics, intelligence, rumours — and never reveal what it cannot know: a closed government's real support and stability, a coup in the making, an army's exact strength. Intelligence work, defectors, a captured document or events this period may uncover them; then say how they were learned.`,
   ];
   if (groups.good.length) lines.push(`- well informed (allies, open neighbours, its intelligence's targets): ${groups.good.join(", ")}`);
   if (groups.poor.length) lines.push(`- poorly informed (closed regimes, enemies): ${groups.poor.join(", ")}`);

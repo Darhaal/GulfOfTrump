@@ -7,6 +7,8 @@
 2. **The player's plan through the game server** — anyone who can call the
    game's AI routes spends the plan of the person running it.
 3. **Cloud saves** — each player's games, readable and writable by them only.
+4. **What anonymous telemetry may carry** — nothing that names the player or
+   repeats what they or the model wrote, and nothing at all without consent.
 
 Cheating is out of scope: the state lives in the player's own browser and they
 may edit it as they like. There is nothing to win from anyone else.
@@ -39,7 +41,13 @@ server on `127.0.0.1:41914` and shows it in its own window. The guards are
 unchanged. Sign-in opens the system browser and returns to the loopback
 listener, and the tokens live in the same encrypted store. Links outside the
 game open in the system browser, never in the app's window. Desktop builds
-carry no Supabase project and no `.env` file.
+carry no `.env` file; the release workflows build in only the Supabase URL
+and anon key (public by design) from the repository's variables.
+
+Neither the app's window nor `next.config.ts` sets a Content-Security-Policy
+(only the loading screen, `desktop/splash.html`, has its own). If one is
+added, its `connect-src` must allow the Supabase origin, which the page calls
+directly for cloud saves and telemetry.
 
 ### The public demo
 
@@ -83,7 +91,8 @@ against the state before anything is applied; stat changes are clamped to
 
 - Row-level security on `profiles` and `games`; every policy is
   `auth.uid() = owner` (or `= id`), for the `authenticated` role only.
-- No privileges for `anon` at all. `TRUNCATE`, `REFERENCES` and `TRIGGER` are
+- No privileges for `anon` on either (its only right anywhere is to insert
+  telemetry, below). `TRUNCATE`, `REFERENCES` and `TRIGGER` are
   revoked from `authenticated` — RLS does not cover `TRUNCATE`.
 - The profile trigger is `security definer` with an empty `search_path`.
 - Saves are capped at 5 MB per row.
@@ -97,6 +106,36 @@ against the state before anything is applied; stat changes are clamped to
   from before sealed files (save step 21 or earlier).
 
 The anon key in `.env.local` is public by design; RLS is what protects the data.
+
+## Anonymous telemetry
+
+Opt-in statistics ([telemetry.md](telemetry.md)) go from the page straight
+to the same Supabase project, by a plain `fetch` to PostgREST:
+
+- **Consent first.** Off until the player says yes (the front page asks
+  once; Settings switches it). Before a yes and after a no nothing is queued
+  or sent; a no deletes the install id and aborts a request on its way. Tests,
+  CI (`NEXT_PUBLIC_GOT_TELEMETRY=off`), builds without Supabase and runs with
+  `GOT_MOCK_AI=1` never send.
+- **A whitelist, not a convention.** Every event is rebuilt from a fixed list
+  of columns, each checked (`src/lib/telemetry/events.ts`), so there is no
+  field a text, a name, an e-mail, an account id, a token or a save could
+  travel in; `tests/telemetry.test.ts` tries. Error codes that are not plain
+  machine words become `other`; only the scenario's own country tags pass.
+- **Not linked to accounts.** The install id is random and local; requests
+  carry the anon key, never the signed-in player's session, and
+  `credentials: "omit"`. A game is named by a salted hash whose salt never
+  leaves the computer, so rows cannot be joined to `games`. The table has no
+  IP column.
+- **Insert only.** [`20261023000000_telemetry.sql`](../supabase/migrations/20261023000000_telemetry.sql)
+  turns on RLS with one `insert` policy for `anon` and `authenticated` and
+  grants nothing else; the game sends `Prefer: return=minimal`, so it needs
+  no right to read. Every column has a check of the same shape as the
+  whitelist. pg_cron deletes rows after twelve months.
+- **Accepted risk:** whoever holds the public anon key can insert junk rows.
+  The checks keep them small and well-formed, and they can be deleted by
+  install id or time. A failing endpoint costs the game nothing: batches are
+  dropped, never retried, and sending stops after three failures in a row.
 
 ## Reporting a problem
 

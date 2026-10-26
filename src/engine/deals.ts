@@ -492,10 +492,15 @@ export function settleDeals(state: Pick<GameState, "deals" | "player" | "countri
       payer.reserves = round(payer.reserves - paid);
       payer.debt = round(payer.debt + (money - paid));
     }
-    const type: ResourceType | null = d.good === "metals" ? "iron" : d.good === "oil" || d.good === "gas" || d.good === "coal" || d.good === "uranium" ? d.good : null;
+    // Metals cover every metal the buyer lacks, each in proportion to its lack, as their value was summed for the contract.
+    const types: ResourceType[] = d.good === "metals" ? METALS : d.good === "oil" || d.good === "gas" || d.good === "coal" || d.good === "uranium" ? [d.good] : [];
     const store = economies[buyer];
-    const lack = accounts?.get(buyer)?.trade[type ?? "oil"] ?? 0;
-    if (type && store && lack < 0) store.stocks[type] = round(clamp((store.stocks[type] ?? 3) + (d.value / -lack) * span * 12, 0, 12), 1);
+    // The lack at the day's price, unrounded: bauxite's is worth less than a cent of a billion, and still empties a store.
+    const a = accounts?.get(buyer);
+    const short = (t: ResourceType) => Math.max(0, (a?.need[t] ?? 0) - (a?.production[t] ?? 0)) * (a?.world?.price[t] ?? 0);
+    const lacking = types.filter((t) => short(t) > 0);
+    const lack = lacking.reduce((s, t) => s + short(t), 0);
+    if (store && lack > 0) for (const t of lacking) store.stocks[t] = round(clamp((store.stocks[t] ?? 3) + (d.value / lack) * span * 12, 0, 12), 1);
   }
 }
 

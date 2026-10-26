@@ -80,7 +80,7 @@ export function unitCost(kind: WeaponKind, year: number): number {
   return value / 1000;
 }
 
-/** How a year's arms money is split between the kinds, before the player's priorities. */
+/** How a year's arms money is split between the kinds. */
 function mixAt(year: number): Record<WeaponKind, number> {
   if (year < 1916) return { rifles: 0.15, artillery: 0.35, tanks: 0, aircraft: 0.05, ships: 0.45, airDefence: 0, drones: 0 };
   if (year < 1945) return { rifles: 0.08, artillery: 0.22, tanks: 0.18, aircraft: 0.3, ships: 0.15, airDefence: 0.07, drones: 0 };
@@ -359,8 +359,13 @@ function frontsOf(state: Pick<GameState, "regions">, tag: string): number {
 /** Share of each kind lost in a month of the hardest fighting. */
 const LOSS_RATE: Record<WeaponKind, number> = { rifles: 0.01, artillery: 0.02, tanks: 0.04, aircraft: 0.025, ships: 0.01, airDefence: 0.015, drones: 0.12 };
 
-/** What the engine expects a country to lose this turn, by kind, before the game master's word. */
-export function expectedLosses(state: Pick<GameState, "countries" | "regions" | "wars" | "date">, tag: string, years: number): Partial<Record<WeaponKind, number>> {
+/**
+ * What the engine expects a country to lose this turn, by kind, before the
+ * game master's word, by a share of its whole stock; `quiet` reads it with no
+ * front of its own, the losses at sea and in the air. Where the map is known
+ * the fighting's own exchange (engine/warLosses.ts warExchange) is used instead.
+ */
+export function expectedLosses(state: Pick<GameState, "countries" | "regions" | "wars" | "date">, tag: string, years: number, quiet = false): Partial<Record<WeaponKind, number>> {
   const enemies = enemiesOf(state).get(tag);
   const stock = state.countries[tag]?.arsenal?.stock;
   if (!enemies?.size || !stock) return {};
@@ -368,7 +373,7 @@ export function expectedLosses(state: Pick<GameState, "countries" | "regions" | 
   const theirs = [...enemies].reduce((sum, e) => sum + combatPower(state, e), 0);
   const factor = Math.min(1.6, Math.max(0.6, Math.sqrt(theirs / mine)));
   const months = years * 12;
-  const fronts = frontsOf(state, tag);
+  const fronts = quiet ? 0 : frontsOf(state, tag);
   const out: Partial<Record<WeaponKind, number>> = {};
   for (const [kind, s] of Object.entries(stock) as [WeaponKind, ArmsStock][]) {
     const rate = Math.min(0.5, LOSS_RATE[kind] * intensity(fronts, kind) * factor);
@@ -391,8 +396,6 @@ export const armsField = z
       .max(24)
       .catch([])
       .default([]),
-    // The kinds a directive or order told the player's industry to build first.
-    focus: z.array(z.enum(WEAPON_KINDS)).max(2).optional().catch(undefined),
     // Shifts of the research money a directive or order made: a direction and percentage points (engine/research.ts bounds them).
     research: z
       .array(z.object({ direction: z.string().trim().min(1).max(30), shift: z.number() }))
@@ -415,8 +418,7 @@ export function availableKinds(state: Pick<GameState, "player" | "research" | "d
  * Keeps what the game master may change: losses only for a country at war
  * (or going to war in the same answer) and no more than a turn of the
  * hardest fighting could take, captures only by its enemy and no more than
- * half of what it lost; the player's priorities only among kinds it can
- * build. Research is checked by engine/research.ts.
+ * half of what it lost. Research is checked by engine/research.ts.
  */
 export function sanitizeArms(state: GameState, word: ArmsWord, fighting: Set<string>): Omit<ArmsWord, "research"> {
   const months = STEP_YEARS[state.step] * 12;
@@ -431,12 +433,10 @@ export function sanitizeArms(state: GameState, word: ArmsWord, fighting: Set<str
     const captor = l.capturedBy && l.capturedBy !== l.country && enemies.get(l.country)?.has(l.capturedBy) && state.countries[l.capturedBy] ? l.capturedBy : undefined;
     return [{ country: l.country, kind: l.kind, lost, ...(captor ? { capturedBy: captor } : {}) }];
   });
-  const can = new Set(availableKinds(state));
-  const focus = word.focus ? [...new Set(word.focus.filter((k) => can.has(k)))].slice(0, 2) : undefined;
-  return { losses, ...(focus ? { focus } : {}) };
+  return { losses };
 }
 
-/** Production of a country over the turn: the arms money, split by the mix and its priorities, at the day's prices, slowed by shortages. */
+/** Production of a country over the turn: the arms money, split by the mix, at the day's prices, slowed by shortages. */
 export function production(
   state: Pick<GameState, "countries" | "player" | "research" | "date" | "politics" | "wars">,
   tag: string,
@@ -456,9 +456,8 @@ export function production(
   const planned = tag === state.player ? state.politics?.laws?.economy === "planned" : c.domestic?.regime === "party";
   const price = planned ? 0.6 : 1;
   const mix = mixAt(year);
-  const focus = new Set(c.arsenal.focus ?? []);
   const kinds = WEAPON_KINDS.filter((k) => buildLevel(state, tag, k, year, options.rich ?? true) > 0 && !(k === "ships" && options.coastal === false));
-  const weights = kinds.map((k) => mix[k] * (focus.has(k) ? 2 : 1) * (k === "drones" && atWar ? 6 : 1));
+  const weights = kinds.map((k) => mix[k] * (k === "drones" && atWar ? 6 : 1));
   const total = weights.reduce((a, b) => a + b, 0);
   if (!total) return {};
   const short = new Set(options.shortages ?? []);
@@ -506,12 +505,26 @@ function add(arsenal: Arsenal, kind: WeaponKind, n: number, level: number): void
   arsenal.stock[kind] = { n: round(total), level: round1(((s?.level ?? level) * (s?.n ?? 0) + level * n) / total) };
 }
 
+/** The period's fighting, as the engine weighed it (engine/warLosses.ts): each country's weapons lost in it and the share of its army that fought. */
+export interface ArmsExchange {
+  arms: Map<string, Partial<Record<WeaponKind, number>>>;
+  engaged: Map<string, number>;
+}
+
+/** How far the game master's weapons lost may exceed the engine's figure; and what it may report beyond it where the engine saw little fighting, a share of the engaged stock a month. */
+const ARMS_SLACK = 3;
+const ARMS_QUIET = 0.01;
+
 /**
  * Moves every country's weapons through one turn: new ones are built,
  * old ones retire, wars wear them down — by the game master's word where
  * it gave one, else by the engine's own rule — and captured ones change
- * hands. Countries without weapons get them first. Mutates `next`; what
- * each country lost goes into `lostBy`, for the wars' records.
+ * hands. Countries without weapons get them first. With the period's
+ * `exchange`, the engine's figure is what the fighting cost each country
+ * (a country at war with no fighting of its own loses a little at sea and
+ * in the air), and the game master's word is kept within three times it.
+ * Mutates `next`; what each country lost goes into `lostBy`, for the wars'
+ * records.
  */
 export function advanceArsenals(
   next: GameState,
@@ -522,6 +535,7 @@ export function advanceArsenals(
   applied: AppliedChange[],
   deliveries: Delivery[] = [],
   lostBy?: Map<string, Partial<Record<WeaponKind, number>>>,
+  exchange?: ArmsExchange,
 ): void {
   const seeded = seedArsenals(next, map);
   next.countries = seeded.countries;
@@ -531,7 +545,6 @@ export function advanceArsenals(
   const reported = new Map(word.losses.map((l) => [`${l.country}:${l.kind}`, l]));
   const fighting = enemiesOf(next);
   const year0 = yearOf(next.date);
-  if (word.focus && next.countries[next.player]?.arsenal) next.countries[next.player].arsenal!.focus = word.focus;
   const captured: { by: string; from: string; kind: WeaponKind; n: number; level: number }[] = [];
 
   for (const [tag, country] of Object.entries(next.countries)) {
@@ -542,7 +555,8 @@ export function advanceArsenals(
       coastal: coast ? coast.has(tag) : undefined,
       rich: wealth(tag) >= 0.6,
     });
-    const expected = before.countries[tag]?.arsenal ? expectedLosses(before, tag, years) : {};
+    const engaged = exchange?.engaged.get(tag) ?? 0;
+    const expected = !before.countries[tag]?.arsenal ? {} : !exchange ? expectedLosses(before, tag, years) : engaged > 0 ? (exchange.arms.get(tag) ?? {}) : expectedLosses(before, tag, years, true);
     const stock: Arsenal["stock"] = {};
     const madeOut: Arsenal["made"] = {};
     const lostOut: Arsenal["lost"] = {};
@@ -552,7 +566,9 @@ export function advanceArsenals(
       if (!s && !m) continue;
       const old = s ? s.n * Math.max(0, 1 - RETIRE * years) : 0;
       const word = reported.get(`${tag}:${kind}`);
-      const lost = Math.min(old, word ? word.lost : (expected[kind] ?? 0));
+      // The game master's word, within three times what the fighting cost and a little beyond where the engine saw little of it.
+      const said = word && exchange ? Math.min(word.lost, Math.max(ARMS_SLACK * (expected[kind] ?? 0), old * ARMS_QUIET * years * 12 * Math.max(0.05, engaged))) : word?.lost;
+      const lost = Math.min(old, said ?? expected[kind] ?? 0);
       if (word?.capturedBy && lost > 0) captured.push({ by: word.capturedBy, from: tag, kind, n: round(lost / 2), level: s?.level ?? 1 });
       const kept = old - lost;
       const add = m?.n ?? 0;
@@ -570,7 +586,6 @@ export function advanceArsenals(
       ...country,
       arsenal: {
         stock,
-        ...(arsenal.focus?.length ? { focus: arsenal.focus } : {}),
         ...(tag === next.player ? { made: madeOut, lost: lostOut } : {}),
         ...(nuclear ? { nuclear: true } : {}),
         men,
@@ -615,7 +630,7 @@ export function arsenalLine(arsenal: Arsenal | undefined): string {
 
 /**
  * The weapons the game master needs for the turn: the player's, with what
- * it built and lost last turn and its priorities; the arms of every side in
+ * it built and lost last turn; the arms of every side in
  * the player's wars; and the balance of strength in every war.
  */
 export function describeArms(state: GameState): string[] {
@@ -626,7 +641,6 @@ export function describeArms(state: GameState): string[] {
     const made = Object.entries(player.arsenal.made ?? {}).map(([k, n]) => `${KIND_EN[k as WeaponKind]} +${n}`);
     const lost = Object.entries(player.arsenal.lost ?? {}).map(([k, n]) => `${KIND_EN[k as WeaponKind]} −${n}`);
     if (made.length || lost.length) lines.push(`  last turn: built ${made.join(", ") || "nothing"}; lost ${lost.join(", ") || "nothing"}`);
-    if (player.arsenal.focus?.length) lines.push(`  industry builds first: ${player.arsenal.focus.map((k) => KIND_EN[k]).join(", ")}`);
     const men = menOf(state, player);
     if (menTotal(men) > 0) lines.push(`  soldiers by training (thousands): ${Math.round(men.pro)} career, ${Math.round(men.trained)} trained conscripts, ${Math.round(men.recruits)} recruits still in training`);
   }
@@ -646,18 +660,6 @@ export function describeArms(state: GameState): string[] {
     });
   if (balance.length) lines.push("STRENGTH IN EACH WAR (soldiers by their training and weapons by their level, in thousand-soldier equivalents; battles should reflect it):", ...balance);
   return lines.length > 2 ? lines : [];
-}
-
-/** The player's industry builds these kinds first (at most two, among those it can build); none to spread the money by the usual mix. */
-export function setFocus<T extends Pick<GameState, "countries" | "player" | "research" | "date" | "updatedAt">>(state: T, kinds: WeaponKind[], now = new Date()): T {
-  const country = state.countries[state.player];
-  if (!country?.arsenal) return state;
-  const can = new Set(availableKinds(state));
-  const focus = [...new Set(kinds.filter((k) => can.has(k)))].slice(0, 2);
-  const arsenal: Arsenal = { ...country.arsenal };
-  delete arsenal.focus;
-  if (focus.length) arsenal.focus = focus;
-  return { ...state, countries: { ...state.countries, [state.player]: { ...country, arsenal } }, updatedAt: now.toISOString() };
 }
 
 /** What the player's army spends on new weapons a year now, $bn. */

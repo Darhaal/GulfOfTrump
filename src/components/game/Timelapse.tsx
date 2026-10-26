@@ -9,7 +9,7 @@ import { drawFrame, focusView, homeLand, pageFont, preparedMap, type PreparedMap
 import { APP_NAME } from "@/constants/app";
 import { formatDate } from "@/engine/calendar";
 import { mapFrames } from "@/engine/history";
-import { getScenario } from "@/engine/scenarios";
+import { scenarioOf } from "@/engine/scenarios";
 import type { GameState } from "@/engine/types";
 import { useI18n } from "@/i18n/useI18n";
 import { downloadBlob } from "@/lib/exports";
@@ -35,7 +35,7 @@ export default function Timelapse({ state, topology, onClose }: { state: GameSta
   const [running, setRunning] = useState<{ kind: "play" | "record"; controller: AbortController } | null>(null);
   const [failed, setFailed] = useState(false);
   const video = useMemo(() => videoType(), []);
-  const scenario = getScenario(state.scenarioId);
+  const scenario = scenarioOf(state);
   // Turns from before borders were kept are drawn from their list of changes.
   const approximate = state.chronicle.some((e) => !e.borders && changedRegions(e.applied).length > 0);
 

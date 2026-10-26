@@ -13,6 +13,9 @@ jobs:
   build:
     name: Typecheck, lint, test, build
     runs-on: ubuntu-latest
+    env:
+      # CI never sends anonymous statistics, whatever the build's Supabase (docs/telemetry.md).
+      NEXT_PUBLIC_GOT_TELEMETRY: "off"
 
     steps:
       - uses: actions/checkout@v4

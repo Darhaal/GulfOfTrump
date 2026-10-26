@@ -43,6 +43,19 @@ world should move on its own, and every result should hold up to scrutiny.
   action and can fade or fail; wars and military blocs among other
   governments only from those plans; new governments that change course;
   a free and a historical mode chosen when a game is created.
+- **Crises in stages, politics that steer policy, news that explains** (the
+  living world's items 3, 4 and 6, second pass): a crisis between two states
+  climbs incident, escalation, preparation, a decision at the brink and an
+  outcome, with odds read off the world – everyone who would stand by each
+  side and how firmly, a great power's guarantee, mediators, talks, trade,
+  each government's trouble at home, the era; trouble at home holds a
+  government back where votes count and tempts an autocracy abroad, cools
+  its support for a friend at war and its appetite for sanctions; new
+  governments lift or raise sanctions; the news and the game master are
+  told why.
+- **Wars need means** (the living world's item 5, first pass): readiness,
+  reach, the will to fight and war-weariness at the fronts; partisans in
+  occupied land; wars that end by terms, not by a capital falling.
 - **Fog of war, first step:** other countries' figures are what the player's
   government knows of them — estimates and ranges by openness, alliances,
   borders and intelligence — and what governments hide is a rumour.
@@ -51,6 +64,72 @@ world should move on its own, and every result should hold up to scrutiny.
   causes, an ambition, a party — that colour their answers, and may object
   or threaten to resign.
 - **Resources on all eight dates** follow the real output of the year before.
+- **A cabinet that intrigues.** Ministers and deputies form factions from
+  their causes, party and ambition, and rivals from posts they both want
+  and causes that clash. Loyalty answers to the player's orders, laws,
+  favours and humiliations. A disloyal faction drags its feet (the engine
+  marks its orders down and holds its directives up), leaks to the press
+  and plots against a minister or the leader in the plots of the player's
+  politics; intelligence hears rumours before it knows. The government
+  favours, promotes, reshuffles, dismisses, investigates and purges, by the
+  engine's dice. Next: factions that reach beyond the cabinet – into
+  parliament, the army's command and the parties – the same moves on
+  deputies in their ministry's tab, and loyalty itself seen through
+  intelligence rather than in plain figures.
+- **Anonymous statistics, only with consent.** The first start asks once and
+  Settings switches them; nothing is sent without a yes. The game's own
+  Supabase learns which dates and countries are played, what turns take and
+  cost, which errors players meet and which panels they use, under a random
+  id of the copy – never a text, a name or an account, which a whitelist
+  keeps out – and forgets it after twelve months (docs/telemetry.md).
+
+## 1.1.0: simulation quality
+
+Not new mechanics: proof that the world left alone produces plausible
+alternate histories over 10–30 years, and the fixes the proof asks for. The
+statistics bound the implausible – explosions, freezes, causeless flips,
+impossible conquests – and never ask for a minimum of wars: long quiet
+stretches are history too.
+
+| Criterion | How it is measured | Assertion |
+|---|---|---|
+| Impossible wars | provinces taken (a front crossing the middle, or the whole) by a side whose best reach there is below 0.15, beyond its limited aims, or annexed unheld; wars begun far short of the means | none, in every seed; wars begun far short (attack means below 0.3) – none but history's dates |
+| Territory | a state-invariant checker every turn (owners and holders that exist, fronts in range and inside a war, behind-the-front marks, no land held without a war beyond the start's standing occupations, wars, blocs, sanctions and plans that point at real countries) and the save schema every 12 turns | none, in every seed and in the ordinary suite's long runs |
+| Peaceful life | policies adopted a year, programmes run to their end, growth a year per country (median, lowest, highest), states that ever act (and by half of the alphabet) | someone acts every year (no stretch of 12 months with nobody acting) |
+| Political stability | regime changes and course resets with their recorded cause; flips within a year (a regime back and forth, a course set twice, policies that undo each other, sanctions on and off) | no regime change or flip without a cause (an election, a coup, a new government, trouble at home) |
+| Blocs | trust, tension and threat inside every bloc and pact formed, and what explains it (a shared threat, an accord after talks, a trusted leader) | no bloc between open enemies (trust ≤ −50 or tension ≥ 60) |
+| Diversity | distinct histories, distinct sets of wars, and provinces whose owner differs between two seeds | at least half the seeds tell different histories |
+| Long runs | time a turn, economies out of bounds (debt, inflation, growth, joblessness), wars begun a decade | slowest turn under 20 s, median under 3 s; growth beyond ±15% in at most a handful of country-years; at most 8 wars a decade in 2022, 16 in 1939 |
+| Causality | counterfactuals: the same seeds with one change (lower tension, more trust, a great power's word withdrawn, a government's support crashed before its election, no fleet for a distant war), paired, with a 95% interval and McNemar's test | no change moves the odds the wrong way beyond noise; the clearest (tension, guarantee, trouble at home, fleet, the fall of a crashed government) must move them the right way |
+
+**Done:** fair caps on the world's peaceful plans and incidents (every
+government casts its dice, a seeded priority by need and weight decides when
+the cap binds, and the caps are backstops, not quotas); the game master and
+the news limited by relevance instead; the multi-seed harness
+(`WORLD_STATS=1`, reports in docs/playtests/world-stats-2022.md and
+world-stats-1939.md, chronicles beside them) and the counterfactuals
+(docs/playtests/world-counterfactuals.md); and the contained fixes they
+found (docs/world.md, "What the statistics changed"): an ally's land
+returned to it, fronts that end with their war, treaties that defend only
+the attacked, neighbours by land that need no fleet, patrons that back
+only their own quarrels, blocs in their own part of the world, goodwill
+that holds a quarrel back, coups that follow trouble, sanctions that stand
+a year. With them every seed of both dates and both modes passes every
+assertion (eight seeds each; two 2022 seeds played thirty years pass
+too), and every counterfactual moves the odds the expected way.
+
+**Remains** (docs/world.md, "Still open"): more seeds of 20–30 years (two
+so far) and the same statistics for the other six dates; a guarantee aimed at
+one power rather than any aggressor; a fleet that weighs more at the brink
+of a war across the sea (stripping a whole navy lowers the odds of such a
+war by only a few points – the fronts then stall it); every economy
+drifting to one trend growth for its era; fronts that move at one pace
+whatever the era; mobilisation that raises soldiers, not only readiness;
+a supporter already at war elsewhere counting fully behind its friends;
+wartime elections held on their dates; incumbents who lose most elections;
+the Sino-Japanese war and the Russo-Ukrainian war ending too soon by terms;
+and the statistics and counterfactuals run on a schedule rather than by
+hand.
 
 ## Next: turns that are cheaper and proven
 
@@ -96,8 +175,27 @@ crises or breakthroughs, not only wars.
    decide what an attack can do. Taking a capital is not winning a war:
    holding ground, keeping it safe, being accepted there and settling the war
    are separate things.
+
+   **First pass is in:** readiness by mobilisation, reach from home across
+   land and sea, the will to fight and war-weariness weigh every side's
+   strength at the fronts; a planner short of them backs down or fights for
+   a border; occupied peoples resist and accept new rulers only years after
+   a peace; a side whose will breaks seeks terms. Next: a front pace by era
+   and mechanisation (a 1939 Blitzkrieg is still too slow in a world left
+   alone), mobilisation that raises soldiers rather than only readiness, and
+   the people of a province as more than the country it was taken from.
 6. **World news that explains.** The feed is in; next, each item should say
    why it happened — the slump before a coup, the war before a lost vote.
+
+**Items 3, 4 and 6 are in (second pass):** crises climb their five steps in
+the open, end in war in one game and fade in another – talked down,
+mediated by a great power or a bloc's leader, deterred by the target's
+friends, dropped by a new government or for the economy's sake; politics at
+home steer wars, aid to friends at war and sanctions; crises, coups, lost
+elections and sanctions say why in the news. Next: aid to a country at war
+as a deed of its own (money and arms the engine sends, not only sanctions
+and the word given), mediation as a visible step (an envoy, a conference),
+and the reasons of policies and alliances.
 
 This is built into the engine, with no model call per country. The engine
 moves every country and its plans; the game master settles the few decisions
@@ -130,21 +228,37 @@ portraits, and on deputies who can plot against their chiefs.
 a revolution or a lost election, the choice to stay with the country or go
 into opposition or underground; the movement's strength, the state's hand
 by the dice, and its rise to power by election, revolution, coup or a call
-into government; a panel of its own. Next: ministers and generals as roles,
-exile with a host government, resignation and death as falls, and the
-movement's own contacts abroad as letters.
+into government; a panel of its own.
+
+**Phase 2 is in:** ministers of the eight ministries and generals of the
+forces or a front as roles, real people of the date where the data has
+them, each with its standing, its orders accepted or refused by the dice,
+its own panel and what its post lets it see; their rise – named head of
+government, a coup, a resignation that topples a coalition cabinet; exile
+with the government that would shelter the person, lobbying and
+broadcasting from abroad and coming home; the movement's contacts abroad
+as letters; resignation, dismissal and death as falls, each with the
+choice to go on with the country, with the person or with a successor.
+Next: a dissident and an émigré as starting roles, deputies who rise, and
+the people around each role – an aide, a rival, a patron – as people.
 
 ## Later
 
 - **Fog of war, deeper.** Intelligence reports with their reliability,
   rumours and mistakes, on both sides; the map and the news under it too.
-- **A cabinet that intrigues.** Ministers with interests are in; next, they
-  form factions, plot and become opponents.
 - **Actors beyond states**: parties, armed movements, companies and elites.
 - **Cascades.** A shock in one country spreads through prices, trade and
   politics, and reaches yours turns later.
 - **International bodies that act**: the UN calls an emergency session,
   alliances consult, lenders step in before a default.
+- **The human cost of war, felt.** The engine now counts each war's dead,
+  wounded and prisoners; next, they should matter:
+  - prisoner exchanges and their terms, negotiated in talks, and what a
+    country does to win its people back;
+  - honours, funerals and memorials for the fallen, which rally a country;
+  - anger at heavy losses, at men lost for nothing, at families waiting for
+    news of the missing, which turns into protests and lost elections;
+  - how prisoners are treated, and the outrage abroad when they are not.
 - **People who react**: emigration, draft evasion, and a generation shaped by
   a war.
 - **World memory.** The major events, broken treaties and claims of this
@@ -155,7 +269,11 @@ movement's own contacts abroad as letters.
   never costs anything: the terms forbid charging for it. Map skins and era
   themes (a 1914 atlas, a 1939 staff map) need:
   - accounts and payments;
-  - a licence for paid assets, which stay out of the MIT code.
+  - a licence for paid assets, which stay out of the AGPL code.
+- **Multiplayer.** Several players, each governing a different country in
+  one world on a server we host, each still playing on their own ChatGPT
+  plan: the engine settles the shared world, and each player's plan writes
+  only that player's part of the turn, so the parts run side by side.
 - **More dates and countries,** chosen from what testers ask for.
 
 ## Upkeep, alongside
@@ -170,4 +288,3 @@ movement's own contacts abroad as letters.
 - **Claude subscription sign-in.** Anthropic's terms forbid it in third-party
   apps.
 - **API keys as a second provider.**
-- **Telemetry inside the game.**

@@ -17,6 +17,9 @@ jobs:
   smoke:
     name: Interface smoke test
     runs-on: ubuntu-latest
+    env:
+      # The smoke test never sends anonymous statistics (docs/telemetry.md).
+      NEXT_PUBLIC_GOT_TELEMETRY: "off"
 
     steps:
       - uses: actions/checkout@v4

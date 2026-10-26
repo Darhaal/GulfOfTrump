@@ -2,6 +2,7 @@ import { yearOf } from "./calendar";
 import { peopleIn } from "./population";
 import { programmeShift } from "./programmes";
 import { crisisLimits, interestOf } from "./crises";
+import { advanceDevelopment, effortOf, EXTRACTION_MAX, extractionOf, FACTORIES_BOUNDS, GOODS_VALUE, goodsLine, researchGoods } from "./development";
 import { callUpFactor } from "./laws";
 import { BEHIND_CALL_UP, BEHIND_TAKES, countsFor, heldBehind } from "./occupation";
 import { activeResources, linearOutput, RESOURCE_TYPES, type ResourceType } from "./resources";
@@ -20,6 +21,15 @@ import { unitsPerPoint } from "./units";
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const round = (value: number, digits = 1) => Math.round(value * 10 ** digits) / 10 ** digits;
+/**
+ * Growth, inflation and unemployment kept to three decimals; shown to one.
+ * Kept to one, a weekly turn's drift (a hundredth of the gap, or less) was
+ * rounded away: growth five points off its trend, inflation five off calm and
+ * unemployment thirteen off normal never moved in a weekly game.
+ */
+const rate = (value: number) => round(value, 3);
+/** A rate as the game master reads it, to one decimal. */
+export const rateText = (value: number) => String(round(value, 1));
 /**
  * Money in $bn kept to six significant figures: a fixed number of decimals
  * froze small economies, whose monthly growth was smaller than the last digit,
@@ -467,6 +477,8 @@ export function provinceIncome(region: Pick<MapRegion, "inc" | "adm0">, era: Sce
 
 /** The share of GDP a government of the era spent on its people, in a rich country or a poor one. */
 export const socialNorm = (era: ScenarioId, rich: boolean) => ERAS[era].social[rich ? 0 : 1];
+/** The reserves a state of the era held, as a share of GDP. */
+export const reserveNorm = (era: ScenarioId) => ERAS[era].reserves;
 
 /** Today's (2019) income per person above which a country counts as rich, as the starting budget judges it. */
 export const RICH_INCOME = 20000;
@@ -818,6 +830,10 @@ export function nationalAccounts(state: Pick<GameState, "countries" | "regions" 
   const owned = new Map<string, Partial<Record<ResourceType, number>>>();
   // People of captured land behind the front: counted as the captor's, few of them called up.
   const captured = new Map<string, number>();
+  // How hard each holder works its mines and wells (engine/development.ts): what it digs past the land's own output is
+  // counted in the world's too, so the world's need still equals its output.
+  const worked = new Map<string, number>();
+  for (const [tag, c] of Object.entries(state.countries)) if (c.economy?.extraction) worked.set(tag, extractionOf(c.economy));
   for (const [id, r] of Object.entries(state.regions)) {
     const p = regions[id];
     if (!p) continue;
@@ -828,8 +844,9 @@ export function nationalAccounts(state: Pick<GameState, "countries" | "regions" 
     for (const { type, output } of activeResources(p, year)) {
       const held = get(r.controller);
       const amount = linearOutput(output);
-      held.production[type] = (held.production[type] ?? 0) + amount;
-      world[type] = (world[type] ?? 0) + amount;
+      const dug = amount * (worked.get(r.controller) ?? 1);
+      held.production[type] = (held.production[type] ?? 0) + dug;
+      world[type] = (world[type] ?? 0) + dug;
       const own = owned.get(by) ?? {};
       own[type] = (own[type] ?? 0) + amount;
       owned.set(by, own);
@@ -953,6 +970,52 @@ const SURPLUS_KEPT = 0.02;
 const TRADE_HELD = 0.25;
 /** Of the gap between unemployment and the era's usual level, the share that closes in a year. */
 const UNEMPLOYMENT_RETURN = 0.2;
+/**
+ * Growth points a doubling of the industry budget past the era's usual share
+ * of GDP buys, and the most it can (factories, roads and power take years to
+ * build and pay back less the more there are); cut below the usual share, the
+ * points lost per halving and the most that can be lost. Calibrated on the
+ * policies (programmes.ts: 0.8% of GDP more for industry, half a point).
+ */
+const INVEST_GAIN = 1.2;
+const INVEST_MAX = 2;
+const INVEST_LOSS = 1;
+const INVEST_MAX_LOSS = 1.5;
+/** Taxes past the era's usual take for a rich country by this share of GDP start to hold growth back, by this many points per point of GDP. */
+const TAX_ROOM = 0.05;
+const TAX_DRAG = 0.08;
+/**
+ * A war on a country's own soil: growth points it takes while the fronts are
+ * there, by the share of its people on them, and the most. The output of
+ * occupied land is already lost to it (followLand); this is the rest –
+ * bridges, railways, factories and fields near the front, and the people
+ * who flee them. The blow is hardest when the war arrives; an economy then
+ * learns to work around a front that stands, and keeps three tenths of the
+ * toll (Ukraine shrank by a third in 2022 and grew again in 2023).
+ */
+const HOME_WAR = 2;
+/** The share of its people on the front from which a war counts fully as fought at home: a skirmish in one far colony is not. */
+const HOME_WAR_FULL = 0.05;
+const HOME_WAR_FRONT = 25;
+const HOME_WAR_MAX = 10;
+const HOME_WAR_KEPT = 0.3;
+/** Years over which the rest of the war's toll fades as the economy adapts (to a third in about nine months). */
+const HOME_WAR_ADAPT = 0.75;
+/** Share of GDP a soldier called up from work takes with him, against his share of the workforce: the army pays him, but he no longer makes anything. */
+const DRAFT_COST = 0.4;
+/** How far the game master's growth may stray from what the engine's causes give, points below and above: past them it would count again what the land lost already takes. */
+const GROWTH_BELOW = 10;
+const GROWTH_ABOVE = 6;
+/** How fast a growth already outside those bounds is pulled into them while the game master holds it there, a year: 63% of the way in six months. */
+const HOLD_PULL = 2;
+/** The army's share of GDP a government abroad moves to in a war fought on its own soil (at least), and against the era's usual share in a war abroad. */
+const WAR_FOOTING_HOME = 0.1;
+const WAR_FOOTING_HOME_ERA = 3;
+const WAR_FOOTING_ABROAD_ERA = 1.5;
+/** Of a war's rise in the army budget, the share raised in war taxes; the rest is borrowed. */
+const WAR_TAXES = 0.3;
+/** How fast the army budget goes to a war footing and back, a year: 86% of the way in half a year, whatever the turn's length. */
+const WAR_PACE = 4;
 
 /** In a war that is not under a truce. */
 function fighting(state: Partial<Pick<GameState, "wars" | "date">>, tag: string): boolean {
@@ -960,11 +1023,137 @@ function fighting(state: Partial<Pick<GameState, "wars" | "date">>, tag: string)
 }
 
 /**
+ * Share of each country's own people whose province is a front or under an
+ * enemy's guns – where its war is fought at home. Land the front has left
+ * behind in an enemy's hands has left the country's economy (followLand) and
+ * counts no more.
+ */
+export function frontsAtHome(regions: Record<string, RegionState>, map: Record<string, MapRegion>): Map<string, number> {
+  const people = new Map<string, number>();
+  const front = new Map<string, number>();
+  for (const [id, r] of Object.entries(regions)) {
+    const p = map[id];
+    if (!p || heldBehind(r)) continue;
+    const n = peopleIn(r, p);
+    people.set(r.owner, (people.get(r.owner) ?? 0) + n);
+    if (r.contested || r.controller !== r.owner) front.set(r.owner, (front.get(r.owner) ?? 0) + n);
+  }
+  const out = new Map<string, number>();
+  for (const [tag, n] of front) {
+    const all = people.get(tag) ?? 0;
+    if (all > 0 && n > 0) out.set(tag, n / all);
+  }
+  return out;
+}
+
+/** What drives a country's growth, points a year: the engine's causes, which the game master may move within bounds. */
+export interface GrowthCauses {
+  /** The era's trend. */
+  trend: number;
+  /** Policies at work (programmes.ts). */
+  policies: number;
+  /** Exports lost to sanctions and imports cut off. */
+  trade: number;
+  /** The industry budget against the era's usual share. */
+  investment: number;
+  /** Taxes past the era's usual take. */
+  taxes: number;
+  /** A war on the country's own soil, this turn. */
+  war: number;
+}
+
+/** What the budget's industry line and taxes do to growth, points a year; what policies add to the industry line is theirs (programmes.ts) and not counted twice. */
+export function budgetGrowth(e: Pick<Economy, "gdp" | "budget">, era: ScenarioId, policyIndustry = 0): { investment: number; taxes: number } {
+  const E = ERAS[era];
+  const gdp = Math.max(0.01, e.gdp);
+  const ratio = Math.max(0, e.budget.industry / gdp - policyIndustry) / E.industry;
+  const investment = ratio >= 1 ? Math.min(INVEST_MAX, INVEST_GAIN * Math.log2(ratio)) : Math.max(-INVEST_MAX_LOSS, INVEST_LOSS * Math.log2(Math.max(ratio, 1 / 8)));
+  const taxes = Math.max(0, e.budget.revenue / gdp - E.revenue[0] - TAX_ROOM) * 100 * TAX_DRAG;
+  return { investment: round(investment, 2), taxes: round(taxes, 2) };
+}
+
+/**
+ * The shares of GDP the budget is judged against, for the panel's hints: the
+ * era's usual industry line, the social line the people's provision is
+ * measured by (a rich country's or a poor one's, as engine/provision.ts
+ * judges it), and the tax take past which growth is held back.
+ */
+export function budgetNorms(state: Pick<GameState, "regions" | "scenarioId">, tag: string, map: Record<string, MapRegion> | null): { industry: number; social: number; taxes: number } {
+  const E = ERAS[state.scenarioId];
+  let people = 0;
+  let richness = 0;
+  if (map) {
+    for (const [id, r] of Object.entries(state.regions)) {
+      if (countsFor(r) !== tag) continue;
+      const n = peopleIn(r, map[id]);
+      people += n;
+      richness += n * (map[id]?.inc ?? 3000);
+    }
+  }
+  return { industry: E.industry, social: socialNorm(state.scenarioId, people > 0 && richness / people >= RICH_INCOME), taxes: E.revenue[0] + TAX_ROOM };
+}
+
+/** The share of GDP the policies at work add to the industry line (engine/programmes.ts). */
+function policyIndustry(country: Pick<GameState["countries"][string], "programmes">, date: string): number {
+  return (country.programmes ?? []).reduce((s, p) => s + (p.until > date ? (p.lines?.industry ?? 0) : 0), 0);
+}
+
+/** A war on soil whose `share` of the people live on a front, fought for `years`: the growth points it takes. */
+export function homeWarDrag(share: number, years = 0): number {
+  if (share <= 0.003) return 0;
+  return Math.min(HOME_WAR_MAX, HOME_WAR * Math.min(1, share / HOME_WAR_FULL) + HOME_WAR_FRONT * share) * (HOME_WAR_KEPT + (1 - HOME_WAR_KEPT) * Math.exp(-Math.max(0, years) / HOME_WAR_ADAPT));
+}
+
+/** Years since the oldest war a country is fighting began, on `date`. */
+function yearsAtWar(state: Partial<Pick<GameState, "wars">>, tag: string, date: string): number {
+  const since = (state.wars ?? []).filter((w) => w.attackers.includes(tag) || w.defenders.includes(tag)).map((w) => w.since).sort()[0];
+  return since ? Math.max(0, (Date.parse(date) - Date.parse(since)) / (365.25 * 86_400_000)) : 0;
+}
+
+/**
+ * The engine's causes of a country's growth now, for the panel and the game
+ * master: the trend, its policies, what sanctions and cut imports take, its
+ * industry budget and taxes, and the war at home.
+ */
+export function growthCauses(
+  state: Pick<GameState, "countries" | "regions" | "scenarioId" | "date"> & Partial<Pick<GameState, "player" | "wars" | "politics" | "sanctions">>,
+  tag: string,
+  map: Record<string, MapRegion> | null,
+  accounts?: Accounts,
+  exportCut = 0,
+): GrowthCauses | null {
+  const country = state.countries[tag];
+  const e = country?.economy;
+  if (!e) return null;
+  const { investment, taxes } = budgetGrowth(e, state.scenarioId, policyIndustry(country, state.date));
+  const gdp = Math.max(0.01, e.gdp);
+  const lostExports = accounts ? accounts.exports * exportCut * 0.5 : 0;
+  const goneWithout = accounts && e.tradeCut < 1 ? (accounts.imports * e.tradeCut) / (1 - e.tradeCut) : 0;
+  const share = map && fighting(state, tag) ? (frontsAtHome(state.regions, map).get(tag) ?? 0) : 0;
+  return {
+    trend: ERAS[state.scenarioId].trend,
+    policies: programmeShift(country, state.date).growth,
+    trade: -round(Math.min(10, ((lostExports + goneWithout) / gdp) * 100), 2),
+    investment,
+    taxes: -taxes,
+    war: -round(homeWarDrag(share, yearsAtWar(state, tag, state.date)), 2),
+  };
+}
+
+/**
  * Moves every economy forward by one turn of `years`. The model's changes
- * land first (troops limited by who is left to call up); what it leaves
- * alone, the engine moves by cause:
+ * land first (troops limited by who is left to call up, growth within
+ * bounds of the engine's causes); what it leaves alone, the engine moves by
+ * cause:
  * - growth drifts back towards the era's trend, less what sanctions and
- *   cut-off imports take; a crisis caps it whatever the model says;
+ *   cut-off imports take, more with industry spending past the era's usual
+ *   share and less with taxes far past its usual take; a war on the
+ *   country's own soil takes points while it lasts; a crisis caps it
+ *   whatever the model says;
+ * - men called up from work take their share of output with them, and men
+ *   sent home in peace bring it back where there are jobs;
+ * - a government abroad at war raises its army budget to a war footing,
+ *   and gives the rise back after the peace;
  * - inflation drifts back towards the era's norm, held up by a deficit, cut
  *   imports and a shortage, and kept rising while a deficit is printed;
  * - unemployment follows growth against the trend, and falls as men are
@@ -982,11 +1171,16 @@ function fighting(state: Partial<Pick<GameState, "wars" | "date">>, tag: string)
  *   and the rest of the economy pulls them back into a band of half to twice
  *   the era's normal holdings (less so when trade is cut); what the reserves
  *   cannot cover is borrowed;
+ * - goods bought abroad for the people are paid from the reserves
+ *   (engine/development.ts goodsLine);
+ * - the consumer factories and the mines worked harder move with the
+ *   industry line, the policies that build and the research lead
+ *   (engine/development.ts);
  * - a country whose imports are cut lives off its stores.
  * Pure; returns the new economies by country.
  */
 export function advanceEconomies(
-  state: Pick<GameState, "countries" | "regions" | "scenarioId" | "date"> & Partial<Pick<GameState, "player" | "wars" | "politics">>,
+  state: Pick<GameState, "countries" | "regions" | "scenarioId" | "date"> & Partial<Pick<GameState, "player" | "wars" | "politics" | "research">>,
   changes: EconomyChange[],
   years: number,
   regions: Record<string, MapRegion> | null,
@@ -997,6 +1191,7 @@ export function advanceEconomies(
 ): Record<string, Economy> {
   const era = ERAS[state.scenarioId];
   const accounts = regions ? nationalAccounts(state, regions) : null;
+  const fronts = regions ? frontsAtHome(state.regions, regions) : new Map<string, number>();
   const byCountry = new Map(changes.map((c) => [c.country, c]));
   const out: Record<string, Economy> = {};
   for (const [tag, country] of Object.entries(state.countries)) {
@@ -1004,8 +1199,11 @@ export function advanceEconomies(
     if (!before) continue;
     const change = byCountry.get(tag) ?? { country: tag };
     const e: Economy = structuredClone(before);
+    delete e.shock;
+    delete e.war;
     const a = accounts?.get(tag);
     const atWar = fighting(state, tag);
+    const atHome = atWar ? (fronts.get(tag) ?? 0) : 0;
     const gdpBefore = Math.max(0.01, before.gdp);
 
     // A blockade or war cut the model reported lasts while the country fights, then fades by half a year; sanctions in force stay.
@@ -1018,23 +1216,38 @@ export function advanceEconomies(
     const goneWithout = a && e.tradeCut < 1 ? (a.imports * e.tradeCut) / (1 - e.tradeCut) : 0;
     const drag = Math.min(10, ((lostExports + goneWithout) / gdpBefore) * 100);
 
-    // Growth drifts back towards the era's trend, less the drag and moved by the policies at work (engine/programmes.ts), unless the model says otherwise.
+    // Growth drifts towards the era's trend, less the drag, moved by the policies at work (engine/programmes.ts) and by the
+    // budget: industry spending past the era's usual share builds, taxes far past its usual take hold back. A war on the
+    // country's own soil takes its toll on top while it lasts; last turn's toll is taken out before the drift.
     const shift = programmeShift(country, state.date).growth;
-    e.growth = change.growth ?? round(e.growth + (era.trend + shift - drag - e.growth) * Math.min(1, years) * 0.5);
+    const budgeted = budgetGrowth(before, state.scenarioId, policyIndustry(country, state.date));
+    const steady = before.growth - (before.shock ?? 0);
+    const target = era.trend + shift - drag + budgeted.investment - budgeted.taxes;
+    const drifted = steady + (target - steady) * Math.min(1, years) * 0.5;
+    const shock = -homeWarDrag(atHome, yearsAtWar(state, tag, state.date));
+    // The game master's figure is taken within bounds of the engine's causes – no more than ten points below them or six
+    // above: a country losing land has lost that output already (followLand), and a growth of −40% written every week on
+    // top of it took it twice. The bounds stand on the causes, not on last turn's figure, so no answer can walk the growth
+    // down (or up) turn by turn; a figure already outside them (a date's slump or boom) may be held, but it is pulled in.
+    const held = steady + (target - steady) * (1 - Math.exp(-HOLD_PULL * years));
+    const low = Math.min(target - GROWTH_BELOW, held) + shock;
+    const high = Math.max(target + GROWTH_ABOVE, held) + shock;
+    e.growth = rate(change.growth !== undefined ? clamp(change.growth, low, high) : drifted + shock);
 
     // Crises bite whatever the game master says: no growth through a shortage, hyperinflation or a debt crisis,
     // and prices that cannot fall while the deficit is printed.
     const limits = crisisLimits(before, a, state.scenarioId);
     if (limits.growthCap !== undefined) e.growth = Math.min(e.growth, limits.growthCap);
+    if (shock) e.shock = round(shock, 2);
 
     // Prices drift back towards the era's norm, held up by a deficit beyond what lenders fund quietly, cut imports and a shortage.
     if (change.inflation !== undefined) e.inflation = change.inflation;
     else {
       const deficit = ((-balance(before) + interestOf(before, state.scenarioId)) / gdpBefore) * 100;
       const pressure = Math.max(0, deficit - 4) + e.tradeCut * 15 + (a?.shortages.length && e.tradeCut > 0 ? 10 : 0);
-      e.inflation = round(before.inflation + (Math.min(era.inflation, CALM_INFLATION) + pressure - before.inflation) * Math.min(1, years * 0.5));
+      e.inflation = rate(before.inflation + (Math.min(era.inflation, CALM_INFLATION) + pressure - before.inflation) * Math.min(1, years * 0.5));
     }
-    if (limits.printing) e.inflation = Math.max(e.inflation, round(before.inflation + 8 * years));
+    if (limits.printing) e.inflation = Math.max(e.inflation, rate(before.inflation + 8 * years));
 
     // In dollars, a country's own inflation is offset by its currency falling;
     // what it does to people is the model's to judge (growth, stability).
@@ -1052,6 +1265,20 @@ export function advanceEconomies(
       e.troops = Math.max(0, before.troops + Math.min(change.troops, room, pace));
       // More soldiers cost more: their pay and kit follow their number unless the model set the army's budget itself.
       if (change.army === undefined && before.troops > 0) e.budget.army = money(Math.max(0, e.budget.army * (1 + PAY_SHARE * (e.troops / before.troops - 1))));
+      // Men called up from work no longer make anything: output falls by their share of the workforce, less those the draft
+      // takes from among the jobless. Men sent home in peace go back to work where there are jobs for them; those a war
+      // takes do not come back.
+      const workforce = (a?.population ?? 0) * WORKFORCE;
+      if (workforce > 0) {
+        const jobless = (Math.max(0, before.unemployment - era.unemployment / 2) / 100) * workforce;
+        const fromWork = Math.max(0, e.troops - before.troops - jobless);
+        const home = atWar || before.unemployment > era.unemployment ? 0 : Math.max(0, before.troops - e.troops);
+        const ratio = clamp(1 - (DRAFT_COST * (fromWork - home)) / workforce, 0.7, 1.1);
+        if (ratio !== 1) {
+          e.gdp = money(e.gdp * ratio);
+          e.budget.revenue = money(e.budget.revenue * ratio);
+        }
+      }
     }
 
     // Jobs follow growth against the trend (a point of unemployment for every two and a half of growth lost),
@@ -1060,9 +1287,37 @@ export function advanceEconomies(
     else {
       const workforce = (a?.population ?? 0) * WORKFORCE;
       const drafted = workforce > 0 ? (Math.max(0, e.troops - before.troops) / workforce) * 100 : 0;
+      // Half of the men sent home in peace look for work a while.
+      const returned = workforce > 0 && !atWar ? (Math.max(0, before.troops - e.troops) / workforce) * 50 : 0;
       // Out of a slump, jobs come back slowly towards the era's usual level, rather than staying lost for decades.
       const back = (era.unemployment - before.unemployment) * Math.min(1, UNEMPLOYMENT_RETURN * years);
-      e.unemployment = round(clamp(before.unemployment - 0.4 * (e.growth - era.trend) * years - drafted + back, 0, 60));
+      e.unemployment = rate(clamp(before.unemployment - 0.4 * (e.growth - era.trend) * years - drafted + returned + back, 0, 60));
+    }
+
+    // A government abroad pays for its war: its army budget rises towards a war footing in about half a year – half as much
+    // again as the era's usual share in a war abroad, up to a tenth of GDP or three times the usual share as the front
+    // reaches a twentieth of its people – three tenths of the rise in war taxes and the rest borrowed; after the peace it
+    // gives the rise back as fast. Without it the United States fought in Korea on its peacetime budget.
+    if (tag !== state.player && change.army === undefined) {
+      const raised = (before.war ?? 0) * nominal;
+      let war = raised;
+      if (atWar) {
+        const abroad = era.army * WAR_FOOTING_ABROAD_ERA;
+        const footing = abroad + Math.max(0, Math.max(WAR_FOOTING_HOME, era.army * WAR_FOOTING_HOME_ERA) - abroad) * Math.min(1, atHome / HOME_WAR_FULL);
+        const gap = footing * e.gdp - e.budget.army;
+        if (gap > 0) {
+          const rise = gap * (1 - Math.exp(-WAR_PACE * years));
+          e.budget.army = money(e.budget.army + rise);
+          if (change.revenue === undefined) e.budget.revenue = money(Math.min(e.gdp * 0.7, e.budget.revenue + rise * WAR_TAXES));
+          war += rise;
+        }
+      } else if (raised > 0) {
+        const cut = Math.min(raised, e.budget.army) * (1 - Math.exp(-WAR_PACE * years));
+        e.budget.army = money(e.budget.army - cut);
+        if (change.revenue === undefined) e.budget.revenue = money(Math.max(e.gdp * 0.05, e.budget.revenue - cut * WAR_TAXES));
+        war -= cut;
+      }
+      if (war > e.gdp * 0.001) e.war = money(war);
     }
 
     // A government abroad that the model leaves alone keeps its books like most did: it lets run a deficit that does not raise
@@ -1089,6 +1344,23 @@ export function advanceEconomies(
       }
     }
 
+    // Goods the people buy abroad while trade is open and the reserves allow are paid from them (engine/development.ts),
+    // read as the provision panel showed them at the start of the turn.
+    const lead = tag === state.player && state.research?.tech ? effortOf(state, tag, era.industry).lead : 0;
+    const goods = goodsLine({
+      army: before.budget.army / gdpBefore,
+      inflation: before.inflation,
+      cut: clamp(before.tradeCut, 0, 1),
+      growth: before.growth,
+      metalsLacking: a ? a.shortages.filter((t) => METALS.includes(t)).length : 0,
+      broke: before.reserves / gdpBefore < 0.01,
+      factories: before.factories ?? 0,
+      research: researchGoods(lead),
+      reserves: before.reserves / gdpBefore,
+      reserveNorm: era.reserves,
+    });
+    const goodsBill = goods.imported * GOODS_VALUE * gdpBefore * years;
+
     // The books, every turn whatever the game master says. Loans it reports add to both the debt and the reserves.
     // The period's balance after interest: a deficit is met partly from the reserves above their floor, the rest borrowed;
     // a surplus pays down half of what is owed and puts the rest by.
@@ -1096,7 +1368,7 @@ export function advanceEconomies(
     const norm = gdpBefore * era.reserves;
     const gap = balance(e) * years - interestOf(before, state.scenarioId) * years;
     let debt = before.debt + borrow;
-    let reserves = before.reserves + borrow;
+    let reserves = before.reserves + borrow - goodsBill;
     if (gap < 0) {
       const drawn = Math.min(-gap * RESERVE_SHARE, Math.max(0, before.reserves - norm * RESERVE_FLOOR));
       reserves -= drawn;
@@ -1128,6 +1400,9 @@ export function advanceEconomies(
     if (tag !== state.player && debt > DEFAULT_DEBT * e.gdp) debt = RESTRUCTURED_DEBT * e.gdp;
     e.debt = money(Math.max(0, debt));
     e.reserves = money(Math.max(0, reserves));
+
+    // The factories and the mines move with this turn's industry line, the policies that build and the research lead.
+    advanceDevelopment(e, before, effortOf(state, tag, era.industry, e), years);
 
     // Stores, in months of need: cut-off imports eat them, a surplus refills them.
     if (a) {
@@ -1222,6 +1497,10 @@ export function boundEconomy(e: Economy, basis: EconomyBasis = { largest: 0, yea
     reserves: n(e.reserves, 0, output * (ECONOMY_BOUNDS.reserves + ECONOMY_BOUNDS.reservesPerYear * years)),
     troops: n(e.troops, 0, ECONOMY_BOUNDS.troops),
     tradeCut: n(e.tradeCut, 0, 1),
+    ...(e.shock !== undefined ? { shock: n(e.shock, -HOME_WAR_MAX, 0) } : {}),
+    ...(e.war !== undefined ? { war: n(e.war, 0) } : {}),
+    ...(e.factories !== undefined ? { factories: n(e.factories, FACTORIES_BOUNDS[0], FACTORIES_BOUNDS[1]) } : {}),
+    ...(e.extraction !== undefined ? { extraction: n(e.extraction, 1, EXTRACTION_MAX) } : {}),
     ...(e.stocks ? { stocks: Object.fromEntries(Object.entries(e.stocks).map(([k, v]) => [k, n(v ?? 0, 0, MAX_STOCK_MONTHS)])) } : {}),
   };
 }

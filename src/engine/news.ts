@@ -98,12 +98,17 @@ function placeChange(c: AppliedChange, ctx: Lookup): Placed | null {
       return { section: "war", countries: [c.country], topics: [`war:${c.war}`, ...(c.plan ? [`plan:${c.plan}`] : [])] };
     case "plan":
     case "plan-end":
-      // A plan's own thread: incident, tension, preparation, then the war or bloc it led to.
-      return { section: PLAN_SECTION[c.type === "policy" ? (POLITICAL.has(c.policy ?? "infrastructure") ? "politics" : "economy") : c.type] ?? "diplomacy", countries: [c.by, ...(c.target ? [c.target] : [])], topics: [`plan:${c.plan}`] };
+      // A plan's own thread: incident, escalation, preparation, the brink, then the war or bloc it led to; talks that
+      // would defuse a crisis belong to the crisis's thread too.
+      return {
+        section: PLAN_SECTION[c.type === "policy" ? (POLITICAL.has(c.policy ?? "infrastructure") ? "politics" : "economy") : c.type] ?? "diplomacy",
+        countries: [c.by, ...(c.target ? [c.target] : [])],
+        topics: [`plan:${c.plan}`, ...(c.crisis ? [`plan:${c.crisis}`] : [])],
+      };
     case "policy":
       return { section: POLITICAL.has(c.policy) ? "politics" : "economy", countries: [c.country], topics: c.plan ? [`plan:${c.plan}`] : [] };
     case "accord":
-      return { section: "diplomacy", countries: [c.by, c.with], topics: [...(c.plan ? [`plan:${c.plan}`] : []), ...(c.pact ? [`bloc:${c.pact}`] : [])] };
+      return { section: "diplomacy", countries: [c.by, c.with], topics: [...(c.plan ? [`plan:${c.plan}`] : []), ...(c.crisis ? [`plan:${c.crisis}`] : []), ...(c.pact ? [`bloc:${c.pact}`] : [])] };
     case "incident":
       // An incident opens the thread of the plan it led to: the war, the sanctions, the talks.
       return { section: c.what === "border" || c.what === "naval" || c.what === "airspace" ? "war" : "diplomacy", countries: [c.by, c.target], topics: c.plan ? [`plan:${c.plan}`] : [] };
@@ -219,6 +224,18 @@ function turnNews(entry: ChronicleEntry, ctx: Lookup): NewsItem[] {
     items.push({ ...base(`l${i}`, "war", [group.from, group.to], []), type: "land", land: group });
   });
   return items;
+}
+
+/**
+ * A routine policy elsewhere: a programme of a government without a foreign
+ * course (the light tier) that is not the player's neighbour. The world
+ * adopts many; the feed folds them into one line a turn, as it does elections
+ * a government keeps. A political opening or a crackdown is always news.
+ */
+export function routinePolicy(item: NewsItem, state: Pick<GameState, "countries">, near: ReadonlySet<string>): boolean {
+  if (item.type !== "change" || item.change.kind !== "policy") return false;
+  const c = item.change;
+  return c.policy !== "liberalise" && c.policy !== "crackdown" && !state.countries[c.country]?.course && !near.has(c.country);
 }
 
 /** The thread of a topic: every item that belongs to it, oldest first. */

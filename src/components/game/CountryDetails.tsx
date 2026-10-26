@@ -17,6 +17,8 @@ import CourseBlock from "./CourseBlock";
 import EconomyPanel from "./EconomyPanel";
 import { shown } from "./estimate";
 import RulersRow from "./RulersRow";
+import SocietyPanel from "./SocietyPanel";
+import type { Society, SocietyFigure } from "@/engine/society";
 
 interface CountryDetailsProps {
   country: CountryState;
@@ -49,6 +51,8 @@ interface CountryDetailsProps {
   province?: ReactNode;
   provinceKey?: string | null;
   footer?: ReactNode;
+  /** Its people in numbers (engine/society.ts); another country's under fog of war as estimates. */
+  society?: { society: Society; estimates?: Record<SocietyFigure, Estimate>; level?: KnowledgeLevel };
 }
 
 type Section = "province" | "power" | "economy" | "army" | "laws";
@@ -143,7 +147,7 @@ function DomesticBlock({ d, coupRisk, view }: { d: Domestic; coupRisk?: number; 
 }
 
 /** Everything the player can know about one country at a glance: in the game, in sections the player switches between. */
-export default function CountryDetails({ country, scenario, regionCount, population, accounts, detailed, wars, alliances, countries, isPlayer, brief, coupRisk, view, plans, player, laws, province, provinceKey, footer }: CountryDetailsProps) {
+export default function CountryDetails({ country, scenario, regionCount, population, accounts, detailed, wars, alliances, countries, isPlayer, brief, coupRisk, view, plans, player, laws, province, provinceKey, footer, society }: CountryDetailsProps) {
   const { t, text, people, locale } = useI18n();
   const name = (tag: string) => text(countries[tag]?.name ?? tag);
   const enemies = [
@@ -321,6 +325,7 @@ export default function CountryDetails({ country, scenario, regionCount, populat
       {current === "economy" && (
         <div className="flex flex-col gap-3 text-sm">
           {economy}
+          {society && <SocietyPanel society={society.society} estimates={society.estimates} level={society.level} />}
           {land}
         </div>
       )}

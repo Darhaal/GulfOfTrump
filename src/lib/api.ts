@@ -102,6 +102,13 @@ function trimForServer(state: GameState): GameState {
   };
 }
 
+/** The model a stage was written by and the tokens it took, when the server knows them (counts only, for telemetry). */
+export interface TurnUsage {
+  model?: string;
+  input?: number;
+  output?: number;
+}
+
 /** One stage of a turn (engine/stages.ts): the story first, then the world and home with the story that came back. */
 export function playTurnStage<S extends TurnStage>(
   state: GameState,
@@ -109,7 +116,7 @@ export function playTurnStage<S extends TurnStage>(
   stage: S,
   options: { locale: Locale; model?: string; signal?: AbortSignal; onProgress: (chars: number) => void; story?: StoryCarry },
 ) {
-  return stream<{ stage: S; part: StagePart<S> }>(
+  return stream<{ stage: S; part: StagePart<S>; usage?: TurnUsage }>(
     "/api/game/turn",
     { state: trimForServer(state), orders, stage, ...(options.story ? { story: options.story } : {}), locale: options.locale, model: options.model || undefined },
     options.onProgress,

@@ -1,6 +1,6 @@
 # Gulf of Trump
 
-[![Microsoft Store](https://img.shields.io/badge/Microsoft%20Store-Get%20it-0078D4.svg)](https://apps.microsoft.com/detail/9n07jx2chmw0) ![Version](https://img.shields.io/badge/version-1.0.5--beta-blue.svg) ![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Node](https://img.shields.io/badge/node-%E2%89%A522.12-339933.svg)
+[![Microsoft Store](https://img.shields.io/badge/Microsoft%20Store-Get%20it-0078D4.svg)](https://apps.microsoft.com/detail/9n07jx2chmw0) ![Version](https://img.shields.io/badge/version-1.0.6--beta-blue.svg) ![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg) ![Node](https://img.shields.io/badge/node-%E2%89%A522.12-339933.svg)
 
 An alternate-history grand strategy game where a language model is the game
 master. Pick a turning point of the 20th or 21st century, pick any country,
@@ -12,7 +12,7 @@ It is a free, open-source take on the idea behind
 [Pax Historia](https://paxhistoria.co), which is a good game with a paywall in
 front of every turn.
 
-![A 1950 game as the United States: the Pusan perimeter, with the front running through Korean provinces between the towns each side holds](public/screens/1950/turn.jpg)
+![A 2022 game as Ukraine: the turn Kherson was freed, with the front running through the provinces between the towns each side holds](public/screens/turn.jpg)
 
 > **Beta. A sandbox: no goals and no victory screen — your country, your
 > plan.** Eight dates; about 2,700 provinces with terrain, people, resources and
@@ -25,20 +25,20 @@ front of every turn.
 
 | | | |
 |---|---|---|
-| ![The cabinet's eight ministries and the Secretary of Defense's view of the turn](public/screens/1950/cabinet.jpg) | ![A sitting of the House of Representatives on the Defense Production Act](public/screens/1950/parliament.jpg) | ![Debt, reserves and a budget in dollars of 1950](public/screens/1950/economy.jpg) |
+| ![Johnson's cabinet in 1964, each with a portrait, and the Secretary of Defense's view of the Gulf of Tonkin](public/screens/cabinet.jpg) | ![A sitting of the Verkhovna Rada on the budget for 2023](public/screens/parliament.jpg) | ![Austria-Hungary's debt, reserves and war budget in August 1914](public/screens/economy.jpg) |
 | **Ministers of the day** in eight ministries, with interests of their own, who report after each turn | **Politics at home:** parties, elections, sittings where you speak for your bills | **An economy that keeps its books**, in money of the day |
-| ![The Secretary of Defense above the army: soldiers by training and weapons in service](public/screens/1950/army.jpg) | ![Research by direction, against the years of history](public/screens/1950/science.jpg) | ![China under fog of war: its economy and army as Washington estimates them](public/screens/1950/foreign.jpg) |
+| ![Marshal Rydz-Śmigły above the Polish army in September 1939: soldiers by training and weapons in service](public/screens/army.jpg) | ![NASA's administrator above research by direction, against the years of history](public/screens/science.jpg) | ![North Vietnam under fog of war: its economy and army as Washington estimates them](public/screens/foreign.jpg) |
 | **An army counted piece by piece**, with its armies and fronts | **Research racing history** in seven directions | **Other countries as you know them:** wars, pacts and, under fog of war, estimates |
 
 | | |
 |---|---|
-| ![The diplomatic map for the United Kingdom: its empire, its allies and its enemies in Korea](public/screens/1950/diplomacy.jpg) | ![Resources, transport, people and terrain over Korea](public/screens/1950/modes.jpg) |
+| ![The diplomatic map for the United States in 1964: allies on every continent, at war in Vietnam](public/screens/diplomacy.jpg) | ![Resources, transport, people and terrain over the Persian Gulf](public/screens/modes.jpg) |
 | **The world as any country sees it** on the diplomatic map | **Seven maps** of about 2,700 provinces |
 
 Any turn can be shared as a picture, and the whole game replayed as a
 timelapse video of its borders:
 
-![A turn as a picture: the Pusan perimeter holds on the Naktong](public/screens/1950/picture.jpg)
+![A turn as a picture: Europe goes to war in August 1914](public/screens/picture.jpg)
 
 ---
 
@@ -261,9 +261,17 @@ Status: [Changelog](CHANGELOG.md) · [Bugs and ideas](https://github.com/Darhaal
 
 ## License
 
-The code is [MIT](LICENSE). The map data in [`public/maps/`](public/maps/) is
+The code is under the [GNU Affero General Public License v3.0](LICENSE)
+(AGPL-3.0-only) from version 1.0.6; versions up to 1.0.5 were released under
+MIT and stay so. Anyone may use, study and share it, and anyone who
+distributes a changed version, or runs one for others over a network, must
+publish its full source under the same licence. The map data in [`public/maps/`](public/maps/) is
 derived from [aourednik/historical-basemaps](https://github.com/aourednik/historical-basemaps)
 and stays under **GPL-3.0** ([details](public/maps/README.md)).
+
+The name Gulf of Trump and its logo are trademarks of Artem Okhten and are not
+covered by the code's licence: a fork must take another name
+([TRADEMARKS.md](TRADEMARKS.md)).
 
 ChatGPT is a trademark of OpenAI. This project is not affiliated with OpenAI,
 Anthropic or Pax Historia.

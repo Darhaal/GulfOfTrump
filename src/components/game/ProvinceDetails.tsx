@@ -1,10 +1,12 @@
 "use client";
 
-import { Anchor, Building2, Gem, Mountain, Ruler, Sprout, TrainFront, Users, Waves } from "lucide-react";
+import { Anchor, Building2, Flame, Gem, Mountain, Ruler, Sprout, TrainFront, Users, Waves } from "lucide-react";
 import { ui } from "@/components/ui/classes";
 import { RESOURCE_COLORS, TERRAIN_COLORS } from "@/components/map/colors";
 import { riverName } from "@/components/map/rivers";
+import { formatDate } from "@/engine/calendar";
 import { activeResources } from "@/engine/resources";
+import { provinceResistance } from "@/engine/warMeans";
 import { peopleIn } from "@/engine/population";
 import { populationDensity, provinceName, railLevel } from "@/engine/provinces";
 import type { CountryState, MapRegion, RegionState } from "@/engine/types";
@@ -31,6 +33,7 @@ export default function ProvinceDetails({
   const resources = activeResources(province, year);
   const owner = countries[region.owner];
   const holder = countries[region.controller];
+  const resistance = provinceResistance(region);
   const fact = (icon: React.ReactNode, label: string, value: React.ReactNode) => (
     <div className="flex items-center justify-between gap-3 rounded-xl bg-page px-3 py-2 text-xs">
       <span className="flex items-center gap-1.5 font-bold text-muted">
@@ -64,6 +67,22 @@ export default function ProvinceDetails({
         )}
       </div>
       <div className="mt-3 grid gap-1.5">
+        {/* Its people against a holder they do not take as theirs (engine/warMeans.ts). */}
+        {resistance && (
+          <div className="cursor-help rounded-xl bg-page px-3 py-2 text-xs" title={t("province.resistanceHint")}>
+            <div className="mb-1 flex items-center justify-between gap-3">
+              <span className="flex items-center gap-1.5 font-bold text-muted">
+                <Flame className="h-3.5 w-3.5" />
+                {t("province.resistance", { country: text(countries[resistance.of]?.name ?? resistance.of) })}
+              </span>
+              <span className="font-black tabular-nums text-ink">{Math.round(resistance.level)}</span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-divider">
+              <div className="h-full rounded-full bg-war" style={{ width: `${Math.min(100, resistance.level)}%` }} />
+            </div>
+            {resistance.peace && <div className="mt-1 font-medium text-muted">{t("province.accepting", { date: formatDate(resistance.peace, locale) })}</div>}
+          </div>
+        )}
         {fact(
           <Mountain className="h-3.5 w-3.5" />,
           t("province.terrain"),

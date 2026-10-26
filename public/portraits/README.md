@@ -3,8 +3,13 @@
 The leaders and ministers of the game, painted in oil by `npm run portraits`
 (`scripts/portraits.mjs`) from photographs on Wikimedia Commons.
 
-- **Who:** `scripts/portraits/people.json` — every leader of the eight start
-  dates and the key ministers of the main countries, each with a Wikidata id.
+- **Who:** `scripts/portraits/people.json` – every leader of the eight start
+  dates, the ministers, chiefs of staff, central bankers and heads of
+  intelligence and science of the countries that matter on each date, their
+  deputies (`deputyOf`: the post they stand in for) and the party leaders,
+  rebels and commanders the game shows, each with a Wikidata id. Most were
+  taken from the offices they held on the date (Wikidata P39 with start and
+  end), the rest checked against Wikidata by name and year of birth.
   The script reads each person's picture (P18) and sex (P21) from Wikidata.
   `scripts/portraits/quoted.json` holds the writers and thinkers quoted while
   a turn is written who are not the game's people; `npm run portraits --
@@ -25,12 +30,12 @@ The leaders and ministers of the game, painted in oil by `npm run portraits`
   way. Each era (1914, the forties, the fifties to seventies, the nineties,
   today) has its own hair, beards, hats, caps, collars and shoulders, several
   looks to each sex; a stranger gets one fixed by their name. The shadows are
-  the game's own work, under its MIT licence; `npm run portraits -- --shadows`
+  the game's own work, under its licence (AGPL-3.0); `npm run portraits -- --shadows`
   paints them again.
 
 ## Licences
 
-The portraits are not under the game's MIT licence. Each keeps the licence of
+The portraits are not under the game's AGPL-3.0 licence. Each keeps the licence of
 its photograph:
 
 - from a public-domain or CC0 photograph: public domain;

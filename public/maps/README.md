@@ -78,5 +78,6 @@ of about 230 fields and mines matched to provinces by country and name;
 **License.** These files are derived from the historical-basemaps data and are
 distributed under the GNU General Public License v3.0 — full text in
 [`LICENSE`](LICENSE) in this folder. The Natural Earth part is public domain.
-The rest of the repository (the game's code) is under the MIT License; the
+The rest of the repository (the game's code) is under the GNU AGPL-3.0 (MIT up
+to version 1.0.5); the
 game reads these files as data at run time.

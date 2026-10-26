@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { type BudgetProposal, budgetProposalField, sanitizeBudgetProposal } from "./budgetAdvice";
-import { MINISTER_STANCES, type Directive, type GameState, type Localized, type MinisterMood, type Official, type OfficialPost, type Operation, type ResearchDirection, type WeaponKind } from "./types";
+import { MINISTER_STANCES, type Directive, type GameState, type Localized, type MinisterMood, type Official, type OfficialPost, type Operation, type ResearchDirection } from "./types";
 
 /**
  * The cabinet: the leader's chief of staff and seven ministries the player governs through, in the order the
@@ -10,10 +10,10 @@ import { MINISTER_STANCES, type Directive, type GameState, type Localized, type 
  * the player to add or not), given standing directives — special operations planned
  * in detail among them — and reports on them after every turn, in a request
  * of its own once the turn is played (engine/reports.ts). Asked to, the
- * economy minister proposes a whole budget (engine/budgetAdvice.ts), the
- * science minister a research split and the general staff what industry
- * builds first (engine/advice.ts); the player applies each or not. The
- * turn's game master sees the directives, not the conversations.
+ * economy minister proposes a whole budget (engine/budgetAdvice.ts) and the
+ * science minister a research split (engine/advice.ts); the player applies
+ * each or not. The turn's game master sees the directives, not the
+ * conversations.
  */
 export const ADVISORS = ["chief", "foreign", "interior", "military", "intelligence", "finance", "industry", "science"] as const;
 export type AdvisorId = (typeof ADVISORS)[number];
@@ -78,10 +78,9 @@ export interface AdviceMessage {
   orders?: string[];
 }
 
-/** What a minister may propose to change, each in their own field: the science minister the research split, the general staff what industry builds first. */
+/** What a minister may propose to change in their own field: the science minister the research split. */
 export interface AdviceProposal {
   research?: Record<ResearchDirection, number>;
-  focus?: WeaponKind[];
 }
 
 /**
@@ -135,7 +134,6 @@ export const AdviceSchema = z.object({
   proposal: z
     .object({
       research: z.record(z.string(), z.number()).optional().catch(undefined),
-      focus: z.array(z.string()).optional().catch(undefined),
     })
     .optional()
     .catch(undefined),
@@ -236,5 +234,5 @@ export function planOperation(
 export function directiveLine(d: Directive): string {
   if (!d.operation) return `${d.id}: ${d.text} (since ${d.since})`;
   const o = d.operation;
-  return `${d.id}: SPECIAL OPERATION "${o.name}" — target: ${o.target}; goal: ${o.goal}; means: ${o.means}; timing: ${o.timing}; secrecy: ${o.secrecy} (ordered ${d.since})`;
+  return `${d.id}: SPECIAL OPERATION "${o.name}", approved by the government ${d.since} and under way — target: ${o.target}; goal: ${o.goal}; means: ${o.means}; timing: ${o.timing}; secrecy: ${o.secrecy}`;
 }

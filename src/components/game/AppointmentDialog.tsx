@@ -26,12 +26,13 @@ export function Pips({ value, label }: { value: number; label: string }) {
   );
 }
 
-export function Traits({ traits }: { traits: string[] }) {
+/** A person's traits as chips; `onPage` for chips on a card that is itself the page's colour. */
+export function Traits({ traits, onPage }: { traits: string[]; onPage?: boolean }) {
   if (!traits.length) return null;
   return (
     <div className="flex flex-wrap gap-1">
       {traits.map((t) => (
-        <span key={t} className="rounded-md bg-page px-1.5 py-0.5 text-2xs font-bold text-ink">
+        <span key={t} className={`rounded-md px-1.5 py-0.5 text-2xs font-bold text-ink ${onPage ? "sheet" : "bg-page"}`}>
           {t}
         </span>
       ))}

@@ -13,6 +13,8 @@ interface DialogProps {
   wide?: boolean;
   /** For two columns side by side: a live meeting with an adviser beside it. */
   huge?: boolean;
+  /** What the tour and the tutorial's guide call the panel, to point at it (components/game/Tour.tsx). */
+  tourId?: string;
 }
 
 /**
@@ -20,7 +22,7 @@ interface DialogProps {
  * It is drawn into the page's body, so a parent with a filter or transform
  * (the blurred sticky header) cannot clip it to its own box.
  */
-export default function Dialog({ open, onClose, title, children, footer, wide, huge }: DialogProps) {
+export default function Dialog({ open, onClose, title, children, footer, wide, huge, tourId }: DialogProps) {
   const panel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,6 +39,7 @@ export default function Dialog({ open, onClose, title, children, footer, wide, h
       <div className="absolute inset-0 bg-scrim/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose} />
       <div
         ref={panel}
+        data-tour={tourId}
         role="dialog"
         aria-modal="true"
         tabIndex={-1}

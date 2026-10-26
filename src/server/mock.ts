@@ -49,6 +49,12 @@ const SAY = {
     ru: "Это демо: мир играет упрощённый офлайн-ведущий, поэтому по-настоящему ничего не моделируется. Войдите через ChatGPT в настройках, чтобы играл настоящий ведущий.",
     uk: "Це демо: світ грає спрощений офлайн-ведучий, тому насправді нічого не моделюється. Увійдіть через ChatGPT у налаштуваннях, щоб грав справжній ведучий.",
   },
+  // The public demo site has no sign-in: the real game master is in the app.
+  demoNoteSite: {
+    en: "This is the demo: an offline stand-in plays the world, so nothing is really simulated. The real game master plays in the desktop app, on your own ChatGPT plan.",
+    ru: "Это демо: мир играет упрощённый офлайн-ведущий, поэтому по-настоящему ничего не моделируется. Настоящий ведущий играет в приложении для компьютера, на вашей подписке ChatGPT.",
+    uk: "Це демо: світ грає спрощений офлайн-ведучий, тому насправді нічого не моделюється. Справжній ведучий грає в застосунку для комп'ютера, на вашій підписці ChatGPT.",
+  },
   underWay: { en: "Under way.", ru: "Выполняется.", uk: "Виконується." },
   agreed: { en: "Agreed.", ru: "Согласны.", uk: "Згодні." },
   passed: { en: "Passed by the majority.", ru: "Принят большинством.", uk: "Ухвалено більшістю." },
@@ -145,6 +151,9 @@ const SAY = {
   head: { en: "Head of state", ru: "Глава государства", uk: "Глава держави" },
   movementName: { en: "Civic Forum", ru: "Гражданский форум", uk: "Громадянський форум" },
   movementLeader: { en: "A. Varga", ru: "А. Варга", uk: "А. Варга" },
+  figureName: { en: "L. Brandt", ru: "Л. Брандт", uk: "Л. Брандт" },
+  frontName: { en: "Northern Front", ru: "Северный фронт", uk: "Північний фронт" },
+  successorName: { en: "M. Horvath", ru: "М. Хорват", uk: "М. Горват" },
   regimeDemocracy: { en: "Parliamentary democracy", ru: "Парламентская демократия", uk: "Парламентська демократія" },
   regimeLimited: { en: "Authoritarian republic", ru: "Авторитарная республика", uk: "Авторитарна республіка" },
   regimeParty: { en: "One-party state", ru: "Однопартийное государство", uk: "Однопартійна держава" },
@@ -192,7 +201,7 @@ function turnStageOf(instructions: string): "story" | "world" | "home" | null {
 const STAGE_KEYS = {
   story: ["headline", "narrative", "orders"],
   world: ["events", "transfers", "newCountries", "warsStarted", "warsJoined", "warsEnded", "alliancesFormed", "alliancesJoined", "alliancesLeft", "leaders", "invitations", "summitsHeld", "sessions", "population"],
-  home: ["opposition", "economy", "ministries", "protests", "trade", "bills", "acts"],
+  home: ["opposition", "figure", "economy", "ministries", "protests", "trade", "bills", "acts"],
 } as const;
 
 /**
@@ -264,7 +273,7 @@ export async function mockComplete(instructions: string, input: InputMessage[], 
 }
 
 /** Streams an answer in a few pieces so the progress indicator has something to show. */
-async function streamOut(answer: string, onDelta?: (d: string) => void): Promise<string> {
+export async function streamOut(answer: string, onDelta?: (d: string) => void): Promise<string> {
   for (let i = 0; i < answer.length; i += 400) {
     onDelta?.(answer.slice(i, i + 400));
     await new Promise((r) => setTimeout(r, 15));
@@ -340,7 +349,7 @@ function mockTurn(prompt: string, locale: Locale): Record<string, unknown> {
   const narrative = [
     say(locale, "calm"),
     orderLines.length ? `${say(locale, /THE PLAYER IS NOT THE GOVERNMENT/.test(prompt) ? "actionsUnderWay" : "ordersUnderWay")}\n${orderLines.map((l) => l.trim()).join("\n")}` : say(locale, "noOrders"),
-    say(locale, "demoNote"),
+    say(locale, isDemo() ? "demoNoteSite" : "demoNote"),
   ].join("\n\n");
   // A war costs a few tanks; a directive to the science ministry puts ten more points into the direction furthest behind.
   const split = /RESEARCH OF THE PLAYER'S GOVERNMENT \([^)]*\): ([^\n]*)/.exec(prompt)?.[1] ?? "";
@@ -361,8 +370,21 @@ function mockTurn(prompt: string, locale: Locale): Record<string, unknown> {
         press: 1,
       }
     : undefined;
+  // A minister or a general: a point more of the leader's ear, a name if they have none; anyone who falls gets a successor (engine/figures.ts, engine/fate.ts).
+  const figureRole = /THE PLAYER IS NOT THE LEADER: [^\n]*/.exec(prompt)?.[0];
+  const successor = /name the successor in figure\.successor/.test(prompt);
+  const figure =
+    figureRole || successor
+      ? {
+          ...(figureRole?.includes("name them in figure.name") ? { name: say(locale, "figureName"), gender: "male" } : {}),
+          ...(figureRole?.includes("name it in figure.front") ? { front: say(locale, "frontName") } : {}),
+          ...(figureRole ? { influence: 1, loyalty: 1 } : {}),
+          ...(successor ? { successor: say(locale, "successorName") } : {}),
+        }
+      : undefined;
   return {
     ...(opposition ? { opposition } : {}),
+    ...(figure ? { figure } : {}),
     headline: say(locale, "headline"),
     narrative,
     events: [
@@ -670,7 +692,7 @@ function mockReport(prompt: string, locale: Locale): string {
 }
 
 /** A question that asks a minister to change something: the stand-in proposes only then, as a minister does. */
-const ASKS_CHANGE = /(измен|перераспредел|сдвин|поменя|раздели|приоритет|построй|строить|змін|перерозпод|пріоритет|будуй|change|shift|split|redistribut|prioriti|build first|focus)/i;
+const ASKS_CHANGE = /(измен|перераспредел|сдвин|поменя|раздели|приоритет|змін|перерозпод|пріоритет|change|shift|split|redistribut|prioriti)/i;
 
 /** A question that asks for an order or what to do: the stand-in drafts one only then. */
 const ASKS_ORDER = /(что делать|что нам делать|приказ|подготовь|составь|що робити|наказ|підготуй|склади|what should|what do we do|draft|an order)/i;
@@ -682,13 +704,8 @@ function mockAdvice(instructions: string, prompt: string, locale: Locale): strin
     : undefined;
   const question = prompt.slice(prompt.lastIndexOf("ASKS:") + 5);
   const asked = ASKS_CHANGE.test(question);
-  const proposal = !asked
-    ? undefined
-    : instructions.includes('"proposal": { "research"')
-      ? { research: { military: 20, industry: 20, agriculture: 10, medicine: 10, science: 20, communications: 10, strategic: 10 } }
-      : instructions.includes('"proposal": { "focus"')
-        ? { focus: ["tanks", "aircraft"] }
-        : undefined;
+  const proposal =
+    asked && instructions.includes('"proposal": { "research"') ? { research: { military: 20, industry: 20, agriculture: 10, medicine: 10, science: 20, communications: 10, strategic: 10 } } : undefined;
   const orders = ASKS_ORDER.test(question) ? [say(locale, "garrisons")] : undefined;
   return JSON.stringify({
     answer: say(locale, "advice"),

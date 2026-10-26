@@ -40,8 +40,8 @@ interface AdvisorStripProps {
  * field to ask or request something. The conversation is the cabinet's own
  * thread with that minister; it opens when used and folds back. The minister
  * says nothing unasked; an order they draft when asked is one click from the
- * turn's orders, and a change they propose (the research split, what
- * industry builds first, the budget) waits for the player to apply it.
+ * turn's orders, and a change they propose (the research split, the
+ * budget) waits for the player to apply it.
  */
 export default function AdvisorStrip({ state, advisors, busy, askDisabled, disabled, setupBusy, onAsk, onSetup, onApply, onAddOrder }: AdvisorStripProps) {
   const { t, text } = useI18n();

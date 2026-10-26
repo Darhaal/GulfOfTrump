@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import { seatFigure } from "@/engine/figures";
 import { OfficialsSetupSchema, startOfficials } from "@/engine/government";
 import { PoliticsSetupSchema, startPolitics } from "@/engine/politics";
 import { buildPoliticsPrompt, SETUP_INSTRUCTIONS, type SetupPart } from "@/engine/prompts";
@@ -46,7 +47,8 @@ export async function POST(request: Request) {
     );
     return {
       ...(withPolitics ? { politics: startPolitics(raw as never, state.date) } : {}),
-      ...(withOfficials ? { officials: startOfficials(raw as never, state.date) } : {}),
+      // The player's minister holds their own post (engine/figures.ts).
+      ...(withOfficials ? { officials: seatFigure(startOfficials(raw as never, state.date), state) } : {}),
     };
   });
 }

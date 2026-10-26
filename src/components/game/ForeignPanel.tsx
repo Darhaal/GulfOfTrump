@@ -1,21 +1,30 @@
 "use client";
 
-import { CalendarPlus, ChevronLeft, Handshake, Mic, MessageSquare, Search, Swords, Users, X } from "lucide-react";
+import { CalendarPlus, ChevronLeft, Handshake, Mic, MessageSquare, Search, Swords, TriangleAlert, Users, X } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import Flag from "@/components/Flag";
 import { ui } from "@/components/ui/classes";
+import DoneButton, { useDone } from "@/components/ui/DoneButton";
 import Dictation from "@/components/voice/Dictation";
-import { addStep, formatDate } from "@/engine/calendar";
+import { addStep, formatDate, formatMonth } from "@/engine/calendar";
 import { BLOC_KINDS, canHoldNow, type BlocKind } from "@/engine/foreign";
 import { planLadder, shownStage } from "@/engine/intentions";
-import { planKindKey, planStageKey } from "./changes";
-import type { Alliance, GameState, Plan, Proposal, Summit, Text, War } from "@/engine/types";
+import { liveCrises, type CrisisView } from "@/engine/standoffs";
+import { becauseText, planKindKey, planStageKey } from "./changes";
+import type { Alliance, Because, GameState, MapIndex, Plan, Proposal, Summit, Text, War } from "@/engine/types";
 import { lossesView, warFrontsOf } from "@/engine/warLosses";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
 import TalksThread from "./TalksThread";
+import WarMeans from "./WarMeans";
 
 export type ForeignSection = "wars" | "pacts" | "blocs" | "talks";
+
+/** A crisis's five steps: incident, escalation, preparation, the decision at the brink, the outcome. */
+const CRISIS_STEPS = ["incident", "tension", "preparation", "decision", "action"] as const;
+
+/** A wide button of the panel once its action has gone through. */
+const DONE_WIDE = `${ui.done} justify-center gap-2 rounded-xl px-3 py-2.5 text-xs uppercase tracking-wide`;
 
 interface ForeignPanelProps {
   state: GameState;
@@ -25,6 +34,8 @@ interface ForeignPanelProps {
   onSection: (section: ForeignSection) => void;
   /** Province names, once the map has loaded. */
   places?: (id: string) => string;
+  /** The map, for each side's reach in a war (engine/warMeans.ts), once it has loaded. */
+  index?: MapIndex | null;
   /** The government the talks are with: picked in the list or on the map. */
   talkTarget: string | null;
   onTalkTarget: (tag: string | null) => void;
@@ -35,6 +46,8 @@ interface ForeignPanelProps {
   /** Letters speak for the state: none for a player in opposition. */
   talksOff: boolean;
   onSend: (target: string, message: string) => Promise<boolean>;
+  /** A letter to put into the box for a government, once per number (the tutorial's suggestion). */
+  letterDraft?: { target: string; text: string; n: number } | null;
   onPropose: (proposal: Proposal) => void;
   onWithdraw: (id: string) => void;
   onSchedule: (summit: Summit) => void;
@@ -161,12 +174,14 @@ export default function ForeignPanel({
   section,
   onSection,
   places,
+  index,
   talkTarget,
   onTalkTarget,
   talking,
   canTalk,
   talksOff,
   onSend,
+  letterDraft = null,
   onPropose,
   onWithdraw,
   onSchedule,
@@ -184,6 +199,8 @@ export default function ForeignPanel({
   const [scope, setScope] = useState<"mine" | "all">("mine");
   const [kindShown, setKindShown] = useState<BlocKind | null>(null);
   const [query, setQuery] = useState("");
+  const [sent, flashSent] = useDone();
+  const [scheduled, flashScheduled] = useDone();
   const periodEnd = addStep(state.date, state.step);
 
   const reset = () => {
@@ -195,6 +212,8 @@ export default function ForeignPanel({
   };
   const mine = (tags: string[]) => tags.includes(state.player);
   const wars = [...state.wars].sort((a, b) => Number(mine([...b.attackers, ...b.defenders])) - Number(mine([...a.attackers, ...a.defenders])));
+  // The crises between states (war plans under way), those touching us or a great power first.
+  const crises = useMemo(() => liveCrises(state), [state]);
   const truces = wars.filter((w) => w.truce);
   const blocsOf = (kinds: BlocKind[]) => [...state.alliances].filter((a) => kinds.includes(a.kind ?? "alliance")).sort((a, b) => Number(mine(b.members)) - Number(mine(a.members)));
   const pacts = blocsOf(["pact", "trade"]);
@@ -256,6 +275,57 @@ export default function ForeignPanel({
     );
   };
 
+  /**
+   * A crisis between two states (engine/standoffs.ts): who threatens whom, the
+   * five steps from the incident to the outcome with the one it has reached,
+   * what it grew from, and what spurs it on or holds it back.
+   */
+  const crisisCard = (c: CrisisView) => {
+    const p = c.plan;
+    const reached = CRISIS_STEPS.indexOf(c.stage);
+    const country = (tag: string) => text(state.countries[tag]?.name ?? tag);
+    const why = (b: Because) => becauseText(b, country, t, (iso) => formatMonth(iso, locale));
+    const reasons = (label: string, list: Because[]) =>
+      list.length > 0 && (
+        <p className="text-2xs leading-snug">
+          <span className="mr-1.5 font-black uppercase tracking-wider text-muted">{label}</span>
+          <span className="font-medium text-ink">{list.map(why).join(" · ")}</span>
+        </p>
+      );
+    return (
+      <li key={p.id} className="grid gap-2 rounded-xl bg-page p-3">
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <Flags state={state} tags={[p.by, ...(p.partners ?? [])]} />
+          <span className="font-black text-muted">→</span>
+          {p.target && <Flags state={state} tags={[p.target]} />}
+          <span className="min-w-0 font-bold text-ink">
+            {country(p.by)} – {p.target ? country(p.target) : ""}
+          </span>
+        </div>
+        <div className="grid gap-1">
+          <div className="flex gap-1" aria-hidden>
+            {CRISIS_STEPS.map((s, i) => (
+              <span key={s} className={`h-1 flex-1 rounded-full ${i < reached ? "bg-accent/50" : i === reached ? "bg-accent" : "bg-divider"}`} />
+            ))}
+          </div>
+          {/* The chain spelled out, the step it has reached in bold, then what that step looks like. */}
+          <p className="text-2xs leading-snug">
+            {CRISIS_STEPS.map((s, i) => (
+              <span key={s} className={i === reached ? "font-black text-ink" : "font-medium text-muted"}>
+                {i > 0 ? " → " : ""}
+                {t(`standoff.step.${s}` as MessageKey)}
+              </span>
+            ))}
+          </p>
+          <p className="text-2xs font-medium leading-snug text-ink">{t(planStageKey(p, c.stage))}</p>
+        </div>
+        {c.origin && <p className="text-2xs font-medium leading-snug text-muted">{why(c.origin)}</p>}
+        {reasons(t("standoff.spurs"), c.spurs)}
+        {reasons(t("standoff.brakes"), c.brakes)}
+      </li>
+    );
+  };
+
   const warCard = (w: War) => {
     const sides = [...w.attackers, ...w.defenders];
     const inWar = new Set(sides);
@@ -270,6 +340,8 @@ export default function ForeignPanel({
       (p) => !p.end && shownStage(p) && (p.war === w.id || (p.kind === "war" && p.target !== undefined && inWar.has(p.target) && !inWar.has(p.by))),
     );
     const fighting = sides.filter((c) => lossesView(state, w, c) || warFrontsOf(state, w, c) > 0);
+    // Prisoners get a column once an army in rout has given them up.
+    const taken = sides.some((c) => (w.losses?.[c]?.captured ?? 0) >= 0.5);
     return (
       <li key={w.id} className="grid gap-3 rounded-xl bg-page p-3">
         <div>
@@ -296,6 +368,7 @@ export default function ForeignPanel({
                   <th className="pb-1 font-black" />
                   <th className="pb-1 text-right font-black">{t("foreign.killed")}</th>
                   <th className="pb-1 text-right font-black">{t("foreign.wounded")}</th>
+                  {taken && <th className="pb-1 text-right font-black">{t("foreign.captured")}</th>}
                   <th className="pb-1 text-right font-black">{t("foreign.heavy")}</th>
                 </tr>
               </thead>
@@ -316,6 +389,7 @@ export default function ForeignPanel({
                       </td>
                       {cell(v.killed, soldiers)}
                       {cell(v.wounded, soldiers)}
+                      {taken && cell(v.captured, soldiers)}
                       {cell(v.heavy, (n) => Math.round(n).toLocaleString(locale))}
                     </tr>
                   );
@@ -326,6 +400,8 @@ export default function ForeignPanel({
             <p className="text-xs font-medium text-muted">{t("foreign.noLosses")}</p>
           )}
         </div>
+
+        {!w.truce && <WarMeans state={state} war={w} index={index ?? null} labels={[<Flags key="a" state={state} tags={w.attackers} still />, <Flags key="d" state={state} tags={w.defenders} still />]} />}
 
         <div>
           <div className={`${ui.label} mb-1`}>{t("foreign.front")}</div>
@@ -442,13 +518,24 @@ export default function ForeignPanel({
       </div>
 
       {section === "wars" && (
-        <section>
-          <div className={`${ui.label} mb-2 flex items-center gap-1.5`}>
-            <Swords className="h-3.5 w-3.5" />
-            {t("foreign.section.wars")}
-          </div>
-          {wars.length === 0 ? <p className="text-xs font-medium text-muted">{t("foreign.noWars")}</p> : <ul className="grid gap-2">{wars.map(warCard)}</ul>}
-        </section>
+        <>
+          {crises.length > 0 && (
+            <section>
+              <div className={`${ui.label} mb-2 flex items-center gap-1.5`}>
+                <TriangleAlert className="h-3.5 w-3.5" />
+                {t("standoff.title")}
+              </div>
+              <ul className="grid gap-2">{crises.map(crisisCard)}</ul>
+            </section>
+          )}
+          <section>
+            <div className={`${ui.label} mb-2 flex items-center gap-1.5`}>
+              <Swords className="h-3.5 w-3.5" />
+              {t("foreign.section.wars")}
+            </div>
+            {wars.length === 0 ? <p className="text-xs font-medium text-muted">{t("foreign.noWars")}</p> : <ul className="grid gap-2">{wars.map(warCard)}</ul>}
+          </section>
+        </>
       )}
 
       {section === "pacts" && (
@@ -579,16 +666,20 @@ export default function ForeignPanel({
             )}
           </section>
 
+          {/* Once the invitations or the summit have gone out, the button that opened the form says so for a moment. */}
           {form === null && (
             <div className="grid gap-2 sm:grid-cols-2">
-              <button type="button" disabled={disabled} onClick={() => setForm("bloc")} className={`${ui.secondary} px-3 py-2.5 text-xs`}>
-                <Handshake className="h-4 w-4" />
-                {t("foreign.found")}
-              </button>
-              <button type="button" disabled={disabled} onClick={() => setForm("summit")} className={`${ui.secondary} px-3 py-2.5 text-xs`}>
-                <CalendarPlus className="h-4 w-4" />
-                {t("foreign.propose")}
-              </button>
+              <DoneButton icon={Handshake} label={t("foreign.found")} doneLabel={t("done.sent")} done={sent} disabled={disabled} onAct={() => setForm("bloc")} className={`${ui.secondary} px-3 py-2.5 text-xs`} doneClassName={DONE_WIDE} />
+              <DoneButton
+                icon={CalendarPlus}
+                label={t("foreign.propose")}
+                doneLabel={t("done.scheduled")}
+                done={scheduled}
+                disabled={disabled}
+                onAct={() => setForm("summit")}
+                className={`${ui.secondary} px-3 py-2.5 text-xs`}
+                doneClassName={DONE_WIDE}
+              />
             </div>
           )}
 
@@ -619,6 +710,7 @@ export default function ForeignPanel({
                   onClick={() => {
                     onPropose({ id: `p${state.turn}-${Date.now().toString(36)}`, kind, name: title.trim(), invited: picked, ...(terms.trim() ? { terms: terms.trim() } : {}), date: state.date });
                     reset();
+                    flashSent();
                   }}
                   className={`${ui.primary} flex-1 px-3 py-2.5 text-xs`}
                 >
@@ -660,6 +752,7 @@ export default function ForeignPanel({
                       status: "planned",
                     });
                     reset();
+                    flashScheduled();
                   }}
                   className={`${ui.primary} flex-1 px-3 py-2.5 text-xs`}
                 >
@@ -679,7 +772,15 @@ export default function ForeignPanel({
               <ChevronLeft className="h-3.5 w-3.5" />
               {t("foreign.talks.back")}
             </button>
-            <TalksThread state={state} target={talkTarget} busy={talking} disabled={!canTalk} onSend={onSend} />
+            <TalksThread
+              key={letterDraft?.target === talkTarget ? `${talkTarget}-${letterDraft.n}` : talkTarget}
+              state={state}
+              target={talkTarget}
+              busy={talking}
+              disabled={!canTalk}
+              onSend={onSend}
+              prefill={letterDraft?.target === talkTarget ? letterDraft.text : undefined}
+            />
           </section>
         ) : (
           <section className="flex min-w-0 flex-col gap-3">

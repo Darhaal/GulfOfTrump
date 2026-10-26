@@ -125,6 +125,200 @@ function allBriefs(state: Pick<GameState, "directives" | "advice" | "turn">, wor
   });
 }
 
+/** The most ministers the player may have report after a turn on their own (Settings); the default is VOICES_PER_TURN. */
+export const MAX_VOICES = 5;
+
+/** How many ministers report after a turn, from the player's setting: "" (not chosen) for the default, else 0 to MAX_VOICES. */
+export function voicesFrom(setting: string): number {
+  return /^\d$/.test(setting) && Number(setting) <= MAX_VOICES ? Number(setting) : VOICES_PER_TURN;
+}
+
+/** A touch at least this strong gives a ministry something to report even when the game master named nothing for it. */
+const STRONG = 3;
+
+/** What a ministry reports on when only the turn's touch, not the game master, gives it something to say. */
+const TOUCHED_MATTER: Record<AdvisorId, string> = {
+  chief: "The government's people, laws and standing at home this period.",
+  foreign: "The country's foreign relations this period.",
+  interior: "The protests and the mood in the country this period.",
+  military: "The war and the fronts this period.",
+  intelligence: "What other governments plotted against the country this period.",
+  finance: "The swing of the economy this period.",
+  industry: "Production, supply and trade this period.",
+  science: "The laboratories' work this period.",
+};
+
+/** A little of each ministry's weight when nothing else tells them apart: the closest adviser first, then the money, then the army. */
+const STANDING: Record<AdvisorId, number> = { chief: 0.3, finance: 0.25, military: 0.2, foreign: 0.15, interior: 0.1, industry: 0.05, intelligence: 0.04, science: 0.03 };
+
+type TouchState = Pick<GameState, "player" | "wars" | "diplomacy"> & Partial<Pick<GameState, "protests" | "politics" | "plans">>;
+
+/**
+ * How much a played turn touched each ministry, from what it changed, its
+ * events and the country after it: a war and its fronts the general staff,
+ * a swing of the economy, the budget and money the economy, treaties, blocs,
+ * talks, sanctions and incidents the foreign ministry, protests and the mood
+ * at home the interior, the cabinet and the laws the chief of staff, plots
+ * the intelligence service, deals industry, breakthroughs science.
+ */
+export function turnTouches(state: TouchState, entry: Pick<ChronicleEntry, "turn" | "applied" | "events" | "economy">): Record<AdvisorId, number> {
+  const t: Record<AdvisorId, number> = { chief: 0, foreign: 0, interior: 0, military: 0, intelligence: 0, finance: 0, industry: 0, science: 0 };
+  const me = state.player;
+  const add = (points: Partial<Record<AdvisorId, number>>) => {
+    for (const [m, n] of Object.entries(points)) t[m as AdvisorId] += n;
+  };
+  if (state.wars.some((w) => w.attackers.includes(me) || w.defenders.includes(me))) add({ military: 3 });
+  let front = false;
+  for (const a of entry.applied) {
+    switch (a.kind) {
+      case "war":
+      case "peace":
+        if (a.sides?.includes(me)) add({ military: 3, foreign: 1 });
+        break;
+      case "enter":
+        if (a.country === me) add({ military: 2, foreign: 1 });
+        break;
+      case "truce":
+      case "truce-ended":
+        add({ military: 1, foreign: 1 });
+        break;
+      case "occupy":
+      case "liberate":
+      case "annex":
+      case "behind":
+        if (!front && (a.from === me || a.to === me)) {
+          add({ military: 2 });
+          front = true;
+        }
+        break;
+      case "contest":
+      case "repel":
+        if (!front && (a.by === me || a.holder === me)) {
+          add({ military: 2 });
+          front = true;
+        }
+        break;
+      case "alliance":
+      case "alliance-ended":
+        if (a.members?.includes(me)) add({ foreign: 2 });
+        break;
+      case "accession":
+      case "leave":
+      case "invitation":
+        if (a.country === me) add({ foreign: 2 });
+        break;
+      case "accord":
+        if (a.by === me || a.with === me) add({ foreign: 2 });
+        break;
+      case "summit-planned":
+        add({ foreign: 1 });
+        break;
+      case "incident":
+        if (a.by === me || a.target === me) add({ foreign: 1, intelligence: 1 });
+        break;
+      case "sanction":
+        if (a.by === me || a.against === me) add({ foreign: 2, finance: 1, industry: 1 });
+        break;
+      case "budget":
+        add({ finance: 2 });
+        break;
+      case "funds":
+        if (a.from === me || a.to === me) add({ finance: 2 });
+        break;
+      case "deal":
+        add({ industry: 2 });
+        break;
+      case "protest":
+      case "election":
+      case "party":
+      case "repression":
+      case "movement":
+        add({ interior: 2 });
+        break;
+      case "vote":
+      case "coup":
+        if (a.country === me) add({ interior: 2 });
+        break;
+      case "plot":
+        add({ interior: 1, intelligence: 2, ...(a.cabinet ? { chief: 1 } : {}) });
+        break;
+      case "official":
+      case "cabinet":
+      case "intrigue":
+        add({ chief: 2 });
+        break;
+      case "law":
+      case "bill":
+      case "identity":
+        add({ chief: 1, interior: 1 });
+        break;
+      case "research":
+        if (a.change === "done" || a.change === "setback") add({ science: 2 });
+        break;
+      case "captured":
+        if (a.by === me || a.from === me) add({ military: 1 });
+        break;
+      case "population":
+        if (a.country === me) add({ interior: 1 });
+        break;
+    }
+  }
+  for (const e of entry.events) {
+    if (!e.countries.includes(me)) continue;
+    if (e.kind === "war" || e.kind === "military") add({ military: 1 });
+    else if (e.kind === "economy") add({ finance: 1 });
+    else if (e.kind === "diplomacy") add({ foreign: 1 });
+    else if (e.kind === "politics") add({ interior: 1 });
+  }
+  if (entry.economy) {
+    const { before, after } = entry.economy;
+    const swing = Math.abs(after.gdp - before.gdp) / Math.max(0.01, before.gdp);
+    if (swing > 0.05) add({ finance: 3 });
+    else if (swing > 0.02) add({ finance: 2 });
+    if (after.reserves < before.reserves * 0.8) add({ finance: 1 });
+  }
+  if (state.protests?.length) add({ interior: 3 });
+  if ((state.politics?.unrest ?? 0) >= 50) add({ interior: 1 });
+  if (Object.values(state.diplomacy).some((thread) => thread.some((m) => m.turn === entry.turn))) add({ foreign: 2 });
+  if ((state.plans ?? []).some((p) => !p.end && p.kind === "war" && p.target === me && p.stage !== "incident")) add({ intelligence: 1, foreign: 1 });
+  return t;
+}
+
+/**
+ * Who reports after a turn, as many as the player chose (0–MAX_VOICES): the
+ * ministries ranked by what the turn touched and by what they have to say
+ * (a question the government put, a directive closed, the game master's
+ * word). A ministry the game master named nothing for speaks only when the
+ * turn touched it strongly – a war for the general staff, protests for the
+ * interior, a swing of the economy for its minister – and then on that.
+ * With none, nobody reports on their own: every brief is kept quiet and any
+ * minister can still be asked. Reports already given stay.
+ */
+export function chooseVoices(state: GameState, turn: number, count: number): GameState {
+  const at = state.chronicle.findIndex((e) => e.turn === turn);
+  const entry = state.chronicle[at];
+  if (!entry) return state;
+  const n = Math.max(0, Math.min(MAX_VOICES, Math.round(count)));
+  const briefs = entry.briefs ?? [];
+  const touches = turnTouches(state, entry);
+  const score = (m: AdvisorId) => {
+    const brief = briefs.find((b) => b.ministry === m);
+    return (brief ? urgency(brief) : 0) + touches[m] + STANDING[m];
+  };
+  const eligible = ADVISORS.filter((m) => briefs.some((b) => b.ministry === m) || touches[m] >= STRONG);
+  const speak = new Set([...eligible].sort((a, b) => score(b) - score(a) || ADVISORS.indexOf(a) - ADVISORS.indexOf(b)).slice(0, n));
+  const next: MinistryBrief[] = ADVISORS.flatMap((ministry): MinistryBrief[] => {
+    const brief = briefs.find((b) => b.ministry === ministry);
+    if (!brief) return speak.has(ministry) ? [{ ministry, matter: TOUCHED_MATTER[ministry], directives: [] }] : [];
+    const open: MinistryBrief = { ...brief };
+    delete open.quiet;
+    return [speak.has(ministry) ? open : { ...open, quiet: true }];
+  });
+  if (!next.length) return state;
+  const chronicle = state.chronicle.map((e, i) => (i === at ? { ...e, briefs: next } : e));
+  return { ...state, chronicle };
+}
+
 /** The ministries of a turn still owing their view; the quiet ones owe none until asked. */
 export function reportsDue(entry: Pick<ChronicleEntry, "briefs" | "reports"> | undefined): AdvisorId[] {
   if (!entry) return [];

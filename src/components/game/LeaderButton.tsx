@@ -1,5 +1,7 @@
 "use client";
 
+import { ADVISOR_TITLES } from "@/engine/advisors";
+import { isFigure, ministryOf } from "@/engine/figures";
 import { leaderOf, personName } from "@/engine/people";
 import { isOpposition } from "@/engine/role";
 import type { GameState } from "@/engine/types";
@@ -10,10 +12,24 @@ import Portrait from "./Portrait";
 /**
  * Who the player is, in the game's header: the country's leader, a small
  * portrait that opens the country's card; or, in opposition, the player's
- * own person with the movement's standing (engine/role.ts).
+ * own person with the movement's standing (engine/role.ts); or a minister's
+ * or a general's own person and post, with a portrait only if they have one
+ * (engine/figures.ts).
  */
-export default function LeaderButton({ state, onOpen, onOpposition }: { state: GameState; onOpen: () => void; onOpposition?: () => void }) {
-  const { t, locale } = useI18n();
+export default function LeaderButton({ state, onOpen, onOpposition, onPost }: { state: GameState; onOpen: () => void; onOpposition?: () => void; onPost?: () => void }) {
+  const { t, text, locale } = useI18n();
+  if (isFigure(state)) {
+    const role = state.role!;
+    const name = role.person ? personName(role.person, locale) : t("figure.unnamed");
+    const ministry = role.post ? ministryOf(role.post) : undefined;
+    const post = role.kind === "general" ? t(`figure.scope.${role.command?.scope ?? "front"}` as MessageKey) : ministry ? text(ADVISOR_TITLES[ministry]) : "";
+    return (
+      <button type="button" onClick={onPost} className="group flex shrink-0 items-center gap-1.5 rounded-full" aria-label={`${name} · ${post}`} title={`${name} · ${post}`}>
+        {role.person?.portrait && <Portrait portrait={role.person.portrait} gender={role.person.gender} name={name} size="xs" className="transition-shadow group-hover:ring-2 group-hover:ring-accent/60" />}
+        <span className="max-w-40 truncate rounded-md bg-accent/10 px-1.5 py-0.5 text-2xs font-black text-accent max-sm:hidden">{post}</span>
+      </button>
+    );
+  }
   if (isOpposition(state)) {
     const role = state.role!;
     const name = role.person ? personName(role.person, locale) : t("role.opposition");

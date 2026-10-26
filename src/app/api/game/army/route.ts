@@ -1,6 +1,6 @@
 import { ArmyOrganisationSchema, sanitizeArmyOrganisation } from "@/engine/army";
 import { ARMY_INSTRUCTIONS, buildArmyPrompt } from "@/engine/armyPrompts";
-import { getScenario } from "@/engine/scenarios";
+import { scenarioOf } from "@/engine/scenarios";
 import { wantsDemo } from "@/server/demo";
 import { rejectNonLocal } from "@/server/guard";
 import { completeJson } from "@/server/llm";
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   const parsed = await readGameRequest(request);
   if (parsed instanceof Response) return parsed;
   const { state, locale, model } = parsed;
-  const index = await loadMapIndex(getScenario(state.scenarioId).map);
+  const index = await loadMapIndex(scenarioOf(state).map);
 
   return ndjsonResponse(request, async ({ signal, progress }) => {
     let chars = 0;

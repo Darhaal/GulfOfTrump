@@ -8,18 +8,23 @@ import type { CountryState, GameState, Gender, Locale, Official, Person, Rulers 
  * people.json, in English, Russian and Ukrainian) gets that person's
  * portrait; anyone else gets a shadow of their sex and era. Anyone can lead: a
  * leader line the game master writes is read again, and a minister named to
- * the top post takes their own portrait with them.
+ * the top post takes their own portrait with them. A name is read by its
+ * words, in any order and with or without the patronymic, and the year tells
+ * namesakes of different eras apart.
  */
 
 /** Someone the portrait data knows (generated into people.data.ts). */
 export interface KnownPerson {
   id: string;
   name: { en: string; ru?: string; uk?: string };
-  /** Every name the person goes by, in any of the three languages. */
+  /** Every other name the person goes by, in any of the three languages: other spellings, the patronymic, surname first. */
   names: string[];
   gender: Gender;
   /** A painted portrait exists in public/portraits. */
   portrait?: true;
+  /** The years of birth and death, when known: they tell namesakes of different eras apart. */
+  born?: number;
+  died?: number;
 }
 
 /** Lowercase words of a name, without accents, so "Мосцицкий" and "Mościcki" each match themselves however written. */
@@ -55,7 +60,8 @@ function variants(): Map<string, Variant[]> {
     index!.set(key, [...(index!.get(key) ?? []), { person, tokens }]);
   };
   for (const person of KNOWN_PEOPLE) {
-    for (const name of person.names) {
+    for (const name of [person.name.en, person.name.ru, person.name.uk, ...person.names]) {
+      if (!name) continue;
       const tokens = [...new Set(nameTokens(name))];
       if (tokens.length < 2 && (tokens[0]?.length ?? 0) < 5) continue;
       add(person, tokens);
@@ -71,25 +77,53 @@ function variants(): Map<string, Variant[]> {
   return index;
 }
 
-/** Everyone the text names, the fullest names first; a name inside a fuller one ("George W. Bush" in "George H. W. Bush") is not counted. */
-export function findAllKnown(text: string): KnownPerson[] {
+/** How long after someone's death a game may still have them alive: a campaign that started before it can run on for decades. */
+const OUTLIVED = 30;
+
+/**
+ * Whether someone can be meant in a year: born by then and not dead long
+ * before the game could have kept them alive. Unknown years count as possible.
+ */
+export function aliveIn(p: Pick<KnownPerson, "born" | "died">, year: number): boolean {
+  return !(p.born && p.born > year) && !(p.died && p.died + OUTLIVED < year);
+}
+
+/**
+ * 0 for someone of working age in the year as history has it, 1 for someone
+ * the game may have kept alive or still a youth: the first is meant before the
+ * second ("Gerhard Schröder" in 1964 is the foreign minister, not the student).
+ */
+const lateness = (p: KnownPerson, year?: number) => (year && ((p.died && p.died < year) || (p.born && year - p.born < 25)) ? 1 : 0);
+
+/**
+ * Everyone the text names, the fullest names first; a name inside a fuller one
+ * ("George W. Bush" in "George H. W. Bush") is not counted. Given the year,
+ * people who cannot be meant then are left out, and of two people with the
+ * same name the one alive then comes first: "King Abdullah" in 2014 is the
+ * Saudi king, not Jordan's of 1950.
+ */
+export function findAllKnown(text: string, year?: number): KnownPerson[] {
   const words = new Set(nameTokens(text));
   const found = new Map<string, Variant>();
   for (const word of words) {
     for (const v of variants().get(word) ?? []) {
       if (!v.tokens.every((t) => words.has(t))) continue;
+      if (year && !aliveIn(v.person, year)) continue;
       const before = found.get(v.person.id);
       if (!before || v.tokens.length > before.tokens.length) found.set(v.person.id, v);
     }
   }
   const all = [...found.values()];
   const kept = all.filter((v) => !all.some((o) => o !== v && o.tokens.length > v.tokens.length && v.tokens.every((t) => o.tokens.includes(t))));
+  // Namesakes named by the same words: the one alive in the year, the other only if no one is.
+  const same = (a: Variant, b: Variant) => a.tokens.length === b.tokens.length && a.tokens.every((t) => b.tokens.includes(t));
+  const best = kept.filter((v) => !kept.some((o) => o !== v && same(o, v) && lateness(o.person, year) < lateness(v.person, year)));
   // In the order the text names them.
   const at = (v: Variant) => Math.min(...v.tokens.map((t) => [...words].indexOf(t)));
-  return kept.sort((a, b) => at(a) - at(b)).map((v) => v.person);
+  return best.sort((a, b) => at(a) - at(b) || lateness(a.person, year) - lateness(b.person, year)).map((v) => v.person);
 }
 
-export const findKnown = (text: string): KnownPerson | undefined => findAllKnown(text)[0];
+export const findKnown = (text: string, year?: number): KnownPerson | undefined => findAllKnown(text, year)[0];
 
 const byId = new Map<string, KnownPerson>();
 export function knownById(id: string): KnownPerson | undefined {
@@ -135,7 +169,7 @@ const asPerson = (k: KnownPerson): Person => ({ id: k.id, name: k.name.en, gende
 
 /** Someone by name: the known person if the data has them, otherwise a new one, shown as a shadow of their sex. */
 export function personFor(name: string, year: number, gender?: Gender): Person {
-  const known = findKnown(name);
+  const known = findKnown(name, year);
   if (known) return asPerson(known);
   const bare = bareName(name) || name.trim();
   return { id: `${NEW_PERSON}${nameTokens(bare).join("-").slice(0, 60) || "unknown"}`, name: bare, gender: gender ?? guessGender(bare, year) };
@@ -156,7 +190,7 @@ export function rulersOf(line: string, tag: string, year: number, gender?: Gende
   for (const part of parts) {
     firstOf.push(people.length);
     if (NOBODY.has(part)) continue;
-    const known = findAllKnown(part);
+    const known = findAllKnown(part, year);
     if (known.length) {
       for (const k of known) if (!people.some((p) => p.id === k.id)) people.push(asPerson(k));
     } else {
@@ -203,15 +237,19 @@ export function withRulers<T extends Pick<GameState, "countries" | "date">>(stat
 }
 
 /** An official with their sex and portrait: the data's if it knows the name, else what the game master said, else a fixed guess. */
-export function dressOfficial(o: Official, year: number): Official {
-  const known = findKnown(o.name);
+export function dressOfficial<T extends Official>(o: T, year: number): T {
+  const known = findKnown(o.name, year);
   if (known) {
-    const dressed: Official = { ...o, gender: known.gender };
+    const dressed: T = { ...o, gender: known.gender };
     if (known.portrait) dressed.portrait = known.id;
     else delete dressed.portrait;
     return dressed;
   }
-  return o.gender ? o : { ...o, gender: guessGender(o.name, year) };
+  // Someone the data no longer knows (dropped as a namesake, say) keeps no portrait from an older save.
+  if (!o.portrait) return o.gender ? o : { ...o, gender: guessGender(o.name, year) };
+  const plain: T = { ...o, gender: o.gender ?? guessGender(o.name, year) };
+  delete plain.portrait;
+  return plain;
 }
 
 /** A copy of the state with its leader lines read and its ministers and their deputies given their sex and portraits; safe to run on every load. */
@@ -221,7 +259,7 @@ export function withPeople(state: GameState): GameState {
   return {
     ...next,
     ...(state.officials?.length ? { officials: state.officials.map((o) => dressOfficial(o, year)) } : {}),
-    ...(state.deputies?.length ? { deputies: state.deputies.map((d) => ({ ...d, ...dressOfficial(d, year) })) } : {}),
+    ...(state.deputies?.length ? { deputies: state.deputies.map((d) => dressOfficial(d, year)) } : {}),
   };
 }
 
@@ -248,7 +286,7 @@ export function leaderOf(state: Pick<GameState, "countries" | "player" | "offici
   const year = yearOf(state.date);
   const dress = (o: Official) => {
     const dressed = dressOfficial(o, year);
-    const known = findKnown(dressed.name);
+    const known = findKnown(dressed.name, year);
     return { id: known?.id ?? lead?.id ?? `${NEW_PERSON}${nameTokens(dressed.name).join("-")}`, name: dressed.name, gender: dressed.gender ?? lead?.gender ?? "male", ...(dressed.portrait ? { portrait: dressed.portrait } : lead?.portrait ? { portrait: lead.portrait } : {}), title: dressed.title };
   };
   if (lead) {
@@ -262,6 +300,19 @@ export function leaderOf(state: Pick<GameState, "countries" | "player" | "offici
   const crowned = head && (MONARCH.test(head.title) || MONARCH.test(head.name));
   const chosen = crowned && government ? government : (head ?? government);
   return chosen ? dress(chosen) : undefined;
+}
+
+/**
+ * The cabinet's entry for the player's own leader, when one of the two top
+ * posts holds them: the leader's card shows it, and the list of ministers
+ * leaves it out — the player does not replace themselves. The other top post
+ * stays a minister's (a ceremonial head of state, a premier under a ruling
+ * president).
+ */
+export function leaderOfficial(state: Pick<GameState, "countries" | "player" | "officials" | "date">): Official | undefined {
+  const leader = leaderOf(state, state.player);
+  if (!leader) return undefined;
+  return state.officials?.find((o) => (o.post === "head" || o.post === "government") && samePerson(o.name, leader.name));
 }
 
 /** A person's name in the interface language, when the data knows it. */

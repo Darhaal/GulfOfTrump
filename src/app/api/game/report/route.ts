@@ -1,7 +1,8 @@
 import { ADVISORS, type AdvisorId } from "@/engine/advisors";
 import { buildReportBrief, buildReportDigest, REPORT_INSTRUCTIONS } from "@/engine/prompts";
 import { MinisterReportSchema, sanitizeMinisterReport } from "@/engine/reports";
-import { getScenario } from "@/engine/scenarios";
+import { scenarioOf } from "@/engine/scenarios";
+import { scriptedTurn, scriptedView } from "@/engine/tutorial";
 import { wantsDemo } from "@/server/demo";
 import { rejectNonLocal } from "@/server/guard";
 import { completeJson } from "@/server/llm";
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
   const entry = state.chronicle.find((e) => e.turn === turn);
   if (!entry?.briefs?.some((b) => b.ministry === ministry)) return badRequest("That ministry has nothing to report on that turn.");
 
-  const index = await loadMapIndex(getScenario(state.scenarioId).map);
+  const index = await loadMapIndex(scenarioOf(state).map);
   return ndjsonResponse(request, async ({ signal, progress }) => {
     let chars = 0;
     const reply = await completeJson(
@@ -48,6 +49,8 @@ export async function POST(request: Request) {
         ],
         signal,
         onDelta: (delta) => progress((chars += delta.length)),
+        // A view of one of the tutorial's written turns is written in advance too (engine/tutorial.ts).
+        scripted: scriptedTurn(state, turn) ? JSON.stringify(scriptedView(ministry, locale)) : undefined,
       },
       MinisterReportSchema,
     );

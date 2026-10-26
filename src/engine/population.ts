@@ -60,9 +60,10 @@ export function growPopulation(regions: Record<string, RegionState>, map: Record
 }
 
 /**
- * A period's losses: people driven out of contested provinces, then the
- * model's dead and refugees, limited to what a country could lose in the
- * period. Changes `regions` in place and logs the losses for the report.
+ * A period's losses: people driven out of contested provinces where the two
+ * sides fight (a line of contact between sides at peace, an eve's, is quiet),
+ * then the model's dead and refugees, limited to what a country could lose in
+ * the period. Changes `regions` in place and logs the losses for the report.
  */
 export function losePopulation(
   regions: Record<string, RegionState>,
@@ -70,10 +71,11 @@ export function losePopulation(
   changes: PopulationChange[],
   years: number,
   applied: AppliedChange[],
+  fighting: (a: string, b: string) => boolean = () => true,
 ): void {
   const months = years * 12;
   for (const [id, r] of Object.entries(regions)) {
-    if (r.contested && map[id]) r.pop = round(Math.max(0, peopleIn(r, map[id]) * (1 - FRONT_LOSS_PER_MONTH * months)));
+    if (r.contested && map[id] && fighting(r.contested, r.controller)) r.pop = round(Math.max(0, peopleIn(r, map[id]) * (1 - FRONT_LOSS_PER_MONTH * months)));
   }
 
   const byOwner = new Map<string, string[]>();

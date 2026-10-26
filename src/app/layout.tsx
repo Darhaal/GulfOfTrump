@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Telemetry from "@/components/Telemetry";
 import ThemeController, { THEME_SCRIPT } from "@/components/ThemeController";
 import { APP_NAME, isDemo } from "@/constants/app";
 import "./globals.css";
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-page text-ink`}>
         <ThemeController />
         {children}
+        <Telemetry />
       </body>
     </html>
   );

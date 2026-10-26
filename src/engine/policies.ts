@@ -5,10 +5,12 @@ import { balance, money } from "./economy";
 import { countryName } from "./names";
 import { peopleIn } from "./population";
 import { PROGRAMMES } from "./programmes";
-import { addTension, allied, enemiesOf, isMilitary, pacted, tieOf, warBetween } from "./relations";
+import { homeFront } from "./politics";
+import { addTension, allied, enemiesOf, isMilitary, pacted, powers, tieOf, warBetween } from "./relations";
+import { homeBecause, homeEnd, lensOf, mediatorOf, originOf, pickFade } from "./standoffs";
 import { same } from "./text";
 import { countryCentres, distanceKm } from "./trade";
-import type { Alliance, AppliedChange, GameState, Localized, MapRegion, Plan, PlanEnd, PlanKind, PlanStage, PolicyKind, Programme, RegimeKind, ScenarioId } from "./types";
+import type { Alliance, AppliedChange, Because, GameState, Localized, MapRegion, Plan, PlanEnd, PlanKind, PlanStage, PolicyKind, Programme, RegimeKind, ScenarioId } from "./types";
 
 /**
  * Peaceful decisions of every government but the player's, small states
@@ -78,6 +80,21 @@ const sanctionedEither = (state: GameState, a: string, b: string) => sanctions(s
 const tradeBloc = (state: GameState, a: string, b: string) => state.alliances.some((x) => x.kind === "trade" && x.members.length < WORLD_BODY && x.members.includes(a) && x.members.includes(b));
 const running = (state: GameState, tag: string, kind: PolicyKind) => (state.countries[tag]?.programmes ?? []).some((p) => p.kind === kind && p.until > state.date);
 
+/** Policies that undo each other. */
+const UNDOES: Partial<Record<PolicyKind, PolicyKind>> = { armament: "disarmament", disarmament: "armament", austerity: "stimulus", stimulus: "austerity", liberalise: "crackdown", crackdown: "liberalise" };
+/**
+ * A government does not undo within a year a policy it adopted itself: the
+ * same cabinet arming in May and disarming in February, with nothing between,
+ * reads as no policy at all. A new government may.
+ */
+function undoing(state: GameState, tag: string, kind: PolicyKind): boolean {
+  const undo = UNDOES[kind];
+  const c = state.countries[tag];
+  if (!undo || !c) return false;
+  const since = c.domestic?.changed?.date ?? "";
+  return (c.programmes ?? []).some((p) => p.kind === undo && p.until > state.date && p.since >= since && yearsBetween(p.since, state.date) < 1);
+}
+
 /** A country's name in each language. */
 function names(state: GameState, tag: string): Localized {
   const n = state.countries[tag]?.name;
@@ -99,8 +116,8 @@ function pactName(state: GameState, a: string, b: string): Localized {
   return { en: `${x.en}–${y.en} Pact`, ru: `${x.ru} – ${y.ru}: пакт`, uk: `${x.uk} – ${y.uk}: пакт` };
 }
 
-/** The pace of a peaceful plan at its stage, a year: the time it must spend there, how fast it climbs, how fast it fades and why. */
-export function peacefulRates(state: GameState, p: Plan): { min: number; advance: number; fade: number; why: PlanEnd } {
+/** The pace of a peaceful plan at its stage, a year: the time it must spend there, how fast it climbs, how fast it fades, why, and the reason the news gives. */
+export function peacefulRates(state: GameState, p: Plan): { min: number; advance: number; fade: number; why: PlanEnd; because?: Because } {
   const stay = { min: 0, advance: 0, fade: 0, why: "compromise" as PlanEnd };
   const d = state.countries[p.by]?.domestic;
   switch (p.kind) {
@@ -118,9 +135,15 @@ export function peacefulRates(state: GameState, p: Plan): { min: number; advance
       if (p.stage !== "tension" || !p.target) return stay;
       const t = tieOf(state, p.by, p.target);
       const trade = (t.trade ?? 0) / 100;
-      if (p.lift) return { min: 1 / 24, advance: 3, fade: 0.6 + t.tension / 50, why: "government" };
-      // A government that sells much to the target thinks twice.
-      return { min: 1 / 24, advance: 3 * (1 + t.tension / 100), fade: 0.6 * (1 + 4 * trade), why: "compromise" };
+      const home = homeFront(state, p.by);
+      // A government in trouble at home lifts sanctions that cost it sooner, and keeps those it means to lift.
+      if (p.lift) return { min: 1 / 24, advance: 3 * (1 + home.trouble), fade: Math.max(0.2, 0.6 + t.tension / 50 - home.trouble), why: "government" };
+      // A government that sells much to the target thinks twice; one in trouble at home thinks three times about sanctions that cost it trade.
+      const f = pickFade([
+        ["compromise", 0.6 * (1 + 4 * trade), trade >= 0.12 ? { kind: "trade" } : undefined],
+        [homeEnd(home), home.trouble * (0.5 + 4 * trade), homeBecause(home)],
+      ]);
+      return { min: 1 / 24, advance: 3 * (1 + t.tension / 100), fade: f.fade, why: f.why, ...(f.because ? { because: f.because } : {}) };
     }
     case "deal": {
       if (p.stage !== "preparation" || !p.target) return stay;
@@ -142,8 +165,12 @@ export function acceptChance(state: GameState, p: Plan): number | undefined {
   if (!p.target || p.target === state.player) return undefined;
   const t = tieOf(state, p.target, p.by);
   if (p.kind === "deal") return clamp(0.6 + t.trust / 150 - t.tension / 150, 0.1, 0.92);
-  if (p.kind === "talks") return clamp(0.45 + (1 - hawkOf(state, p.target) / 100) * 0.4 + t.trust / 200 - t.tension / 300, 0.1, 0.9);
-  return undefined;
+  if (p.kind !== "talks") return undefined;
+  // Talks that defuse a crisis: a mediator both sides trust brings the other side to the table, and trouble at home makes it readier.
+  const crisis = p.origin && !/^i\d/.test(p.origin);
+  const mediator = crisis ? mediatorOf(lensOf(state, powers(state)), p.by, p.target) : null;
+  const home = homeFront(state, p.target);
+  return clamp(0.45 + (1 - hawkOf(state, p.target) / 100) * 0.4 + t.trust / 200 - t.tension / 300 + 0.25 * (mediator?.strength ?? 0) + (home.votes ? 0.15 * home.trouble : 0), 0.1, 0.9);
 }
 
 /** A peaceful plan overtaken or made pointless before it moves. */
@@ -154,11 +181,13 @@ export function settlePeaceful(state: GameState, p: Plan, stands: (tag: string |
       const d = state.countries[p.by]?.domestic;
       if (!p.policy || !d || !state.countries[p.by]?.economy) return "overtaken";
       if (p.policy === "liberalise" && d.regime === "democracy") return "overtaken";
-      return running(state, p.by, p.policy) ? "overtaken" : null;
+      return running(state, p.by, p.policy) || undoing(state, p.by, p.policy) ? "overtaken" : null;
     }
     case "sanction":
       if (warBetween(state, p.by, p.target!)) return "overtaken";
-      return Boolean(p.lift) !== sanctioning(state, p.by, p.target!) ? "overtaken" : null;
+      // Sanctions planned where partial ones stand raise them to an embargo; done once there is one.
+      if (!p.lift) return sanctions(state).some((s) => s.by === p.by && s.against === p.target && s.scope === "full") ? "overtaken" : null;
+      return !sanctioning(state, p.by, p.target!) ? "overtaken" : null;
     case "deal":
       if (warBetween(state, p.by, p.target!) || sanctionedEither(state, p.by, p.target!)) return "refused";
       return tradeBloc(state, p.by, p.target!) ? "overtaken" : null;
@@ -244,6 +273,21 @@ function adopt(next: GameState, p: Plan, when: string, applied: AppliedChange[])
   return "carried-out";
 }
 
+/** Why sanctions are imposed, raised or lifted, for the news: a new government, trouble at home, a war on a friend, an incident. */
+function sanctionBecause(state: GameState, p: Plan): Because | undefined {
+  const d = state.countries[p.by]?.domestic;
+  if (p.cause === "new-government" && d?.changed) return { kind: d.changed.how === "election" ? "election-lost" : d.changed.how === "coup" ? "coup" : "new-government" };
+  if (p.lift && p.cause === "politics") {
+    const home = homeFront(state, p.by);
+    return home.why ? { kind: home.why } : undefined;
+  }
+  if (!p.lift && p.target && (p.cause === "threat" || p.cause === "treaty")) {
+    const war = state.wars.find((w) => !w.truce && w.attackers.includes(p.target!));
+    if (war?.defenders[0]) return { kind: "war-on", country: war.defenders[0] };
+  }
+  return p.origin ? originOf(state, p) : undefined;
+}
+
 /**
  * Carries out a peaceful plan at action: a policy adopted, sanctions
  * imposed or lifted, a trade agreement signed (or the answer's own taken for
@@ -257,19 +301,28 @@ export function enactPeaceful(next: GameState, p: Plan, ctx: { turn: number; whe
     case "sanction": {
       if (!p.target || !next.countries[p.target]) return "target-gone";
       const list = next.sanctions ?? [];
+      const because = sanctionBecause(next, p);
+      const extra = because ? { because } : {};
       if (p.lift) {
         if (!list.some((s) => s.by === p.by && s.against === p.target)) return "carried-out";
         next.sanctions = list.filter((s) => !(s.by === p.by && s.against === p.target));
         if (!next.sanctions.length) delete next.sanctions;
-        applied.push({ kind: "sanction", by: p.by, against: p.target, change: "lifted", plan: p.id });
+        applied.push({ kind: "sanction", by: p.by, against: p.target, change: "lifted", plan: p.id, ...extra });
         return "carried-out";
       }
-      if (list.some((s) => s.by === p.by && s.against === p.target)) return "carried-out";
+      const standing = list.find((s) => s.by === p.by && s.against === p.target);
+      if (standing?.scope === "full") return "carried-out";
+      // Partial sanctions raised to an embargo.
+      if (standing) {
+        next.sanctions = list.map((s) => (s === standing ? { ...s, scope: "full" as const } : s));
+        applied.push({ kind: "sanction", by: p.by, against: p.target, change: "full", plan: p.id, ...extra });
+        return "carried-out";
+      }
       // An embargo where the quarrel is past bearing; partial sanctions otherwise, an aggressor far away included.
       const t = tieOf(next, p.by, p.target);
       const scope = t.tension >= 65 ? "full" : "partial";
       next.sanctions = [...list, { by: p.by, against: p.target, scope, since: when }];
-      applied.push({ kind: "sanction", by: p.by, against: p.target, change: scope, plan: p.id });
+      applied.push({ kind: "sanction", by: p.by, against: p.target, change: scope, plan: p.id, ...extra });
       return "carried-out";
     }
     case "deal": {
@@ -317,7 +370,8 @@ export function enactPeaceful(next: GameState, p: Plan, ctx: { turn: number; whe
         pact = bloc.id;
         applied.push({ kind: "alliance", alliance: bloc.id, name: bloc.name, members: [...bloc.members], plan: p.id });
       }
-      applied.push({ kind: "accord", by: p.by, with: p.target, plan: p.id, ...(pact ? { pact } : {}) });
+      const crisis = p.origin && !/^i\d/.test(p.origin) ? p.origin : undefined;
+      applied.push({ kind: "accord", by: p.by, with: p.target, plan: p.id, ...(pact ? { pact } : {}), ...(crisis ? { crisis } : {}) });
       return "carried-out";
     }
     default:
@@ -432,7 +486,7 @@ export function policyNeeds(state: GameState, tag: string, view: Pick<View, "inc
   const tenure = d.changed ? yearsBetween(d.changed.date, state.date) : 3;
   const out: [PolicyKind, number][] = [];
   const add = (k: PolicyKind, n: number) => {
-    if (n > 0.02 && !running(state, tag, k)) out.push([k, n]);
+    if (n > 0.02 && !running(state, tag, k) && !undoing(state, tag, k)) out.push([k, n]);
   };
   add("infrastructure", (rel < 1.5 ? 0.4 : 0.15) * (d.stability >= 45 ? 1 : 0.4) * (ratio < 0.8 ? 1 : 0.3) * (atWar ? 0.3 : 1));
   add("industry", INDUSTRY_ERA[era] * (rel >= 0.4 && rel <= 3 ? 0.45 : 0.2) * (atWar ? 1.3 : 1));
@@ -441,7 +495,8 @@ export function policyNeeds(state: GameState, tag: string, view: Pick<View, "inc
   add("austerity", ((ratio > 0.9 ? 0.6 + Math.min(1, ratio - 0.9) : 0) + (deficit > 6 ? 0.5 : 0)) * (e.growth < -2 ? 0.3 : 1) * (atWar ? 0.2 : 1));
   add("stimulus", (e.growth < 0.5 || (e.growth < 1.5 && e.unemployment > 7)) && ratio < 0.9 && !atWar ? 0.4 + Math.min(1, Math.max(0, -e.growth) / 4) : 0);
   add("armament", (threat / 70 + (atWar ? 0.5 : 0) + (nearby ? 0.25 : 0)) * hawk * ARM_ERA[era] * (ratio > 1.2 ? 0.5 : 1));
-  const heavy = e.budget.army / gdp >= HEAVY_ARMY[era];
+  // What a war added to the army line is given back after the peace by itself (economy.ts): it calls for no disarmament.
+  const heavy = (e.budget.army - (e.war ?? 0)) / gdp >= HEAVY_ARMY[era];
   add("disarmament", !atWar && threat < 25 ? (0.05 + (ratio > 1 ? 0.3 : 0) + (heavy ? 0.5 : 0)) * clamp(2 - hawk, 0.3, 1.5) * 0.6 : 0);
   if (d.regime !== "democracy") {
     const junta = d.regime === "military" ? (tenure >= 2 ? 0.8 : 0.1) : 0;
@@ -512,58 +567,130 @@ function attacksFriend(state: GameState, tag: string, target: string): boolean {
 }
 
 /**
+ * New plans the world may open in one period, a backstop against a burst
+ * rather than a quota: about a year's worth of what ~190 governments start
+ * at the long-run rates (POLICY_RATE, DEAL_RATE…) in a month, so the cap
+ * seldom binds and never decides who acts. The game master and the news are
+ * limited separately, by relevance (describeIntentions, WorldNews).
+ */
+export const peacefulCaps = (years: number) => ({ policies: Math.max(6, Math.ceil(72 * years)), moves: Math.max(4, Math.ceil(36 * years)) });
+
+/** A peaceful plan a government would open this period, before the period's cap: what it opens and how much it matters. */
+export interface PeacefulCandidate {
+  tag: string;
+  fields: Omit<Plan, "id" | "since" | "moved">;
+  /** Need or quarrel, by the government's weight in the world: the priority when the cap binds. */
+  weight: number;
+}
+
+/**
+ * The seeded order in which candidates are taken when the cap binds: an
+ * exponential race on each one's weight, so a candidate's chance of coming
+ * first is its share of the weight – a great power's urgent need before a
+ * small state's routine one, more often than not, and never the alphabet.
+ */
+function ranked(list: PeacefulCandidate[], dice: (key: string) => number, what: string): PeacefulCandidate[] {
+  const race = (c: PeacefulCandidate) => -Math.log(1 - dice(`rank:${what}:${c.tag}`)) / Math.max(1e-6, c.weight);
+  return list
+    .map((c) => ({ c, t: race(c) }))
+    .sort((a, b) => a.t - b.t || a.c.tag.localeCompare(b.c.tag))
+    .map((x) => x.c);
+}
+
+/**
  * New peaceful plans at the end of a turn, for every government but the
  * player's: a policy at home when it needs one, and at most one foreign move
  * a turn – sanctions lifted or imposed, a trade agreement sought, talks
  * offered. A government with a course reads its ties; the light tier reads
- * its numbers, its neighbours and its bloc's leader.
+ * its numbers, its neighbours and its bloc's leader. Every government casts
+ * its own dice first; when more pass than the period allows, the seeded
+ * priority (ranked) decides which open, not the order of the alphabet.
  */
 export function openPeaceful(next: GameState, ctx: PeacefulContext): void {
+  const plans = next.plans ?? [];
+  const { policies, moves } = peacefulCandidates(next, ctx);
+  const caps = peacefulCaps(ctx.years);
+  for (const c of ranked(policies, ctx.dice, "policy").slice(0, caps.policies)) ctx.open(c.fields);
+  // Foreign moves: no more governments' plans on one target than MAX_SANCTIONERS, one trade agreement sought between two at a time.
+  const sanctioners = (target: string) => new Set([...sanctions(next).filter((s) => s.against === target).map((s) => s.by), ...plans.filter((p) => !p.end && p.kind === "sanction" && !p.lift && p.target === target).map((p) => p.by)]).size;
+  let taken = 0;
+  for (const c of ranked(moves, ctx.dice, "move")) {
+    if (taken >= caps.moves) break;
+    const f = c.fields;
+    if (f.kind === "sanction" && !f.lift && f.target && sanctioners(f.target) >= MAX_SANCTIONERS) continue;
+    if (f.kind === "deal" && f.target && plans.some((p) => !p.end && p.kind === "deal" && p.by === f.target && p.target === c.tag)) continue;
+    ctx.open(f);
+    taken += 1;
+  }
+}
+
+/** Every government's candidate plans for the period, each passing its own dice: a policy, and one move abroad. */
+export function peacefulCandidates(next: GameState, ctx: PeacefulContext): { policies: PeacefulCandidate[]; moves: PeacefulCandidate[] } {
   const plans = next.plans ?? [];
   const view = viewOf(next, ctx);
   const chance = (rate: number) => 1 - Math.exp(-Math.max(0, rate) * ctx.years);
   const live = (tag: string, kinds: PlanKind[]) => plans.filter((p) => !p.end && p.by === tag && kinds.includes(p.kind)).length;
   const foreign: PlanKind[] = ["sanction", "deal", "talks"];
-  const policyCap = Math.max(3, Math.ceil(30 * ctx.years));
-  const foreignCap = Math.max(2, Math.ceil(16 * ctx.years));
-  let policies = 0;
-  let moves = 0;
   const sanctioners = (target: string) => new Set([...sanctions(next).filter((s) => s.against === target).map((s) => s.by), ...plans.filter((p) => !p.end && p.kind === "sanction" && !p.lift && p.target === target).map((p) => p.by)]).size;
   const planned = (by: string, kind: PlanKind, target: string) => plans.some((p) => !p.end && p.by === by && p.kind === kind && p.target === target);
   const fresh = new Set(ctx.changed);
+  const policies: PeacefulCandidate[] = [];
+  const moves: PeacefulCandidate[] = [];
 
   for (const tag of view.alive) {
     const c = next.countries[tag];
     const course = c.course;
     const size = course ? 1.3 : gdpOf(next, tag) >= view.medianGdp ? 0.9 : 0.55;
+    // A government's weight in the world, for the priority: a great power's needs come first more often.
+    const weight = 1 + 2 * (ctx.power.get(tag) ?? 0);
 
     // A policy at home.
     const programmes = (c.programmes ?? []).filter((p) => p.kind !== "trade" && p.until > ctx.to).length;
-    if (policies < policyCap && !live(tag, ["policy"]) && programmes < MAX_PROGRAMMES) {
+    if (!live(tag, ["policy"]) && programmes < MAX_PROGRAMMES) {
       const needs = policyNeeds(next, tag, view);
       const top = Math.max(0, ...needs.map(([, n]) => n));
       const rate = POLICY_RATE * size * (0.3 + Math.min(1.5, top)) * (fresh.has(tag) ? 2 : 1);
       if (needs.length && ctx.dice(`open:policy:${tag}`) < chance(rate)) {
         const total = needs.reduce((s, [, n]) => s + n, 0);
         let x = ctx.dice(`pick:policy:${tag}`) * total;
-        const [policy] = needs.find(([, n]) => (x -= n) < 0) ?? needs[needs.length - 1];
-        ctx.open({ kind: "policy", by: tag, policy, cause: fresh.has(tag) ? "new-government" : CAUSE_OF[policy], stage: "decision" });
-        policies += 1;
+        const [policy, need] = needs.find(([, n]) => (x -= n) < 0) ?? needs[needs.length - 1];
+        policies.push({ tag, fields: { kind: "policy", by: tag, policy, cause: fresh.has(tag) ? "new-government" : CAUSE_OF[policy], stage: "decision" }, weight: (0.3 + Math.min(1.5, need)) * weight });
       }
     }
 
     // One move abroad at most.
-    if (moves >= foreignCap || live(tag, foreign) >= (course ? 2 : 1)) continue;
-    const opened = (() => {
-      // Sanctions lifted: trust has come back, the quarrel has ebbed, a new government, or years have passed.
+    if (live(tag, foreign) >= (course ? 2 : 1)) continue;
+    const home = homeFront(next, tag);
+    const hawk = hawkOf(next, tag);
+    const dove = fresh.has(tag) && hawk < 45;
+    const open = (fields: Omit<Plan, "id" | "since" | "moved">, urgency: number) => moves.push({ tag, fields, weight: clamp(urgency, 0.2, 2) * weight });
+    void (() => {
+      // Sanctions lifted: trust has come back, the quarrel has ebbed, a dovish new government, years have passed – or
+      // trouble at home, the sooner the more trade they cost. A line held against an aggressor on a friend breaks only
+      // under real trouble at home or a dovish new government: support for a country at war follows the supporter's politics.
       for (const s of sanctions(next).filter((x) => x.by === tag).sort((a, b) => a.against.localeCompare(b.against))) {
-        if (planned(tag, "sanction", s.against) || attacksFriend(next, tag, s.against)) continue;
+        if (planned(tag, "sanction", s.against)) continue;
         const t = course?.ties[s.against];
+        const cost = (t?.trade ?? 0) / 100;
         const age = yearsBetween(s.since, ctx.to);
         const leaderStill = leadersOf(next, tag, ctx.power).some((l) => sanctioning(next, l.lead, s.against));
-        const rate = t ? (t.trust >= -15 && t.tension < 25 ? 0.6 : 0) + (fresh.has(tag) && (course?.hawk ?? 50) < 45 ? 0.4 : 0) : age >= 3 ? (leaderStill ? 0.05 : 0.15) : 0;
-        if (rate > 0 && ctx.dice(`open:lift:${tag}:${s.against}`) < chance(rate)) {
-          ctx.open({ kind: "sanction", by: tag, target: s.against, lift: true, cause: fresh.has(tag) ? "new-government" : "tension", stage: "tension" });
+        const friend = attacksFriend(next, tag, s.against);
+        // A quarrel that has ebbed lifts sanctions only once they have stood a year: imposed after an incident, they are not dropped the season the tension fades.
+        const base = friend ? (dove ? 0.25 : 0) : (t ? (t.trust >= -15 && t.tension < 25 && age >= 1 ? 0.6 : 0) + (dove ? 0.4 : 0) : age >= 3 ? (leaderStill ? 0.05 : 0.15) : 0);
+        const politics = friend ? (home.trouble >= 0.45 ? 0.5 * home.trouble * (1 + 4 * cost) : 0) : home.trouble * (0.3 + 3 * cost);
+        if (base + politics > 0 && ctx.dice(`open:lift:${tag}:${s.against}`) < chance(base + politics)) {
+          open({ kind: "sanction", by: tag, target: s.against, lift: true, cause: fresh.has(tag) ? "new-government" : politics > base ? "politics" : "tension", stage: "tension" }, base + politics);
+          return true;
+        }
+      }
+      // Hawks raise partial sanctions to an embargo: a hawkish new government, or a quarrel past bearing.
+      for (const s of sanctions(next).filter((x) => x.by === tag && x.scope === "partial").sort((a, b) => a.against.localeCompare(b.against))) {
+        if (planned(tag, "sanction", s.against) || !ctx.holders.has(s.against)) continue;
+        const t = course?.ties[s.against];
+        const costly = clamp((t?.trade ?? 0) / 15, 0, 1);
+        const rate = ((fresh.has(tag) && hawk >= 60 ? 0.5 : 0) + (t && t.tension >= 65 && t.trust <= -50 ? 0.3 : 0)) * (1 - 0.7 * home.trouble * costly);
+        if (rate > 0 && ctx.dice(`open:raise:${tag}:${s.against}`) < chance(rate)) {
+          open({ kind: "sanction", by: tag, target: s.against, cause: fresh.has(tag) ? "new-government" : "tension", stage: "tension" }, 0.8);
           return true;
         }
       }
@@ -594,8 +721,10 @@ export function openPeaceful(next: GameState, ctx: PeacefulContext): void {
       if (best) {
         const democracy = c.domestic?.regime === "democracy" ? 1.3 : 0.7;
         const weight = gdpOf(next, tag) >= gdpOf(next, best.target) * 0.05 ? 1 : 0.3;
-        if (ctx.dice(`open:sanction:${tag}:${best.target}`) < chance(0.9 * best.weight * democracy * weight)) {
-          ctx.open({ kind: "sanction", by: tag, target: best.target, cause: best.cause, stage: "tension" });
+        // A government in trouble at home shies from sanctions, most of all those that cost it trade.
+        const restraint = 1 - home.trouble * (0.3 + 0.5 * clamp((course?.ties[best.target]?.trade ?? 0) / 15, 0, 1));
+        if (ctx.dice(`open:sanction:${tag}:${best.target}`) < chance(0.9 * best.weight * democracy * weight * restraint)) {
+          open({ kind: "sanction", by: tag, target: best.target, cause: best.cause, stage: "tension" }, best.weight);
           return true;
         }
       }
@@ -609,7 +738,7 @@ export function openPeaceful(next: GameState, ctx: PeacefulContext): void {
           const doves = course.hawk < 55 && hawkOf(next, other) < 60;
           const rate = (doves ? 0.5 : 0.1) * (1 + (t.trade ?? 0) / 20) + (fresh.has(tag) && course.hawk < 40 ? 0.8 : 0);
           if (ctx.dice(`open:talks:${tag}:${other}`) < chance(rate)) {
-            ctx.open({ kind: "talks", by: tag, target: other, cause: fresh.has(tag) ? "new-government" : "tension", stage: "preparation" });
+            open({ kind: "talks", by: tag, target: other, cause: fresh.has(tag) ? "new-government" : "tension", stage: "preparation" }, t.tension / 50);
             return true;
           }
         }
@@ -632,11 +761,11 @@ export function openPeaceful(next: GameState, ctx: PeacefulContext): void {
       const total = top.reduce((s, x) => s + x.score, 0);
       let x = ctx.dice(`pick:deal:${tag}`) * total;
       const pick = top.find((p) => (x -= p.score) < 0) ?? top[top.length - 1];
-      ctx.open({ kind: "deal", by: tag, target: pick.partner, cause: "trade", stage: "preparation" });
+      open({ kind: "deal", by: tag, target: pick.partner, cause: "trade", stage: "preparation" }, 0.5);
       return true;
     })();
-    if (opened) moves += 1;
   }
+  return { policies, moves };
 }
 
 const POLICY_EN: Record<PolicyKind, string> = {

@@ -2,7 +2,7 @@ import type { MessageKey } from "@/i18n/messages";
 import { INSTITUTIONS } from "@/engine/funds";
 import { formatPopulation } from "@/engine/provinces";
 import { breakthroughOf } from "@/engine/research";
-import type { AppliedChange, GameState, PlanKind, PlanStage, PolicyKind, ResearchDirection, Stats, Text } from "@/engine/types";
+import type { AppliedChange, Because, CabinetPlot, GameState, PlanKind, PlanStage, Plot, PolicyKind, ResearchDirection, Stats, Text } from "@/engine/types";
 import { researchLabel, versusText } from "./armsText";
 
 /** Directions whose breakthroughs say what the direction brings; the military and strategic ones say it themselves. */
@@ -29,13 +29,48 @@ export function planKindKey(plan: { kind: PlanKind; lift?: boolean; policy?: Pol
   return (plan.kind === "sanction" && plan.lift ? "plan.kind.sanctionLift" : `plan.kind.${plan.kind}`) as MessageKey;
 }
 
+/** A faction of the cabinet by its id (engine/intrigue.ts): "hawks", …, or a coalition partner's "party:<name>". */
+export function factionName(id: string, t: T): string {
+  return id.startsWith("party:") ? t("faction.party.named", { party: id.slice(6) }) : t(`faction.${id}` as MessageKey);
+}
+
+/** A plot inside the cabinet in the interface language: its faction (or who is blamed for it) and whom it aims at. */
+export function cabinetPlotTitle(cabinet: Pick<CabinetPlot, "faction" | "target" | "targetName">, t: T, faction = factionName(cabinet.faction, t)): string {
+  return cabinet.target === "leader" ? t("plot.cabinet.leader", { faction }) : t("plot.cabinet", { faction, target: cabinet.targetName });
+}
+
+/** A plot's title as the player reads it: a cabinet plot's in their language, any other as the game master wrote it. */
+export const plotTitle = (plot: Pick<Plot, "title" | "cabinet">, t: T): string => (plot.cabinet ? cabinetPlotTitle(plot.cabinet, t) : plot.title);
+
 /** The words for a stage a plan has reached. */
 export function planStageKey(plan: { kind: PlanKind; lift?: boolean }, stage: PlanStage): MessageKey {
   return `plan.stage.${plan.kind === "sanction" && plan.lift ? "sanctionLift" : plan.kind}.${stage}` as MessageKey;
 }
 
-/** One applied change as a line of the chronicle, in the interface language; `date` formats a calendar date. */
-export function describeChange(change: AppliedChange, state: GameState, t: T, text: TextFn, region: RegionName, date: (iso: string) => string = (iso) => iso): string {
+/** Why something happened (engine/standoffs.ts), in the interface language: "after the border clash of May 2024", "deterred by the United States". */
+export function becauseText(b: Because, country: (tag: string) => string, t: T, month: (iso: string) => string): string {
+  if (b.kind === "incident") return t(`because.incident.${b.incident ?? "border"}` as MessageKey, { month: b.date ? month(b.date) : "" });
+  return t(`because.${b.kind}` as MessageKey, { country: b.country ? country(b.country) : "" });
+}
+
+/** One applied change as a line of the chronicle, in the interface language; `date` formats a calendar date, `month` a month ("2024-05"). */
+export function describeChange(
+  change: AppliedChange,
+  state: GameState,
+  t: T,
+  text: TextFn,
+  region: RegionName,
+  date: (iso: string) => string = (iso) => iso,
+  month: (iso: string) => string = (iso) => iso.slice(0, 7),
+): string {
+  const country = (tag: string) => text(state.countries[tag]?.name ?? tag);
+  const line = describeLine(change, state, t, text, region, date);
+  // What the engine knows of why: the incident a crisis grew from, the mediator, the slump before a coup.
+  const because = "because" in change && change.because ? becauseText(change.because, country, t, month) : "";
+  return because ? t("change.because", { line, because }) : line;
+}
+
+function describeLine(change: AppliedChange, state: GameState, t: T, text: TextFn, region: RegionName, date: (iso: string) => string): string {
   const country = (tag: string) => text(state.countries[tag]?.name ?? tag);
   switch (change.kind) {
     case "annex":
@@ -75,9 +110,13 @@ export function describeChange(change: AppliedChange, state: GameState, t: T, te
     case "plan":
       if (change.type === "policy" && change.policy) return t("change.policyPlan", { country: country(change.by), policy: t(`policy.${change.policy}` as MessageKey), stage: t(planStageKey({ kind: change.type }, change.stage)) });
       return t("change.plan", { who: planWho(change, country, t), stage: t(planStageKey({ kind: change.type, lift: change.lift }, change.stage)) });
-    case "plan-end":
+    case "plan-end": {
       if (change.type === "policy" && change.policy) return t("change.policyEnd", { country: country(change.by), policy: t(`policy.${change.policy}` as MessageKey), why: t(`plan.end.${change.why}` as MessageKey) });
-      return t("change.planEnd", { who: planWho(change, country, t), drop: t((change.type === "sanction" && change.lift ? "plan.drop.sanctionLift" : `plan.drop.${change.type}`) as MessageKey), why: t(`plan.end.${change.why}` as MessageKey) });
+      const drop = t((change.type === "sanction" && change.lift ? "plan.drop.sanctionLift" : `plan.drop.${change.type}`) as MessageKey);
+      // A reason the engine knows says it better than the kind of end: "– after mediation by Turkey".
+      if (change.because) return t("change.plan", { who: planWho(change, country, t), stage: drop });
+      return t("change.planEnd", { who: planWho(change, country, t), drop, why: t(`plan.end.${change.why}` as MessageKey) });
+    }
     case "policy":
       return t("change.policy", { country: country(change.country), policy: t(`policy.${change.policy}` as MessageKey) });
     case "accord":
@@ -106,7 +145,12 @@ export function describeChange(change: AppliedChange, state: GameState, t: T, te
     case "coup":
       return t(change.succeeded ? "change.coup.succeeded" : "change.coup.failed", { country: country(change.country) });
     case "plot":
-      return t(`change.plot.${change.change}` as MessageKey, { title: change.title });
+      return t(`change.plot.${change.change}` as MessageKey, { title: change.cabinet ? cabinetPlotTitle(change.cabinet, t) : change.title });
+    case "cabinet":
+      if (change.event === "loyalty") return t(change.to > change.from ? "change.cabinet.loyaltyUp" : "change.cabinet.loyaltyDown", { name: change.name, from: change.from, to: change.to });
+      return change.operation
+        ? t("change.cabinet.leakOperation", { by: change.by, faction: factionName(change.faction, t), operation: change.operation })
+        : t("change.cabinet.leak", { by: change.by, faction: factionName(change.faction, t) });
     case "exile":
       return change.host ? t("change.exileTo", { country: country(change.country), host: country(change.host) }) : t("change.exile", { country: country(change.country) });
     case "return":
@@ -167,6 +211,10 @@ export function describeChange(change: AppliedChange, state: GameState, t: T, te
       return t((change.event === "done" ? `change.intrigue.done.${change.goal}` : "change.intrigue.exposed") as MessageKey, { deputy: change.deputy, target: change.target });
     case "rise":
       return t(`change.rise.${change.how}` as MessageKey, { name: change.name });
+    case "fate":
+      return t((change.event === "died" && change.cause === "assassination" ? "change.fate.assassinated" : `change.fate.${change.event}`) as MessageKey, { name: change.name || t(`change.fate.who.${change.role}` as MessageKey) });
+    case "approval":
+      return t("change.approval", { yes: change.accepted.join(", ") || "–", no: change.refused.join(", ") || "–" });
     case "repression":
       return t(`change.repression.${change.event}` as MessageKey);
     case "movement":
@@ -204,7 +252,7 @@ export const listedChanges = (applied: AppliedChange[]): AppliedChange[] => appl
 /** Map changes first, then politics, then the numbers. */
 export function sortChanges(changes: AppliedChange[]): AppliedChange[] {
   const rank: Record<AppliedChange["kind"], number> = {
-    overthrown: -2, rise: -1.9, exile: -1, return: -1, "new-country": 0, war: 1, peace: 2, truce: 3, "truce-ended": 4, annex: 5, liberate: 6, occupy: 7, behind: 7.5, contest: 8, repel: 9, alliance: 10, invitation: 11, "alliance-ended": 12, leave: 13, "summit-planned": 14, election: 15, coup: 15.2, vote: 15.4, party: 16, protest: 16.5, plot: 17, leader: 18, official: 18.2, enter: 1.5, accession: 10.5, plan: 14.2, "plan-end": 14.3, incident: 14.15, policy: 14.25, accord: 14.35, sanction: 14.5, deal: 14.6, funds: 14.7, law: 16.8, bill: 16.7, identity: 0.5, budget: 18.3, population: 18.5, stats: 19, research: 18.25, captured: 14.8, intrigue: 18.1, repression: 16.6, movement: 16.65,
+    overthrown: -2, rise: -1.9, fate: -1.95, approval: 18.15, exile: -1, return: -1, "new-country": 0, war: 1, peace: 2, truce: 3, "truce-ended": 4, annex: 5, liberate: 6, occupy: 7, behind: 7.5, contest: 8, repel: 9, alliance: 10, invitation: 11, "alliance-ended": 12, leave: 13, "summit-planned": 14, election: 15, coup: 15.2, vote: 15.4, party: 16, protest: 16.5, plot: 17, leader: 18, official: 18.2, enter: 1.5, accession: 10.5, plan: 14.2, "plan-end": 14.3, incident: 14.15, policy: 14.25, accord: 14.35, sanction: 14.5, deal: 14.6, funds: 14.7, law: 16.8, bill: 16.7, identity: 0.5, budget: 18.3, population: 18.5, stats: 19, research: 18.25, captured: 14.8, intrigue: 18.1, cabinet: 18.16, repression: 16.6, movement: 16.65,
   };
   return [...changes].sort((a, b) => rank[a.kind] - rank[b.kind]);
 }

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { clipAnswer } from "./advisors";
+import { letterRole } from "./exile";
 import type { DiplomacyMessage, GameState, Stance } from "./types";
 
 export const DiplomacySchema = z.object({
@@ -23,7 +24,9 @@ export function addDiplomacyExchange(
 ): GameState {
   const next = structuredClone(state);
   const thread = next.diplomacy[target] ?? [];
-  const mine: DiplomacyMessage = { from: "player", text: message, date: state.date, turn: state.turn };
+  // A letter from the opposition or a minister is marked as theirs, not the government's (engine/exile.ts).
+  const as = letterRole(state);
+  const mine: DiplomacyMessage = { from: "player", text: message, date: state.date, turn: state.turn, ...(as ? { as } : {}) };
   const theirs: DiplomacyMessage = {
     from: "them",
     text: reply.reply,

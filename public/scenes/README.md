@@ -16,9 +16,9 @@ The pictures of the eight start dates on the front page, painted in oil by
 
 ## Licences
 
-The scenes are not under the game's MIT licence. Each keeps the licence of
+The scenes are not under the game's AGPL-3.0 licence. Each keeps the licence of
 its picture: public domain stays public domain; a CC BY or CC BY-SA picture
 keeps that licence, crediting its author as `credits.json` does.
 
 The worn paper under the pages (`public/paper/`) is drawn by the same script
-from noise, with no source picture, and is the game's own work under MIT.
+from noise, with no source picture, and is the game's own work under AGPL-3.0.

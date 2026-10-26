@@ -1,5 +1,5 @@
 import { BIO_INSTRUCTIONS, BioSchema, bioKey, buildBioPrompt, clipBio } from "@/engine/bios";
-import { getScenario } from "@/engine/scenarios";
+import { scenarioOf } from "@/engine/scenarios";
 import { wantsDemo } from "@/server/demo";
 import { rejectNonLocal } from "@/server/guard";
 import { completeJson } from "@/server/llm";
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
   const name = typeof body.name === "string" ? body.name.trim() : "";
   if (!name || name.length > 120) return badRequest("The name is empty or too long.");
-  const startDate = getScenario(state.scenarioId).startDate;
+  const startDate = scenarioOf(state).startDate;
 
   return ndjsonResponse(request, async ({ signal, progress }) => {
     let chars = 0;

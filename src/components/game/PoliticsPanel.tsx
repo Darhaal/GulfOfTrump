@@ -1,8 +1,9 @@
 "use client";
 
-import { ArrowDownRight, ArrowUpRight, Briefcase, Check, ChevronDown, Clock, Gavel, Handshake, Landmark, Loader2, Megaphone, MessagesSquare, Plus, Shield, ShieldAlert, Siren, Tv, Unlock, Users, Vote } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Briefcase, Check, ChevronDown, Clock, Gavel, Handshake, Landmark, Loader2, type LucideIcon, Megaphone, MessagesSquare, Plus, Shield, ShieldAlert, ShieldX, Siren, Tv, Unlock, Users, Vote } from "lucide-react";
 import { type ReactNode, useId, useMemo, useState } from "react";
 import { ui } from "@/components/ui/classes";
+import DoneButton, { Hint } from "@/components/ui/DoneButton";
 import { MAX_ORDERS } from "@/constants/app";
 import { formatDate } from "@/engine/calendar";
 import { LAW_IDS, LAWS, type LawId } from "@/engine/laws";
@@ -13,6 +14,7 @@ import { ownProtests } from "@/engine/unrest";
 import { type GameState, type Loyalty, type Motion, type MotionKind, type Parliament, type Party, PILLARS, type Protest, type Session, type Talk } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
+import { plotTitle } from "./changes";
 import { partyActions, type PoliticsAction } from "./politics/actions";
 import { abbreviation, hemicycle, INNER, inkOn, partyColors, seatingOrder, spread } from "./politics/layout";
 import { useMotionLabel } from "./politics/motion";
@@ -123,19 +125,46 @@ function ProtestFacts({ p, state, regionName }: { p: Protest; state: GameState; 
   return <div className="mt-0.5 text-xs font-medium text-muted">{facts.join(" · ")}</div>;
 }
 
-/** The button that opens talks, or takes them up again. */
-function TalksButton({ under, disabled, onClick }: { under: boolean; disabled: boolean; onClick: () => void }) {
+/** Moves that become orders: the turn's orders so far, whether there is room for one more, and the way to add it. */
+interface Ordering {
+  orders: Set<string>;
+  full: boolean;
+  disabled: boolean;
+  order: (line: string) => boolean;
+}
+
+/** A small square control on a card, so the card's title keeps its width; its words show in a hint above the row it sits in (made `relative`). */
+const SQUARE = "grid h-7 w-7 shrink-0 place-items-center rounded-lg border sheet transition-colors disabled:cursor-not-allowed disabled:border-line disabled:text-faded";
+
+/** The button that opens talks, or takes them up again: a square, its words in a hint; filled while talks are under way. */
+function TalksButton({ under, disabled, onClick, align }: { under: boolean; disabled: boolean; onClick: () => void; align?: "start" | "end" }) {
   const { t } = useI18n();
+  const label = under ? t("politics.talk.resume") : t("politics.talk.open");
   return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className="inline-flex items-center gap-1 rounded-lg border border-accent/40 bg-surface px-2 py-1 text-2xs font-black uppercase tracking-wider text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
-    >
-      <MessagesSquare className="h-3 w-3" />
-      {under ? t("politics.talk.resume") : t("politics.talk.open")}
+    <button type="button" disabled={disabled} onClick={onClick} aria-label={label} className={`group ${SQUARE} ${under ? "border-accent bg-accent/10 text-accent" : "border-accent/40 text-accent hover:bg-accent/10"}`}>
+      <MessagesSquare className="h-3.5 w-3.5" />
+      <Hint label={label} align={align} />
     </button>
+  );
+}
+
+/** A move on a card that becomes an order: a square with its name and the order in a hint; once ordered, a tick and "In orders". */
+function OrderSquare({ id, icon, line, ordering, align, tone = "text-muted hover:border-accent/40 hover:text-accent" }: { id: string; icon: LucideIcon; line: string; ordering: Ordering; align?: "start" | "end"; tone?: string }) {
+  const { t } = useI18n();
+  const done = ordering.orders.has(line);
+  return (
+    <DoneButton
+      compact
+      icon={icon}
+      label={t(`politics.act.${id}` as MessageKey)}
+      hint={ordering.full && !done ? t("game.orders.limit", { n: MAX_ORDERS }) : line}
+      doneLabel={t("done.inOrders")}
+      done={done}
+      disabled={ordering.disabled || ordering.full}
+      onAct={() => ordering.order(line)}
+      align={align}
+      className={`${SQUARE} border-line ${tone}`}
+    />
   );
 }
 
@@ -144,36 +173,14 @@ function TalksButton({ under, disabled, onClick }: { under: boolean; disabled: b
  * security services and elites; the protests at home, with talks in person
  * and every other measure against them; protests abroad to condemn or back.
  */
-function Street({
-  state,
-  disabled,
-  order,
-  orders,
-  regionName,
-  onTalks,
-}: {
-  state: GameState;
-  disabled: boolean;
-  order: (text: string) => void;
-  orders: Set<string>;
-  regionName: (id: string) => string;
-  onTalks: (kind: Talk["with"], target: string) => void;
-}) {
+function Street({ state, ordering, regionName, onTalks }: { state: GameState; ordering: Ordering; regionName: (id: string) => string; onTalks: (kind: Talk["with"], target: string) => void }) {
   const { t, text } = useI18n();
   const [open, setOpen] = useState<string | null>(null);
   const loyalty = state.politics ? loyaltyOf(state.politics) : null;
   const home = ownProtests(state.protests, state.player);
   const abroad = (state.protests ?? []).filter((p) => !home.includes(p));
   const row = (action: PoliticsAction, line: string) => (
-    <ActionRow
-      key={action.id}
-      action={action}
-      label={t(`politics.act.${action.id}` as MessageKey)}
-      desc={t(`politics.desc.${action.id}` as MessageKey)}
-      disabled={disabled}
-      inOrders={orders.has(line)}
-      onOrder={() => order(line)}
-    />
+    <ActionRow key={action.id} action={action} label={t(`politics.act.${action.id}` as MessageKey)} desc={t(`politics.desc.${action.id}` as MessageKey)} line={line} ordering={ordering} />
   );
 
   return (
@@ -199,18 +206,10 @@ function Street({
                   <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-2xs font-black uppercase tracking-wider ${STAGE_TONE[p.stage]}`}>{t(`politics.protest.${p.stage}` as MessageKey)}</span>
                 </div>
                 {p.demands && <p className="mt-1.5 text-xs font-medium text-ink">{t("politics.protest.demands", { demands: p.demands })}</p>}
-                <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  <TalksButton under={Boolean(talksWith(state.politics, p.id))} disabled={disabled} onClick={() => onTalks("protest", p.id)} />
+                <div className="relative mt-2 flex flex-wrap items-center gap-1.5">
+                  <TalksButton under={Boolean(talksWith(state.politics, p.id))} disabled={ordering.disabled} onClick={() => onTalks("protest", p.id)} align="start" />
                   {(["concede", "disperse", "troops"] as const).map((action) => (
-                    <button
-                      key={action}
-                      type="button"
-                      disabled={disabled}
-                      onClick={() => order(t(`politics.order.${action}` as MessageKey, { title: p.title, demands: p.demands || "–" }))}
-                      className="rounded-lg border border-line px-2 py-1 text-2xs font-black uppercase tracking-wider text-muted transition-colors hover:border-accent/30 hover:text-ink"
-                    >
-                      {t(`politics.act.${action}` as MessageKey)}
-                    </button>
+                    <OrderSquare key={action} id={action} icon={HOME_ICONS[action]} line={t(`politics.order.${action}` as MessageKey, { title: p.title, demands: p.demands || "–" })} ordering={ordering} align="start" />
                   ))}
                   <button
                     type="button"
@@ -442,10 +441,11 @@ function IdeasCompass({ parties, colors, focus, onFocus }: { parties: Party[]; c
   );
 }
 
-/** One thing the government can do: what it gives, what it risks, and the button. */
-function ActionRow({ action, label, desc, disabled, inOrders, onOrder }: { action: PoliticsAction; label: string; desc: string; disabled: boolean; inOrders: boolean; onOrder: () => void }) {
+/** One thing the government can do: what it gives, what it risks, and the button that orders it – "In orders" once it is. */
+function ActionRow({ action, label, desc, line, ordering }: { action: PoliticsAction; label: string; desc: string; line: string; ordering: Ordering }) {
   const { t } = useI18n();
   const Icon = action.icon;
+  const done = ordering.orders.has(line);
   return (
     <div className="rounded-xl border border-line sheet p-2.5">
       <div className="flex items-start gap-2.5">
@@ -455,27 +455,21 @@ function ActionRow({ action, label, desc, disabled, inOrders, onOrder }: { actio
         <div className="min-w-0 flex-1">
           <div className="text-xs font-black text-ink">{label}</div>
           <p className="mt-0.5 text-xs font-medium leading-snug text-muted">{desc}</p>
-          <div className="mt-1.5 flex flex-wrap items-center justify-between gap-1.5">
+          <div className="relative mt-1.5 flex flex-wrap items-center justify-between gap-1.5">
             <span className="inline-flex items-center gap-1 text-2xs font-bold text-muted">
               <span className={`h-1.5 w-1.5 rounded-full ${RISK_TONE[action.risk]}`} />
               {t(`politics.risk.${action.risk}` as MessageKey)}
             </span>
-            {inOrders ? (
-              <span className="inline-flex items-center gap-1 text-2xs font-black uppercase tracking-wider text-emerald-700">
-                <Check className="h-3 w-3" />
-                {t("politics.inOrders")}
-              </span>
-            ) : (
-              <button
-                type="button"
-                disabled={disabled}
-                onClick={onOrder}
-                className="inline-flex items-center gap-1 rounded-lg border border-line px-2 py-1 text-2xs font-black uppercase tracking-wider text-ink transition-colors hover:border-accent/40 hover:text-accent disabled:opacity-50"
-              >
-                <Plus className="h-3 w-3" />
-                {t("politics.add")}
-              </button>
-            )}
+            <DoneButton
+              icon={Plus}
+              label={t("politics.add")}
+              doneLabel={t("done.inOrders")}
+              done={done}
+              disabled={ordering.disabled || ordering.full}
+              hint={ordering.full && !done ? t("game.orders.limit", { n: MAX_ORDERS }) : undefined}
+              onAct={() => ordering.order(line)}
+              className="inline-flex items-center gap-1 rounded-lg border border-line px-2 py-1 text-2xs font-black uppercase tracking-wider text-ink transition-colors hover:border-accent/40 hover:text-accent disabled:cursor-not-allowed disabled:text-faded"
+            />
           </div>
         </div>
       </div>
@@ -503,15 +497,16 @@ function AxisBar({ name, left, right, value, was, color }: { name: string; left:
 }
 
 /**
- * A new sitting: what parliament is to vote on. A change of one law is
- * chosen from the law's options; a bill or an amendment is written; the
- * motions of state need nothing more. The seats it needs show before it opens.
+ * A new sitting: what parliament is to vote on, a bill unless the player
+ * picks otherwise. A change of one law is chosen from the law's options; a
+ * bill or an amendment is written; the motions of state need nothing more.
+ * The seats it needs show before it opens.
  */
 function MotionForm({ state, disabled, onConvene }: { state: GameState; disabled: boolean; onConvene: (motion: Motion) => void }) {
   const { t } = useI18n();
   const kinds = availableMotions(state);
   const laws = state.politics?.laws;
-  const [kind, setKind] = useState<MotionKind>(kinds[0] ?? "law");
+  const [kind, setKind] = useState<MotionKind>(kinds[0] ?? "bill");
   const [law, setLaw] = useState<LawId>("press");
   const options = (LAWS[law] as readonly string[]).filter((o) => o !== laws?.[law]);
   const [option, setOption] = useState<string>("");
@@ -606,18 +601,19 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
   const politics = state.politics;
   const [tab, setTab] = useState<Tab>("parliament");
   const [focus, setFocus] = useState<string | null>(null);
-  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const label = useMotionLabel();
   const orders = useMemo(() => new Set([...state.draft, ...(state.standing ?? [])]), [state.draft, state.standing]);
   const full = state.draft.length + (state.standing?.length ?? 0) >= MAX_ORDERS;
-  const order = (line: string) => {
-    if (orders.has(line)) return;
-    if (full) {
-      setNotice({ ok: false, text: t("game.orders.limit", { n: MAX_ORDERS }) });
-      return;
-    }
-    onOrder(line);
-    setNotice({ ok: true, text: line });
+  // Each move answers on its own button ("In orders"); once the turn is full the buttons say why they are off.
+  const ordering: Ordering = {
+    orders,
+    full,
+    disabled,
+    order: (line) => {
+      if (orders.has(line) || full) return false;
+      onOrder(line);
+      return true;
+    },
   };
 
   const parties = useMemo(() => [...(politics?.parties ?? [])].sort((a, b) => (b.seats ?? -1) - (a.seats ?? -1) || b.support - a.support), [politics?.parties]);
@@ -654,8 +650,6 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
 
   return (
     <div className="flex flex-col gap-3">
-      {notice && <p className={`rounded-xl px-3 py-2 text-xs font-bold ${notice.ok ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{notice.ok ? `${t("politics.ordered")}: ${notice.text}` : notice.text}</p>}
-
       <section className="rounded-xl bg-page p-3">
         <div className={ui.label}>{t("politics.regime")}</div>
         <div className="mt-1 text-sm font-black leading-snug text-ink">{politics?.regime || text(state.countries[state.player]?.government)}</div>
@@ -823,20 +817,16 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
                         <AxisBar name={t("politics.axisName.nation")} left={t("politics.axis.open")} right={t("politics.axis.nationalist")} value={p.stance.nation} was={p.was?.nation} color={color} />
                       </div>
                       <div className="grid gap-1.5">
-                        {partyActions(p).map((action) => {
-                          const line = partyOrder(action, p);
-                          return (
-                            <ActionRow
-                              key={action.id}
-                              action={action}
-                              label={t(`politics.act.${action.id}` as MessageKey)}
-                              desc={t(`politics.desc.${action.id}` as MessageKey)}
-                              disabled={disabled}
-                              inOrders={orders.has(line)}
-                              onOrder={() => order(line)}
-                            />
-                          );
-                        })}
+                        {partyActions(p).map((action) => (
+                          <ActionRow
+                            key={action.id}
+                            action={action}
+                            label={t(`politics.act.${action.id}` as MessageKey)}
+                            desc={t(`politics.desc.${action.id}` as MessageKey)}
+                            line={partyOrder(action, p)}
+                            ordering={ordering}
+                          />
+                        ))}
                       </div>
                     </div>
                   )}
@@ -851,7 +841,7 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
 
       {tab === "street" && (
         <div className="flex flex-col gap-4">
-          <Street state={state} disabled={disabled} order={order} orders={orders} regionName={regionName} onTalks={onTalks} />
+          <Street state={state} ordering={ordering} regionName={regionName} onTalks={onTalks} />
           <section>
             <div className={`${ui.label} mb-2`}>{t("politics.plots")}</div>
             {plots.length === 0 ? (
@@ -860,25 +850,15 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
               <ul className="grid gap-2">
                 {plots.map((p) => (
                   <li key={p.id} className="rounded-xl bg-red-50/60 p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="text-sm font-black text-ink">{p.title}</div>
-                        <div className="text-xs font-medium text-muted">{p.by}</div>
+                    {/* The title and who is behind it across the card; its strength and the two moves on a row below. */}
+                    <div className="text-sm font-black leading-snug text-ink">{plotTitle(p, t)}</div>
+                    {p.by && <div className="mt-0.5 text-xs font-medium text-muted">{p.by}</div>}
+                    <div className="relative mt-2 flex items-center gap-1.5">
+                      <div className="mr-1 h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-divider">
+                        <div className="h-full rounded-full bg-red-600" style={{ width: `${p.strength}%` }} />
                       </div>
-                      <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
-                        <TalksButton under={Boolean(talksWith(politics, p.id))} disabled={disabled} onClick={() => onTalks("plot", p.id)} />
-                        <button
-                          type="button"
-                          disabled={disabled}
-                          onClick={() => order(t("politics.order.foil", { title: p.title }))}
-                          className="rounded-lg border border-line sheet px-2 py-1 text-2xs font-black uppercase tracking-wider text-red-700 hover:border-red-300"
-                        >
-                          {t("politics.act.foil")}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-divider">
-                      <div className="h-full rounded-full bg-red-600" style={{ width: `${p.strength}%` }} />
+                      <TalksButton under={Boolean(talksWith(politics, p.id))} disabled={disabled} onClick={() => onTalks("plot", p.id)} />
+                      <OrderSquare id="foil" icon={ShieldX} line={t("politics.order.foil", { title: plotTitle(p, t) })} ordering={ordering} tone="text-red-700 hover:border-red-300" />
                     </div>
                   </li>
                 ))}

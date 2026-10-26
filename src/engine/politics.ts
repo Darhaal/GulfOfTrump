@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { slug } from "./text";
-import type { AppliedChange, GameState, Loyalty, Parliament, Party, PartyStance, Plot, Politics } from "./types";
+import type { AppliedChange, BecauseKind, GameState, Loyalty, Parliament, Party, PartyStance, Plot, Politics } from "./types";
 import { PILLARS } from "./types";
 import { applyLaws, describeLaws, lawsShape, startLaws } from "./laws";
 
@@ -317,6 +317,8 @@ export function applyPolitics(current: Politics, change: PoliticsChange | undefi
   for (const [i, u] of (change?.plots ?? []).entries()) {
     const needle = u.title.trim().toLowerCase();
     const existing = plots.find((p) => p.title.trim().toLowerCase() === needle);
+    // A plot inside the cabinet is the engine's (engine/intrigue.ts): the turn may only foil one the government knows of.
+    if (existing?.cabinet && !(u.outcome === "foiled" && existing.known)) continue;
     const plot: Plot = existing ?? { id: `plot-${ctx.turn}-${i + 1}`, title: u.title, by: u.by, kind: u.kind, strength: 0, known: false, since: ctx.to };
     plot.strength = clamp(Math.round(u.strength), 0, 100);
     if (u.known && !plot.known) applied.push({ kind: "plot", title: plot.title, change: "discovered" });
@@ -372,6 +374,59 @@ export function applyPolitics(current: Politics, change: PoliticsChange | undefi
     ...(current.sessions ? { sessions: current.sessions } : {}),
     ...(current.talks ? { talks: current.talks } : {}),
   };
+}
+
+/**
+ * How a government other than the player's stands at home, read off the
+ * engine's politics abroad (engine/abroad.ts) and its economy: what steers
+ * its foreign policy. A government in trouble – unpopular, a shaky state, a
+ * slump, runaway prices, blockade, an election near – has less appetite for
+ * wars, for going to a friend's aid and for sanctions that cost it trade;
+ * an autocracy in trouble is tempted by an adventure abroad instead.
+ */
+export interface HomeFront {
+  /** How much trouble at home, 0–1. */
+  trouble: number;
+  /** The economy's share of it, 0–1: slump, prices, blockade. */
+  pain: number;
+  /** Votes count: a democracy, or a regime that holds managed elections. */
+  votes: boolean;
+  /** A national election within a year. */
+  election: boolean;
+  /** The worst of it, for the news. */
+  why?: Extract<BecauseKind, "weak" | "unrest" | "election" | "slump" | "inflation" | "sanctions">;
+}
+
+const CALM: HomeFront = { trouble: 0, pain: 0, votes: false, election: false };
+
+export function homeFront(state: Pick<GameState, "countries" | "date">, tag: string): HomeFront {
+  const c = state.countries[tag];
+  const d = c?.domestic;
+  if (!d) return CALM;
+  const e = c.economy;
+  const votes = d.regime === "democracy" || d.regime === "limited";
+  const ahead = d.nextElection ? (Date.parse(d.nextElection) - Date.parse(state.date)) / (365.25 * 86400000) : Infinity;
+  const election = votes && ahead >= 0 && ahead < 1;
+  const parts: [NonNullable<HomeFront["why"]>, number][] = [
+    ["weak", clamp((42 - d.support) / 25, 0, 1)],
+    ["unrest", clamp((50 - d.stability) / 30, 0, 1)],
+    // Where the vote is free an election near makes every risk abroad costlier; a managed vote less so.
+    ["election", election ? (d.regime === "democracy" ? 0.35 : 0.15) : 0],
+  ];
+  const economic: [NonNullable<HomeFront["why"]>, number][] = e
+    ? [
+        ["slump", clamp(Math.max(-e.growth / 4, (e.unemployment - 10) / 12), 0, 1)],
+        ["inflation", clamp((e.inflation - 12) / 30, 0, 1)],
+        ["sanctions", clamp((e.tradeCut - 0.1) * 2.5, 0, 1)],
+      ]
+    : [];
+  // Each trouble adds to the others as independent odds do: two halves make three quarters, not one.
+  const sum = (list: [string, number][]) => 1 - list.reduce((p, [, v]) => p * (1 - v), 1);
+  const all = [...parts, ...economic];
+  const trouble = Math.round(sum(all) * 100) / 100;
+  const pain = Math.round(sum(economic) * 100) / 100;
+  const worst = all.reduce((best, x) => (x[1] > best[1] ? x : best), all[0]);
+  return { trouble, pain, votes, election, ...(worst[1] >= 0.2 ? { why: worst[0] } : {}) };
 }
 
 /** The player's politics as the model reads it every turn. */

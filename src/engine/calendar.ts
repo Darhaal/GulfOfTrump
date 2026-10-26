@@ -61,6 +61,16 @@ export function formatShortDate(date: string, locale: Locale): string {
   }).format(parse(date));
 }
 
+/** The month and year, "May 2024" / "май 2024 г.": when an incident a crisis grew from began. Takes "2024-05" or a whole date. */
+export function formatMonth(date: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], { month: "long", year: "numeric", timeZone: "UTC" }).format(parse(date.length === 7 ? `${date}-01` : date));
+}
+
+/** The day and month alone, "25 August": two starts of one year side by side. */
+export function formatDayMonth(date: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], { day: "numeric", month: "long", timeZone: "UTC" }).format(parse(date));
+}
+
 export function yearOf(date: string): number {
   return parse(date).getUTCFullYear();
 }

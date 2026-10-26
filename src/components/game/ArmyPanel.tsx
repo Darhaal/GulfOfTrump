@@ -1,8 +1,9 @@
 "use client";
 
-import { Atom, MapPin, Plus, Star } from "lucide-react";
+import { Atom, MapPin, Plus } from "lucide-react";
 import { useState } from "react";
 import { ui } from "@/components/ui/classes";
+import DoneButton from "@/components/ui/DoneButton";
 import { divisionsOf, menOf, tally } from "@/engine/army";
 import { availableKinds, combatPower, enemiesOf, needsOf, procurement } from "@/engine/arsenal";
 import { yearOf } from "@/engine/calendar";
@@ -11,21 +12,23 @@ import { fogOn, foreignView } from "@/engine/fog";
 import { shownStage } from "@/engine/intentions";
 import { planKindKey, planStageKey } from "./changes";
 import { provinceName } from "@/engine/provinces";
-import { WEAPON_KINDS, type GameState, type MapRegion, type WeaponKind } from "@/engine/types";
+import { WEAPON_KINDS, type GameState, type MapIndex, type MapRegion, type WeaponKind } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
 import { ARMS_ICONS } from "./armsText";
 import RefineButton from "./RefineButton";
+import WarMeans from "./WarMeans";
 
 interface ArmyPanelProps {
   state: GameState;
   accounts?: Accounts;
   /** The map's provinces, for their names. */
   regions?: Record<string, MapRegion>;
+  /** The map, for each side's reach in a war (engine/warMeans.ts). */
+  index?: MapIndex | null;
   disabled: boolean;
   /** The game master is describing the army. */
   learning: boolean;
-  onFocus: (kinds: WeaponKind[]) => void;
   /** Ask the game master how the army is organised now. */
   onLearn: () => void;
   /** Show these provinces on the map. */
@@ -40,7 +43,7 @@ interface ArmyPanelProps {
  * and, at war, the fronts, each side's strength, the losses and the plans
  * known — with an offensive the player can order right there.
  */
-export default function ArmyPanel({ state, accounts, regions, disabled, learning, onFocus, onLearn, onShowRegions, onOrder }: ArmyPanelProps) {
+export default function ArmyPanel({ state, accounts, regions, index, disabled, learning, onLearn, onShowRegions, onOrder }: ArmyPanelProps) {
   const { t, text, money, locale } = useI18n();
   const [target, setTarget] = useState("");
   const [order, setOrder] = useState("");
@@ -48,7 +51,6 @@ export default function ArmyPanel({ state, accounts, regions, disabled, learning
   const player = state.countries[state.player];
   const arsenal = player?.arsenal;
   const can = new Set(availableKinds(state));
-  const focus = arsenal?.focus ?? [];
   const buy = procurement(state);
   const shortages = new Set(accounts?.shortages ?? []);
   const slowed = [...new Set(WEAPON_KINDS.flatMap((k) => needsOf(k).filter((r) => shortages.has(r))))];
@@ -61,11 +63,6 @@ export default function ArmyPanel({ state, accounts, regions, disabled, learning
   const enemies = enemiesOf(state).get(state.player) ?? new Set<string>();
   const wars = state.wars.filter((w) => !w.truce && (w.attackers.includes(state.player) || w.defenders.includes(state.player)));
   const organisation = arsenal?.organisation;
-
-  const toggle = (kind: WeaponKind) => {
-    if (focus.includes(kind)) onFocus(focus.filter((k) => k !== kind));
-    else onFocus([...focus, kind].slice(-2));
-  };
 
   if (!arsenal || !player?.economy) return <p className="text-xs font-medium text-muted">{t("arms.none")}</p>;
 
@@ -102,13 +99,14 @@ export default function ArmyPanel({ state, accounts, regions, disabled, learning
 
   const lost = Object.entries(arsenal.lost ?? {}).filter(([, n]) => (n ?? 0) > 0) as [WeaponKind, number][];
 
-  const send = () => {
+  const send = (): boolean => {
     const words = order.trim();
-    if (!words) return;
+    if (!words) return false;
     const who = organisation?.formations.find((f) => f.name === target);
     const added = onOrder(who ? `${who.name}: ${words}` : words);
     setRefused(!added);
     if (added) setOrder("");
+    return added;
   };
 
   return (
@@ -172,7 +170,6 @@ export default function ArmyPanel({ state, accounts, regions, disabled, learning
             const made = arsenal.made?.[kind] ?? 0;
             const gone = arsenal.lost?.[kind] ?? 0;
             const got = arsenal.got?.[kind] ?? 0;
-            const on = focus.includes(kind);
             if (!s && !can.has(kind)) {
               return (
                 <li key={kind} className="flex items-center gap-2.5 rounded-xl border border-dashed border-line px-3 py-2 text-xs font-medium text-muted">
@@ -184,7 +181,7 @@ export default function ArmyPanel({ state, accounts, regions, disabled, learning
               );
             }
             return (
-              <li key={kind} className={`flex items-center gap-2.5 rounded-xl border px-3 py-2 ${on ? "border-accent/40 bg-accent/5" : "border-line sheet"}`}>
+              <li key={kind} className="flex items-center gap-2.5 rounded-xl border border-line sheet px-3 py-2">
                 <Icon className="h-4 w-4 shrink-0 text-muted" />
                 <div className="min-w-0 flex-1">
                   <span className="block truncate text-xs font-bold text-ink">{t(`arms.kind.${kind}` as MessageKey)}</span>
@@ -195,17 +192,6 @@ export default function ArmyPanel({ state, accounts, regions, disabled, learning
                   </div>
                 </div>
                 <span className="text-sm font-black tabular-nums text-ink">{count(s?.n ?? 0, `stock:${kind}`, unit)}</span>
-                <button
-                  type="button"
-                  onClick={() => toggle(kind)}
-                  disabled={disabled || !can.has(kind)}
-                  aria-pressed={on}
-                  title={t("arms.focus")}
-                  aria-label={t("arms.focus")}
-                  className="rounded-lg p-1 text-muted transition-colors hover:bg-page hover:text-accent disabled:opacity-40"
-                >
-                  <Star className={`h-3.5 w-3.5 ${on ? "fill-current text-accent" : ""}`} />
-                </button>
               </li>
             );
           })}
@@ -275,6 +261,15 @@ export default function ArmyPanel({ state, accounts, regions, disabled, learning
                 <div className="mt-1 flex justify-between text-2xs font-bold tabular-nums text-muted">
                   <span>{t("arms.us", { n: Math.round(share) })}</span>
                   <span>{t("arms.them", { n: 100 - Math.round(share) })}</span>
+                </div>
+                <div className="mt-3">
+                  <WarMeans
+                    state={state}
+                    war={w}
+                    index={index ?? null}
+                    labels={w.attackers.includes(state.player) ? [t("army.ours"), t("army.theirs")] : [t("army.theirs"), t("army.ours")]}
+                    oursFirst
+                  />
                 </div>
                 <div className={`${ui.label} mt-3 mb-1`}>{t("army.frontLine")}</div>
                 {line.length ? (
@@ -352,10 +347,16 @@ export default function ArmyPanel({ state, accounts, regions, disabled, learning
               disabled={disabled}
               className={`${ui.input} resize-none text-xs`}
             />
-            <button type="button" onClick={send} disabled={disabled || !order.trim()} className={`${ui.primary} mt-2 w-full px-3 py-2 text-2xs`}>
-              <Plus className="h-3.5 w-3.5" />
-              {t("army.orderAdd")}
-            </button>
+            {/* A moment of "in orders" once it went in, as every action that adds an order says. */}
+            <DoneButton
+              label={t("army.orderAdd")}
+              icon={Plus}
+              doneLabel={t("done.inOrders")}
+              onAct={send}
+              disabled={disabled || !order.trim()}
+              className={`${ui.primary} mt-2 w-full px-3 py-2 text-2xs`}
+              doneClassName={`${ui.done} mt-2 flex w-full items-center justify-center gap-1 rounded-xl px-3 py-2 text-2xs font-black uppercase tracking-wider`}
+            />
             {refused && <p className="mt-1.5 text-2xs font-bold text-amber-700">{t("army.ordersFull")}</p>}
             {state.draft.length > 0 && (
               <div className="mt-3">

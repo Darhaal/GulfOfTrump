@@ -4,9 +4,10 @@ import { ChevronRight, Handshake, Landmark, Newspaper, Swords, TrendingUp } from
 import { useMemo, useState } from "react";
 import { ui } from "@/components/ui/classes";
 import SpeakButton from "@/components/voice/SpeakButton";
-import { formatDate } from "@/engine/calendar";
-import { NEWS_SECTIONS, newsThread, worldNews, type NewsItem, type NewsSection } from "@/engine/news";
+import { formatDate, formatMonth } from "@/engine/calendar";
+import { NEWS_SECTIONS, newsThread, routinePolicy, worldNews, type NewsItem, type NewsSection } from "@/engine/news";
 import { regionLabel } from "@/engine/provinces";
+import { landNeighbours } from "@/engine/relations";
 import { getScenario } from "@/engine/scenarios";
 import type { GameState, Locale, MapIndex } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
@@ -41,6 +42,8 @@ const routine = (item: NewsItem) => item.type === "change" && item.change.kind =
 export default function WorldNews({ state, index, onCountry }: { state: GameState; index: MapIndex | null; onCountry?: (tag: string) => void }) {
   const { t, text, locale } = useI18n();
   const news = useMemo(() => worldNews(state), [state]);
+  // The player's neighbours: their policies stay news; a distant small state's are folded into one line a turn.
+  const near = useMemo(() => (index ? landNeighbours(state, index.neighbors, state.player) : new Set<string>()), [state, index]);
   const [section, setSection] = useState<NewsSection | "all">("all");
   const [open, setOpen] = useState<string | null>(null);
   const [topic, setTopic] = useState<string | null>(null);
@@ -57,7 +60,7 @@ export default function WorldNews({ state, index, onCountry }: { state: GameStat
   /** The item as one line of text, in the interface language. */
   const lineOf = (item: NewsItem): string => {
     if (item.type === "event") return item.event.title;
-    if (item.type === "change") return describeChange(item.change, state, t, text, region, date);
+    if (item.type === "change") return describeChange(item.change, state, t, text, region, date, (iso) => formatMonth(iso, locale));
     const names = item.land.regions.map(region);
     const shown = names.slice(0, NAMES_PER_LINE).join(", ") + (names.length > NAMES_PER_LINE ? ` +${names.length - NAMES_PER_LINE}` : "");
     const key: MessageKey = item.land.kind === "annex" ? "change.annex" : item.land.kind === "occupy" ? "change.occupy" : "change.liberate";
@@ -118,8 +121,10 @@ export default function WorldNews({ state, index, onCountry }: { state: GameStat
 
       {turnList.map((turn) => {
         const all = byTurn.get(turn)!;
-        const items = all.filter((item) => !routine(item));
+        const quiet = (item: NewsItem) => routinePolicy(item, state, near);
+        const items = all.filter((item) => !routine(item) && !quiet(item));
         const kept = all.filter(routine);
+        const adopted = all.filter(quiet);
         return (
           <section key={turn} className={`${ui.card} p-3`}>
             <div className={`${ui.label} mb-2 flex items-center justify-between gap-2 tabular-nums`}>
@@ -213,6 +218,19 @@ export default function WorldNews({ state, index, onCountry }: { state: GameStat
                   {kept.length === 1
                     ? t("change.vote.kept", { country: name(kept[0].countries[0]) })
                     : t("news.kept", { list: kept.map((item) => name(item.countries[0])).join(", ") })}
+                </span>
+              </p>
+            )}
+            {adopted.length > 0 && (
+              <p className={`${items.length || kept.length ? "mt-2" : ""} flex items-start gap-2 px-1 text-2xs font-medium leading-relaxed text-muted`}>
+                <TrendingUp className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>
+                  {t("news.policies", {
+                    list: adopted
+                      .map((item) => (item.type === "change" && item.change.kind === "policy" ? `${name(item.change.country)} (${t(`policy.${item.change.policy}` as MessageKey).toLocaleLowerCase(locale)})` : ""))
+                      .filter(Boolean)
+                      .join(", "),
+                  })}
                 </span>
               </p>
             )}

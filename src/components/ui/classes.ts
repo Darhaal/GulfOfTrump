@@ -18,6 +18,8 @@ export const ui = {
   input:
     "w-full bg-page/70 border border-line focus:bg-surface focus:border-ink rounded-xl py-3 px-4 font-medium text-ink outline-none transition-all placeholder:text-faded text-sm",
   chip: "bg-page px-2 py-1 rounded-md text-xs font-medium",
+  /** A one-shot action once it has gone through (DoneButton): a green tick and a short word; the shape is the button's own. */
+  done: "inline-flex items-center border border-emerald-100 bg-emerald-50 font-black text-emerald-700 disabled:cursor-default",
   segment: "py-2 px-3 rounded-lg text-xs font-bold transition-all",
   segmentOn: "bg-divider text-ink",
   segmentOff: "text-muted hover:bg-divider/60 hover:text-ink",

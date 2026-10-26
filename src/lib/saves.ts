@@ -3,7 +3,7 @@
 import { isDemo } from "@/constants/app";
 import { parseGameState } from "@/engine/schema";
 import { newGameId } from "@/engine/setup";
-import type { GameState, SaveMeta } from "@/engine/types";
+import { START_VARIANTS, type GameState, type SaveMeta, type StartVariant } from "@/engine/types";
 import { localStore } from "./localSaves";
 import { getSupabase } from "./supabase";
 
@@ -20,6 +20,7 @@ export function metaOf(state: GameState): SaveMeta {
     id: state.id,
     ...(state.title ? { title: state.title } : {}),
     scenarioId: state.scenarioId,
+    ...(state.variant ? { variant: state.variant } : {}),
     player: state.player,
     playerName: state.countries[state.player]?.name ?? state.player,
     date: state.date,
@@ -48,7 +49,7 @@ export async function listSaves(): Promise<ListedSave[]> {
   if (supabase && (await cloudUserId())) {
     const { data } = await supabase
       .from("games")
-      .select("id, scenario_id, player, player_name, game_date, turn, updated_at, title:state->>title")
+      .select("id, scenario_id, player, player_name, game_date, turn, updated_at, title:state->>title, variant:state->>variant")
       .order("updated_at", { ascending: false })
       .limit(100);
     for (const row of data ?? []) {
@@ -56,6 +57,7 @@ export async function listSaves(): Promise<ListedSave[]> {
         id: row.id,
         ...(row.title ? { title: row.title as string } : {}),
         scenarioId: row.scenario_id,
+        ...(START_VARIANTS.includes(row.variant as StartVariant) ? { variant: row.variant as StartVariant } : {}),
         player: row.player,
         playerName: row.player_name,
         date: row.game_date,

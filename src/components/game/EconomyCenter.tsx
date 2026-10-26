@@ -4,12 +4,13 @@ import { ArrowDownLeft, ArrowUpRight, Check, FileSignature, Gem, Handshake, Land
 import { useMemo, useState } from "react";
 import Flag from "@/components/Flag";
 import { ui } from "@/components/ui/classes";
+import DoneButton, { useDone } from "@/components/ui/DoneButton";
 import { formatDate } from "@/engine/calendar";
 import { interestOf, interestRate } from "@/engine/crises";
 import { dealsLeft, MAX_NEW_DEALS, type TradeOffer, tradeOffers, tradePosition, UNITS, volumeOf } from "@/engine/deals";
-import type { Accounts, WorldScale } from "@/engine/economy";
+import { budgetNorms, growthCauses, type Accounts, type GrowthCauses, type WorldScale } from "@/engine/economy";
 import { ADVISOR_POST } from "@/engine/government";
-import { tradeBooks } from "@/engine/trade";
+import { sanctionExportCuts, tradeBooks } from "@/engine/trade";
 import type { Budget, GameState, MapRegion, TradeDeal, TradeGood } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
@@ -17,6 +18,11 @@ import ProvisionPanel from "./ProvisionPanel";
 import ResourceLedger from "./ResourceLedger";
 
 const LINES = ["revenue", "army", "industry", "social", "other"] as const;
+/** The causes of growth the overview names, in this order (engine/economy.ts growthCauses). */
+const CAUSES: (keyof GrowthCauses)[] = ["trend", "investment", "taxes", "policies", "trade", "war"];
+
+/** A wide button of the panel once its action has gone through. */
+const DONE_WIDE = `${ui.done} flex-1 justify-center gap-2 rounded-xl px-3 py-2 text-xs uppercase tracking-wide`;
 
 interface EconomyCenterProps {
   state: GameState;
@@ -48,6 +54,8 @@ export default function EconomyCenter({ state, accounts, regions, disabled, onBu
   const books = useMemo(() => (regions ? tradeBooks(state, regions) : null), [state, regions]);
   const offers = useMemo(() => (regions ? tradeOffers(state, regions) : []), [state, regions]);
   const position = useMemo(() => (regions ? tradePosition(state, regions) : []), [state, regions]);
+  const causes = useMemo(() => growthCauses(state, state.player, regions, accounts, regions ? (sanctionExportCuts(state, regions).get(state.player) ?? 0) : 0), [state, regions, accounts]);
+  const norms = useMemo(() => budgetNorms(state, state.player, regions), [state, regions]);
   if (!economy) return null;
 
   const budget = draft ?? economy.budget;
@@ -66,6 +74,16 @@ export default function EconomyCenter({ state, accounts, regions, disabled, onBu
       </span>
     );
   };
+  // What each budget line does, against the shares of GDP the engine judges it by.
+  const norm = (n: number) => (Math.round(n * 1000) / 10).toLocaleString(locale);
+  const hint = (key: (typeof LINES)[number]) =>
+    key === "revenue"
+      ? t("econ.hint.revenue", { n: norm(norms.taxes) })
+      : key === "industry"
+        ? t("econ.hint.industry", { n: norm(norms.industry) })
+        : key === "social"
+          ? t("econ.hint.social", { n: norm(norms.social) })
+          : t(`econ.hint.${key}` as MessageKey);
   const book = books?.get(state.player);
   const name = (tag: string) => text(state.countries[tag]?.name ?? tag);
   // The latest budget the economy minister proposed in the cabinet's thread, unless it was applied or is the budget already.
@@ -134,6 +152,20 @@ export default function EconomyCenter({ state, accounts, regions, disabled, onBu
           {t("econ.overview")}
         </div>
         <dl className="grid gap-1 text-xs">
+          <div className="flex items-baseline justify-between gap-2" title={t("econ.growthHint")}>
+            <dt className="font-bold text-muted">{t("econ.growthLine")}</dt>
+            <dd className={`font-black tabular-nums ${economy.growth < 0 ? "text-red-600" : "text-ink"}`}>
+              {economy.growth > 0 ? "+" : ""}
+              {economy.growth.toLocaleString(locale, { maximumFractionDigits: 1 })}%
+            </dd>
+          </div>
+          {causes && (
+            <div className="-mt-0.5 text-right text-2xs font-bold leading-snug text-muted" title={t("econ.growthHint")}>
+              {CAUSES.filter((k) => k === "trend" || Math.abs(causes[k]) >= 0.05)
+                .map((k) => t(`econ.cause.${k}` as MessageKey, { n: `${causes[k] > 0 && k !== "trend" ? "+" : ""}${causes[k].toLocaleString(locale, { maximumFractionDigits: 1 })}` }))
+                .join(" · ")}
+            </div>
+          )}
           <div className="flex items-baseline justify-between gap-2">
             <dt className="font-bold text-muted">{t("econ.debtLine")}</dt>
             <dd className="font-black tabular-nums text-ink">
@@ -156,7 +188,7 @@ export default function EconomyCenter({ state, accounts, regions, disabled, onBu
           </div>
           <div className="flex items-baseline justify-between gap-2">
             <dt className="font-bold text-muted">{t("econ.pricesLine")}</dt>
-            <dd className="font-black tabular-nums text-ink">{t("econ.pricesValue", { inflation: economy.inflation, jobless: economy.unemployment })}</dd>
+            <dd className="font-black tabular-nums text-ink">{t("econ.pricesValue", { inflation: economy.inflation.toLocaleString(locale, { maximumFractionDigits: 1 }), jobless: economy.unemployment.toLocaleString(locale, { maximumFractionDigits: 1 }) })}</dd>
           </div>
         </dl>
       </section>
@@ -170,8 +202,8 @@ export default function EconomyCenter({ state, accounts, regions, disabled, onBu
         </div>
         <div className="grid gap-1.5">
           {LINES.map((key) => (
-            <label key={key} className="grid grid-cols-[1fr_6.5rem_3rem] items-center gap-2 text-xs">
-              <span className="font-bold text-muted">{t(`econ.line.${key}` as MessageKey)}</span>
+            <label key={key} className="grid grid-cols-[1fr_6.5rem_3rem] items-center gap-2 text-xs" title={hint(key)}>
+              <span className="cursor-help font-bold text-muted underline decoration-dotted decoration-1 underline-offset-2">{t(`econ.line.${key}` as MessageKey)}</span>
               <input
                 type="number"
                 min={0}
@@ -194,18 +226,19 @@ export default function EconomyCenter({ state, accounts, regions, disabled, onBu
           </span>
         </div>
         <div className="mt-2 flex gap-2">
-          <button
-            type="button"
+          <DoneButton
+            icon={Check}
+            label={t("econ.approve")}
+            doneLabel={t("done.approved")}
             disabled={disabled || !draft}
-            onClick={() => {
-              if (draft) onBudget(draft);
+            onAct={() => {
+              if (!draft) return false;
+              onBudget(draft);
               setDraft(null);
             }}
             className={`${ui.primary} flex-1 px-3 py-2 text-xs`}
-          >
-            <Check className="h-4 w-4" />
-            {t("econ.approve")}
-          </button>
+            doneClassName={DONE_WIDE}
+          />
           {draft && (
             <button type="button" onClick={() => setDraft(null)} className={`${ui.secondary} px-3 py-2 text-xs`}>
               {t("econ.reset")}
@@ -243,15 +276,17 @@ export default function EconomyCenter({ state, accounts, regions, disabled, onBu
                   );
                 })}
               </dl>
-              <button
-                type="button"
+              {/* "Filled in" while the fields hold it, until the budget is approved (and the proposal goes) or the fields are reset. */}
+              <DoneButton
+                icon={Check}
+                label={t("econ.proposal.apply")}
+                doneLabel={t("done.filled")}
+                done={draft !== null && LINES.every((key) => Math.abs(draft[key] - shown[key]) < 0.005)}
                 disabled={disabled}
-                onClick={() => setDraft({ revenue: shown.revenue, army: shown.army, industry: shown.industry, social: shown.social, other: shown.other })}
+                onAct={() => setDraft({ revenue: shown.revenue, army: shown.army, industry: shown.industry, social: shown.social, other: shown.other })}
                 className={`${ui.secondary} px-3 py-2 text-xs`}
-              >
-                <Check className="h-4 w-4" />
-                {t("econ.proposal.apply")}
-              </button>
+                doneClassName={DONE_WIDE}
+              />
             </div>
           )}
         </section>
@@ -354,6 +389,9 @@ function Deals({
 }) {
   const { t } = useI18n();
   const volume = useVolume(world);
+  // A signed offer leaves the list; for a moment its place at the top says it went through.
+  const [signedShown, flashSigned] = useDone();
+  const [signed, setSigned] = useState("");
   const deals = (state.deals ?? []).filter((d) => d.status === "active" || d.status === "proposed");
   const left = dealsLeft(state);
   const flag = (tag: string) => <Flag tag={tag} scenario={state.scenarioId} color={state.countries[tag]?.color} size="sm" />;
@@ -369,6 +407,12 @@ function Deals({
           {t("deals.offers")}
         </div>
         <p className={`text-2xs font-bold ${left ? "text-muted" : "text-amber-700"}`}>{left ? t("deals.left", { n: left, max: MAX_NEW_DEALS }) : t("deals.noneLeft")}</p>
+        {signedShown && (
+          <p role="status" className={`${ui.done} gap-1.5 rounded-xl px-3 py-2 text-xs`}>
+            <Check className="h-3.5 w-3.5 shrink-0" />
+            {t("done.signed", { deal: signed })}
+          </p>
+        )}
         {offers.length === 0 && left > 0 && <p className="text-xs font-medium text-muted">{t("deals.noOffers")}</p>}
         {offers.map((o) => (
           <div key={o.id} className="rounded-xl border border-line sheet p-3">
@@ -396,7 +440,16 @@ function Deals({
               </div>
             </div>
             <div className="mt-2 flex gap-1.5">
-              <button type="button" disabled={disabled} onClick={() => onSign(o)} className={`${ui.primary} flex-1 px-3 py-2 text-2xs`}>
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => {
+                  onSign(o);
+                  setSigned(`${t(`goods.${o.good}` as MessageKey)} · ${name(o.partner)}`);
+                  flashSigned();
+                }}
+                className={`${ui.primary} flex-1 px-3 py-2 text-2xs`}
+              >
                 <Check className="h-3.5 w-3.5" />
                 {t("deals.sign")}
               </button>

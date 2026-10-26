@@ -3,12 +3,14 @@
 import { Crosshair, Eye, Shield, Swords, X, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { ui } from "@/components/ui/classes";
+import DoneButton from "@/components/ui/DoneButton";
 import { ADVISOR_TITLES, MAX_DIRECTIVES, OPERATION_MINISTRIES, planOperation, type AdvisorId } from "@/engine/advisors";
 import { formatDate } from "@/engine/calendar";
 import { ADVISOR_POST, officialAt } from "@/engine/government";
 import type { Directive, DirectiveStatus, GameState, Operation } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
+import { plotTitle } from "./changes";
 
 const ICONS: Partial<Record<AdvisorId, LucideIcon>> = { military: Swords, intelligence: Eye, interior: Shield };
 const SECRECY: Operation["secrecy"][] = ["open", "covert", "deniable"];
@@ -86,20 +88,22 @@ export default function OperationsPanel({
       .map((p): Outline => ({
         key: `plot-${p.id}`,
         ministry: "interior",
-        label: t("ops.tpl.foil.name", { title: p.title }),
-        draft: { name: t("ops.tpl.foil.name", { title: p.title }), target: p.title, goal: t("ops.tpl.foil.goal"), secrecy: "covert" },
+        label: t("ops.tpl.foil.name", { title: plotTitle(p, t) }),
+        draft: { name: t("ops.tpl.foil.name", { title: plotTitle(p, t) }), target: plotTitle(p, t), goal: t("ops.tpl.foil.goal"), secrecy: "covert" },
       })),
   ];
 
+  /** Starts the operation; false when the engine refuses it, with the reason under the form. */
   const start = () => {
     const next = planOperation(state, ministry, draft, (o) => t("op.text", { name: o.name, goal: o.goal }));
     if (!next) {
       setProblem(full ? t("ops.full", { n: MAX_DIRECTIVES }) : draft.name.trim() ? t("ops.duplicate") : t("ops.needName"));
-      return;
+      return false;
     }
     onDirectives(next);
     setDraft(EMPTY);
     setProblem(null);
+    return true;
   };
   const field = (key: "target" | "goal" | "means" | "timing", rows = 1) => (
     <label className="grid gap-1">
@@ -272,9 +276,15 @@ export default function OperationsPanel({
           <button type="button" onClick={() => onConsult(ministry)} className="inline-flex items-center gap-1.5 text-2xs font-bold text-muted hover:text-ink">
             {minister ? t("ops.consult.named", { name: minister.name }) : t("ops.consult.minister")}
           </button>
-          <button type="button" disabled={disabled || full || !draft.name.trim()} onClick={start} className={`${ui.primary} px-4 py-2 text-xs`}>
-            {t("ops.start")}
-          </button>
+          {/* "Started" for a moment once it is: the form empties and the operation joins those under way above. */}
+          <DoneButton
+            label={t("ops.start")}
+            doneLabel={t("done.started")}
+            disabled={disabled || full || !draft.name.trim()}
+            onAct={start}
+            className={`${ui.primary} px-4 py-2 text-xs`}
+            doneClassName={`${ui.done} justify-center gap-1.5 rounded-xl px-4 py-2 text-xs uppercase tracking-wide`}
+          />
         </div>
         {full && <p className="mt-1.5 text-2xs font-medium text-muted">{t("ops.full", { n: MAX_DIRECTIVES })}</p>}
       </section>

@@ -4,6 +4,7 @@ import { describeArms } from "./arsenal";
 import { describeIntrigues } from "./deputies";
 import { describeFog } from "./fog";
 import { describeIntentions } from "./intentions";
+import { describeCabinet } from "./intrigue";
 import { peopleIn } from "./population";
 import {
   alliancesPart,
@@ -38,8 +39,10 @@ import {
 } from "./prompts";
 import { describePolitics } from "./politics";
 import { describeResearch } from "./research";
-import { castRepression, describeRole, roleOf } from "./role";
-import { getScenario } from "./scenarios";
+import { castFate, describePerson, needsFigure } from "./fate";
+import { FIGURE_ROLE } from "./figures";
+import { roleOf } from "./role";
+import { scenarioOf } from "./scenarios";
 import type { StoryCarry, TurnStage } from "./stages";
 import { en } from "./text";
 import { FALL_PLOT, FALL_UNREST } from "./unrest";
@@ -74,6 +77,8 @@ export interface TurnNeeds {
   officials: boolean;
   /** Little enough land that the turn may leave the government in exile. */
   exposed: boolean;
+  /** The answer says what became of the player's person: a minister or a general, or someone falling this turn (engine/fate.ts). */
+  figure?: boolean;
 }
 
 /** Unrest from which the street gets its full rule. */
@@ -99,6 +104,7 @@ export function turnNeeds(state: GameState, orders: string[], ctx?: WorldContext
     politics: Boolean(state.politics),
     officials: Boolean(state.officials?.length),
     exposed: Boolean(player?.exile) || (atWar && Object.values(state.regions).filter((r) => r.controller === state.player).length <= EXPOSED_PROVINCES),
+    figure: needsFigure(state, castFate(state, orders)),
   };
 }
 
@@ -110,7 +116,7 @@ const STORY_RULES = (locale: Locale, role: RoleKind, needs: TurnNeeds) => ({
   pushback: `- The world pushes back. Rivals and enemies work against the player's government, not only on the battlefield: spies, sabotage, propaganda, sanctions, funding the opposition, stirring up separatists. At home, the opposition, ambitious generals, oligarchs, unpaid soldiers and hungry cities can turn into protests, strikes, plots and coups when the government is weak, unpopular or overreaching. Show it in the story.`,
   fronts: `- Wars move province by province along the fronts, and the next stage draws your story on the map: say plainly which towns and regions were taken, lost or retaken, true to the fighting – a few villages in trench fighting, a city in a breakthrough – and to terrain, rivers, winter, railways, each side's strength (WARS) and weapons (ARMS).`,
   crises: `- Crises (PLAYER'S CRISES below) are the engine's alarms, and they are real: each shows its consequences in the story, in proportion. An order that ignores or worsens a critical one partly fails or backfires; one that addresses it helps, slowly and at a cost.`,
-  directives: `- The government also works through its ministries (MINISTRY DIRECTIVES below): carry them out as the ministry's means, the opponent and luck allow – a well-planned operation can succeed – and tell what came of those that matter.`,
+  directives: `- The government also works through its ministries (MINISTRY DIRECTIVES below), each approved by the government and under way – never held back for another approval, whatever its plan says: carry them out as the ministry's means, the opponent and luck allow – a well-planned operation can succeed – and tell what came of those that matter.`,
   summits: `- A summit or session the player's country takes part in is never held by you: the player attends it in person, so it never happens off stage.`,
   fall: `- A government can fall to a coup, a revolution or an uprising only when it is weak: unrest ${FALL_UNREST} or more, an uprising in the streets, or a coup plot of strength ${FALL_PLOT} or more; otherwise an attempt fails. Losing a war or all the land is not an overthrow.${role === "leader" ? " Losing an election is a fall too." : ""}`,
   exile: needs.exile ? `- The government is in exile: it keeps its gold, diplomats, the soldiers who escaped and the resistance at home; its orders work through the host, its allies, the resistance and propaganda; it comes home when it frees a province.` : "",
@@ -134,18 +140,18 @@ const HOME_RULES = (locale: Locale) => ({
 const SHAPE_FIELDS: Record<TurnStage, string[]> = {
   story: ["headline", "narrative", "orders"],
   world: ["events", "transfers", "newCountries", "warsStarted", "warsJoined", "warsEnded", "alliancesFormed", "alliancesJoined", "alliancesLeft", "leaders", "truces", "trucesEnded", "invitations", "summits", "summitsHeld", "sessions", "warLosses", "population", "sanctions", "arms", "exileHost"],
-  home: ["economy", "politics", "ministries", "officials", "trade", "funds", "bills", "acts", "protests", "overthrow", "arms", "opposition"],
+  home: ["economy", "politics", "ministries", "officials", "cabinet", "trade", "funds", "bills", "acts", "protests", "overthrow", "arms", "opposition", "figure"],
 };
 
-/** The arms field as each stage writes it: the world its losses, home what to build and research. */
+/** The arms field as each stage writes it: the world its losses, home the research. */
 const ARMS_SHAPE: Partial<Record<TurnStage, string>> = {
   world: `"arms": { "losses": [{ "country": "tag", "kind": "rifles|artillery|tanks|aircraft|ships|airDefence|drones", "lost": 0, "capturedBy": "tag" }] }`,
-  home: `"arms": { "focus": ["tanks"], "research": [{ "direction": "military|industry|agriculture|medicine|science|communications|strategic", "shift": 10 }] }`,
+  home: `"arms": { "research": [{ "direction": "military|industry|agriculture|medicine|science|communications|strategic", "shift": 10 }] }`,
 };
 
 function stageShape(stage: TurnStage, role: RoleKind, needs: TurnNeeds): string {
-  const left = new Set<string>([...(needs.politics ? [] : ["politics"]), ...(needs.officials ? [] : ["officials"]), ...(needs.proposals ? [] : ["invitations"]), ...(needs.deals ? [] : ["trade"]), ...(needs.bills ? [] : ["bills"]), ...(needs.acts ? [] : ["acts"]), ...(needs.wars ? [] : ["warLosses"])]);
-  const lines = turnShape(role)
+  const left = new Set<string>([...(needs.politics ? [] : ["politics"]), ...(needs.officials ? [] : ["officials", "cabinet"]), ...(needs.proposals ? [] : ["invitations"]), ...(needs.deals ? [] : ["trade"]), ...(needs.bills ? [] : ["bills"]), ...(needs.acts ? [] : ["acts"]), ...(needs.wars ? [] : ["warLosses"])]);
+  const lines = turnShape(role, Boolean(needs.figure))
     .filter(([key]) => SHAPE_FIELDS[stage].includes(key) && !left.has(key))
     .sort(([a], [b]) => SHAPE_FIELDS[stage].indexOf(a) - SHAPE_FIELDS[stage].indexOf(b))
     .map(([key, line]) => (key === "arms" ? ARMS_SHAPE[stage]! : line));
@@ -157,7 +163,7 @@ export function STAGE_INSTRUCTIONS(stage: TurnStage, locale: Locale, mode: GameM
   const rules = turnRules(locale, mode, role);
   if (stage === "story") {
     const own = STORY_RULES(locale, role, needs);
-    const opposition = role === "opposition" ? [OPPOSITION_ROLE] : [];
+    const opposition = role === "opposition" ? [OPPOSITION_ROLE] : role === "minister" || role === "general" ? [FIGURE_ROLE] : [];
     return [
       `${STAGE_HEAD} A turn is written in stages; this first one tells the period as the player's government lives it, and the next ones turn your story into changes, so what you tell is what happened.`,
       "",
@@ -215,7 +221,7 @@ export function STAGE_INSTRUCTIONS(stage: TurnStage, locale: Locale, mode: GameM
     "",
     `- ${CARRY_OUT}`,
     joinRules(rules, ids),
-    `- ${rules.build}`,
+    `- ${rules.research}`,
     joinRules(rules, after),
     ...(needs.crisis ? [] : [own.crises]),
     own.ids,
@@ -294,7 +300,7 @@ const nameOf = (state: GameState) => (tag: string) => en(state.countries[tag]?.n
 
 /** The story stage's message: the player's country, its wars, neighbours and partners, the plans abroad, the history, the orders. */
 export function buildStoryPrompt(state: GameState, orders: string[], index: MapIndex, ctx = worldContext(state, index)): string {
-  const scenario = getScenario(state.scenarioId);
+  const scenario = scenarioOf(state);
   const relevant = relevantCountries(ctx);
   const ours = (w: GameState["wars"][number]) => w.attackers.includes(state.player) || w.defenders.includes(state.player);
   // What the player and its enemies dig matters for the war; the rest of the books are home's.
@@ -305,7 +311,7 @@ export function buildStoryPrompt(state: GameState, orders: string[], index: MapI
     "",
     periodLine(state),
     "",
-    ...describeRole(state, castRepression(state)),
+    ...describePerson(state, orders),
     ...playerPart(ctx),
     ...economyPart(ctx, true),
     ...crisesPart(ctx),
@@ -324,6 +330,8 @@ export function buildStoryPrompt(state: GameState, orders: string[], index: MapI
     ...meetingsPart(ctx),
     ...summitsPart(ctx, true),
     ...describeIntentions(state, nameOf(state), index),
+    // The cabinet's factions and what the dice did with them: feet dragged over the orders, leaks, plots (engine/intrigue.ts).
+    ...describeCabinet(state, "story"),
     ...describeFog(state, index),
     "",
     "HISTORY SO FAR:",
@@ -389,13 +397,14 @@ export function buildHomePrompt(state: GameState, orders: string[], index: MapIn
   return [
     periodLine(state),
     "",
-    ...describeRole(state, castRepression(state)),
+    ...describePerson(state, orders),
     ...playerPart(ctx),
     ...economyPart(ctx),
     ...crisesPart(ctx),
     ...domesticPart(ctx),
     ...describeResearch(state),
     ...describeIntrigues(state),
+    ...describeCabinet(state, "home"),
     "",
     `COUNTRIES THAT MATTER TO THE PLAYER (tag | name): ${relevant.map((t) => `${t} | ${en(state.countries[t].name)}`).join("; ")}`,
     `THE PLAYER'S BLOCS (id | name): ${blocs.length ? blocs.map((a) => `${a.id} | ${en(a.name)}`).join("; ") : "none"}`,

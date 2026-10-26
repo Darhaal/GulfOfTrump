@@ -718,19 +718,6 @@
   "image": "George Orwell, c. 1940 (41928180381).jpg"
  },
  {
-  "id": "georges-clemenceau",
-  "qid": "Q171730",
-  "name": {
-   "en": "Georges Clemenceau",
-   "ru": "Жорж Клемансо",
-   "uk": "Жорж Клемансо"
-  },
-  "gender": "male",
-  "born": 1841,
-  "died": 1929,
-  "image": "Georges Clemenceau par Nadar.jpg"
- },
- {
   "id": "goethe",
   "qid": "Q5879",
   "name": {
@@ -742,19 +729,6 @@
   "born": 1749,
   "died": 1832,
   "image": "Goethe (Stieler 1828).jpg"
- },
- {
-  "id": "golda-meir",
-  "qid": "Q42992",
-  "name": {
-   "en": "Golda Meir",
-   "ru": "Голда Меир",
-   "uk": "Голда Меїр"
-  },
-  "gender": "female",
-  "born": 1898,
-  "died": 1978,
-  "image": "Golda Meir 03265u-2 (cropped).jpg"
  },
  {
   "id": "h-g-wells",
@@ -958,19 +932,6 @@
   "born": 1724,
   "died": 1804,
   "image": "Immanuel Kant - Gemaelde 2.jpg"
- },
- {
-  "id": "indira-gandhi",
-  "qid": "Q1149",
-  "name": {
-   "en": "Indira Gandhi",
-   "ru": "Индира Ганди",
-   "uk": "Індіра Ганді"
-  },
-  "gender": "female",
-  "born": 1917,
-  "died": 1984,
-  "image": "Indira Gandhi official portrait.png"
  },
  {
   "id": "isaac-asimov",
@@ -1312,19 +1273,6 @@
   "image": "Karl Popper.jpg"
  },
  {
-  "id": "kofi-annan",
-  "qid": "Q1254",
-  "name": {
-   "en": "Kofi Annan",
-   "ru": "Кофи Аннан",
-   "uk": "Кофі Аннан"
-  },
-  "gender": "male",
-  "born": 1938,
-  "died": 2018,
-  "image": "Kofi Annan 2012 (cropped).jpg"
- },
- {
   "id": "kozma-prutkov",
   "qid": "Q1784989",
   "name": {
@@ -1431,19 +1379,6 @@
   ]
  },
  {
-  "id": "leon-trotsky",
-  "qid": "Q33391",
-  "name": {
-   "en": "Leon Trotsky",
-   "ru": "Лев Троцкий",
-   "uk": "Лев Троцький"
-  },
-  "gender": "male",
-  "born": 1879,
-  "died": 1940,
-  "image": "León trotski 1924 color.jpg"
- },
- {
   "id": "lesya-ukrainka",
   "qid": "Q298033",
   "name": {
@@ -1508,19 +1443,6 @@
   "image": "Marcus Aurelius Louvre MR561 n02.jpg"
  },
  {
-  "id": "margaret-thatcher",
-  "qid": "Q7416",
-  "name": {
-   "en": "Margaret Thatcher",
-   "ru": "Маргарет Тэтчер",
-   "uk": "Маргарет Тетчер"
-  },
-  "gender": "female",
-  "born": 1925,
-  "died": 2013,
-  "image": "Margaret Thatcher (1983).jpg"
- },
- {
   "id": "mark-twain",
   "qid": "Q7245",
   "name": {
@@ -1532,19 +1454,6 @@
   "born": 1835,
   "died": 1910,
   "image": "MarkTwain.LOC.jpg"
- },
- {
-  "id": "martin-luther-king",
-  "qid": "Q8027",
-  "name": {
-   "en": "Martin Luther King Jr.",
-   "ru": "Мартин Лютер Кинг",
-   "uk": "Мартін Лютер Кінг"
-  },
-  "gender": "male",
-  "born": 1929,
-  "died": 1968,
-  "image": "The Rev. Dr. Martin Luther King Jr. Color Portrait (high quality).jpg"
  },
  {
   "id": "mencius",
@@ -1697,19 +1606,6 @@
    0.5,
    0.25
   ]
- },
- {
-  "id": "nelson-mandela",
-  "qid": "Q8023",
-  "name": {
-   "en": "Nelson Mandela",
-   "ru": "Нельсон Мандела",
-   "uk": "Нельсон Мандела"
-  },
-  "gender": "male",
-  "born": 1918,
-  "died": 2013,
-  "image": "Nelson Mandela 1994.jpg"
  },
  {
   "id": "niccolo-machiavelli",
@@ -2272,19 +2168,6 @@
   "noPortrait": true
  },
  {
-  "id": "viacheslav-chornovil",
-  "qid": "Q2084848",
-  "name": {
-   "en": "Viacheslav Chornovil",
-   "ru": "Вячеслав Чорновол",
-   "uk": "В'ячеслав Чорновіл"
-  },
-  "gender": "male",
-  "born": 1937,
-  "died": 1999,
-  "image": "НДУ 3 Чорновіл Вячеслав Максимович.jpg"
- },
- {
   "id": "victor-hugo",
   "qid": "Q535",
   "name": {
@@ -2296,32 +2179,6 @@
   "born": 1802,
   "died": 1885,
   "image": "Victor Hugo by Étienne Carjat 1876 - full.jpg"
- },
- {
-  "id": "viktor-chernomyrdin",
-  "qid": "Q190884",
-  "name": {
-   "en": "Viktor Chernomyrdin",
-   "ru": "Виктор Черномырдин",
-   "uk": "Віктор Черномирдін"
-  },
-  "gender": "male",
-  "born": 1938,
-  "died": 2010,
-  "image": "ЧЕРНОМЫРДИН Виктор Степанович.jpg"
- },
- {
-  "id": "vladimir-lenin",
-  "qid": "Q1394",
-  "name": {
-   "en": "Vladimir Lenin",
-   "ru": "Владимир Ленин",
-   "uk": "Володимир Ленін"
-  },
-  "gender": "male",
-  "born": 1870,
-  "died": 1924,
-  "image": "Vladímir Lenin (fotografía coloreada).jpg"
  },
  {
   "id": "volodymyr-vynnychenko",
@@ -2376,19 +2233,6 @@
   "image": "Shakespeare.jpg"
  },
  {
-  "id": "willy-brandt",
-  "qid": "Q2514",
-  "name": {
-   "en": "Willy Brandt",
-   "ru": "Вилли Брандт",
-   "uk": "Віллі Брандт"
-  },
-  "gender": "male",
-  "born": 1913,
-  "died": 1992,
-  "image": "Bundesarchiv B 145 Bild-F057884-0009, Willy Brandt.jpg"
- },
- {
   "id": "yevgeny-shvarts",
   "qid": "Q268111",
   "name": {
@@ -2412,19 +2256,6 @@
   "born": 1897,
   "died": 1968,
   "image": "Jevhen Malanjuk.jpg"
- },
- {
-  "id": "yitzhak-rabin",
-  "qid": "Q34060",
-  "name": {
-   "en": "Yitzhak Rabin",
-   "ru": "Ицхак Рабин",
-   "uk": "Іцхак Рабин"
-  },
-  "gender": "male",
-  "born": 1922,
-  "died": 1995,
-  "image": "Flickr - Israel Defense Forces - Life of Lt. Gen. Yitzhak Rabin, 7th IDF Chief of Staff in photos (11).jpg"
  },
  {
   "id": "zhuangzi",

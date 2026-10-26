@@ -49,6 +49,62 @@ export function behindFront(state: Pick<GameState, "regions" | "wars">, neighbor
 }
 
 /**
+ * A front with no war behind it ends: a side still fighting in a province
+ * whose holder it is not at war with withdraws. A peace hands a province back
+ * to its owner while a third country, at war with the old holder only, still
+ * fights in it (the 1939 statistics runs: the Soviet Union went on fighting
+ * in Slovakia's Prešov once the German–Polish peace had returned it to
+ * Slovakia). Returns the provinces left, with who withdrew.
+ */
+export function clearOrphanFronts(state: Pick<GameState, "regions" | "wars">): { id: string; by: string; holder: string }[] {
+  const out: { id: string; by: string; holder: string }[] = [];
+  for (const [id, r] of Object.entries(state.regions)) {
+    if (!r.contested) continue;
+    const by = r.contested;
+    if (state.wars.some((w) => (w.attackers.includes(by) && w.defenders.includes(r.controller)) || (w.defenders.includes(by) && w.attackers.includes(r.controller)))) continue;
+    out.push({ id, by, holder: r.controller });
+    delete r.contested;
+    delete r.held;
+    delete r.taken;
+  }
+  return out;
+}
+
+/**
+ * An ally's land taken back from the enemy goes back to its ally: a province
+ * held by a country fighting on the same side as its owner, in a war the
+ * owner wages too, returns to the owner – a liberation. Without it, a
+ * country that drove the enemy out of a co-belligerent's province kept it,
+ * and held another government's land with no war between them (the 1939
+ * statistics runs: the Soviet Union and Germany in Slovakia's Prešov, taken
+ * back from Poland). A government in exile or a movement without land takes
+ * nothing back, nor an owner that is not at war with the side still fighting
+ * in the province. Returns the provinces handed back, with who held them.
+ */
+export function returnToAllies(state: Pick<GameState, "regions" | "wars" | "countries">): { id: string; from: string }[] {
+  const at = (a: string, b: string) => state.wars.some((w) => (w.attackers.includes(a) && w.defenders.includes(b)) || (w.attackers.includes(b) && w.defenders.includes(a)));
+  const enemies = (a: string) => new Set(state.wars.flatMap((w) => (w.attackers.includes(a) ? w.defenders : w.defenders.includes(a) ? w.attackers : [])));
+  // Co-belligerents: on one side of a war, or at war with the same enemy in wars of their own (France and the Netherlands,
+  // each against Germany: France took Dutch Limburg back from Germany and kept it past both peaces).
+  const together = (a: string, b: string) => {
+    if (state.wars.some((w) => (w.attackers.includes(a) && w.attackers.includes(b)) || (w.defenders.includes(a) && w.defenders.includes(b)))) return true;
+    const theirs = enemies(b);
+    return [...enemies(a)].some((x) => theirs.has(x));
+  };
+  const out: { id: string; from: string }[] = [];
+  for (const [id, r] of Object.entries(state.regions)) {
+    if (r.controller === r.owner) continue;
+    const owner = state.countries[r.owner];
+    if (!owner || owner.exile || owner.dormant || at(r.controller, r.owner) || !together(r.controller, r.owner)) continue;
+    if (r.contested && !at(r.contested, r.owner)) continue;
+    out.push({ id, from: r.controller });
+    r.controller = r.owner;
+    delete r.behind;
+  }
+  return out;
+}
+
+/**
  * Marks the provinces the front has left behind this turn and clears the mark
  * where the front came back, the war ended or the owner retook the land.
  * Returns the provinces newly left behind, for the turn's report.

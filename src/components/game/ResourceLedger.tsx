@@ -1,6 +1,7 @@
 "use client";
 
 import { RESOURCE_COLORS } from "@/components/map/colors";
+import { extractionOf } from "@/engine/development";
 import { DEFAULT_STOCK_MONTHS, MAX_STOCK_MONTHS, type Accounts } from "@/engine/economy";
 import type { ResourceType } from "@/engine/resources";
 import type { Economy } from "@/engine/types";
@@ -48,9 +49,12 @@ export default function ResourceLedger({ accounts, economy }: { accounts: Accoun
   const amount = useAmount();
   const types = ledgerTypes(accounts);
   const cut = economy.tradeCut;
+  // What industry spending and policies have added to the output of the mines and wells (engine/development.ts).
+  const extra = Math.round((extractionOf(economy) - 1) * 100);
 
   return (
     <ul className="flex flex-col gap-3">
+      {extra >= 1 && <li className="text-2xs font-bold text-emerald-700">{t("ledger.extraction", { n: extra })}</li>}
       {types.map((type) => {
         const made = accounts.production[type] ?? 0;
         const need = accounts.need[type] ?? 0;
@@ -66,9 +70,11 @@ export default function ResourceLedger({ accounts, economy }: { accounts: Accoun
         const room = (MAX_STOCK_MONTHS / 12) * need;
         const lack = need > 0 ? Math.max(0, -surplus) / need : 0;
         const draw = lack * cut;
-        const row = (label: string, text: string, tone = "text-ink") => (
+        const row = (label: string, text: string, tone = "text-ink", hint?: string) => (
           <>
-            <dt className="font-bold text-muted">{label}</dt>
+            <dt className={`font-bold text-muted ${hint ? "cursor-help underline decoration-dotted decoration-1 underline-offset-2" : ""}`} title={hint}>
+              {label}
+            </dt>
             <dd className={`text-right font-black tabular-nums ${tone}`}>{text}</dd>
           </>
         );
@@ -89,7 +95,7 @@ export default function ResourceLedger({ accounts, economy }: { accounts: Accoun
               {surplus > 0.005 && row(t("ledger.sell"), `${real(surplus)} · ${money(value)}`, "text-emerald-700")}
               {surplus < -0.005 &&
                 row(t("ledger.buy"), `${real(-surplus * (1 - cut))} · ${money(value * (1 - cut))}${cut > 0 ? ` · ${t("ledger.cut", { n: Math.round(cut * 100) })}` : ""}`, cut > 0 ? "text-red-600" : "text-amber-700")}
-              {need > 0 && row(t("ledger.store"), t("ledger.storeOf", { have: real(stored), cap: real(room), n: Math.round(months * 10) / 10 }))}
+              {need > 0 && row(t("ledger.store"), t("ledger.storeOf", { have: real(stored), cap: real(room), n: Math.round(months * 10) / 10 }), "text-ink", t("ledger.storeHint"))}
             </dl>
             {need > 0 && (
               <div className="ml-5 mt-1 h-1 overflow-hidden rounded-full bg-divider">

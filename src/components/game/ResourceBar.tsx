@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type FocusEvent, type MouseEvent as ReactM
 import { RESOURCE_COLORS } from "@/components/map/colors";
 import { type Crisis, interestRate } from "@/engine/crises";
 import { balance, type Accounts } from "@/engine/economy";
-import type { Economy, ScenarioId } from "@/engine/types";
+import type { Economy, EconomyFigures, ScenarioId } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
 import ResourceLedger, { ledgerTypes, resourceState, STATE_TONE } from "./ResourceLedger";
@@ -107,6 +107,7 @@ export default function ResourceBar({
   crises = [],
   era,
   unrest,
+  before,
 }: {
   economy: Economy;
   accounts?: Accounts;
@@ -114,8 +115,10 @@ export default function ResourceBar({
   era: ScenarioId;
   /** The country's tension, 0–100 (its politics' unrest); missing until the politics are described. */
   unrest?: number;
+  /** The books at the start of the last turn (its chronicle entry), for what the turn changed. */
+  before?: EconomyFigures;
 }) {
-  const { t, money, people, locale } = useI18n();
+  const { t, money, moneyFine, moneyMoved, people, locale } = useI18n();
   const [shelf, setShelf] = useState(false);
   const [hint, setHint] = useState<Hint | null>(null);
   const row = useRef<HTMLDivElement>(null);
@@ -186,7 +189,11 @@ export default function ResourceBar({
     };
   }, [shelf]);
 
-  const item = (id: string, Icon: LucideIcon, label: string, short: string, value: string, sub?: string, tone = "", minor = false) => {
+  /** What the last turn did to a figure, if it moved: "▲+$370 M", green when it went the good way. */
+  const turned = (now: number, then: number | undefined, good: "up" | "down", text: (from: number, to: number) => string) =>
+    then === undefined || Math.abs(now - then) < 1e-6 ? undefined : { text: `${now > then ? "▲" : "▼"}${text(then, now)}`, good: now > then === (good === "up") };
+  const moneyTurned = (now: number, then: number | undefined, good: "up" | "down") => turned(now, then, good, (from, to) => moneyMoved(from, to).delta);
+  const item = (id: string, Icon: LucideIcon, label: string, short: string, value: string, sub?: string, tone = "", minor = false, change?: { text: string; good: boolean }) => {
     const show = hintFor(id, label);
     return (
       <button
@@ -205,6 +212,11 @@ export default function ResourceBar({
         <Icon className="h-3.5 w-3.5 text-muted" />
         {names < 2 && <span className="text-2xs font-bold text-muted">{names === 0 ? label : short}</span>}
         <span className={`text-xs font-black tabular-nums ${tone || "text-ink"}`}>{value}</span>
+        {change && (
+          <span className={`text-2xs font-bold tabular-nums max-md:hidden ${change.good ? "text-emerald-700" : "text-red-600"}`} title={t("econ.sinceTurn")}>
+            {change.text}
+          </span>
+        )}
         {sub && <span className={`text-2xs font-bold tabular-nums text-muted ${minor ? "max-2xl:hidden" : ""}`}>{sub}</span>}
       </button>
     );
@@ -215,12 +227,22 @@ export default function ResourceBar({
     <div className="relative z-30 border-b border-line sheet">
       <div className="flex items-center gap-2 px-3 py-1.5">
         <div ref={row} className="flex min-w-0 flex-1 items-center gap-4 overflow-x-auto [scrollbar-width:none]">
-          {item("gdp", TrendingUp, t("economy.gdp"), t("economy.gdp.short"), money(economy.gdp), pct(economy.growth), economy.growth < 0 ? "text-red-600" : "")}
+          {item("gdp", TrendingUp, t("economy.gdp"), t("economy.gdp.short"), moneyFine(economy.gdp), pct(economy.growth), economy.growth < 0 ? "text-red-600" : "", false, moneyTurned(economy.gdp, before?.gdp, "up"))}
           {item("budget", Banknote, t("economy.budget"), t("economy.budget.short"), `${gap < 0 ? "−" : "+"}${money(Math.abs(gap))}`, undefined, gap < 0 ? "text-red-600" : "text-emerald-700")}
-          {item("debt", Scale, t("economy.debt"), t("economy.debt.short"), money(economy.debt), t("economy.debtShare", { n: Math.round((economy.debt / Math.max(0.01, economy.gdp)) * 100) }), "", true)}
-          {item("reserves", PiggyBank, t("economy.reserves"), t("economy.reserves"), money(economy.reserves))}
+          {item("debt", Scale, t("economy.debt"), t("economy.debt.short"), moneyFine(economy.debt), t("economy.debtShare", { n: Math.round((economy.debt / Math.max(0.01, economy.gdp)) * 100) }), "", true, moneyTurned(economy.debt, before?.debt, "down"))}
+          {item("reserves", PiggyBank, t("economy.reserves"), t("economy.reserves"), moneyFine(economy.reserves), undefined, "", false, moneyTurned(economy.reserves, before?.reserves, "up"))}
           {item("inflation", Percent, t("economy.inflation"), t("economy.inflation"), pct(economy.inflation))}
-          {item("troops", Shield, t("economy.troops"), t("economy.troops.short"), people(economy.troops), accounts ? `/ ${people(Math.max(0, accounts.mobilisable - economy.troops))}` : undefined, "", true)}
+          {item(
+            "troops",
+            Shield,
+            t("economy.troops"),
+            t("economy.troops.short"),
+            people(economy.troops),
+            accounts ? `/ ${people(Math.max(0, accounts.mobilisable - economy.troops))}` : undefined,
+            "",
+            true,
+            turned(economy.troops, before?.troops, "up", (from, to) => `${to >= from ? "+" : "−"}${people(Math.abs(to - from))}`),
+          )}
         </div>
 
         {unrest !== undefined &&

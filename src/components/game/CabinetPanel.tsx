@@ -4,16 +4,20 @@ import { Banknote, Check, ClipboardList, Crosshair, Eye, Factory, FlaskConical, 
 import { useEffect, useState } from "react";
 import ChatScroll from "@/components/ui/ChatScroll";
 import { ui } from "@/components/ui/classes";
+import DoneButton from "@/components/ui/DoneButton";
 import Dictation from "@/components/voice/Dictation";
 import SpeakButton from "@/components/voice/SpeakButton";
 import { ADVISOR_TITLES, ADVISORS, MAX_DIRECTIVES, type AdvisorId } from "@/engine/advisors";
 import { formatDate } from "@/engine/calendar";
 import { ADVISOR_POST, officialAt, type Candidate } from "@/engine/government";
 import { agendaOf } from "@/engine/interests";
-import { leaderOf } from "@/engine/people";
+import { factionOf, factionsOf } from "@/engine/intrigue";
+import { leaderOf, leaderOfficial } from "@/engine/people";
 import { bioKey, bioOf } from "@/engine/bios";
 import { reportsDue } from "@/engine/reports";
 import AppointmentDialog, { Pips, Traits } from "./AppointmentDialog";
+import CabinetFactions, { FactionBadge, MinisterMarks, MinisterMoves } from "./CabinetFactions";
+import { factionName } from "./changes";
 import LeaderCard, { Bio } from "./LeaderCard";
 import DraftedOrders from "./DraftedOrders";
 import Portrait, { ARCH } from "./Portrait";
@@ -36,7 +40,7 @@ interface CabinetPanelProps {
   state: GameState;
   /** Add an order a minister drafted to the turn's orders. */
   onAddOrder: (order: string) => void;
-  /** Apply the proposal (a research split, what industry builds first, a budget) in message `at` of a minister's conversation. */
+  /** Apply the proposal (a research split, a budget) in message `at` of a minister's conversation. */
   onApply: (advisor: AdvisorId, at: number) => void;
   busy:{ chars: number; advisor: AdvisorId } | null;
   /** Any request under way: the setup of the government, candidates, a minister's answer. */
@@ -117,6 +121,9 @@ const SECRECY_TONE: Record<Operation["secrecy"], string> = { open: "bg-page text
  * paragraph each, as it comes; a quiet one can be asked. "About" shows who
  * they are – a short biography, their interests and their mood – and the
  * leader's card has a biography too, both written once when first seen.
+ * The ministers' list shows the cabinet's factions and what intelligence
+ * reports of their plots, each minister's faction and where their loyalty
+ * is heading, and the moves the government can make on them (CabinetFactions).
  */
 export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, onAddOrder, onApply, onDirectives, onSetup, onFind, onAppoint, prefill, reporting, onRequestReport, onSetupDeputies, onAskDeputy, onChange, bioStatus, onRequestBio }: CabinetPanelProps) {
   const { t, text, locale } = useI18n();
@@ -164,7 +171,12 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
   const approved = (o: Operation) => directives.some((d) => d.operation?.name === o.name && d.ministry === advisor);
 
   const officials = state.officials ?? [];
+  // The player's own leader has the card above the ministries, not a place among the ministers.
+  const own = leaderOfficial(state);
   const setupBusy = anyBusy?.kind === "politics";
+  // The cabinet's factions as its people stand now (engine/intrigue.ts); its moves are the engine's, so they wait only for a request under way.
+  const factions = factionsOf(state);
+  const personFaction = person ? factionOf(factions, person.name) : undefined;
 
   // Biographies: the leader's when the cabinet opens, a minister's when their tab does.
   const leader = leaderOf(state, state.player);
@@ -180,13 +192,14 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
 
   const people = (
     <div className="flex flex-col gap-3">
+      <CabinetFactions state={state} factions={factions} disabled={Boolean(anyBusy)} onChange={onChange} />
       {officials.length > 0 && (
         <ul className="grid gap-2">
           {OFFICIAL_POSTS.map((post) => {
             const o = officials.find((x) => x.post === post);
             const Icon = POST_ICONS[post];
             const minister = ADVISOR_OF[post];
-            if (!o && (post === "head" || post === "government")) return null;
+            if ((!o && (post === "head" || post === "government")) || own?.post === post) return null;
             return (
               <li key={post} className="grid gap-1.5 rounded-xl border border-line sheet p-3">
                 <div className="flex items-start gap-2">
@@ -200,9 +213,12 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
                 {o && (
                   <>
                     <Traits traits={o.traits} />
-                    <div className="flex flex-wrap items-center gap-3">
+                    <div className="relative flex flex-wrap items-center gap-3">
                       <Pips value={o.competence} label={t("gov.competence")} />
-                      <Pips value={o.loyalty} label={t("gov.loyalty")} />
+                      <span className="inline-flex items-center gap-1.5">
+                        <Pips value={o.loyalty} label={t("gov.loyalty")} />
+                        {minister && <MinisterMarks state={state} person={o} factions={factions} />}
+                      </span>
                       {o.faction && <span className="text-2xs font-bold text-muted">{o.faction}</span>}
                       <span className="text-2xs font-medium tabular-nums text-muted">{t("gov.since", { date: formatDate(o.since, locale) })}</span>
                       {o.mood && <StanceChip stance={o.mood.stance} />}
@@ -239,6 +255,7 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
                       {o ? t("gov.replace") : t("gov.appoint")}
                     </button>
                   )}
+                  {minister && o && <MinisterMoves state={state} person={o} disabled={Boolean(anyBusy)} onChange={onChange} />}
                 </div>
               </li>
             );
@@ -282,13 +299,15 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
           const on = id === advisor;
           const p = personOf(id);
           const count = directives.filter((d) => d.ministry === id).length;
+          // The minister's faction, marked on the tile when it is restive or disloyal.
+          const camp = p ? factionOf(factions, p.name) : undefined;
           return (
             <button
               key={id}
               type="button"
               onClick={() => setAdvisor(id)}
               aria-pressed={on}
-              title={p ? `${p.name} · ${p.title}` : text(ADVISOR_TITLES[id])}
+              title={p ? `${p.name} · ${p.title}${camp ? ` · ${factionName(camp.id, t)}` : ""}` : text(ADVISOR_TITLES[id])}
               className="group flex min-w-0 flex-col items-center gap-1"
             >
               {/* A quiet tile on the paper: the portrait or the ministry's ink icon, a thin line, a soft accent ring when chosen. */}
@@ -301,6 +320,7 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
                 </span>
                 {count > 0 && <span className="absolute -top-1 -right-1 min-w-4 rounded-full bg-accent px-1 text-center text-[9px] font-black leading-4 text-on-ink">{count}</span>}
                 {reporting[id]?.status === "writing" && <span className="absolute -top-1 -left-1 h-3 w-3 animate-pulse rounded-full border-2 border-page bg-accent" aria-hidden />}
+                {camp && camp.temper !== "loyal" && <span className={`absolute -bottom-1 -left-1 h-2.5 w-2.5 rounded-full border-2 border-page ${camp.temper === "disloyal" ? "bg-red-600" : "bg-amber-500"}`} aria-hidden />}
               </span>
               <span className={`w-full truncate text-center text-2xs font-bold ${on ? "text-ink" : "text-muted"}`}>{p ? surname(p.name) : t(`post.${ADVISOR_POST[id]}` as MessageKey)}</span>
             </button>
@@ -364,9 +384,10 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
         </>
       )}
 
-      <div className="flex items-baseline justify-between gap-2 px-0.5">
-        <span className="truncate text-sm font-black text-ink">{text(ADVISOR_TITLES[advisor])}</span>
-        {person && <span className="truncate text-xs font-bold text-muted">{person.name}</span>}
+      {/* The minister's own post as the country called it (the ministry's name while it is vacant), the full name under it, wrapped rather than cut. */}
+      <div className="grid gap-0.5 px-0.5">
+        <span className="text-sm font-black leading-snug text-ink">{person?.title || text(ADVISOR_TITLES[advisor])}</span>
+        {person && <span className="text-xs font-bold leading-snug text-muted">{person.name}</span>}
       </div>
       <div className="grid grid-cols-4 gap-1 rounded-xl bg-page p-1">
         {views.map(({ id, label, icon: Icon }) => (
@@ -445,7 +466,7 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
               </div>
             )}
           </ChatScroll>
-          <div>
+          <div data-tour="cabinet-ask">
             <Dictation id={`cabinet-${advisor}`} set={setQuestion} max={2000} disabled={disabled || Boolean(busy)}>
               <textarea
                 value={question}
@@ -513,10 +534,11 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
                     </span>
                   ))}
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="relative flex flex-wrap items-center gap-3">
                   <Pips value={person.interests.ambition} label={t("cabinet.ambition")} />
                   {person.interests.party && <span className="text-2xs font-bold text-muted">{t("cabinet.party", { party: person.interests.party })}</span>}
                   {person.mood && <StanceChip stance={person.mood.stance} />}
+                  {personFaction && <FactionBadge faction={personFaction} state={state} />}
                 </div>
               </div>
             )}
@@ -574,18 +596,19 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
             </Dictation>
             <div className="mt-2 flex items-center justify-between gap-2">
               <span className="text-2xs font-medium text-muted">{directivesFull ? t("cabinet.tasks.limit", { n: MAX_DIRECTIVES }) : ""}</span>
-              <button
-                type="button"
+              {/* A moment of "assigned" once the task is in the list below, as every action says it went through. */}
+              <DoneButton
+                label={t("cabinet.tasks.add")}
+                icon={Plus}
+                doneLabel={t("done.assigned")}
                 disabled={disabled || directivesFull || !task.trim()}
-                onClick={() => {
+                onAct={() => {
                   addDirective({ text: task.trim() });
                   setTask("");
                 }}
                 className={`${ui.secondary} shrink-0 px-3 py-2 text-xs`}
-              >
-                <Plus className="h-4 w-4" />
-                {t("cabinet.tasks.add")}
-              </button>
+                doneClassName={`${ui.done} shrink-0 gap-1 rounded-xl px-3 py-2 text-xs`}
+              />
             </div>
           </div>
         </>

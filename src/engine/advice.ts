@@ -1,20 +1,18 @@
 import { addAdvice, type AdviceMessage, type AdviceProposal, type AdviceReply, type AdvisorId } from "./advisors";
-import { availableKinds, setFocus } from "./arsenal";
 import { type BudgetProposal, sanitizeBudgetProposal } from "./budgetAdvice";
 import { setBudget } from "./economy";
 import { normalizeShares, setShares, startingResearch } from "./research";
-import { RESEARCH_DIRECTIONS, WEAPON_KINDS, type GameState, type ResearchDirection, type WeaponKind } from "./types";
+import { RESEARCH_DIRECTIONS, type GameState, type ResearchDirection } from "./types";
 
 /**
  * Ministers who change something in the game when the leader asks them to:
- * the science minister proposes a split of the research money, the general
- * staff what industry builds first for the army (and the economy minister a
- * budget, engine/budgetAdvice.ts). The model proposes it in the answer, the
- * engine keeps only what that minister may propose and what differs from
- * today, and nothing changes until the leader applies it – when it is
- * checked again against the state as it is then.
+ * the science minister proposes a split of the research money (and the
+ * economy minister a budget, engine/budgetAdvice.ts). The model proposes it
+ * in the answer, the engine keeps only what that minister may propose and
+ * what differs from today, and nothing changes until the leader applies it –
+ * when it is checked again against the state as it is then.
  */
-export const PROPOSALS: Partial<Record<AdvisorId, keyof AdviceProposal>> = { science: "research", military: "focus" };
+export const PROPOSALS: Partial<Record<AdvisorId, keyof AdviceProposal>> = { science: "research" };
 
 /** How many orders a minister drafts at once, and how long one may be. */
 export const DRAFTED_ORDERS = 2;
@@ -41,8 +39,6 @@ export function sanitizeOrders(state: Pick<GameState, "draft">, raw: readonly un
   return out;
 }
 
-const sameKinds = (a: readonly WeaponKind[], b: readonly WeaponKind[]) => a.length === b.length && a.every((k) => b.includes(k));
-
 /** A minister's proposal checked against the state: their own field only, valid, and a change. */
 export function sanitizeProposal(state: GameState, advisor: AdvisorId, raw: AdviceReply["proposal"] | AdviceProposal | undefined): AdviceProposal | undefined {
   if (!raw) return undefined;
@@ -54,14 +50,6 @@ export function sanitizeProposal(state: GameState, advisor: AdvisorId, raw: Advi
     if (!named.length) return undefined;
     const shares = normalizeShares({ ...now, ...(Object.fromEntries(named) as Partial<Record<ResearchDirection, number>>) });
     return RESEARCH_DIRECTIONS.every((d) => shares[d] === now[d]) ? undefined : { research: shares };
-  }
-  if (field === "focus" && raw.focus) {
-    const arsenal = state.countries[state.player]?.arsenal;
-    if (!arsenal) return undefined;
-    const can = new Set(availableKinds(state));
-    const named: readonly string[] = raw.focus;
-    const focus: WeaponKind[] = [...new Set(named.filter((k): k is WeaponKind => (WEAPON_KINDS as readonly string[]).includes(k) && can.has(k as WeaponKind)))].slice(0, 2);
-    return sameKinds(focus, arsenal.focus ?? []) ? undefined : { focus };
   }
   return undefined;
 }
@@ -79,8 +67,8 @@ export function takeAdvice(state: GameState, advisor: AdvisorId, question: strin
 
 /**
  * What a minister's message would still change if applied now: its proposal
- * or budget checked again against the state as it is (the split, what the
- * country can build, the limits of a budget change). Null when nothing is
+ * or budget checked again against the state as it is (the split, the
+ * limits of a budget change). Null when nothing is
  * left to apply: none was proposed, it was applied, or it is in force already.
  */
 export function pendingProposal(state: GameState, advisor: AdvisorId, message: AdviceMessage | undefined): { proposal?: AdviceProposal; budget?: BudgetProposal } | null {
@@ -104,7 +92,6 @@ export function applyProposal(state: GameState, advisor: AdvisorId, at: number, 
   if (!thread || !pending) return state;
   let next = state;
   if (pending.proposal?.research) next = setShares(next, pending.proposal.research);
-  if (pending.proposal?.focus) next = setFocus(next, pending.proposal.focus, now);
   if (pending.budget) {
     const { revenue, army, industry, social, other } = pending.budget;
     next = setBudget(next, { revenue, army, industry, social, other }, now);

@@ -31,6 +31,12 @@ interface Preferences {
   volume: string;
   /** "1" when the player chose the offline demo game master (lib/gameMaster.ts). */
   demo: string;
+  /** The game's left panel width in pixels, dragged by its edge; "" for the default. */
+  leftWidth: string;
+  /** "done" once the tutorial was finished or skipped, or this browser was found to have played before (lib/tutorial.ts). */
+  tutorial: string;
+  /** How many ministers report after a turn on their own, "0"–"5"; "" for the default (engine/reports.ts voicesFrom). */
+  reports: string;
 }
 
 const KEYS: Record<keyof Preferences, string> = {
@@ -45,6 +51,9 @@ const KEYS: Record<keyof Preferences, string> = {
   micDevice: "got_mic_device",
   volume: "got_volume",
   demo: "got_demo",
+  leftWidth: "got_left_width",
+  tutorial: "got_tutorial",
+  reports: "got_reports",
 };
 
 function browserLocale(): Locale {
@@ -58,7 +67,7 @@ function browserLocale(): Locale {
   return "en";
 }
 
-const DEFAULTS = (): Preferences => ({ locale: browserLocale(), theme: "system", model: "", speech: "", voice: "", rate: "", readTurns: "", mic: "", micDevice: "", volume: "", demo: "" });
+const DEFAULTS = (): Preferences => ({ locale: browserLocale(), theme: "system", model: "", speech: "", voice: "", rate: "", readTurns: "", mic: "", micDevice: "", volume: "", demo: "", leftWidth: "", tutorial: "", reports: "" });
 
 function read<K extends keyof Preferences>(key: K): Preferences[K] {
   try {
@@ -67,6 +76,9 @@ function read<K extends keyof Preferences>(key: K): Preferences[K] {
     if (key === "locale" && !LOCALES.includes(value as Locale)) return DEFAULTS()[key];
     if (key === "theme" && !["system", "light", "dark"].includes(value)) return DEFAULTS()[key];
     if (key === "demo" && value !== "1") return DEFAULTS()[key];
+    if (key === "leftWidth" && !/^\d{3,4}$/.test(value)) return DEFAULTS()[key];
+    if (key === "tutorial" && value !== "done") return DEFAULTS()[key];
+    if (key === "reports" && !/^[0-5]$/.test(value)) return DEFAULTS()[key];
     return value as Preferences[K];
   } catch {
     return DEFAULTS()[key];

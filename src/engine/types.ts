@@ -109,7 +109,37 @@ export interface Scenario {
    * map's; the rest are scaled by `others`.
    */
   people?: { byCountry: Record<string, number>; others: number };
+  /**
+   * Other starts of the same date, chosen on its card: a week before it, say.
+   * Everything else of the date (its economy, people, quotes, scene, plans)
+   * stays keyed by the scenario's id; `getScenario(id, variant)` lays a
+   * variant over the date.
+   */
+  variants?: Partial<Record<StartVariant, ScenarioVariant>>;
+  /** The variant this scenario was laid out for, by `getScenario`; missing for the date itself. */
+  variant?: StartVariant;
+  /** The one country a start is played as, chosen for the player (the tutorial): no country to pick. */
+  player?: string;
 }
+
+/**
+ * The starts a date may offer besides its own day: the week before it, and
+ * on 2022 the tutorial, the first morning of the invasion played as Ukraine
+ * with a guide and its first turns written in advance (engine/tutorial.ts).
+ */
+export const START_VARIANTS = ["eve", "tutorial"] as const;
+export type StartVariant = (typeof START_VARIANTS)[number];
+
+/**
+ * What a start other than the date's own day changes: its day, its words, and
+ * the world as it stood then. A war or treaty of the date that had not begun
+ * on that day is left out by itself; what else differs is given here.
+ */
+export type ScenarioVariant = Pick<Scenario, "startDate" | "tagline" | "story" | "briefing" | "context"> &
+  Partial<Pick<Scenario, "defaultStep" | "wars" | "alliances" | "provinceControllers" | "provinceContested" | "provinceHeld" | "provinceTaken" | "protests" | "loyalty" | "featured" | "player">> & {
+    /** Leader lines that differ on that day, by country. */
+    leaders?: Record<string, string>;
+  };
 
 /** A protest a scenario starts with; its words in each language. */
 export interface ProtestSeed {
@@ -156,6 +186,17 @@ export interface Economy {
   tradeCut: number;
   /** Strategic resources in store, months of need. */
   stocks: Partial<Record<ResourceType, number>>;
+  /** Points of this turn's growth that a war on the country's own soil took (engine/economy.ts): taken out again before growth drifts next turn. */
+  shock?: number;
+  /** $bn a year of the army budget a government abroad added for a war it fights, given back after the peace. */
+  war?: number;
+  /**
+   * Share of the people's goods need the consumer factories built by industry spending and policies hold up
+   * (engine/development.ts): built over months, run down over years; negative when industry is starved.
+   */
+  factories?: number;
+  /** What the mines and wells it holds give against what the land alone gives: 1 when missing, up to 1.3 (engine/development.ts). */
+  extraction?: number;
 }
 
 export interface CountryState {
@@ -235,6 +276,8 @@ export interface Tie {
   near: number;
   /** Share of its exports that go to the other, %: how much it depends on that market. Recomputed every turn with the map. */
   trade?: number;
+  /** Their land touches (a province each owns or holds side by side): an army needs no fleet to reach the other. Recomputed every turn with the map's neighbours. */
+  land?: boolean;
 }
 
 export const DEED_KINDS = ["attacked", "joined-enemy", "came-to-aid", "stood-aside", "left-bloc", "sanctioned", "aided", "allied", "made-peace", "broke-pact", "occupied", "provoked"] as const;
@@ -311,8 +354,50 @@ export type PlanStage = (typeof PLAN_STAGES)[number];
 export const PLAN_CAUSES = ["claim", "ambition", "treaty", "threat", "incident", "weariness", "new-government", "opportunity", "seeded", "economy", "politics", "trade", "tension"] as const;
 export type PlanCause = (typeof PLAN_CAUSES)[number];
 
-export const PLAN_ENDS = ["carried-out", "compromise", "refused", "outmatched", "unrest", "government", "target-gone", "overtaken"] as const;
+export const PLAN_ENDS = ["carried-out", "compromise", "refused", "outmatched", "unrest", "government", "target-gone", "overtaken", "mediation", "deterred", "economy"] as const;
+/** How a plan ended; a crisis (a war plan) can also be talked down by a mediator, deterred by the target's backers, or dropped for the economy's sake (engine/standoffs.ts). */
 export type PlanEnd = (typeof PLAN_ENDS)[number];
+
+export const BECAUSE_KINDS = [
+  "incident",
+  "claim",
+  "ambition",
+  "backing",
+  "diversion",
+  "deterrent",
+  "mediation",
+  "talks",
+  "trade",
+  "weak",
+  "unrest",
+  "election",
+  "slump",
+  "inflation",
+  "sanctions",
+  "election-lost",
+  "coup",
+  "new-government",
+  "war",
+  "war-on",
+  "defeat",
+  "tenure",
+] as const;
+export type BecauseKind = (typeof BECAUSE_KINDS)[number];
+
+/**
+ * Why something happened, for the news and the game master (engine/standoffs.ts):
+ * the incident a crisis grew from, the ally that deterred it, the mediator,
+ * the slump before a coup, the lost election before a change of course.
+ */
+export interface Because {
+  kind: BecauseKind;
+  /** The country behind it: the mediator, the deterrent ally, the backer, the victim of a war. */
+  country?: string;
+  /** When: the month an incident began in. */
+  date?: string;
+  /** The kind of incident. */
+  incident?: IncidentKind;
+}
 
 /** A plan of one government that takes several turns: it grows stage by stage, or fades or fails (engine/intentions.ts). */
 export interface Plan {
@@ -325,6 +410,8 @@ export interface Plan {
   partners?: string[];
   /** Join and peace: the war; once a war plan is carried out, the war it began. */
   war?: string;
+  /** War: the scenario's war it begins, a war of the date that an earlier start opens before it (its id and name, when the engine starts it). */
+  begins?: string;
   /** Leave: the bloc; bloc: the one it joins, or the one it founded. */
   bloc?: string;
   /** Join: the side it takes. */
@@ -361,8 +448,6 @@ export interface ArmsStock {
 /** A country's weapons (engine/arsenal.ts). */
 export interface Arsenal {
   stock: Partial<Record<WeaponKind, ArmsStock>>;
-  /** Kinds the player's government builds first (at most two), with twice the money. */
-  focus?: WeaponKind[];
   /** The player's: made and lost over the last turn, by kind. */
   made?: Partial<Record<WeaponKind, number>>;
   lost?: Partial<Record<WeaponKind, number>>;
@@ -517,6 +602,12 @@ export interface Official {
   /** Their sex and portrait (engine/people.ts); missing in saves from before portraits. */
   gender?: Gender;
   portrait?: string;
+  /** Progress towards the next step of loyalty, up or down (engine/intrigue.ts); none in saves from before it. */
+  favour?: number;
+  /** The turn the government last courted them with a favour or a post: once a turn. */
+  courted?: number;
+  /** They were given a seat at the top table once, to win them over: it is not given twice. */
+  raised?: boolean;
 }
 
 export interface MinisterInterests {
@@ -614,8 +705,8 @@ export interface Appointment {
 export interface Defeat {
   date: string;
   turn: number;
-  /** "election": the government's party lost a vote and with it the government. */
-  how: "coup" | "revolution" | "uprising" | "deposed" | "election";
+  /** "election": the government's party lost a vote and with it the government; "resigned" and "died": the leader the player played (engine/fate.ts). */
+  how: "coup" | "revolution" | "uprising" | "deposed" | "election" | "resigned" | "died";
   by: string;
   note: string;
   /** The leader who fell, the person the player may stay with (into opposition). */
@@ -626,8 +717,8 @@ export interface Defeat {
   continued?: boolean;
 }
 
-/** Who the player is: the country's leader, or (later) a minister or a general, or the leader of the opposition. */
-export const ROLE_KINDS = ["leader", "opposition"] as const;
+/** Who the player is: the country's leader, the leader of the opposition, a minister of one of the eight ministries, or a general (engine/figures.ts). */
+export const ROLE_KINDS = ["leader", "opposition", "minister", "general"] as const;
 
 /** How an opposition comes to power. */
 export const RISE_HOWS = ["election", "revolution", "coup", "appointed"] as const;
@@ -654,6 +745,8 @@ export interface Movement {
   /** Its name, once the player or the game master has given one. */
   name?: string;
   kind: MovementKind;
+  /** In exile: the government that shelters it (engine/exile.ts). */
+  host?: string;
   status: MovementStatus;
   /** Popular support, % of the country. */
   support: number;
@@ -667,6 +760,45 @@ export interface Movement {
   street: number;
 }
 
+/** A minister's or a general's standing (engine/figures.ts), each 0–100. */
+export interface Standing {
+  /** How far the leader listens to them. */
+  influence: number;
+  /** The post's means: the ministry's budget and staff, or the strength and supply of the troops under command. */
+  means: number;
+  /** How loyal the ministry's people or the troops are to them in person. */
+  loyalty: number;
+}
+
+/** A general commands all the country's forces, or one front. */
+export const COMMAND_SCOPES = ["forces", "front"] as const;
+export type CommandScope = (typeof COMMAND_SCOPES)[number];
+
+/** What a general commands (engine/figures.ts). */
+export interface Command {
+  scope: CommandScope;
+  /** The front or the theatre, in the player's words or the game master's. */
+  name?: string;
+}
+
+/** How the player's person can fall from a post or a movement (engine/fate.ts). */
+export const FALL_HOWS = ["resigned", "dismissed", "died", "arrested"] as const;
+export type FallHow = (typeof FALL_HOWS)[number];
+export const DEATH_CAUSES = ["age", "illness", "assassination"] as const;
+export type DeathCause = (typeof DEATH_CAUSES)[number];
+
+/** The fall of the player's person from a role that does not govern, waiting for the player's choice (engine/fate.ts). */
+export interface Fall {
+  how: FallHow;
+  /** The role they fell from. */
+  from: RoleKind;
+  date: string;
+  turn: number;
+  cause?: DeathCause;
+  /** Who takes over the post or the movement, when the game master named them. */
+  successor?: string;
+}
+
 /** The player's place in the game (engine/role.ts). */
 export interface PlayerRole {
   kind: RoleKind;
@@ -676,10 +808,20 @@ export interface PlayerRole {
   movement?: Movement;
   /** The player's own words on who they are, which party or movement they lead and whose side they take; the game master names them from it. */
   about?: string;
+  /** A minister's ministry, by the post its minister holds (engine/figures.ts). */
+  post?: OfficialPost;
+  /** What a general commands. */
+  command?: Command;
+  /** A minister's or a general's standing. */
+  standing?: Standing;
+  /** The player resigns as the next turn is played (engine/fate.ts). */
+  resigning?: boolean;
+  /** The person fell from this role; the player chooses what next (engine/fate.ts). */
+  fall?: Fall;
   /** Since when the player has held this role. */
   since: string;
-  /** Chosen at the start; left with after the fall of their government; or won by taking power. */
-  how?: "start" | "fell" | "rose";
+  /** Chosen at the start; left with after the fall of their government; won by taking power; or taken over from someone who fell. */
+  how?: "start" | "fell" | "rose" | "succeeded";
 }
 
 /**
@@ -701,6 +843,18 @@ export interface RegionState {
   pop?: number;
   /** Taken in a war and left behind by the front: it counts as its holder's until a peace (engine/occupation.ts). */
   behind?: boolean;
+  /** Its people resist the holder, whose people they are not (engine/warMeans.ts); missing where they do not, and in saves from before step 26. */
+  resistance?: Resistance;
+}
+
+/** A province's people against a holder they do not take as theirs: partisans, insurgents, and in time acceptance. */
+export interface Resistance {
+  /** The country whose people they are: the owner the province was taken from. */
+  of: string;
+  /** Organised resistance, 0–100: it ties down troops, kills soldiers and cuts supply. */
+  level: number;
+  /** The peace that left the province with its holder: acceptance builds from here. */
+  peace?: string;
 }
 
 /** What the map draws of a province: kept per turn so the past can be drawn again (engine/history.ts). */
@@ -712,6 +866,8 @@ export interface WarLosses {
   killed: number;
   /** Soldiers wounded, thousands. */
   wounded: number;
+  /** Soldiers taken prisoner, thousands: an army in rout loses more men this way than killed. */
+  captured?: number;
   /** Weapons lost in this war, by kind (rifles in thousands, the rest in pieces). */
   arms?: Partial<Record<WeaponKind, number>>;
 }
@@ -784,6 +940,50 @@ export interface Plot {
   /** Whether the government knows of it; the panel shows only those it does. */
   known: boolean;
   since: string;
+  /** A plot inside the cabinet, kept by the engine (engine/intrigue.ts): the turn cannot change it. */
+  cabinet?: CabinetPlot;
+}
+
+/** Who is behind a plot inside the cabinet, against whom, and what the intelligence service suspects. */
+export interface CabinetPlot {
+  /** The faction behind it (engine/intrigue.ts factionsOf). */
+  faction: string;
+  /** Those in it, by name. */
+  members: string[];
+  /** A minister's post, or the leader. */
+  target: OfficialPost | "leader";
+  /** Whom it was aimed at when it began: it ends when they go. */
+  targetName: string;
+  /** What the intelligence service suspects while the plot is not known for certain: a faction, or "" for nobody in particular. */
+  rumour?: { faction: string; turn: number };
+}
+
+/** What the government can do to its own people between turns (engine/intrigue.ts). */
+export const CABINET_MOVES = ["favour", "post", "reshuffle", "dismiss", "investigate", "purge"] as const;
+export type CabinetMoveKind = (typeof CABINET_MOVES)[number];
+/** What the dice made of a move. */
+export const CABINET_RESULTS = ["took", "pocketed", "pleased", "humiliated", "resigned", "quiet", "angry", "found", "nothing", "caught", "escaped"] as const;
+export type CabinetResult = (typeof CABINET_RESULTS)[number];
+
+export interface CabinetMove {
+  kind: CabinetMoveKind;
+  /** The person, by name; for an investigation or a purge, the faction's id. */
+  who: string;
+  /** The minister the person swapped posts with, in a reshuffle. */
+  with?: string;
+  result: CabinetResult;
+  /** Those a purge caught, by name. */
+  names?: string[];
+  /** The ministers the move put out of the government, with the posts they held, for the turn's record. */
+  removed?: { post: OfficialPost; title: string; name: string }[];
+  /** The faction found out it was being watched. */
+  noticed?: boolean;
+  turn: number;
+}
+
+/** The government's dealings with its own cabinet since the last turn, for the next game master (engine/intrigue.ts). */
+export interface CabinetLog {
+  moves: CabinetMove[];
 }
 
 /** The player's domestic politics (engine/politics.ts). */
@@ -1054,37 +1254,45 @@ export type AppliedChange =
   | { kind: "summit-planned"; summit: string; title: string; date: string }
   | { kind: "party"; party: string; change: Party["status"] | "new" | "dissolved" }
   | { kind: "election"; winner: string; share: number }
-  | { kind: "vote"; country: string; kept: boolean; date?: string }
-  | { kind: "coup"; country: string; succeeded: boolean }
-  | { kind: "plot"; title: string; change: "discovered" | "foiled" | "succeeded" | "faded" }
+  | { kind: "vote"; country: string; kept: boolean; date?: string; because?: Because }
+  | { kind: "coup"; country: string; succeeded: boolean; because?: Because }
+  | { kind: "plot"; title: string; change: "discovered" | "foiled" | "succeeded" | "faded"; cabinet?: Pick<CabinetPlot, "faction" | "target" | "targetName"> }
   | { kind: "exile"; country: string; host?: string }
   | { kind: "return"; country: string }
   | { kind: "protest"; title: string; change: Protest["stage"] | "new" | "dispersed" | "conceded" | "faded" | "won" }
   | { kind: "overthrown"; how: Defeat["how"]; by: string }
-  | { kind: "rise"; how: RiseHow; name: string }
+  | { kind: "rise"; how: RiseHow | "cabinet"; name: string }
+  /** The player's person falls from a post or a movement (engine/fate.ts). */
+  | { kind: "fate"; event: FallHow; role: RoleKind; name: string; cause?: DeathCause }
+  /** Which of a minister's or a general's orders the government accepted, by the engine's dice (engine/figures.ts). */
+  | { kind: "approval"; accepted: number[]; refused: number[] }
   | { kind: "repression"; event: Repression }
   | { kind: "movement"; change: "named" | "released"; name: string }
   | { kind: "population"; country: string; deaths: number; refugees: number; to?: string; cause: string }
-  | { kind: "sanction"; by: string; against: string; change: "partial" | "full" | "lifted"; plan?: string }
+  | { kind: "sanction"; by: string; against: string; change: "partial" | "full" | "lifted"; plan?: string; because?: Because }
   | { kind: "deal"; partner: string; good: TradeGood; side: "sell" | "buy"; value: number; change: "signed" | "rejected" | "broken" | "ended"; note?: string }
   | { kind: "funds"; from: string; to: string; amount: number; type: "grant" | "loan" | "aid" | "arms" | "reparations" | "bribe"; note?: string }
   | { kind: "law"; law: LawId; from?: string; to: string }
   | { kind: "bill"; title: string; change: "passed" | "failed"; note?: string }
   | { kind: "identity"; what: "name" | "color" | "place"; from?: string; to: Text }
   | { kind: "budget"; country: string }
-  | { kind: "plan"; plan: string; type: PlanKind; by: string; target?: string; stage: PlanStage; policy?: PolicyKind; lift?: boolean }
-  | { kind: "plan-end"; plan: string; type: PlanKind; by: string; target?: string; how: "failed" | "faded"; why: PlanEnd; policy?: PolicyKind; lift?: boolean }
+  /** A plan reaches a stage; `because`: what drove it there; `crisis`: the war plan whose crisis it belongs to (talks to defuse it). */
+  | { kind: "plan"; plan: string; type: PlanKind; by: string; target?: string; stage: PlanStage; policy?: PolicyKind; lift?: boolean; because?: Because; crisis?: string }
+  | { kind: "plan-end"; plan: string; type: PlanKind; by: string; target?: string; how: "failed" | "faded"; why: PlanEnd; policy?: PolicyKind; lift?: boolean; because?: Because; crisis?: string }
   /** A government adopts a policy at home (engine/policies.ts). */
   | { kind: "policy"; country: string; policy: PolicyKind; plan?: string }
-  /** Talks between two governments end in an accord: tension eases (engine/policies.ts). */
-  | { kind: "accord"; by: string; with: string; plan?: string; pact?: string }
+  /** Talks between two governments end in an accord: tension eases (engine/policies.ts); `crisis`: the war plan the accord defused. */
+  | { kind: "accord"; by: string; with: string; plan?: string; pact?: string; crisis?: string }
   /** An incident between two states, and the answer it drew (engine/incidents.ts); `plan`: the plan it led to. */
   | { kind: "incident"; id: string; by: string; target: string; what: IncidentKind; why: IncidentCause; answer: IncidentAnswer; plan?: string }
   // A breakthrough ("done", `ahead`: years before history), a direction's setback, lucky turn or share shifted (`shift` points); "started" and "stopped" are old projects in old saves.
   | { kind: "research"; project: string; change: "started" | "stopped" | "done" | "setback" | "lucky" | "focus"; shift?: number; ahead?: number }
   | { kind: "captured"; by: string; from: string; arms: WeaponKind; n: number }
   | { kind: "official"; post: OfficialPost; title: string; name: string; change: "appointed" | "resigned" | "dismissed" | "died" | "arrested" | "fled" }
-  | { kind: "intrigue"; post: OfficialPost; deputy: string; target: string; goal: IntrigueGoal; event: "done" | "exposed" };
+  | { kind: "intrigue"; post: OfficialPost; deputy: string; target: string; goal: IntrigueGoal; event: "done" | "exposed" }
+  /** A faction of the cabinet leaked to the press, an operation of its ministries with it; or a person's loyalty moved a step (engine/intrigue.ts). */
+  | { kind: "cabinet"; event: "leak"; faction: string; by: string; operation?: string }
+  | { kind: "cabinet"; event: "loyalty"; name: string; from: number; to: number };
 
 export type Verdict = "success" | "partial" | "failed";
 
@@ -1094,6 +1302,10 @@ export interface OrderVerdict {
   n: number;
   result: Verdict;
   note: string;
+  /** The ministry that carried it out, when the game master named one. */
+  by?: AdvisorId;
+  /** That ministry dragged its feet (engine/intrigue.ts): the engine marked the order down. */
+  obstructed?: boolean;
 }
 
 export interface ChronicleEntry {
@@ -1139,6 +1351,8 @@ export interface DiplomacyMessage {
   stance?: Stance;
   /** One English sentence on what was agreed, for the next turn's prompt. */
   summary?: string;
+  /** The role the player wrote in when not as the government: the movement's contacts abroad, a minister's own letters (engine/exile.ts). */
+  as?: RoleKind;
 }
 
 export interface GameState {
@@ -1156,6 +1370,8 @@ export interface GameState {
   createdAt: string;
   updatedAt: string;
   scenarioId: ScenarioId;
+  /** The start chosen on the date's card (a week before it); the date's own day when missing, as every game before the choice. */
+  variant?: StartVariant;
   player: string;
   date: string;
   turn: number;
@@ -1190,6 +1406,8 @@ export interface GameState {
   bios?: Record<string, Partial<Record<Locale, string>>>;
   /** The government's own plots inside its ministries, deputies against their chiefs. */
   intrigues?: Intrigue[];
+  /** The government's moves in its own cabinet since the last turn: favours, reshuffles, purges (engine/intrigue.ts). */
+  cabinet?: CabinetLog;
   /** The player's appointments since the last turn. */
   personnel?: Appointment[];
   /** Sanctions in force between governments. */
@@ -1213,8 +1431,35 @@ export interface GameState {
   fog?: boolean;
   /** The player's research projects (engine/research.ts). */
   research?: Research;
-  /** Who the player is: the country's leader (when missing) or the leader of its opposition (engine/role.ts). */
+  /** Who the player is: the country's leader (when missing), the leader of its opposition, a minister or a general (engine/role.ts, engine/figures.ts). */
   role?: PlayerRole;
+  /** What the turns did to each country's people that its figures today do not show, by country (engine/society.ts); missing in saves from before step 31. */
+  society?: Record<string, SocietyTrack>;
+}
+
+/** A society's headline figures, kept as they were when its record began: shares in %, men aged 20–34 in thousands. */
+export interface SocietyFigures {
+  poor: number;
+  rich: number;
+  urban: number;
+  literate: number;
+  farm: number;
+  industry: number;
+  /** Under 15, %. */
+  young: number;
+  men: number;
+}
+
+/** What the game left on a country's people that its figures today do not show (engine/society.ts). */
+export interface SocietyTrack {
+  /** The player's country: its figures when the record began, the trend arrows' base. */
+  start?: SocietyFigures;
+  /** The player's country: real income per head the poverty line is anchored to, dollars of 2019 a year; it follows incomes over a generation. */
+  anchor?: number;
+  /** Points of farm and industry workers, townspeople and the literate that programmes, budgets and war moved beyond the drift with income. */
+  shift?: Partial<Record<"farm" | "industry" | "urban" | "literate", number>>;
+  /** People missing from each five-year age band (0–4 … 80+), thousands, men and women: killed in war or never born; `aged`, years since the bands last moved up one (they move every five). */
+  gap?: { m: number[]; f: number[]; aged?: number };
 }
 
 /** What a save list shows without loading the whole state. */
@@ -1222,6 +1467,7 @@ export interface SaveMeta {
   id: string;
   title?: string;
   scenarioId: ScenarioId;
+  variant?: StartVariant;
   player: string;
   playerName: Text;
   date: string;

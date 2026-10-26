@@ -1,6 +1,8 @@
 "use client";
 
-import { Check, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
+import { ui } from "@/components/ui/classes";
+import DoneButton from "@/components/ui/DoneButton";
 import { MAX_ORDERS } from "@/constants/app";
 import type { GameState } from "@/engine/types";
 import { useI18n } from "@/i18n/useI18n";
@@ -10,8 +12,8 @@ export const ordersFull = (state: Pick<GameState, "draft" | "standing">) => stat
 
 /**
  * Orders a minister drafted because the leader asked for them, each one
- * click from the turn's orders as it is; there the player can still edit or
- * remove it.
+ * click from the turn's orders as it is ("In orders" once there); there the
+ * player can still edit or remove it, and the button comes back.
  */
 export default function DraftedOrders({ orders, state, disabled, onAdd }: { orders: string[]; state: Pick<GameState, "draft" | "standing">; disabled: boolean; onAdd: (order: string) => void }) {
   const { t } = useI18n();
@@ -22,18 +24,20 @@ export default function DraftedOrders({ orders, state, disabled, onAdd }: { orde
       {orders.map((order) => {
         const added = state.draft.includes(order);
         return (
-          <div key={order} className="flex items-start gap-2 rounded-lg border border-line bg-surface px-2.5 py-1.5">
+          <div key={order} className="relative flex items-start gap-2 rounded-lg border border-line bg-surface px-2.5 py-1.5">
             <span className="min-w-0 flex-1 text-xs font-semibold text-ink">{order}</span>
-            <button
-              type="button"
-              disabled={added || full || disabled}
-              onClick={() => onAdd(order)}
-              title={t(added ? "advisor.added" : "advisor.addOrder")}
-              aria-label={t(added ? "advisor.added" : "advisor.addOrder")}
-              className="grid h-6 w-6 shrink-0 place-items-center rounded-md border border-line bg-surface text-muted transition-colors hover:text-accent disabled:opacity-60"
-            >
-              {added ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Plus className="h-3.5 w-3.5" />}
-            </button>
+            <DoneButton
+              compact
+              icon={Plus}
+              label={t("advisor.addOrder")}
+              hint={full && !added ? t("game.orders.limit", { n: MAX_ORDERS }) : undefined}
+              doneLabel={t("done.inOrders")}
+              done={added}
+              disabled={full || disabled}
+              onAct={() => onAdd(order)}
+              className="grid h-6 w-6 shrink-0 place-items-center rounded-md border border-line bg-surface text-muted transition-colors hover:text-accent disabled:cursor-not-allowed disabled:text-faded"
+              doneClassName={`${ui.done} h-6 shrink-0 gap-1 rounded-md px-1.5 text-2xs uppercase tracking-wider`}
+            />
           </div>
         );
       })}

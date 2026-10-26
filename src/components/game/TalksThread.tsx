@@ -20,6 +20,8 @@ interface TalksThreadProps {
   busy: { chars: number } | null;
   disabled: boolean;
   onSend: (target: string, message: string) => Promise<boolean>;
+  /** A letter put into the box to edit and send (the tutorial's suggestion). */
+  prefill?: string;
 }
 
 const STANCE_STYLE: Record<Stance, string> = {
@@ -30,9 +32,9 @@ const STANCE_STYLE: Record<Stance, string> = {
 };
 
 /** Talks with one government: its letters and answers, written in character by the game master, and the next letter to it. */
-export default function TalksThread({ state, target, busy, disabled, onSend }: TalksThreadProps) {
+export default function TalksThread({ state, target, busy, disabled, onSend, prefill }: TalksThreadProps) {
   const { t, text, locale } = useI18n();
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(prefill ?? "");
 
   const thread = state.diplomacy[target] ?? [];
   const them = state.countries[target];
@@ -86,7 +88,7 @@ export default function TalksThread({ state, target, busy, disabled, onSend }: T
             )}
           </ChatScroll>
 
-          <div>
+          <div data-tour="letter-input">
             <Dictation id={`letter-${target}`} set={setMessage} max={2000} disabled={disabled || Boolean(busy)}>
               <textarea
                 value={message}

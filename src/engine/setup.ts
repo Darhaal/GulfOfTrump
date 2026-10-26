@@ -9,9 +9,11 @@ import { startingOwner } from "./provinces";
 import { startingPolitics } from "./politics";
 import { startingResearch } from "./research";
 import { startingRole } from "./role";
+import { startingFigure } from "./figures";
+import { seedSociety } from "./society";
 import { countryName } from "./names";
 import { same, titleCase, tr } from "./text";
-import type { CountryState, GameMode, GameState, Gender, Locale, MapRegion, RegionState, RoleKind, Scenario } from "./types";
+import type { CommandScope, CountryState, GameMode, GameState, Gender, Locale, MapRegion, RegionState, RoleKind, Scenario } from "./types";
 
 const roundPeople = (v: number) => (v >= 100 ? Math.round(v) : Math.round(v * 10) / 10);
 
@@ -86,8 +88,11 @@ export interface GameOptions {
   fog?: boolean;
   /** Historical or free history (engine/intentions.ts); the country picker starts on historical (GAME_MODES[0]), and a game made without a choice is free. */
   mode?: GameMode;
-  /** Who the player is (engine/role.ts): the country's leader unless the player picks its opposition, with the names they gave or a paragraph on who they are, if any. */
-  role?: { kind: RoleKind; person?: string; gender?: Gender; movement?: string; about?: string };
+  /**
+   * Who the player is (engine/role.ts): the country's leader unless the player picks its opposition, with the names they gave or a paragraph on who they are,
+   * or a minister of a ministry (`post`) or a general (`scope`, `front`), a person of the date by id (`personId`) or one of their own (engine/figures.ts).
+   */
+  role?: { kind: RoleKind; person?: string; personId?: string; gender?: Gender; movement?: string; about?: string; post?: string; scope?: CommandScope; front?: string };
 }
 
 export function createGame(scenario: Scenario, mapRegions: MapRegion[], player: string, now = new Date(), locale: Locale = "en", options: GameOptions = {}): GameState {
@@ -106,6 +111,8 @@ export function createGame(scenario: Scenario, mapRegions: MapRegion[], player: 
     createdAt: stamp,
     updatedAt: stamp,
     scenarioId: scenario.id,
+    // The start chosen on the date's card: the scenario comes laid out for it (getScenario).
+    ...(scenario.variant ? { variant: scenario.variant } : {}),
     player,
     date: scenario.startDate,
     turn: 1,
@@ -118,7 +125,10 @@ export function createGame(scenario: Scenario, mapRegions: MapRegion[], player: 
     diplomacy: {},
     draft: [],
     fog: options.fog ?? true,
-    role: startingRole(regimeAtStart(scenario.id, player), scenario.startDate, options.role),
+    role:
+      options.role?.kind === "minister" || options.role?.kind === "general"
+        ? startingFigure(regimeAtStart(scenario.id, player), scenario.startDate, { ...options.role, kind: options.role.kind })
+        : startingRole(regimeAtStart(scenario.id, player), scenario.startDate, options.role),
     politics: { ...startingPolitics(scenario.countries[player]?.stats?.stability), ...(scenario.loyalty?.[player] ? { loyalty: scenario.loyalty[player] } : {}) },
     ...(scenario.protests?.length
       ? {
@@ -143,7 +153,8 @@ export function createGame(scenario: Scenario, mapRegions: MapRegion[], player: 
   // Every other country's politics in brief (engine/abroad.ts), the courses and plans of those that matter (engine/intentions.ts),
   // every country's weapons and the player's research (arsenal.ts, research.ts), and the people each leader line names (people.ts).
   const seeded = seedIntentions(seedDomestic(game, scenario), scenario, { map: byId, mode: options.mode ?? "free" });
-  return withRulers(seedArsenals({ ...seeded, research: startingResearch(seeded) }, byId));
+  // The player's society on the start date: the base of its trend arrows (engine/society.ts).
+  return seedSociety(withRulers(seedArsenals({ ...seeded, research: startingResearch(seeded) }, byId)), byId);
 }
 
 /** The members of a world body: every country in the game but those left out (the scenario lists them, republics without a seat among them). */

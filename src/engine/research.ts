@@ -1,7 +1,8 @@
 import { LEVEL_YEARS, NUCLEAR_SINCE } from "./arsenal";
 import { roll } from "./dice";
 import { officialAt } from "./government";
-import { aheadOf, growthBonus, techYear, yearFraction } from "./researchEffects";
+import { money } from "./economy";
+import { aheadOf, outputBonus, techYear, yearFraction } from "./researchEffects";
 import { regimeNow } from "./role";
 import { RESEARCH_DIRECTIONS, WEAPON_KINDS, type AppliedChange, type GameState, type Localized, type RegimeKind, type Research, type ResearchDirection, type ScenarioId, type WeaponKind } from "./types";
 
@@ -187,6 +188,13 @@ const DICE_SHARE = 5;
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 const round2 = (v: number) => Math.round(v * 100) / 100;
+/**
+ * The year of technology is kept to four decimals (under an hour of
+ * history's pace): kept to two, a weekly turn's 0.02 years were rounded so
+ * that every pace from 0.78 to 1.3 years a year moved +0.02 a week, and the
+ * split of the money stopped mattering.
+ */
+const round4 = (v: number) => Math.round(v * 10000) / 10000;
 
 /** The first of the month a fractional year falls in: 1943.6 → "1943-08-01". */
 function monthOf(year: number): string {
@@ -240,19 +248,24 @@ export function defaultShares(state: StartState): Record<ResearchDirection, numb
 
 /** A new game's research: the default split, which then keeps history's pace, every direction at the calendar's year, no breakthroughs yet. */
 export function startingResearch(state: StartState): Research {
-  const now = round2(yearFraction(state.date));
+  const now = round4(yearFraction(state.date));
   const shares = defaultShares(state);
   return { shares, base: { ...shares }, tech: Object.fromEntries(RESEARCH_DIRECTIONS.map((d) => [d, now])) as Record<ResearchDirection, number>, done: [] };
 }
 
 type PaceState = Pick<GameState, "research" | "date" | "countries" | "player" | "scenarioId" | "officials">;
 
-/** The research money a year, $bn, and how it compares with what the era's governments spend, by GDP. */
-export function researchMoney(state: Pick<GameState, "countries" | "player" | "scenarioId">): { pool: number; ratio: number } {
+/**
+ * The research money a year, $bn; what the era's governments spend for an
+ * economy of this size (`usual`); and the ratio of the two that the pace
+ * counts, kept from a third to twice.
+ */
+export function researchMoney(state: Pick<GameState, "countries" | "player" | "scenarioId">): { pool: number; ratio: number; usual: number } {
   const e = state.countries[state.player]?.economy;
-  if (!e) return { pool: 0, ratio: 1 };
+  if (!e) return { pool: 0, ratio: 1, usual: 0 };
   const pool = e.budget.army * RESEARCH_POOL.army + e.budget.industry * RESEARCH_POOL.industry;
-  return { pool, ratio: clamp(pool / Math.max(0.01, e.gdp) / NORM[state.scenarioId], 1 / 3, 2) };
+  const usual = Math.max(0.01, e.gdp) * NORM[state.scenarioId];
+  return { pool, ratio: clamp(pool / usual, 1 / 3, 2), usual };
 }
 
 /** The science minister's hand: 1.0 at an ordinary competence of 3, from 0.8 to 1.2. */
@@ -261,11 +274,17 @@ export const ministerPace = (state: Pick<GameState, "officials">): number => 0.7
 /** What science and education ahead of the world (or behind it) do to every other direction. */
 export const scienceBoost = (state: Pick<GameState, "research" | "date">): number => clamp(1 + 0.04 * aheadOf(state, "science"), 0.8, 1.4);
 
-/** Strategic programmes need a big economy: the player's against the largest, from 0.4 to 1. */
-function sizeOf(state: Pick<GameState, "countries" | "player">): number {
+/**
+ * Strategic programmes cost the same whoever runs them: the player's research
+ * money against what the largest economy normally spends on research, from
+ * 0.4 to 1. Measured by GDP, as it was, the Soviet Union of 1950 – spending
+ * more on research than the United States – ran its rockets at 0.45.
+ */
+export function sizeOf(state: Pick<GameState, "countries" | "player" | "scenarioId">): number {
   const gdp = state.countries[state.player]?.economy?.gdp ?? 0;
   const largest = Math.max(gdp, ...Object.values(state.countries).flatMap((c) => (c.economy && !c.dormant ? [c.economy.gdp] : [])));
-  return largest > 0 ? clamp((gdp / largest) ** 0.75, 0.4, 1) : 1;
+  if (largest <= 0) return 1;
+  return clamp(Math.sqrt(researchMoney(state).pool / (largest * NORM[state.scenarioId])), 0.4, 1);
 }
 
 /**
@@ -428,8 +447,8 @@ export function advanceResearch(next: GameState, years: number, applied: Applied
         applied.push({ kind: "research", project: d, change: "lucky" });
       }
     }
-    // Kept to two decimals; the breakthroughs are read off the kept year, so none falls between two turns.
-    reached = round2(reached);
+    // The breakthroughs are read off the kept year, so none falls between two turns.
+    reached = round4(reached);
     tech[d] = reached;
     for (const b of breakthroughsOf(d)) {
       if (b.year <= before || b.year > reached || made.has(b.id)) continue;
@@ -458,10 +477,14 @@ export function advanceResearch(next: GameState, years: number, applied: Applied
     }
   }
   if (bomb.has) progress = undefined;
+  const was = outputBonus({ research, date: next.date });
   next.research = { shares: research.shares, ...(research.base ? { base: research.base } : {}), tech, ...(progress !== undefined ? { bomb: Math.round(progress * 1000) / 1000 } : {}), done };
-  // Industry and communications ahead of the world make the country grow faster; behind it, slower.
-  const growth = growthBonus({ research: next.research, date: to });
-  if (growth) economy.gdp = round2(economy.gdp * (1 + growth / 100) ** years);
+  // Industry and communications gaining on the world raise the economy's output, and taxes with it; falling behind lowers them.
+  const ratio = (1 + outputBonus({ research: next.research, date: to })) / (1 + was);
+  if (ratio !== 1) {
+    economy.gdp = money(economy.gdp * ratio);
+    economy.budget.revenue = money(economy.budget.revenue * ratio);
+  }
 }
 
 /** "military 25% (+1.2 yr)": a direction for the game master. */

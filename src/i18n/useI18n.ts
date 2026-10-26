@@ -12,6 +12,30 @@ export function translate(locale: Locale, key: MessageKey, vars?: Record<string,
   return text;
 }
 
+/**
+ * Billions of dollars in words of the locale, with `extra` more decimals than the short form: "$117 млрд" at 0,
+ * "$117,2 млрд" at 1. A weekly turn moves a large economy by a fraction of a billion, which the short form hides.
+ */
+export function moneyText(locale: Locale, billions: number, extra = 0): string {
+  const abs = Math.abs(billions);
+  const sign = billions < 0 ? "−" : "";
+  const n = (v: number, base: number) => v.toLocaleString(locale, { minimumFractionDigits: extra > 0 ? Math.min(3, base + extra) : 0, maximumFractionDigits: Math.min(3, base + extra) });
+  if (abs >= 1000) return sign + translate(locale, "unit.money.trillion", { n: n(abs / 1000, 1) });
+  if (abs >= 1) return sign + translate(locale, "unit.money.billion", { n: n(abs, abs >= 100 ? 0 : 1) });
+  return sign + translate(locale, "unit.money.million", { n: n(Math.round(abs * 1000 * 10 ** Math.min(1, extra)) / 10 ** Math.min(1, extra), 0) });
+}
+
+/**
+ * Two amounts with just enough decimals to tell them apart, and the change between them, signed:
+ * {from: "$117,24 млрд", to: "$117,61 млрд", delta: "+$370 M"}. Equal amounts keep the short form.
+ */
+export function moneyChange(locale: Locale, from: number, to: number): { from: string; to: string; delta: string } {
+  let extra = 0;
+  while (extra < 3 && Math.abs(to - from) > 1e-9 && moneyText(locale, from, extra) === moneyText(locale, to, extra)) extra++;
+  const d = to - from;
+  return { from: moneyText(locale, from, extra), to: moneyText(locale, to, extra), delta: `${d >= 0 ? "+" : "−"}${moneyText(locale, Math.abs(d), Math.abs(d) >= 1 ? 1 : 0).replace(/^−/, "")}` };
+}
+
 /** The interface language and helpers bound to it. */
 export function useI18n() {
   const [locale, setLocale] = usePreference("locale");
@@ -42,7 +66,11 @@ export function useI18n() {
     },
     [locale],
   );
-  return { locale, setLocale, t, text, people, money };
+  /** Money with one more decimal, for figures a weekly turn moves by fractions: "$117,2 млрд", "$1,23 трлн". */
+  const moneyFine = useCallback((billions: number) => moneyText(locale, billions, 1), [locale]);
+  /** Two amounts told apart and the change between them (moneyChange). */
+  const moneyMoved = useCallback((from: number, to: number) => moneyChange(locale, from, to), [locale]);
+  return { locale, setLocale, t, text, people, money, moneyFine, moneyMoved };
 }
 
 /** A translated error message for a server error code, falling back to its English text. */

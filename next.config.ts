@@ -10,7 +10,10 @@ const nextConfig: NextConfig = {
     "/api/game/*": ["./public/maps/**/*"],
   },
   // The game runs on the player's own machine (the public demo aside), so the
-  // browser is told not to leak the local URL anywhere.
+  // browser is told not to leak the local URL anywhere. There is no
+  // Content-Security-Policy; one added here must let connect-src reach
+  // NEXT_PUBLIC_SUPABASE_URL (cloud saves, and anonymous statistics sent
+  // straight to its PostgREST, docs/telemetry.md).
   async headers() {
     return [
       {

@@ -55,6 +55,36 @@ export function powers(state: Pick<GameState, "countries" | "regions">, holders 
   return out;
 }
 
+/** Pairs of countries ("a|b", a before b) whose land touches: a province one owns or holds next to one the other owns or holds. */
+export function landContacts(state: Pick<GameState, "regions">, neighbors: Record<string, string[]>): Set<string> {
+  const out = new Set<string>();
+  const add = (a: string, b: string) => {
+    if (a !== b) out.add(a < b ? `${a}|${b}` : `${b}|${a}`);
+  };
+  for (const [id, r] of Object.entries(state.regions)) {
+    for (const n of neighbors[id] ?? []) {
+      const o = state.regions[n];
+      if (!o) continue;
+      add(r.owner, o.owner);
+      add(r.controller, o.controller);
+    }
+  }
+  return out;
+}
+
+/** The countries that own land next to a country's own. */
+export function landNeighbours(state: Pick<GameState, "regions">, neighbors: Record<string, string[]>, tag: string): Set<string> {
+  const out = new Set<string>();
+  for (const [id, r] of Object.entries(state.regions)) {
+    if (r.owner !== tag) continue;
+    for (const n of neighbors[id] ?? []) {
+      const o = state.regions[n]?.owner;
+      if (o && o !== tag) out.add(o);
+    }
+  }
+  return out;
+}
+
 /** A bloc that binds its members to fight for each other, not a world body. */
 export const isMilitary = (a: Alliance) => (!a.kind || a.kind === "alliance") && a.members.length < WORLD_BODY;
 export const isPact = (a: Alliance) => a.kind === "pact" && a.members.length < WORLD_BODY;
@@ -147,6 +177,13 @@ const closeness = (at: Map<string, [number, number]>, a: string, b: string): num
   if (!pa || !pb) return undefined;
   return int(100 * clamp(1 - (distanceKm(pa, pb) - 600) / 3000, 0.1, 1));
 };
+
+/**
+ * Goodwill between two governments, 1 and up: 1 + the sum of their trust in each other above zero, / 100. It makes a
+ * crisis between them likelier to end in a compromise, and a war plan or an incident's march to war less likely to
+ * open; distrust adds nothing the tension does not already say.
+ */
+export const goodwillOf = (state: Pick<GameState, "countries" | "alliances" | "wars">, a: string, b: string) => 1 + Math.max(0, tieOf(state, a, b).trust + tieOf(state, b, a).trust) / 100;
 
 /** A government's appetite for force when it takes office. */
 export function hawkFor(regime: RegimeKind, era: ScenarioId, how: Course["set"]["how"], before: number | undefined, noise: number): number {
@@ -400,8 +437,14 @@ export function newGovernments(next: GameState, from: string): string[] {
     c.course.hawk = hawk;
     c.course.set = { date: changed.date, how: changed.how };
     // Old ambitions outlive only a government with the appetite for them; a claim on lost land stays, weighed by it.
+    // A word given to a protégé at war is weighed again too: doves cut their support for it, hawks raise it.
     c.course.aims = c.course.aims
-      .map((a) => (a.kind === "expand" ? { ...a, weight: hawk >= 50 ? a.weight : int(a.weight / 2) } : a.kind === "reclaim" ? { ...a, weight: int(clamp(a.weight * (0.5 + hawk / 100), 10, 100)) } : a))
+      .map((a) => {
+        if (a.kind === "expand") return { ...a, weight: hawk >= 50 ? a.weight : int(a.weight / 2) };
+        if (a.kind === "reclaim") return { ...a, weight: int(clamp(a.weight * (0.5 + hawk / 100), 10, 100)) };
+        if (a.kind === "protect" && a.target && enemiesOf(next, a.target).size > 0) return { ...a, weight: int(clamp(hawk < 40 ? a.weight * 0.6 : hawk >= 60 ? a.weight + 10 : a.weight, 0, 100)) };
+        return a;
+      })
       .filter((a) => a.weight >= 15);
     out.push(c.tag);
   }
@@ -411,10 +454,12 @@ export function newGovernments(next: GameState, from: string): string[] {
 /**
  * Every course looks at the world again: how far the government looks
  * abroad, its aims (a claim on land others took), and its ties — the
- * closeness and trade of each country (with the map), the threat it sees,
- * and which countries matter most to it.
+ * closeness and trade of each country (with the map), whether their land
+ * touches (with the map's neighbours), the threat it sees, and which
+ * countries matter most to it.
  */
-export function refreshCourses(next: GameState, map: Record<string, MapRegion> | null, power: Map<string, number>): void {
+export function refreshCourses(next: GameState, map: Record<string, MapRegion> | null, power: Map<string, number>, neighbors?: Record<string, string[]> | null): void {
+  const land = neighbors ? landContacts(next, neighbors) : null;
   const lost = lostShares(next, map);
   const great = greatPowers(power);
   const at = map ? countryCentres(next, map) : null;
@@ -423,10 +468,10 @@ export function refreshCourses(next: GameState, map: Record<string, MapRegion> |
   const bonds = bondsOf(next);
   const occupied = occupiedBy(next);
   const candidates = [...power.keys()];
-  // Live war plans by planner: a visible plan makes its target afraid.
+  // Live war plans by planner: a plan past its incident – threats, mobilisation, an ultimatum – makes its target afraid.
   const plansAgainst = new Map<string, Set<string>>();
   for (const p of next.plans ?? []) {
-    if (p.end || p.kind !== "war" || !p.target || p.stage === "incident" || p.stage === "decision") continue;
+    if (p.end || p.kind !== "war" || !p.target || p.stage === "incident") continue;
     const set = plansAgainst.get(p.target) ?? new Set<string>();
     set.add(p.by);
     plansAgainst.set(p.target, set);
@@ -480,6 +525,7 @@ export function refreshCourses(next: GameState, map: Record<string, MapRegion> |
       const salience = threat + t.tension + Math.abs(t.trust - base) / 2 + 100 * share + (mine.has(other) ? 25 + 40 * pb : 0) + (other === next.player ? 10 : 0);
       const updated: Tie = { trust: t.trust, tension: t.tension, threat, near };
       if (share > 0.005) updated.trade = int(share * 100);
+      if (land ? land.has(c.tag < other ? `${c.tag}|${other}` : `${other}|${c.tag}`) : existing?.land) updated.land = true;
       scored.push({ tag: other, salience, kept, tie: updated });
     }
     scored.sort((a, b) => Number(b.kept) - Number(a.kept) || b.salience - a.salience);

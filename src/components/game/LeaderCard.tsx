@@ -1,6 +1,6 @@
 "use client";
 
-import { leaderOf, personName, samePerson } from "@/engine/people";
+import { leaderOf, leaderOfficial, personName } from "@/engine/people";
 import type { GameState } from "@/engine/types";
 import { useI18n } from "@/i18n/useI18n";
 import { Traits } from "./AppointmentDialog";
@@ -18,27 +18,41 @@ export function Bio({ text, loading }: { text?: string; loading?: boolean }) {
   );
 }
 
-/** Who leads the player's country, at the top of the cabinet: portrait, name, title, a short biography and traits. */
+/**
+ * Who leads the player's country, at the top of the cabinet: the portrait
+ * with the name, title and faction beside it; the biography and the traits
+ * under both, the card's full width, so a long life does not stretch a
+ * narrow column.
+ */
 export default function LeaderCard({ state, bio, bioLoading }: { state: GameState; bio?: string; bioLoading?: boolean }) {
   const { t, locale } = useI18n();
   const leader = leaderOf(state, state.player);
   if (!leader) return null;
-  const official = state.officials?.find((o) => (o.post === "head" || o.post === "government") && samePerson(o.name, leader.name));
+  const official = leaderOfficial(state);
   const name = personName(leader, locale);
+  const title = official?.title ?? leader.title;
+  const traits = official?.traits ?? [];
   return (
-    <div className="flex items-start gap-4 rounded-2xl bg-page p-3">
-      <Portrait portrait={leader.portrait} gender={leader.gender} name={name} size="hero" className="ring-1 ring-accent/40 ring-offset-2 ring-offset-page" />
-      <div className="min-w-0 pt-1">
-        <div className="text-2xs font-black uppercase tracking-widest text-muted">{t("cabinet.leader")}</div>
-        <div className="text-lg font-black leading-tight text-ink">{name}</div>
-        {(official?.title ?? leader.title) && <div className="mt-0.5 text-xs font-medium leading-snug text-muted">{official?.title ?? leader.title}</div>}
-        <Bio text={bio} loading={bioLoading} />
-        {official && official.traits.length > 0 && (
-          <div className="mt-1.5">
-            <Traits traits={official.traits} />
-          </div>
-        )}
+    <div className="rounded-2xl bg-page p-3">
+      <div className="flex items-start gap-4">
+        <Portrait portrait={leader.portrait} gender={leader.gender} name={name} size="hero" className="ring-1 ring-accent/40 ring-offset-2 ring-offset-page" />
+        <div className="min-w-0 pt-1">
+          <div className="text-2xs font-black uppercase tracking-widest text-muted">{t("cabinet.leader")}</div>
+          <div className="text-lg font-black leading-tight text-ink">{name}</div>
+          {title && <div className="mt-0.5 text-xs font-medium leading-snug text-muted">{title}</div>}
+          {official?.faction && <div className="mt-1.5 text-2xs font-bold text-muted">{official.faction}</div>}
+        </div>
       </div>
+      {(bio || bioLoading || traits.length > 0) && (
+        <div className="mt-2">
+          <Bio text={bio} loading={bioLoading} />
+          {traits.length > 0 && (
+            <div className="mt-2">
+              <Traits traits={traits} onPage />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

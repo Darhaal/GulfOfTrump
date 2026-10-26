@@ -8,15 +8,19 @@ import AppHeader from "@/components/AppHeader";
 import GoogleMark from "@/components/GoogleMark";
 import { ui } from "@/components/ui/classes";
 import { APP_VERSION, CHATGPT_USAGE_URL, CONTENT_REPORT_URL, REPO_URL, isDemo, isDesktopApp } from "@/constants/app";
+import { MAX_VOICES, voicesFrom, VOICES_PER_TURN } from "@/engine/reports";
 import { LOCALES, type Locale } from "@/engine/types";
 import { errorKey, useI18n } from "@/i18n/useI18n";
 import { ApiError, connectAi, disconnectAi, getModels } from "@/lib/api";
 import { useDesktopWindow } from "@/lib/desktop";
+import TelemetrySection from "./TelemetrySection";
 import UpdatesSection from "./UpdatesSection";
 import { usePreference, type Theme } from "@/lib/preferences";
 import { displayName, isCloudEnabled, signInWithGoogle, signOut, useUser } from "@/lib/supabase";
 import { useGameMaster } from "@/lib/gameMaster";
 import { replayTour } from "@/components/game/Tour";
+import { openAppDialog } from "@/components/AppDialogs";
+import { newGamePath, TUTORIAL_START } from "@/engine/scenarios";
 import VoiceSettings from "./VoiceSettings";
 
 const LANGUAGE_NAMES: Record<Locale, string> = { ru: "Русский", uk: "Українська", en: "English" };
@@ -36,6 +40,8 @@ export default function SettingsClient({ embedded = false, onOpenAbout }: { embe
   const { desktop, fullScreen } = useDesktopWindow();
   const [theme, setTheme] = usePreference("theme");
   const [model, setModel] = usePreference("model");
+  const [reports, setReports] = usePreference("reports");
+  const voices = voicesFrom(reports);
   const gameMaster = useGameMaster();
   const { status, refresh } = gameMaster;
   const { user } = useUser();
@@ -197,6 +203,26 @@ export default function SettingsClient({ embedded = false, onOpenAbout }: { embe
           </div>
         </Section>
 
+        <Section title={t("settings.reports")}>
+          <div className="flex gap-1 rounded-xl bg-page p-1" role="radiogroup" aria-label={t("settings.reports")}>
+            {Array.from({ length: MAX_VOICES + 1 }, (_, n) => (
+              <button
+                key={n}
+                type="button"
+                role="radio"
+                aria-checked={n === voices}
+                onClick={() => setReports(n === VOICES_PER_TURN ? "" : String(n))}
+                className={`${ui.segment} flex-1 tabular-nums ${n === voices ? `${ui.segmentOn} bg-surface shadow-sm` : ui.segmentOff}`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-xs font-medium leading-relaxed text-muted">
+            {t("settings.reports.hint")} {t("settings.reports.default", { n: VOICES_PER_TURN })}
+          </p>
+        </Section>
+
         {cloud && (
         <Section title={t("account.title")}>
           {user ? (
@@ -266,6 +292,8 @@ export default function SettingsClient({ embedded = false, onOpenAbout }: { embe
 
         <UpdatesSection />
 
+        <TelemetrySection />
+
         <Section title={t("settings.about")}>
           <p className="text-sm font-medium leading-relaxed text-ink">{t("settings.aboutText")}</p>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -303,6 +331,11 @@ export default function SettingsClient({ embedded = false, onOpenAbout }: { embe
               <GraduationCap className="h-4 w-4" />
               {t("tour.replay")}
             </button>
+            {/* The tutorial again, as a new game: 24 February 2022 as Ukraine, with the guide (lib/tutorial.ts). */}
+            <Link href={newGamePath(TUTORIAL_START.scenario, TUTORIAL_START.variant)} onClick={() => openAppDialog(null)} className={`${ui.secondary} px-4 py-2.5 text-xs`}>
+              <GraduationCap className="h-4 w-4" />
+              {t("tutorial.replay")}
+            </Link>
           </div>
           {tourNote && <p className="mt-2 text-xs font-bold text-emerald-700">{t("tour.replayNote")}</p>}
         </Section>

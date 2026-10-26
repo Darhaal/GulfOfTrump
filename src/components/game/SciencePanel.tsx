@@ -2,8 +2,8 @@
 
 import { Minus, Plus } from "lucide-react";
 import { ui } from "@/components/ui/classes";
-import { BOMB_SHARE, bombStatus, breakthroughOf, directionView, scienceBoost, shiftShares, startingResearch } from "@/engine/research";
-import { armsEfficiency, communicationsGrowth, harvestBonus, industryGrowth, intelligenceBonus, medicineBonus, populationBonus, techYear, yearFraction } from "@/engine/researchEffects";
+import { BOMB_SHARE, bombStatus, breakthroughOf, directionView, researchMoney, scienceBoost, shiftShares, startingResearch } from "@/engine/research";
+import { armsEfficiency, communicationsOutput, harvestBonus, industryOutput, intelligenceBonus, medicineBonus, populationBonus, techYear, yearFraction } from "@/engine/researchEffects";
 import { RESEARCH_DIRECTIONS, type GameState, type ResearchDirection } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
@@ -25,7 +25,8 @@ const STEP = 5;
  * The science minister speaks in the advisor strip above it, when asked.
  */
 export default function SciencePanel({ state, disabled, onShares }: SciencePanelProps) {
-  const { t, text, locale } = useI18n();
+  const i18n = useI18n();
+  const { t, text, locale } = i18n;
   const view = state.research?.shares ? state : { ...state, research: startingResearch(state) };
   const shares = view.research!.shares;
   const bomb = bombStatus(view);
@@ -33,13 +34,14 @@ export default function SciencePanel({ state, disabled, onShares }: SciencePanel
 
   const signed = (n: number, digits = 0, unit = "") => `${n >= 0 ? "+" : "−"}${Math.abs(n).toLocaleString(locale, { maximumFractionDigits: digits, minimumFractionDigits: digits })}${unit}`;
   const pct = (n: number) => signed(Math.round(n * 100), 0, "%");
+  const pct1 = (n: number) => signed(Math.round(n * 1000) / 10, 1, "%");
 
   const effect = (d: ResearchDirection): string => {
     switch (d) {
       case "military":
         return t("research.effect.military", { year: Math.floor(techYear(view, d)) });
       case "industry":
-        return t("research.effect.industry", { growth: signed(industryGrowth(view), 2), arms: pct(armsEfficiency(view) - 1) });
+        return t("research.effect.industry", { growth: pct1(industryOutput(view)), arms: pct(armsEfficiency(view) - 1) });
       case "agriculture":
         return t("research.effect.agriculture", { n: pct(harvestBonus(view)) });
       case "medicine":
@@ -47,16 +49,23 @@ export default function SciencePanel({ state, disabled, onShares }: SciencePanel
       case "science":
         return t("research.effect.science", { n: pct(scienceBoost(view) - 1) });
       case "communications":
-        return t("research.effect.communications", { n: signed(intelligenceBonus(view)), m: signed(communicationsGrowth(view), 2) });
+        return t("research.effect.communications", { n: signed(intelligenceBonus(view)), m: pct1(communicationsOutput(view)) });
       case "strategic":
         return t("research.effect.strategic", { year: Math.floor(techYear(view, d)) });
     }
   };
 
   const done = [...(view.research!.done ?? [])].reverse();
+  const funds = researchMoney(view);
+  const { money } = i18n;
 
   return (
     <div className="flex flex-col gap-4">
+      {funds.pool > 0 && (
+        <p className="cursor-help text-2xs font-bold tabular-nums text-muted" title={t("research.moneyHint")}>
+          {t("research.money", { value: money(funds.pool), n: (Math.round((funds.pool / Math.max(0.0001, funds.usual)) * 10) / 10).toLocaleString(locale) })}
+        </p>
+      )}
       <ul className="flex flex-col gap-2">
         {RESEARCH_DIRECTIONS.map((d) => {
           const v = directionView(view, d);
@@ -94,7 +103,12 @@ export default function SciencePanel({ state, disabled, onShares }: SciencePanel
               </div>
 
               <div className="mt-1.5 flex items-baseline justify-between gap-2 text-2xs font-bold tabular-nums">
-                <span className="text-muted">{t("research.reached", { year: Math.floor(v.tech) })}</span>
+                <span className="text-muted">
+                  {t("research.reached", { year: Math.floor(v.tech) })} ·{" "}
+                  <span className="cursor-help underline decoration-dotted decoration-1 underline-offset-2" title={t("research.paceHint")}>
+                    {t("research.pace", { n: (Math.round(v.rate * 10) / 10).toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) })}
+                  </span>
+                </span>
                 <span className={v.ahead >= 0.5 ? "text-accent" : v.ahead <= -0.5 ? "text-amber-700" : "text-muted"}>{standing}</span>
               </div>
 

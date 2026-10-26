@@ -2,8 +2,9 @@
  * Paints the portraits of the game's people in oil (public/portraits).
  *
  *   npm run portraits              all people in scripts/portraits/people.json
- *   npm run portraits -- molotov   only these ids (and the shadows)
+ *   npm run portraits -- molotov   only these ids (and the shadows; --no-shadows leaves them, for runs side by side)
  *   npm run portraits -- --index   only the engine's index, after editing names in people.json
+ *   npm run portraits -- --figures only the figures of each date (src/engine/figures.data.ts)
  *   npm run portraits -- --author  the developer's own photograph (public/about), for the about page
  *   npm run portraits -- --shadows only the shadows
  *   npm run portraits -- --quoted  the writers and thinkers quoted on the waiting screens
@@ -44,6 +45,7 @@ const QUOTED = path.join(ROOT, "scripts/portraits/quoted.json");
 const CACHE = path.join(ROOT, "scripts/.cache/portraits");
 const OUT = path.join(ROOT, "public/portraits");
 const INDEX = path.join(ROOT, "src/engine/people.data.ts");
+const FIGURES = path.join(ROOT, "src/engine/figures.data.ts");
 
 const W = 480;
 const H = 600;
@@ -181,11 +183,16 @@ async function main() {
   }
   const people = JSON.parse(readFileSync(PEOPLE, "utf8"));
   const quoted = JSON.parse(readFileSync(QUOTED, "utf8"));
+  if (args.includes("--figures")) {
+    writeFigures(people);
+    return;
+  }
   if (args.includes("--index")) {
     // Only the engine's index and the credits, from people.json and what is painted: after an edit to names or aliases.
     const credits = prune(JSON.parse(readFileSync(path.join(OUT, "credits.json"), "utf8")), [...people, ...quoted]);
     writeFileSync(path.join(OUT, "credits.json"), JSON.stringify(credits, null, 1) + "\n");
     writeIndex(people, credits);
+    writeFigures(people);
     return;
   }
   const only = new Set(args.filter((a) => !a.startsWith("--")));
@@ -194,6 +201,16 @@ async function main() {
   const creditsFile = path.join(OUT, "credits.json");
   const credits = existsSync(creditsFile) ? JSON.parse(readFileSync(creditsFile, "utf8")) : {};
   const save = () => {
+    // A run for some ids changes only their credits: read the file again, so runs side by side keep each other's.
+    if (only.size && existsSync(creditsFile)) {
+      const onDisk = JSON.parse(readFileSync(creditsFile, "utf8"));
+      for (const id of only) {
+        if (credits[id]) onDisk[id] = credits[id];
+        else delete onDisk[id];
+      }
+      Object.keys(credits).forEach((id) => delete credits[id]);
+      Object.assign(credits, onDisk);
+    }
     const sorted = only.size ? Object.fromEntries(Object.entries(credits).sort(([a], [b]) => a.localeCompare(b))) : prune(credits, [...people, ...quoted]);
     writeFileSync(creditsFile, JSON.stringify(sorted, null, 1) + "\n");
     return sorted;
@@ -207,12 +224,15 @@ async function main() {
     return;
   }
 
-  // The shadows, always: drawn here, so they have no source to credit.
-  await paintShadows();
+  // The shadows, always (unless --no-shadows, for runs side by side): drawn here, so they have no source to credit.
+  if (!args.includes("--no-shadows")) await paintShadows();
 
   const { painted, shadowed } = await paintPeople(people.filter((p) => p.qid && (!only.size || only.has(p.id))), credits);
   const sorted = save();
-  if (!only.size) writeIndex(people, sorted);
+  if (!only.size) {
+    writeIndex(people, sorted);
+    writeFigures(people);
+  }
   console.log(`painted ${painted}, shadows ${shadowed}`);
 }
 
@@ -285,16 +305,80 @@ function prune(credits, people) {
   return out;
 }
 
-/** The engine's index: every name a person goes by, their sex and whether a portrait exists. */
+/**
+ * A name's words as the engine reads them (nameTokens in src/engine/people.ts),
+ * in any order: the engine matches a name by its words, so "Серов, Иван" and
+ * "Иван Серов" are one name.
+ */
+const nameKey = (s) =>
+  [
+    ...new Set(
+      s
+        .normalize("NFKD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/ё/g, "е")
+        .split(/[^\p{L}\p{N}]+/u)
+        .filter(Boolean),
+    ),
+  ]
+    .sort()
+    .join(" ");
+
+/**
+ * The engine's index: the person's names in the three languages and every
+ * other name they go by (one of each spelling the engine reads alike:
+ * "Молотов, Вячеслав" and "Молотов Вячеслав" are one), their sex, the years of
+ * their life (namesakes of different eras) and whether a portrait exists.
+ */
 function writeIndex(people, credits) {
   const rows = people.map((p) => {
       const name = { en: p.name.en, ...(p.name.ru ? { ru: p.name.ru } : {}), ...(p.name.uk ? { uk: p.name.uk } : {}) };
-      const names = [...new Set([p.name.en, p.name.ru, p.name.uk, ...(p.aliases ?? [])].filter(Boolean))];
-      return { id: p.id, name, names, gender: p.gender ?? "male", ...(credits[p.id] ? { portrait: true } : {}) };
+      const seen = new Set(Object.values(name).map(nameKey));
+      const names = (p.aliases ?? []).filter((n) => n && !seen.has(nameKey(n)) && seen.add(nameKey(n)));
+      return { id: p.id, name, names, gender: p.gender ?? "male", ...(credits[p.id] ? { portrait: true } : {}), ...(p.born ? { born: p.born } : {}), ...(p.died ? { died: p.died } : {}) };
     });
   const lines = rows.map((r) => `  ${JSON.stringify(r)},`).join("\n");
   writeFileSync(INDEX, `// Generated by scripts/portraits.mjs from scripts/portraits/people.json — do not edit by hand.\nimport type { KnownPerson } from "./people";\n\nexport const KNOWN_PEOPLE: KnownPerson[] = [\n${lines}\n];\n`);
   console.log(`index: ${rows.length} people`);
+}
+
+/** The posts a player can hold at the start besides the leader's (engine/figures.ts): the eight ministries; "military" also gives the generals. */
+const FIGURE_POSTS = ["chief", "foreign", "interior", "military", "intelligence", "finance", "industry", "science"];
+
+/**
+ * Who held each post on each start date, by date, country and post, for the
+ * player who starts as a minister or a general. Someone with several dates
+ * and several posts is left out: the data does not say which post went with
+ * which date. Deputies hold no post of their own here.
+ */
+function writeFigures(people) {
+  const out = {};
+  let n = 0;
+  for (const p of people) {
+    const dates = p.dates ?? [];
+    const posts = (p.posts ?? []).filter((x) => FIGURE_POSTS.includes(x));
+    // The country's rulers are the leader's role, not a minister's or a general's.
+    const rules = (p.posts ?? []).some((x) => x === "leader" || x === "head" || x === "government");
+    if (!posts.length || rules || p.deputyOf || (dates.length > 1 && (p.posts ?? []).length > 1)) continue;
+    for (const date of dates) {
+      for (const country of p.countries ?? []) {
+        for (const post of posts) {
+          ((out[date] ??= {})[country] ??= {})[post] ??= [];
+          out[date][country][post].push(p.id);
+          n += 1;
+        }
+      }
+    }
+  }
+  const sorted = (o) => Object.fromEntries(Object.entries(o).sort(([a], [b]) => a.localeCompare(b)));
+  const rows = Object.entries(sorted(out)).map(([date, countries]) =>
+    [`  "${date}": {`, ...Object.entries(sorted(countries)).map(([country, posts]) => `    ${JSON.stringify(country)}: ${JSON.stringify(sorted(posts))},`), "  },"].join("\n"),
+  );
+  const head = "// Generated by scripts/portraits.mjs from scripts/portraits/people.json — do not edit by hand.";
+  const doc = "/** Who held each post on each start date: date → country → post → ids in KNOWN_PEOPLE (engine/figures.ts). */";
+  writeFileSync(FIGURES, [head, "", doc, "export const FIGURES: Record<string, Record<string, Partial<Record<string, string[]>>>> = {", ...rows, "};", ""].join("\n"));
+  console.log(`figures: ${n}`);
 }
 
 await main();

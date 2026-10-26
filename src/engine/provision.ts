@@ -1,8 +1,9 @@
 import { grainBooks, type GrainBook } from "./deals";
-import { type Accounts, nationalAccounts, RICH_INCOME, socialNorm } from "./economy";
+import { extractionOf, goodsLine, researchGoods } from "./development";
+import { type Accounts, nationalAccounts, reserveNorm, RICH_INCOME, socialNorm } from "./economy";
 import { countsFor } from "./occupation";
 import { peopleIn } from "./population";
-import { harvestBonus, medicineBonus } from "./researchEffects";
+import { aheadOf, harvestBonus, medicineBonus } from "./researchEffects";
 import type { ResourceType } from "./resources";
 import type { GameState, MapRegion } from "./types";
 
@@ -34,6 +35,7 @@ export const PROVISION_CAUSES = [
   "recession",
   "austerity",
   "research",
+  "industry",
 ] as const;
 export type ProvisionCause = (typeof PROVISION_CAUSES)[number];
 
@@ -43,6 +45,8 @@ export interface ProvisionLine {
   level: number;
   /** What holds it up or pulls it down, the main one first. */
   causes: ProvisionCause[];
+  /** Of the causes, those that hold it up. */
+  up: ProvisionCause[];
 }
 
 export interface Provision {
@@ -57,8 +61,8 @@ const WEIGHTS: Record<ProvisionKind, number> = { food: 0.35, energy: 0.2, goods:
 const FUELS: ResourceType[] = ["coal", "gas", "oil"];
 /** Resources everyday goods are made of. */
 const METALS: ResourceType[] = ["iron", "copper", "nickel", "tin", "bauxite", "rubber"];
-/** An army costing more than this share of GDP takes from what people can buy. */
-const PEACE_ARMY = 0.08;
+/** The causes that hold a line up, where they are named: the rest pull it down. */
+const SUPPORTS: ProvisionCause[] = ["harvest", "imports", "deals", "stores", "industry"];
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
@@ -114,7 +118,8 @@ export function provisionOf(state: ProvisionState, tag: string, map: Record<stri
   const social = e.budget.social / gdp / Math.max(0.001, socialNorm(state.scenarioId, rich));
 
   const lines: ProvisionLine[] = [];
-  const line = (kind: ProvisionKind, value: number, causes: ProvisionCause[]) => lines.push({ kind, level: Math.round(clamp(value, 0.05, 1) * 100), causes });
+  const line = (kind: ProvisionKind, value: number, causes: ProvisionCause[], up: ProvisionCause[] = causes.filter((c) => SUPPORTS.includes(c))) =>
+    lines.push({ kind, level: Math.round(clamp(value, 0.05, 1) * 100), causes, up });
   // The player's farming and medical research, ahead of the world or behind it (engine/researchEffects.ts).
   const researched = tag === state.player && state.research?.tech;
   const harvest = researched ? harvestBonus(state) : 0;
@@ -152,7 +157,7 @@ export function provisionOf(state: ProvisionState, tag: string, map: Record<stri
       food -= 0.05;
       causes.unshift("war");
     }
-    line("food", food, causes);
+    line("food", food, causes, causes.filter((c) => SUPPORTS.includes(c) || (c === "research" && harvest > 0)));
   }
 
   // Energy for homes and transport: own coal, gas and oil, imports while they come, the stores while they last.
@@ -181,11 +186,14 @@ export function provisionOf(state: ProvisionState, tag: string, map: Record<stri
       got += n * covered;
     }
     let energy = need > 0 ? got / need : 1;
+    // Mines and wells worked harder by industry spending and policies (engine/development.ts).
+    const dug = FUELS.some((f) => (a?.production[f] ?? 0) > 0);
     if (short) causes.push("shortage");
     if (stored) causes.push("stores");
     if (cut > 0.05) causes.push("blockade");
     if (broke) causes.push("broke");
     if (bought && !causes.length) causes.push("imports");
+    if (dug && need > 0 && extractionOf(e) >= 1.02) causes.push("industry");
     if (atHome) {
       energy -= 0.05;
       causes.unshift("war");
@@ -193,37 +201,22 @@ export function provisionOf(state: ProvisionState, tag: string, map: Record<stri
     line("energy", energy, causes);
   }
 
-  // Everyday goods: what is left once the army has taken its share, prices allow, imports come in and the metals are there.
+  // Everyday goods: what is left once the army has taken its share, prices allow and the metals are there, held up by the
+  // factories industry spending built, the industry research lead and imports (engine/development.ts).
   {
-    const causes: ProvisionCause[] = [];
-    let goods = 1;
-    const army = e.budget.army / gdp;
-    if (army > PEACE_ARMY) {
-      goods -= (army - PEACE_ARMY) * 1.5;
-      causes.push("warEconomy");
-    }
-    if (e.inflation > 15) {
-      goods -= Math.min(0.3, (e.inflation - 15) * 0.003);
-      causes.push("inflation");
-    }
-    if (cut > 0.05) {
-      goods -= cut * 0.3;
-      causes.push("blockade");
-    }
-    if (e.growth < 0) {
-      goods -= Math.min(0.2, -e.growth * 0.02);
-      causes.push("recession");
-    }
-    const lacking = a ? a.shortages.filter((t) => METALS.includes(t)).length : 0;
-    if (lacking) {
-      goods -= Math.min(0.2, lacking * 0.1);
-      causes.push("shortage");
-    }
-    if (broke) {
-      goods -= 0.1;
-      causes.push("broke");
-    }
-    line("goods", goods, causes.sort((x, y) => order(x) - order(y)));
+    const g = goodsLine({
+      army: e.budget.army / gdp,
+      inflation: e.inflation,
+      cut,
+      growth: e.growth,
+      metalsLacking: a ? a.shortages.filter((t) => METALS.includes(t)).length : 0,
+      broke,
+      factories: e.factories ?? 0,
+      research: researched ? researchGoods(aheadOf(state, "industry")) : 0,
+      reserves: e.reserves / gdp,
+      reserveNorm: reserveNorm(state.scenarioId),
+    });
+    line("goods", g.level, g.causes, g.up);
   }
 
   // Housing: homes lost to the war and the occupation, and what the state spends on its people.
@@ -267,16 +260,11 @@ export function provisionOf(state: ProvisionState, tag: string, map: Record<stri
       medicine -= 0.1;
       causes.push("inflation");
     }
-    line("medicine", medicine, causes);
+    line("medicine", medicine, causes, cure > 0 && causes.includes("research") ? ["research"] : []);
   }
 
   const overall = Math.round(lines.reduce((s, l) => s + WEIGHTS[l.kind] * l.level, 0));
   return { lines, overall };
-}
-
-/** The order causes are named in: the war and the blockade before the slower ones. */
-function order(c: ProvisionCause): number {
-  return PROVISION_CAUSES.indexOf(c);
 }
 
 /** The worst-supplied need, the one a crisis names. */
@@ -284,7 +272,24 @@ export function worstProvision(p: Provision): ProvisionLine {
   return p.lines.reduce((w, l) => (l.level < w.level ? l : w));
 }
 
-/** "food 95%, energy 80% (blockade, stores), …" — for the game master. */
+/**
+ * "food 95%, energy 80% (blockade; held up by stores), …" — for the game
+ * master, with the levers the engine moves goods and stores by while the
+ * goods are short, so the story promises nothing the engine will not do.
+ */
 export function describeProvision(p: Provision): string {
-  return `- the people's provision, % of need: ${p.lines.map((l) => `${l.kind} ${l.level}%${l.level < 100 && l.causes.length ? ` (${l.causes.join(", ")})` : ""}`).join("; ")}; overall ${p.overall}%`;
+  const causes = (l: ProvisionLine) => {
+    const down = l.causes.filter((c) => !l.up.includes(c));
+    const parts = [down.join(", "), l.up.length ? `held up by ${l.up.join(", ")}` : ""].filter(Boolean);
+    return l.level < 100 && parts.length ? ` (${parts.join("; ")})` : "";
+  };
+  const short = p.lines.some((l) => l.kind === "goods" && l.level < 100);
+  return [
+    `- the people's provision, % of need: ${p.lines.map((l) => `${l.kind} ${l.level}%${causes(l)}`).join("; ")}; overall ${p.overall}%`,
+    ...(short ? [PROVISION_LEVERS] : []),
+  ].join("\n");
 }
+
+/** What moves goods and stores in the engine, in a line. */
+const PROVISION_LEVERS =
+  "- provision levers in the engine: goods rise only with a smaller army share, industry spending past the era's share or industry/infrastructure policies (over months), an industry research lead and imports while reserves last; resource stores refill only when output passes need (industry effort raises it slowly, at most 30% in a decade) or by contract";

@@ -21,6 +21,8 @@ interface OrdersPanelProps {
   /** The special operations beside the orders (OperationsPanel), and how many run; none for the opposition. */
   operations?: ReactNode;
   operationsCount?: number;
+  /** An order put into the box to edit and add, each time its number changes (the tutorial's suggestion). */
+  fill?: { text: string; n: number } | null;
 }
 
 /** The platform never changes while the page is open. */
@@ -75,12 +77,19 @@ function OrderEditor({ value, onSave, onCancel }: { value: string; onSave: (text
  * on a Mac) adds what is written; the turn's length is set over the map
  * (TurnLength). The government's special operations are a tab beside them.
  */
-export default function OrdersPanel({ orders, standing, previous, disabled, onChange, onStanding, operations, operationsCount = 0 }: OrdersPanelProps) {
+export default function OrdersPanel({ orders, standing, previous, disabled, onChange, onStanding, operations, operationsCount = 0, fill = null }: OrdersPanelProps) {
   const { t } = useI18n();
   const [tab, setTab] = useState<"orders" | "operations">("orders");
   // The server knows no platform; the hint names Ctrl until the browser says otherwise.
   const modifier = useSyncExternalStore(never, () => sendModifier(navigator.platform), () => "Ctrl");
   const [draft, setDraft] = useState("");
+  // A suggestion put into the box once per number, while rendering, so it shows at once.
+  const [filled, setFilled] = useState(0);
+  if (fill && fill.n !== filled) {
+    setFilled(fill.n);
+    setDraft(fill.text);
+    setTab("orders");
+  }
   // The order open for editing, in the turn's draft or among the standing ones.
   const [editing, setEditing] = useState<{ list: "draft" | "standing"; index: number } | null>(null);
   const [showLast, setShowLast] = useState(false);
@@ -147,7 +156,7 @@ export default function OrdersPanel({ orders, standing, previous, disabled, onCh
   return (
     <div className="flex flex-col gap-4">
       {tabs}
-      <div>
+      <div data-tour="orders-input">
         <Dictation id="orders" set={setDraft} max={1000} disabled={disabled || full}>
           <textarea
             value={draft}

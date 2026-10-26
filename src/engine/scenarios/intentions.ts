@@ -1,4 +1,4 @@
-import type { AimKind, PlanKind, PlanStage, ScenarioId } from "../types";
+import type { AimKind, PlanKind, PlanStage, ScenarioId, StartVariant } from "../types";
 
 /**
  * What each start date's governments intend (engine/intentions.ts):
@@ -12,10 +12,16 @@ import type { AimKind, PlanKind, PlanStage, ScenarioId } from "../types";
  * - `live`: plans under way on the start date, at the stage they had reached
  *   and with the date history carried them out (in both modes);
  * - `dated`: later history, for the historical mode only: each plan enters
- *   play when its `opens` date falls in a turn, if its countries still stand.
+ *   play when its `opens` date falls in a turn, if its countries still stand;
+ * - `follow`: plans that wait for a war of the date a live plan begins (an
+ *   earlier start's), entering play in both modes once it has begun.
  *
  * A date is a tendency, never a script: the dice move every plan, and the
  * state of the world can stop it.
+ *
+ * An earlier start of a date (`EVES`) has its own live and follow plans: the
+ * war its date opens with is a plan at its last stage, the allies who joined
+ * it wait for it, and the rest of the date's seeds are shared.
  */
 export interface PlanSeed {
   id: string;
@@ -23,13 +29,19 @@ export interface PlanSeed {
   by: string;
   target?: string;
   partners?: string[];
-  /** Join and peace: the scenario's war. */
+  /** Join and peace: the scenario's war (one a seeded plan began in play counts as it). */
   war?: string;
+  /** War: the date's war it begins, whose id and name it takes when the engine starts it. */
+  begins?: string;
+  /** Follow seeds: the date's war they wait for, when it is not their `war`. */
+  after?: string;
   side?: "attackers" | "defenders";
   /** Bloc: what it founds, or the scenario's bloc it joins; leave: the bloc it leaves. */
   blocKind?: "alliance" | "pact";
   bloc?: string;
   stage: PlanStage;
+  /** The day it reached its stage, when that was before it enters play: a mobilisation under way since the summer. */
+  moved?: string;
   due?: string;
   /** Dated seeds: the day the plan enters play. */
   opens?: string;
@@ -41,6 +53,7 @@ export interface IntentionSeeds {
   trust?: Record<string, [string, number][]>;
   live: PlanSeed[];
   dated: PlanSeed[];
+  follow?: PlanSeed[];
 }
 
 export const INTENTIONS: Record<ScenarioId, IntentionSeeds> = {
@@ -62,14 +75,14 @@ export const INTENTIONS: Record<ScenarioId, IntentionSeeds> = {
     hawk: { germany: 65, "austria-hungary": 70, russia: 60, france: 55, uk: 45, italy: 40, usa: 25 },
     // Italy's alliance with Vienna was a marriage of convenience.
     trust: { italy: [["austria-hungary", -40], ["germany", 0]], "austria-hungary": [["serbia", -60], ["italy", -10]], serbia: [["austria-hungary", -60], ["russia", 50]], russia: [["serbia", 50]] },
-    live: [{ id: "july-crisis", kind: "war", by: "austria-hungary", target: "serbia", partners: ["germany"], stage: "decision", due: "1914-07-28" }],
+    live: [{ id: "july-crisis", kind: "war", by: "austria-hungary", target: "serbia", partners: ["germany"], stage: "preparation", due: "1914-07-28" }],
     dated: [
       { id: "japan-tsingtao", kind: "war", by: "japan", target: "germany", stage: "preparation", opens: "1914-08-10", due: "1914-08-23" },
       { id: "ottoman-war", kind: "war", by: "ottoman", target: "russia", partners: ["germany"], stage: "preparation", opens: "1914-10-01", due: "1914-10-29" },
       { id: "italy-leaves", kind: "leave", by: "italy", bloc: "triple-alliance", stage: "decision", opens: "1915-03-01", due: "1915-05-03" },
       { id: "italy-war", kind: "war", by: "italy", target: "austria-hungary", stage: "preparation", opens: "1915-05-04", due: "1915-05-23" },
       { id: "bulgaria-war", kind: "war", by: "bulgaria", target: "serbia", partners: ["germany", "austria-hungary"], stage: "preparation", opens: "1915-09-01", due: "1915-10-14" },
-      { id: "romania-war", kind: "war", by: "romania", target: "austria-hungary", stage: "decision", opens: "1916-06-01", due: "1916-08-27" },
+      { id: "romania-war", kind: "war", by: "romania", target: "austria-hungary", stage: "preparation", opens: "1916-06-01", due: "1916-08-27" },
       { id: "usa-war", kind: "war", by: "usa", target: "germany", stage: "tension", opens: "1917-02-01", due: "1917-04-06" },
     ],
   },
@@ -95,15 +108,15 @@ export const INTENTIONS: Record<ScenarioId, IntentionSeeds> = {
       { id: "khalkhin-gol-truce", kind: "peace", by: "japan", target: "ussr", war: "khalkhin-gol", stage: "decision", due: "1939-09-15" },
     ],
     dated: [
-      { id: "weserubung", kind: "war", by: "germany", target: "norway", stage: "decision", opens: "1940-02-01", due: "1940-04-09" },
-      { id: "fall-gelb-netherlands", kind: "war", by: "germany", target: "netherlands", stage: "decision", opens: "1940-03-01", due: "1940-05-10" },
-      { id: "fall-gelb-belgium", kind: "war", by: "germany", target: "belgium", stage: "decision", opens: "1940-03-01", due: "1940-05-10" },
+      { id: "weserubung", kind: "war", by: "germany", target: "norway", stage: "preparation", opens: "1940-02-01", due: "1940-04-09" },
+      { id: "fall-gelb-netherlands", kind: "war", by: "germany", target: "netherlands", stage: "preparation", opens: "1940-03-01", due: "1940-05-10" },
+      { id: "fall-gelb-belgium", kind: "war", by: "germany", target: "belgium", stage: "preparation", opens: "1940-03-01", due: "1940-05-10" },
       { id: "italy-enters", kind: "join", by: "italy", war: "invasion-of-poland", side: "attackers", target: "france", stage: "tension", opens: "1940-04-01", due: "1940-06-10" },
       { id: "tripartite", kind: "bloc", by: "germany", partners: ["italy", "japan"], blocKind: "alliance", stage: "decision", opens: "1940-07-01", due: "1940-09-27" },
-      { id: "barbarossa", kind: "war", by: "germany", target: "ussr", partners: ["romania", "finland"], stage: "decision", opens: "1940-07-31", due: "1941-06-22" },
-      { id: "greco-italian", kind: "war", by: "italy", target: "greece", stage: "decision", opens: "1940-09-01", due: "1940-10-28" },
-      { id: "pearl-harbor", kind: "war", by: "japan", target: "usa", stage: "decision", opens: "1941-07-01", due: "1941-12-07" },
-      { id: "malaya", kind: "war", by: "japan", target: "uk", stage: "decision", opens: "1941-07-01", due: "1941-12-08" },
+      { id: "barbarossa", kind: "war", by: "germany", target: "ussr", partners: ["romania", "finland"], stage: "preparation", opens: "1940-07-31", due: "1941-06-22" },
+      { id: "greco-italian", kind: "war", by: "italy", target: "greece", stage: "preparation", opens: "1940-09-01", due: "1940-10-28" },
+      { id: "pearl-harbor", kind: "war", by: "japan", target: "usa", stage: "preparation", opens: "1941-07-01", due: "1941-12-07" },
+      { id: "malaya", kind: "war", by: "japan", target: "uk", stage: "preparation", opens: "1941-07-01", due: "1941-12-08" },
       { id: "august-storm", kind: "war", by: "ussr", target: "japan", stage: "tension", opens: "1945-04-05", due: "1945-08-08" },
     ],
   },
@@ -147,12 +160,12 @@ export const INTENTIONS: Record<ScenarioId, IntentionSeeds> = {
       { id: "indo-pakistani-1965", kind: "war", by: "pakistan", target: "india", stage: "tension", due: "1965-08-05" },
     ],
     dated: [
-      { id: "six-day-egypt", kind: "war", by: "israel", target: "egypt", stage: "decision", opens: "1967-05-15", due: "1967-06-05" },
-      { id: "six-day-syria", kind: "war", by: "israel", target: "syria", stage: "decision", opens: "1967-05-15", due: "1967-06-09" },
+      { id: "six-day-egypt", kind: "war", by: "israel", target: "egypt", stage: "preparation", opens: "1967-05-15", due: "1967-06-05" },
+      { id: "six-day-syria", kind: "war", by: "israel", target: "syria", stage: "preparation", opens: "1967-05-15", due: "1967-06-09" },
       { id: "zhenbao", kind: "war", by: "china", target: "ussr", stage: "tension", opens: "1969-01-01", due: "1969-03-02" },
-      { id: "indo-pakistani-1971", kind: "war", by: "india", target: "pakistan", stage: "decision", opens: "1971-09-01", due: "1971-12-03" },
-      { id: "yom-kippur", kind: "war", by: "egypt", target: "israel", partners: ["syria"], stage: "decision", opens: "1973-06-01", due: "1973-10-06" },
-      { id: "cyprus", kind: "war", by: "turkey", target: "cyprus", stage: "decision", opens: "1974-07-15", due: "1974-07-20" },
+      { id: "indo-pakistani-1971", kind: "war", by: "india", target: "pakistan", stage: "preparation", opens: "1971-09-01", due: "1971-12-03" },
+      { id: "yom-kippur", kind: "war", by: "egypt", target: "israel", partners: ["syria"], stage: "preparation", opens: "1973-06-01", due: "1973-10-06" },
+      { id: "cyprus", kind: "war", by: "turkey", target: "cyprus", stage: "preparation", opens: "1974-07-15", due: "1974-07-20" },
     ],
   },
   "1991": {
@@ -181,7 +194,7 @@ export const INTENTIONS: Record<ScenarioId, IntentionSeeds> = {
     },
     hawk: { yugoslavia: 70, pakistan: 60, iraq: 70 },
     live: [
-      { id: "kargil", kind: "war", by: "pakistan", target: "india", stage: "decision", due: "1999-05-03" },
+      { id: "kargil", kind: "war", by: "pakistan", target: "india", stage: "preparation", due: "1999-05-03" },
       { id: "kosovo-terms", kind: "peace", by: "yugoslavia", target: "usa", war: "allied-force", stage: "decision", due: "1999-06-09" },
     ],
     dated: [
@@ -265,7 +278,92 @@ export const INTENTIONS: Record<ScenarioId, IntentionSeeds> = {
     dated: [
       { id: "karabakh-2022", kind: "war", by: "azerbaijan", target: "armenia", stage: "tension", opens: "2022-08-01", due: "2022-09-13" },
       { id: "twelve-day-war", kind: "war", by: "israel", target: "iran", stage: "tension", opens: "2025-04-01", due: "2025-06-13" },
-      { id: "sindoor", kind: "war", by: "india", target: "pakistan", stage: "decision", opens: "2025-04-22", due: "2025-05-07" },
+      { id: "sindoor", kind: "war", by: "india", target: "pakistan", stage: "preparation", opens: "2025-04-22", due: "2025-05-07" },
     ],
   },
 };
+
+/**
+ * The plans of each date's earlier start, a week before it, where they differ
+ * from the date's own (the rest is shared). The war the date opens with is a
+ * plan at its last stage, the decision at the brink, prepared since the day
+ * history prepared it, and those who joined it wait for it to begin; a war
+ * under way that a country entered on the date is one it has prepared to
+ * enter. 1914 has no war yet: before Sarajevo its crisis is still at
+ * escalation, a step behind the date's.
+ */
+export const EVES: Partial<Record<ScenarioId, Partial<IntentionSeeds>>> = {
+  // Before Sarajevo Vienna already weighs a reckoning with Belgrade: Conrad has urged war for years, and the Foreign Ministry drafts a memorandum to isolate Serbia.
+  "1914": {
+    live: [{ id: "july-crisis", kind: "war", by: "austria-hungary", target: "serbia", partners: ["germany"], stage: "tension", due: "1914-07-28" }],
+  },
+  // Fall Weiss, ordered ready for 1 September by the directive of 3 April 1939, set for the 26th and put off on the evening of the 25th.
+  "1939": {
+    live: [
+      { id: "fall-weiss", kind: "war", by: "germany", target: "poland", partners: ["slovakia"], begins: "invasion-of-poland", stage: "decision", moved: "1939-04-03", due: "1939-09-01" },
+      { id: "winter-war", kind: "war", by: "ussr", target: "finland", stage: "tension", due: "1939-11-30" },
+      { id: "khalkhin-gol-truce", kind: "peace", by: "japan", target: "ussr", war: "khalkhin-gol", stage: "decision", due: "1939-09-15" },
+    ],
+    follow: [
+      { id: "uk-poland", kind: "join", by: "uk", war: "invasion-of-poland", side: "defenders", target: "germany", stage: "decision", due: "1939-09-03" },
+      { id: "france-poland", kind: "join", by: "france", war: "invasion-of-poland", side: "defenders", target: "germany", stage: "decision", due: "1939-09-03" },
+      // The secret protocol of 23 August: the Red Army moves once the Wehrmacht has.
+      { id: "soviet-invasion", kind: "war", by: "ussr", target: "poland", after: "invasion-of-poland", stage: "preparation", moved: "1939-08-23", due: "1939-09-17" },
+    ],
+  },
+  // Kim Il-sung's attack, approved by Stalin in April and by Mao in mid-May, its divisions moving up to the parallel.
+  "1950": {
+    live: [{ id: "korea", kind: "war", by: "north-korea", target: "south-korea", begins: "korean-war", stage: "decision", moved: "1950-05-15", due: "1950-06-25" }],
+    follow: [
+      { id: "usa-korea", kind: "join", by: "usa", war: "korean-war", side: "defenders", target: "north-korea", stage: "decision", due: "1950-06-27" },
+      { id: "uk-korea", kind: "join", by: "uk", war: "korean-war", side: "defenders", target: "north-korea", stage: "decision", due: "1950-07-01" },
+      { id: "turkey-korea", kind: "join", by: "turkey", war: "korean-war", side: "defenders", target: "north-korea", stage: "tension", due: "1950-07-25" },
+      { id: "china-korea", kind: "join", by: "china", war: "korean-war", side: "attackers", target: "south-korea", stage: "tension", due: "1950-10-19" },
+    ],
+  },
+  // Before the Maddox: since the Honolulu conference of 1–2 June the strikes on the North are planned and the resolution drafted, waiting for an occasion.
+  "1964": {
+    live: [
+      { id: "tonkin", kind: "join", by: "usa", war: "vietnam-war", side: "defenders", target: "north-vietnam", stage: "preparation", moved: "1964-06-02", due: "1964-08-07" },
+      { id: "indo-pakistani-1965", kind: "war", by: "pakistan", target: "india", stage: "tension", due: "1965-08-05" },
+    ],
+  },
+  // Allied Force, ready since NATO's activation order of 13 October 1998, waits for the talks in Paris to fail.
+  "1999": {
+    live: [
+      {
+        id: "allied-force",
+        kind: "war",
+        by: "usa",
+        target: "yugoslavia",
+        partners: ["uk", "france", "germany", "italy", "netherlands", "canada", "belgium", "spain", "denmark", "norway", "portugal", "turkey"],
+        begins: "allied-force",
+        stage: "decision",
+        moved: "1998-10-13",
+        due: "1999-03-24",
+      },
+      { id: "kargil", kind: "war", by: "pakistan", target: "india", stage: "preparation", due: "1999-05-03" },
+    ],
+    follow: [{ id: "kosovo-terms", kind: "peace", by: "yugoslavia", target: "usa", war: "allied-force", stage: "decision", due: "1999-06-09" }],
+  },
+  // The invasion, its armies massed since the autumn of 2021; Finland and Sweden look to NATO only once it has begun.
+  "2022": {
+    live: [{ id: "invasion", kind: "war", by: "russia", target: "ukraine", begins: "russo-ukrainian-war", stage: "decision", moved: "2021-11-01", due: "2022-02-24" }],
+    follow: [
+      { id: "finland-nato", kind: "bloc", by: "finland", target: "russia", bloc: "nato", after: "russo-ukrainian-war", stage: "tension", due: "2023-04-04" },
+      { id: "sweden-nato", kind: "bloc", by: "sweden", target: "russia", bloc: "nato", after: "russo-ukrainian-war", stage: "tension", due: "2024-03-07" },
+    ],
+  },
+};
+
+const variantSeeds = new Map<string, IntentionSeeds>();
+
+/** What a date's governments intend on the start a game was begun on: an eve's own plans over the date's. */
+export function intentionsOf(id: ScenarioId, variant?: StartVariant | null): IntentionSeeds {
+  const eve = variant === "eve" ? EVES[id] : undefined;
+  if (!eve) return INTENTIONS[id];
+  const key = `${id}:${variant}`;
+  let seeds = variantSeeds.get(key);
+  if (!seeds) variantSeeds.set(key, (seeds = { ...INTENTIONS[id], ...eve }));
+  return seeds;
+}

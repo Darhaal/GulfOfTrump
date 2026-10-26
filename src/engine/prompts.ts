@@ -5,10 +5,11 @@ import { describeForMinister, describeIntrigues } from "./deputies";
 import { addStep, STEP_LABEL_EN, yearOf } from "./calendar";
 import { describeFog } from "./fog";
 import { ADVISOR_PERSONAS, ADVISOR_TITLES, ADVISORS, directiveLine, type AdvisorId, OPERATION_MINISTRIES } from "./advisors";
-import { balance, formatMoney, nationalAccounts } from "./economy";
+import { balance, formatMoney, growthCauses, nationalAccounts, rateText } from "./economy";
 import { truceLine } from "./foreign";
 import { lossesLine } from "./warLosses";
-import { warFront, warStrength } from "./fronts";
+import { frontStrength, paceLine, warFront, warPace, warStrength } from "./fronts";
+import { meansLine, warMeans } from "./warMeans";
 import { describePolitics, MAX_DRIFT } from "./politics";
 import { countsFor, heldBehind } from "./occupation";
 import { LAW_IDS } from "./laws";
@@ -19,20 +20,24 @@ import { describeProvision, provisionOf } from "./provision";
 import { formatPopulation, LANDING_KM, railLevel } from "./provinces";
 import { describeProtests, FALL_PLOT, FALL_UNREST } from "./unrest";
 import { DEFAULT_HELD } from "./outcome";
-import { sanctionCuts, tradeBooks } from "./trade";
+import { sanctionCuts, sanctionExportCuts, tradeBooks } from "./trade";
 import { describeDeals } from "./deals";
 import { describeIdentity } from "./identity";
 import { describeBills } from "./acts";
 import { BOMB_SHARE, describeResearch } from "./research";
-import { castRepression, describeRole } from "./role";
+import { describePerson } from "./fate";
+import { describeFigureSetup, FIGURE_FIELD, FIGURE_ROLE, FIGURE_SHAPE } from "./figures";
+import { describeSender } from "./exile";
 import { amountEn } from "./units";
 import { countryCrises, describeCrisis, interestOf, interestRate } from "./crises";
 import { ADVISOR_POST, describeOfficials, officialAt, officialLine } from "./government";
 import { interestsLine } from "./interests";
+import { describeCabinet, factionLineFor } from "./intrigue";
 import { findKnown } from "./people";
 import { OFFICIAL_POSTS, type OfficialPost, type Session, type Summit, type Talk } from "./types";
 import { activeResources, formatResources, type ResourceType } from "./resources";
-import { getScenario } from "./scenarios";
+import { societyLine } from "./society";
+import { scenarioOf } from "./scenarios";
 import { regionsByOwner } from "./setup";
 import { en } from "./text";
 import type { ChronicleEntry, GameMode, GameState, Locale, MapIndex, RoleKind } from "./types";
@@ -73,10 +78,10 @@ export const turnRules = (locale: Locale, mode: GameMode = "free", role: RoleKin
   plans: `- Other governments' plans are kept by the engine (INTENTIONS ABROAD): each stage a plan reaches this period is already decided — show it in the story. A war, a country entering a war, or a military alliance or pact among other governments happens only when a plan there reaches ACTION, and then it must be in your answer; the engine drops any other, so show tension, incidents or talks instead. The player's government starts wars and makes alliances by its own orders, and a government that agreed with it this turn may join it.`,
   pushback: `- The world pushes back. Rivals and enemies work against the player's government, not only on the battlefield: spies, sabotage, propaganda, sanctions, funding the opposition, stirring up separatists. At home, the opposition, ambitious generals, oligarchs, unpaid soldiers and hungry cities can turn into protests, strikes, plots and coups when the government is weak, unpopular or overreaching. Show it in events, in the "politics" of the player's country and its unrest.`,
   proportion: `- Keep change proportional to the period: in a week borders rarely move; in a year a great deal can happen. Wars take time; occupation comes before annexation.`,
-  fronts: `- The world is divided into provinces, many of them large. Wars move province by province along the fronts listed below, and the map must follow the story: when an attacker takes part of a province (a town, a bridgehead, a stretch of the front), mark it "contest" with "share": how much of the province, in %, the side in "to" holds after this period, and "towns": the towns of the province that side holds afterwards, from the lists given with the front provinces (the map draws the front between the towns each side holds, so a town taken or lost must be in or out of the list). The state shows how much each contested province's attacker holds now: move it by what the fighting really gained or lost — a few points for trench fighting and a village or two, ten to thirty for a breakthrough or a city, and the holder taking ground back is "contest" to the holder with the share it holds afterwards. When the whole province falls, "occupy" it (or a share near 100); when its holder drives the attackers out entirely, give "occupy" to the holder. Local gains are never a whole province: "retook some trenches" is a share change of a few points, not an occupation. A narrative that says a city or region was taken, lost or retaken must come with the matching transfer. In an active war, fighting moves the shares of the contested provinces at least a little each month. Any front you leave alone the engine moves by the balance of strength where it runs: the stronger side gains ground and breaks into provinces next to its own, an even fight favours the defender, terrain and rivers slow the attacker. So move the fronts your story moves, in every war, not only the player's; what you leave out moves anyway. Occupy whole countries only when they really collapse. Terrain matters — mountains, forests, jungle, wetlands and winter slow attackers; plains and coasts are easier to take; major rivers are natural defensive lines. Fertile provinces feed armies and economies. Population is manpower and taxes. Strategic resources (oil, coal, iron, rubber and the rest) feed industry and war; their output is on a 1–10 scale where 10 is the leading producing region of the day and 5 about a quarter of it, so oil 9 matters far more than iron 1 (each country's totals are given in real amounts a year), and losing or gaining them shows in a country's economy and military. Railways move armies and supplies fast; where there are none, offensives slow and supply crawls.`,
-  economy: `- The engine keeps every country's books: GDP, budget, debt, reserves, prices, jobs, soldiers, resource stores and trade (money in US dollars of the day). In "economy", for the player's country and each country this period really changed, give only the fields that change: growth, inflation and unemployment as % a year over this period; revenue, army, industry, social and other as the new budget levels in $bn a year; troops as the change in thousands of soldiers (mobilisation up, losses and demobilisation down); borrow as loans raised (+) or repaid (−) in $bn; tradeCut from 0 to 1 when a blockade, sanctions or war cut a country's imports (back to 0 when they end). Orders about taxes, spending, mobilisation, loans or trade must show there, at a size the country can afford. Deficits and the interest on the debt add to debt; a war, a shortage of a needed resource, a crushing debt or runaway inflation should hurt growth and raise unrest, and a country cannot field more soldiers than it can pay and call up.`,
+  fronts: `- The world is divided into provinces, many of them large. Wars move province by province along the fronts listed below, and the map must follow the story: when an attacker takes part of a province (a town, a bridgehead, a stretch of the front), mark it "contest" with "share": how much of the province, in %, the side in "to" holds after this period, and "towns": the towns of the province that side holds afterwards, from the lists given with the front provinces (the map draws the front between the towns each side holds, so a town taken or lost must be in or out of the list). The state shows how much each contested province's attacker holds now: move it by what the fighting really gained or lost, as each war's pace says — a few points for trench fighting and a village or two, ten to forty for a breakthrough or a city, whole provinces in a pursuit — and the holder taking ground back is "contest" to the holder with the share it holds afterwards. When the whole province falls, "occupy" it (or a share near 100); when its holder drives the attackers out entirely, give "occupy" to the holder. Local gains are never a whole province: "retook some trenches" is a share change of a few points, not an occupation. A narrative that says a city or region was taken, lost or retaken must come with the matching transfer. In an active war, fighting moves the shares of the contested provinces at least a little each month. Any front you leave alone the engine moves by the balance of strength where it runs: the stronger side gains ground and breaks into provinces next to its own, fast where the odds, the tanks and the air are overwhelmingly its own, slowly where they are even, and an even fight favours the defender, terrain and rivers slow the attacker. So move the fronts your story moves, in every war, not only the player's; what you leave out moves anyway. Occupy whole countries only when they really collapse. Terrain matters — mountains, forests, jungle, wetlands and winter slow attackers; plains and coasts are easier to take; major rivers are natural defensive lines. Fertile provinces feed armies and economies. Population is manpower and taxes. Strategic resources (oil, coal, iron, rubber and the rest) feed industry and war; their output is on a 1–10 scale where 10 is the leading producing region of the day and 5 about a quarter of it, so oil 9 matters far more than iron 1 (each country's totals are given in real amounts a year), and losing or gaining them shows in a country's economy and military. Railways move armies and supplies fast; where there are none, offensives slow and supply crawls.`,
+  economy: `- The engine keeps every country's books: GDP, budget, debt, reserves, prices, jobs, soldiers, resource stores and trade (money in US dollars of the day). In "economy", for the player's country and each country this period really changed, give only the fields that change: growth, inflation and unemployment as % a year over this period; revenue, army, industry, social and other as the new budget levels in $bn a year; troops as the change in thousands of soldiers (mobilisation up, losses and demobilisation down); borrow as loans raised (+) or repaid (−) in $bn; tradeCut from 0 to 1 when a blockade, sanctions or war cut a country's imports (back to 0 when they end). Orders about taxes, spending, mobilisation, loans or trade must show there, at a size the country can afford. Deficits and the interest on the debt add to debt; a war, a shortage of a needed resource, a crushing debt or runaway inflation should hurt growth and raise unrest, and a country cannot field more soldiers than it can pay and call up. The engine already moves growth by its causes (industry spending, taxes, sanctions, a war on the country's own soil) and moves GDP with land won or lost and with men called up: give growth only for what else this period brought, and the engine keeps it within ten points below and six above its causes.`,
   arms: `- Weapons (ARMS below) are counted by the engine: rifles in thousands; artillery, tanks, combat aircraft, warships, air defence and drones in pieces; each with a technology level from 1 (the Great War) to 6 (today). The army budget builds them every month and the engine wears them down in war by the fighting and the balance of strength. Battles must reflect what each side has — its numbers, its level, tanks against air power, air defence against aircraft and drones, the bomb — and in "arms.losses" give the losses a battle of this period really caused, by country and kind, with "capturedBy" when the enemy took them intact; the engine keeps them within what a period of fighting can take and works out the rest itself.`,
-  build: `A directive or order to build a kind of weapon first goes in "arms.focus" (at most two kinds). Research (RESEARCH below) is split between military, industry, agriculture, medicine, science, communications and strategic (nuclear, rockets, space); the engine moves each and makes the breakthroughs. A directive or order to the science minister to put more or less into a direction goes in "arms.research" as the direction and a shift in percentage points (at most ±15, at most two); describe what the scientists do, never invent a breakthrough the engine has not made.`,
+  research: `Research (RESEARCH below) is split between military, industry, agriculture, medicine, science, communications and strategic (nuclear, rockets, space); the engine moves each and makes the breakthroughs. A directive or order to the science minister to put more or less into a direction goes in "arms.research" as the direction and a shift in percentage points (at most ±15, at most two); describe what the scientists do, never invent a breakthrough the engine has not made.`,
   funds: `- Money that changes hands in this period goes in "funds" — a grant, a loan (the IMF, a bank, a government), aid, reparations, a bribe, or arms given in kind — with who pays (a country tag, a bloc id, or imf, world-bank, lenders), who gets it, the amount in $bn paid in this period and a note. The engine credits the receiver's reserves (and its debt for a loan) and charges the giver; arms in kind arrive as weapons, which should show in the fighting. Whatever the narrative says was paid must be in "funds", at its real size; promised but not yet paid money is not. Money the player's government asks for arrives only if the giver agrees, and it comes with conditions.`,
   crises: `- Crises (PLAYER'S CRISES and OTHER COUNTRIES IN CRISIS below) are the engine's alarms, and they are real. Every one must show its consequences this turn, in proportion and in the narrative, the events, the economy and the politics:
   - a debt crisis raises the price of borrowing, scares lenders and markets and can force austerity, a default or a bailout with conditions;
@@ -89,7 +94,7 @@ export const turnRules = (locale: Locale, mode: GameMode = "free", role: RoleKin
   ids: `- Use ONLY the country tags and province ids given in the state. A transfer names one province by id ("region"), or every province of a country at once ("country", for annexing or occupying all of it). A province that is not listed may be named by its exact English name instead of an id.`,
   newCountry: `- To create a country (independence, a puppet, a partition), add it to newCountries with a new lowercase tag and give it provinces through transfers in the same answer.`,
   modes: `- transfers.mode: "occupy" = military control in a war (the owner keeps its claim); "contest" = the given country's troops hold "share" % of the province, the front runs through it; "annex" = sovereignty changes (treaty, annexation, union); "liberate" = the province becomes independent or returns to its own people under the given country. An "occupy" or "contest" needs a war between the side in "to" and the province's holder (start it in warsStarted, or join one in warsJoined, in the same answer), and troops that can get there: from land that side, its co-belligerents or its allies hold or fight in next to the province, across a strait, or by a landing on a coast within about ${LANDING_KM} km of a coast they hold; a movement with no land may rise inside the province. The engine drops any other.`,
-  warEnds: `- When a war ends, list it in warsEnded; occupied provinces then return to their owner unless you annex them in transfers. A war in which one side is wholly conquered should end, with the annexations it brings.`,
+  warEnds: `- When a war ends, list it in warsEnded; occupied provinces then return to their owner unless you annex them in transfers. A war in which one side is wholly conquered should end, with the annexations it brings. Taking a capital does not end a war: terms end it, when a side's will breaks. WARS gives each side's means: readiness, reach from home, will and weariness 0–100, troops tied down by partisans. An occupied people resists, and accepts new rulers only years after a peace.`,
   politics: `- The player's domestic politics are below (PLAYER'S DOMESTIC POLITICS). In "politics", move them with the period's events: party support (shares that add up to 100), statuses (ruling, coalition, opposition, underground, banned), leaders, and their ideas on the three axes — ideas drift slowly, at most ${MAX_DRIFT} points per axis a turn, pulled by events, the government's course and rival parties. New parties and figures rise when the times call for them (a splinter, a protest movement, a charismatic outsider); dissolved ones go in "removed". When the next election falls in this period, hold it and give the results — an honest vote can bring the opposition to power and change the government and leader; a rigged or cancelled one costs legitimacy and raises unrest. Unrest (0–100) follows hardship, repression and war. Plots (a coup, a conspiracy, strikes, an insurgency) grow while ignored and may stay secret (known: false) until intelligence finds them; settle them as foiled, succeeded (a successful coup changes the leader in "leaders") or faded. Orders that back, suppress, ban or legalise a party, campaign, call an election or move against a plot must show here.`,
   bills: `- Bills and decrees of the player's government (BILLS AND DECREES below) get a verdict in "bills": passed or failed, with the reason in "note". A bill passes by the seats of those who back it (a majority, two thirds for the constitution); a decree stands if the regime lets the leader rule by decree and the courts and the street let it. A passed act's changes to the laws take effect (the engine applies them, and its reaction moves unrest); show who welcomes it and who resists. A bill may wait a turn or two for its vote; one left three turns lapses.`,
   acts: `- Acts of state by order: when an order of the player's government renames the country or one of its cities, or gives the country a new colour on the maps of the world, answer it in "acts" and carry it out. "rename": "target" is "country", or the city's name as the order gives it (or its English name); "names": the new name in Russian, Ukrainian and English as each language would really write it – translate words that mean something, transliterate proper names, keep each language's grammar. "color": "#rrggbb", the colour the order asks for or the nearest real one. For each act a "reaction": "unrest" from -10 (it calms the country) to 20 (an outrage) and a one-sentence "note" on who welcomes it, who resents it and why – judged honestly by the reasons the order gives, its timing and its legitimacy (where the constitution or a parliament must agree, a rename by decree angers more). Show in the narrative how the people, the neighbours and the UN take it, and judge the order like any other. Leave "acts" empty when no order asks for one.`,
@@ -108,8 +113,8 @@ export const turnRules = (locale: Locale, mode: GameMode = "free", role: RoleKin
   narrative: `- The narrative is 3–5 paragraphs, about 180–350 words, in the voice of a period newspaper or an intelligence briefing to the player's leadership: what the player's government did and how it went, what moved at the fronts, what the rest of the world did, with concrete names, places, dates and numbers.`,
   fresh: `- Every period brings something new. Read the history so far, then write what changed THIS period — a battle won or lost, a decision taken abroad, a scandal, a surprise. Never repeat the previous narratives' situation, sentences or structure; a front that stands still for months is not news every month — say it in a line and move to what is. The rest of the world acts on its own initiative each period: at least one other government does something that matters to the player.`,
   standing: `- Orders marked (standing) are the government's standing policy, in force every turn: judge how they went this period like any other order.`,
-  directives: `- The government also works through its ministries (MINISTRY DIRECTIVES below): standing tasks, and special operations planned in detail. Carry them out in the period as the ministry's means, the opponent and luck allow — a well-planned, well-resourced operation can succeed — and show their effects in the changes.`,
-  ministries: `In "ministries", give each ministry with directives, and any whose field had news the government must hear this period: "matter", one short English sentence on what it has to report (empty if only its directives), and for every directive its status — "progress" (still under way), "done" or "failed", closing it — with a short English note of what came of it (numbers, places). Do not write the ministers' reports: each minister writes their own after the period, from this. A secret operation that is exposed has consequences abroad.`,
+  directives: `- The government also works through its ministries (MINISTRY DIRECTIVES below): standing tasks, and special operations planned in detail. Every one listed there has been approved by the government and is under way: never hold one back for another approval, whatever its plan says about approval. Carry them out in the period as the ministry's means, the opponent and luck allow — a well-planned, well-resourced operation can succeed — and show their effects in the changes.`,
+  ministries: `In "ministries", give each ministry with directives, and any whose field had news the government must hear this period: "matter", one short English sentence on what it has to report (empty if only its directives), and for every directive its status — "progress" (still under way), "done" or "failed", closing it — with a short note in ${LANGUAGE[locale]} of what came of it (numbers, places) – the player reads it beside the directive, so the status and the note must agree. Do not write the ministers' reports: each minister writes their own after the period, from this. A secret operation that is exposed has consequences abroad.`,
   people: `- People: every province's population is in the state, and the engine grows it by the era's natural pace. In "population", give for each country this period really hit its losses beyond that, in thousands: deaths (soldiers and civilians in war, famine, epidemics, repression, executions) and refugees (fled or deported, with the country they went to in "to" if one). Losses shrink the workforce, the taxes and who can be called up; the engine moves GDP with the people and land a country gains or loses, so do not also cut growth for the land itself.`,
   protests: `- The street: protests (PROTESTS below) live in "protests" — rallies, strikes, riots, an uprising — against the player's government or, with "country", any other. They start and grow when unrest is high, prices rise, a war goes badly, elections are stolen or the government overreaches, and they climb at most one step a turn. For each give its stage, size in thousands, where (province ids), demands, leader, public support (% of the country in sympathy), organisation (0–100: leaders, money, camps, self-defence), a foreign backer if one funds or organises it, and protesters killed this period; settle it as dispersed, conceded, faded or won. How they go:
   - concessions, dialogue, reforms and better times calm them; arrests of leaders, beatings and bans can stop a weak protest but swell a strong one with outrage;
@@ -118,7 +123,12 @@ export const turnRules = (locale: Locale, mode: GameMode = "free", role: RoleKin
   - governments, the player's among them, stoke protests abroad with money, organisers and media and back friendly governments against their street. That raises a protest's organisation and support, but exposure discredits it and invites retaliation.
   Secret conspiracies stay in politics.plots.`,
   overthrow: `- A government can fall. When a coup, a revolution or an uprising succeeds against the player's government, report it in "overthrow" with "happened": true (how: coup|revolution|uprising|deposed; by whom; the new leader and government; a note of three or four sentences on how it ended) — the game is then lost. When no government fell, leave "overthrow" out entirely: never fill it in to say that nothing happened. It can only happen to a weak government: unrest ${FALL_UNREST} or more, an uprising in the streets, or a coup plot of strength ${FALL_PLOT} or more; otherwise an attempt fails. Losing a war or all the land is not an overthrow.`,
-  fall: role === "opposition" ? `${OPPOSITION_ROLE} ${OPPOSITION_EMPTY}\n${OPPOSITION_FIELD}` : LEADER_FALL_RULE,
+  fall:
+    role === "opposition"
+      ? `${OPPOSITION_ROLE} ${OPPOSITION_EMPTY}\n${OPPOSITION_FIELD}`
+      : role === "minister" || role === "general"
+        ? `${FIGURE_ROLE} ${OPPOSITION_EMPTY}\n${FIGURE_FIELD}`
+        : LEADER_FALL_RULE,
   officials: `- The player's government is made of people (THE PLAYER'S GOVERNMENT below), with traits, competence and loyalty: a competent minister carries out directives well, an incompetent one botches them, a disloyal one drags his feet, leaks or plots with his faction. People leave too: report in "officials" a resignation, dismissal by others, death, arrest or flight (change, with a note), and who takes the post if anyone does ("appointed", with the new person's traits, manner, competence and loyalty). The government's own appointments since the last turn have happened: show what they bring — a capable new minister, an angry faction, a loyal but weak one. Ministers have interests of their own (causes, ambition, the party they owe the post to) and a mood after the last turn: one who objected or threatened to resign may follow through — resign, leak, drag his feet on a directive, plot with his faction — as his loyalty and character make likely; one whose causes the government served carries out its directives with zeal.`,
   exile: `- A government that has lost all its land goes into exile (the engine marks it; name the country that hosts it in "exileHost" if it is not an obvious ally). In exile it keeps its gold, diplomats, the soldiers who escaped and the resistance at home; its orders work through the host, its allies, the resistance and propaganda; it comes home when it frees a province.`,
 });
@@ -127,12 +137,15 @@ export type TurnRule = keyof ReturnType<typeof turnRules>;
 
 /** The rules of the whole turn in one request, in their order. */
 const TURN_RULE_ORDER: TurnRule[] = [
-  "orders", "inCharacter", "verdicts", "carriedOut", "tendency", "others", "plans", "pushback", "proportion", "fronts", "economy", "arms", "build", "funds", "crises", "ids", "newCountry", "modes", "warEnds", "politics",
+  "orders", "inCharacter", "verdicts", "carriedOut", "tendency", "others", "plans", "pushback", "proportion", "fronts", "economy", "arms", "research", "funds", "crises", "ids", "newCountry", "modes", "warEnds", "politics",
   "bills", "acts", "laws", "parliament", "truce", "blocKinds", "sanctions", "deals", "invitations", "sessions", "warLosses", "summits", "language", "noMechanics", "narrative", "fresh", "standing", "directives", "ministries", "people", "protests", "overthrow", "fall", "officials", "exile",
 ];
 
-/** One line of the answer's shape per field; the whole turn takes them all, in this order, each stage its own. */
-export const turnShape = (role: RoleKind = "leader"): [string, string][] => [
+/**
+ * One line of the answer's shape per field; the whole turn takes them all, in this order, each stage its own. `figure`
+ * adds the player's own (engine/figures.ts): always for a minister or a general, for others when their person falls.
+ */
+export const turnShape = (role: RoleKind = "leader", figure = role === "minister" || role === "general"): [string, string][] => [
   ["headline", `"headline": "string"`],
   ["narrative", `"narrative": "string"`],
   ["orders", `"orders": [{ "n": 1, "result": "success|partial|failed", "note": "string" }]`],
@@ -165,10 +178,13 @@ export const turnShape = (role: RoleKind = "leader"): [string, string][] => [
   ["officials", `"officials": [{ "post": "${OFFICIAL_POSTS.join("|")}", "name": "string", "title": "string", "change": "appointed|resigned|dismissed|died|arrested|fled", "traits": ["string"], "manner": "string", "competence": 3, "loyalty": 3, "faction": "string", "gender": "male|female", "note": "string" }]`],
   ["protests", `"protests": [{ "title": "string", "country": "tag (omit for the player's)", "stage": "rally|strike|riot|uprising", "size": 0, "where": ["province-id"], "demands": "string", "by": "string", "support": 0, "organisation": 0, "backer": "tag", "killed": 0, "outcome": "active|dispersed|conceded|faded|won" }]`],
   ["overthrow", `"overthrow": { "happened": true, "how": "coup|revolution|uprising|deposed", "by": "string", "leader": "string", "government": "string", "note": "string" } (only if the government really fell — otherwise leave this field out)`],
-  ["arms", `"arms": { "losses": [{ "country": "tag", "kind": "rifles|artillery|tanks|aircraft|ships|airDefence|drones", "lost": 0, "capturedBy": "tag" }], "focus": ["tanks"], "research": [{ "direction": "military|industry|agriculture|medicine|science|communications|strategic", "shift": 10 }] }`],
+  ["arms", `"arms": { "losses": [{ "country": "tag", "kind": "rifles|artillery|tanks|aircraft|ships|airDefence|drones", "lost": 0, "capturedBy": "tag" }], "research": [{ "direction": "military|industry|agriculture|medicine|science|communications|strategic", "shift": 10 }] }`],
+  // Whose causes the orders served, for the cabinet's loyalty (engine/intrigue.ts); the government's alone.
+  ...(role === "opposition" ? [] : ([["cabinet", `"cabinet": [{ "name": "string", "sway": "for|against" }]`]] as [string, string][])),
   ...(role === "opposition"
     ? ([["opposition", `"opposition": { "name": "string", "leader": "string", "gender": "male|female", "support": 0, "members": 0, "money": 0, "press": 0, "insiders": 0, "army": 0, "street": 0, "released": false, "rise": { "how": "election|revolution|coup|appointed", "government": "string", "note": "string" } } (leave "rise" out unless the movement took power)`]] as [string, string][])
     : []),
+  ...(figure ? ([["figure", FIGURE_SHAPE]] as [string, string][]) : []),
   ["exileHost", `"exileHost": null`],
 ];
 
@@ -179,10 +195,10 @@ ${lines.map((l) => `  ${l}`).join(",\n")}
 }
 Use empty arrays where nothing happens.`;
 
-/** The rules of a turn joined into instructions; the arms rule and what to build come as one, as does the work of the ministries. */
+/** The rules of a turn joined into instructions; the arms rule and research come as one, as does the work of the ministries. */
 export const joinRules = (rules: ReturnType<typeof turnRules>, ids: TurnRule[]) =>
   ids
-    .map((id) => (id === "arms" && ids.includes("build") ? `${rules.arms} ${rules.build}` : id === "build" && ids.includes("arms") ? "" : id === "directives" && ids.includes("ministries") ? `${rules.directives} ${rules.ministries}` : id === "ministries" && ids.includes("directives") ? "" : rules[id]))
+    .map((id) => (id === "arms" && ids.includes("research") ? `${rules.arms} ${rules.research}` : id === "research" && ids.includes("arms") ? "" : id === "directives" && ids.includes("ministries") ? `${rules.directives} ${rules.ministries}` : id === "ministries" && ids.includes("directives") ? "" : rules[id]))
     .filter(Boolean)
     .join("\n");
 
@@ -279,7 +295,15 @@ export function economyPart({ state, index, accounts }: WorldContext, brief = fa
   const gap = balance(economy);
   lines.push("");
   lines.push("PLAYER'S ECONOMY (US dollars of the day):");
-  lines.push(`- GDP ${formatMoney(economy.gdp)} a year; real growth ${economy.growth}%, inflation ${economy.inflation}%, unemployment ${economy.unemployment}%`);
+  lines.push(`- GDP ${formatMoney(economy.gdp)} a year; real growth ${rateText(economy.growth)}%, inflation ${rateText(economy.inflation)}%, unemployment ${rateText(economy.unemployment)}%`);
+  // The people in one line: who is poor or rich, town and country, work, schooling and age, with the change since the start (engine/society.ts).
+  const society = societyLine(state, index.regions);
+  if (society) lines.push(`- ${society}`);
+  const causes = growthCauses(state, player.tag, index.regions, mine, sanctionExportCuts(state, index.regions).get(player.tag) ?? 0);
+  if (causes) {
+    const named = (Object.entries(causes) as [string, number][]).filter(([k, v]) => k === "trend" || Math.abs(v) >= 0.05).map(([k, v]) => `${k} ${k !== "trend" && v > 0 ? "+" : ""}${rateText(v)}`);
+    lines.push(`- growth's causes in the engine, points a year: ${named.join(", ")}`);
+  }
   lines.push(
     `- budget a year: revenue ${formatMoney(b.revenue)}; spending: army ${formatMoney(b.army)}, industry ${formatMoney(b.industry)}, social ${formatMoney(b.social)}, other ${formatMoney(b.other)}; ${gap < 0 ? "deficit" : "surplus"} ${formatMoney(Math.abs(gap))}`,
   );
@@ -397,7 +421,7 @@ export function countriesPart({ state, byOwner, people, accounts }: WorldContext
     const parts = [c.tag, en(c.name)];
     if (c.leader) parts.push(c.leader);
     if (options.slim) {
-      parts.push(c.economy ? `${formatMoney(c.economy.gdp)} ${c.economy.growth >= 0 ? "+" : ""}${c.economy.growth}%, ${c.economy.troops}k` : "-");
+      parts.push(c.economy ? `${formatMoney(c.economy.gdp)} ${c.economy.growth >= 0 ? "+" : ""}${rateText(c.economy.growth)}%, ${c.economy.troops}k` : "-");
       if (options.resources?.(c.tag)) parts.push(resourcesOf(accounts, c.tag));
       lines.push(`- ${parts.join(" | ")}`);
       continue;
@@ -409,7 +433,7 @@ export function countriesPart({ state, byOwner, people, accounts }: WorldContext
     if (c.government) parts.push(en(c.government));
     parts.push(owned ? String(owned) : c.dormant ? "0, a movement or republic inside another state" : "0, in exile");
     parts.push(owned ? formatPopulation(people.get(c.tag) ?? 0) : "-");
-    parts.push(c.economy ? `${formatMoney(c.economy.gdp)} ${c.economy.growth >= 0 ? "+" : ""}${c.economy.growth}%, ${c.economy.troops}k` : "-");
+    parts.push(c.economy ? `${formatMoney(c.economy.gdp)} ${c.economy.growth >= 0 ? "+" : ""}${rateText(c.economy.growth)}%, ${c.economy.troops}k` : "-");
     if (!options.resources || options.resources(c.tag)) parts.push(resourcesOf(accounts, c.tag));
     lines.push(`- ${parts.join(" | ")}`);
   }
@@ -475,12 +499,19 @@ function warLine(state: GameState, w: GameState["wars"][number]): string {
 export function warsPart({ state, index }: WorldContext, front: (w: GameState["wars"][number]) => "all" | "contested" | "none" = () => "all", title?: string): string[] {
   const lines = ["", title ?? "WARS (id | name | attackers vs defenders | since | strength: each side's soldiers and heavy weapons, split between the wars its members fight | losses so far) and their fronts, the provinces of each side that border the other, those the front runs through first:"];
   if (!state.wars.length) lines.push("- none");
+  const strength = state.wars.some((w) => !w.truce) ? frontStrength(state, index) : null;
   for (const w of state.wars) {
     lines.push(warLine(state, w));
-    const how = front(w);
-    if (how === "none") continue;
     // The provinces the front runs through come first, so a long front's cap never hides one.
     const all = frontOf(state, index, w);
+    // Each side's means in a war being fought (engine/warMeans.ts), and the pace its fronts move at (engine/fronts.ts).
+    if (strength && !w.truce) {
+      lines.push(`    ${meansLine(warMeans(state, w, index, all, strength.means))}`);
+      const pace = paceLine(warPace(state, index, w, strength));
+      if (pace) lines.push(`    ${pace}`);
+    }
+    const how = front(w);
+    if (how === "none") continue;
     const listed = (how === "contested" ? all.filter((id) => state.regions[id].contested) : all).slice(0, MAX_FRONT);
     if (how === "contested" && !listed.length) continue;
     lines.push(listed.length ? listed.map((id) => `    ${provinceLine(id, state, index, true, true)}`).join("\n") : "    (no shared land front: fighting at sea, by air or overseas)");
@@ -604,7 +635,7 @@ export function describeDiplomacy(state: GameState): string {
     if (!recent.length) continue;
     const name = en(state.countries[tag]?.name ?? tag);
     for (const m of recent) {
-      if (m.from === "player") lines.push(`- To ${name} [${tag}]: "${m.text.slice(0, 600)}"`);
+      if (m.from === "player") lines.push(`- ${m.as && m.as !== "leader" ? `From the player as ${m.as === "opposition" ? "the opposition's leader" : `a ${m.as}`}, not the government, to` : "To"} ${name} [${tag}]: "${m.text.slice(0, 600)}"`);
       else lines.push(`- ${name} answered (${m.stance ?? "neutral"}): ${m.summary ?? m.text.slice(0, 300)}`);
     }
   }
@@ -622,15 +653,15 @@ export const periodLine = (state: GameState) => `PERIOD TO SIMULATE: ${state.dat
 
 /** The user message of a turn request. */
 export function buildTurnPrompt(state: GameState, orders: string[], index: MapIndex): string {
-  const scenario = getScenario(state.scenarioId);
+  const scenario = scenarioOf(state);
   const parts = [
     `SCENARIO BACKGROUND (the starting point, ${scenario.startDate}):`,
     scenario.context,
     "",
     periodLine(state),
     "",
-    // Who the player is when not the government, and what the state's dice did to their movement (engine/role.ts).
-    ...describeRole(state, castRepression(state)),
+    // Who the player is when not the government, and what the dice did to their movement and their person (engine/role.ts, engine/fate.ts).
+    ...describePerson(state, orders),
     describeWorld(state, index),
     ...describeArms(state),
     ...describeResearch(state),
@@ -638,6 +669,7 @@ export function buildTurnPrompt(state: GameState, orders: string[], index: MapIn
     ...describeAbroad(state, (tag) => en(state.countries[tag]?.name ?? tag), index.regions),
     ...describeIntentions(state, (tag) => en(state.countries[tag]?.name ?? tag), index),
     ...describeIntrigues(state),
+    ...describeCabinet(state),
     ...describeFog(state, index),
     "",
     "HISTORY SO FAR:",
@@ -667,10 +699,12 @@ Answer with ONE JSON object and nothing else:
 export function buildDiplomacyPrompt(state: GameState, target: string, index: MapIndex): string {
   const them = state.countries[target];
   const player = state.countries[state.player];
-  const scenario = getScenario(state.scenarioId);
+  const scenario = scenarioOf(state);
   return [
     `You are the government of ${en(them.name)} [${target}]${them.leader ? `, led by ${them.leader}` : ""}.`,
     `The date is ${state.date}. The player's government is ${en(player.name)} [${state.player}]${player.leader ? `, led by ${player.leader}` : ""}.`,
+    // A letter from the opposition or a minister is not the government's word (engine/exile.ts).
+    ...describeSender(state),
     ...describeCourse(state, target, (tag) => en(state.countries[tag]?.name ?? tag)),
     "",
     `SCENARIO BACKGROUND (the starting point, ${scenario.startDate}):`,
@@ -718,12 +752,10 @@ Answer with ONE JSON object and nothing else:
  */
 const PROPOSAL_RULE: Partial<Record<AdvisorId, string>> = {
   science: `- When the leader asks you to change how the research money is split, propose the new split in "proposal": "research", whole percentages of the seven directions (military, industry, agriculture, medicine, science, communications, strategic) adding up to 100; RESEARCH below has the split now. A direction you leave out keeps its share. Remember the atomic programme runs only with ${BOMB_SHARE}% or more on strategic. Propose only when asked to change the split; otherwise leave "proposal" out. The leader applies it or not.\n`,
-  military: `- When the leader asks what industry should build first for the army, propose it in "proposal": "focus", at most two of rifles, artillery, tanks, aircraft, ships, airDefence, drones that the country can build (ARMS below); an empty list spreads the money by the usual mix. Propose only when asked; otherwise leave "proposal" out. The leader applies it or not.\n`,
 };
 
 const PROPOSAL_SHAPE: Partial<Record<AdvisorId, string>> = {
   science: ', "proposal": { "research": { "military": 0, "industry": 0, "agriculture": 0, "medicine": 0, "science": 0, "communications": 0, "strategic": 0 } }',
-  military: ', "proposal": { "focus": ["string"] }',
 };
 
 /** Today's budget for the economy minister, in the figures a proposal answers in. */
@@ -743,7 +775,7 @@ export function buildAdvisorPrompt(state: GameState, index: MapIndex, advisor: A
   const mine = (state.directives ?? []).filter((d) => d.ministry === advisor);
   const lastReport = [...state.chronicle].reverse().flatMap((e) => (e.reports ?? []).filter((r) => r.ministry === advisor).map((r) => `[${e.to}] ${r.text}`))[0];
   const player = state.countries[state.player];
-  const scenario = getScenario(state.scenarioId);
+  const scenario = scenarioOf(state);
   return [
     `You advise the government of ${en(player.name)} [${state.player}]${player.leader ? `, led by ${player.leader}` : ""}. The date is ${state.date}.`,
     "",
@@ -778,6 +810,8 @@ export function buildAdvisorPrompt(state: GameState, index: MapIndex, advisor: A
     ...(WATCH_ABROAD.includes(advisor) ? describeVisiblePlans(state, (tag) => en(state.countries[tag]?.name ?? tag)) : []),
     // A deputy speaking in private sees the ministry, not what the minister alone knows.
     ...(asMinister ? describeForMinister(state, ADVISOR_POST[advisor]) : []),
+    // The minister's faction, rivals and plot, so they speak in character (engine/intrigue.ts).
+    ...(asMinister ? factionLineFor(state, officialAt(state, ADVISOR_POST[advisor])?.name ?? "") : []),
   ].join("\n");
 }
 
@@ -818,7 +852,9 @@ export function buildReportDigest(state: GameState, index: MapIndex, entry: Chro
   if (economy) {
     const b = economy.budget;
     const gap = balance(economy);
-    lines.push(`- GDP ${formatMoney(economy.gdp)} a year; growth ${economy.growth}%, inflation ${economy.inflation}%, unemployment ${economy.unemployment}%`);
+    lines.push(`- GDP ${formatMoney(economy.gdp)} a year; growth ${rateText(economy.growth)}%, inflation ${rateText(economy.inflation)}%, unemployment ${rateText(economy.unemployment)}%`);
+    const society = societyLine(state, index.regions);
+    if (society) lines.push(`- ${society}`);
     lines.push(
       `- budget a year: revenue ${formatMoney(b.revenue)}; army ${formatMoney(b.army)}, industry ${formatMoney(b.industry)}, social ${formatMoney(b.social)}, other ${formatMoney(b.other)}; ${gap < 0 ? "deficit" : "surplus"} ${formatMoney(Math.abs(gap))}; debt ${formatMoney(economy.debt)}, reserves ${formatMoney(economy.reserves)}; army ${economy.troops} thousand soldiers`,
     );
@@ -869,6 +905,7 @@ export function buildReportBrief(state: GameState, entry: ChronicleEntry, minist
   return [
     `THE MINISTER WHO SPEAKS (write as them): ${personaOf(ministry, state)}`,
     ...(person && real ? [`${person.name} is a real person: speak as ${real.gender === "female" ? "she" : "he"} really did by ${entry.to}.`] : []),
+    ...(person ? factionLineFor(state, person.name) : []),
     "",
     "THE MINISTRY'S BRIEF FOR THE PERIOD:",
     `- the matter: ${brief?.matter || "its directives and the government's questions"}`,
@@ -919,9 +956,11 @@ Answer with ONE JSON object and nothing else:
 /** The user message of a politics setup request. */
 export function buildPoliticsPrompt(state: GameState): string {
   const player = state.countries[state.player];
-  const scenario = getScenario(state.scenarioId);
+  const scenario = scenarioOf(state);
   return [
     `The player's country: ${en(player.name)} [${state.player}]${player.leader ? `, led by ${player.leader}` : ""}${player.government ? ` (${en(player.government)})` : ""}. The date is ${state.date}.`,
+    // The player's minister holds their own post (engine/figures.ts).
+    ...describeFigureSetup(state),
     "",
     `SCENARIO BACKGROUND (the starting point, ${scenario.startDate}):`,
     scenario.context,
