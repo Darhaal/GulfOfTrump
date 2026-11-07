@@ -8,10 +8,11 @@ import { ui } from "@/components/ui/classes";
 import Dictation from "@/components/voice/Dictation";
 import SpeakButton from "@/components/voice/SpeakButton";
 import { formatDate } from "@/engine/calendar";
-import { canVote, forecast, leanOf, WHIP } from "@/engine/parliament";
+import { canVote, confidenceLost, forecast, leanOf, WHIP } from "@/engine/parliament";
 import type { GameState, Session } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
+import { withPartyColours } from "@/engine/partyEmblems";
 import { partyColors } from "./layout";
 import { useMotionLabel } from "./motion";
 
@@ -22,8 +23,8 @@ interface SessionDialogProps {
   disabled: boolean;
   onSpeak: (line: string) => Promise<boolean>;
   onVote: () => void;
-  /** A draft of the government's next speech from the interior minister, for the player to edit and give; null when none came. */
-  onDraft: () => Promise<string | null>;
+  /** A draft of the government's next speech from the interior minister, for the player to edit and give; null when none came. None for the opposition: no minister writes its words. */
+  onDraft?: () => Promise<string | null>;
   onClose: () => void;
 }
 
@@ -41,7 +42,7 @@ export default function SessionDialog({ state, session, busy, disabled, onSpeak,
   const [line, setLine] = useState("");
   const politics = state.politics;
   const parties = useMemo(() => (politics?.parties ?? []).filter((p) => (p.seats ?? 0) > 0).sort((a, b) => (b.seats ?? 0) - (a.seats ?? 0)), [politics?.parties]);
-  const colors = useMemo(() => partyColors(politics?.parties ?? []), [politics?.parties]);
+  const colors = useMemo(() => partyColors(withPartyColours(state, politics?.parties ?? [])), [politics?.parties, state]);
   const record = session?.transcript ?? [];
   const over = session ? session.status !== "open" : false;
   const talking = busy?.kind === "parliament";
@@ -53,19 +54,19 @@ export default function SessionDialog({ state, session, busy, disabled, onSpeak,
     if (await onSpeak(said)) setLine("");
   };
   const draft = async () => {
-    if (busy) return;
+    if (busy || !onDraft) return;
     const text = await onDraft();
     if (text) setLine(text);
   };
   const drafting = busy?.kind === "advice";
   const m = session?.motion;
   const effect = (() => {
-    if (!session || session.status !== "passed" || !m) return session?.status === "failed" && m?.kind === "confidence" ? t("politics.session.effect.confidenceLost") : null;
+    if (!session || session.status !== "passed" || !m) return session && confidenceLost(session) ? t("politics.session.effect.confidenceLost") : null;
     if (m.kind === "law" && m.law && m.option) return t("politics.session.effect.law", { law: t(`law.${m.law}` as MessageKey), option: t(`law.${m.law}.${m.option}` as MessageKey) });
     if (m.kind === "emergency") return t("politics.session.effect.emergency");
     if (m.kind === "election" && politics?.nextElection) return t("politics.session.effect.election", { date: formatDate(politics.nextElection, locale) });
     if (m.kind === "postpone" && politics?.nextElection) return t("politics.session.effect.postpone", { date: formatDate(politics.nextElection, locale) });
-    if (m.kind === "confidence") return t("politics.session.effect.confidenceWon");
+    if (m.kind === "confidence") return t(confidenceLost(session) ? "politics.session.effect.confidenceLost" : "politics.session.effect.confidenceWon");
     return t("politics.session.effect.bill");
   })();
 
@@ -92,7 +93,7 @@ export default function SessionDialog({ state, session, busy, disabled, onSpeak,
                     <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${mine ? "rounded-tr-md bg-ink text-on-ink" : "rounded-tl-md border border-line sheet text-ink"}`}>
                       <div className={`mb-0.5 flex items-center gap-2 text-2xs font-black uppercase tracking-widest ${mine ? "text-on-ink/60" : "text-muted"}`}>
                         {mine ? t("diplomacy.you") : [l.speaker, partyName(l.party)].filter(Boolean).join(" · ")}
-                        {!mine && <SpeakButton id={`session-${session.id}-${i}`} text={l.text} className="-my-1 ml-auto" />}
+                        {!mine && <SpeakButton id={`session-${session.id}-${i}`} text={l.text} who={{ name: l.speaker || l.party || "chair" }} className="-my-1 ml-auto" />}
                       </div>
                       <p className="whitespace-pre-wrap font-medium leading-relaxed">{l.text}</p>
                     </div>
@@ -142,10 +143,12 @@ export default function SessionDialog({ state, session, busy, disabled, onSpeak,
                     <Mic className="h-4 w-4" />
                     {t("politics.session.speak")}
                   </button>
-                  <button type="button" disabled={disabled || Boolean(busy)} onClick={() => void draft()} title={t("politics.draft.hint")} className={`${ui.secondary} px-4 py-2.5 text-xs`}>
-                    {drafting ? <Loader2 className="h-4 w-4 animate-spin" /> : <PenLine className="h-4 w-4" />}
-                    {t("politics.draft.button")}
-                  </button>
+                  {onDraft && (
+                    <button type="button" disabled={disabled || Boolean(busy)} onClick={() => void draft()} title={t("politics.draft.hint")} className={`${ui.secondary} px-4 py-2.5 text-xs`}>
+                      {drafting ? <Loader2 className="h-4 w-4 animate-spin" /> : <PenLine className="h-4 w-4" />}
+                      {t("politics.draft.button")}
+                    </button>
+                  )}
                   <button type="button" disabled={Boolean(busy) || !canVote(session)} onClick={onVote} title={canVote(session) ? undefined : t("politics.session.speakFirst")} className={`${ui.secondary} px-4 py-2.5 text-xs`}>
                     <Gavel className="h-4 w-4" />
                     {t("politics.session.vote")}
@@ -164,18 +167,19 @@ export default function SessionDialog({ state, session, busy, disabled, onSpeak,
                 <div className={`mt-0.5 text-2xs ${tally.for >= tally.need ? "text-emerald-700" : "text-amber-700"}`}>{t("politics.session.needs", { n: tally.need, total: politics.parliament?.seats ?? 0 })}</div>
               </div>
             )}
-            <ul className="grid gap-1.5">
+            <ul className="grid min-w-0 gap-1.5">
               {parties.map((p) => {
                 const lean = leanOf(p, session, politics.laws);
                 const counted = tally?.parties.find((x) => x.party === p.id);
                 const seats = p.seats ?? 0;
                 const word = lean >= WHIP ? "for" : lean <= -WHIP ? "against" : "waver";
                 return (
-                  <li key={p.id}>
-                    <div className="flex items-baseline justify-between gap-2 text-2xs font-bold">
-                      <span className="flex min-w-0 items-center gap-1.5 text-ink">
-                        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colors.get(p.id) }} />
-                        <span className="truncate">{p.name}</span>
+                  <li key={p.id} className="min-w-0">
+                    {/* A grid item keeps its content's width unless told otherwise: a long party name wraps inside the card instead of running out of it. */}
+                    <div className="flex items-start justify-between gap-2 text-2xs font-bold">
+                      <span className="flex min-w-0 items-start gap-1.5 text-ink">
+                        <span className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colors.get(p.id) }} />
+                        <span className="min-w-0 break-words leading-tight">{p.name}</span>
                       </span>
                       <span className={`shrink-0 uppercase tracking-wider ${word === "for" ? "text-emerald-700" : word === "against" ? "text-red-700" : "text-amber-700"}`}>{t(`politics.session.lean.${word}` as MessageKey)}</span>
                     </div>

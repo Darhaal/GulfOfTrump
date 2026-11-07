@@ -13,7 +13,7 @@ import type { AppliedChange, GameState, MapRegion, Sanction, ScenarioId } from "
  */
 
 /** Exports as a share of GDP in each era, for an economy of middling size; big ones trade less of their output, small ones more. */
-const OPENNESS: Record<ScenarioId, number> = { "1914": 0.14, "1939": 0.08, "1950": 0.1, "1964": 0.12, "1991": 0.18, "1999": 0.24, "2014": 0.3, "2022": 0.28 };
+const OPENNESS: Record<ScenarioId, number> = { "1914": 0.14, "1933": 0.07, "1939": 0.08, "1950": 0.1, "1957": 0.11, "1964": 0.12, "1973": 0.15, "1979": 0.17, "1991": 0.18, "1999": 0.24, "2014": 0.3, "2022": 0.28 };
 
 /** How much distance hurts trade: well above 1, so neighbours matter more than distant giants. */
 const DISTANCE = 1.3;
@@ -48,21 +48,41 @@ export interface TradeBook {
 
 type Point = [number, number];
 
-/** Where each country's people live, on average: its centre for distances. */
+/**
+ * Where each country's own people live: around its most populous province,
+ * within 1,500 km – its centre for distances. An empire's centre averaged
+ * with its far colonies lands nowhere (the Netherlands of 1950, with New
+ * Guinea and Suriname, "lived" in Iran).
+ */
 export function countryCentres(state: Pick<GameState, "regions">, map: Record<string, MapRegion>): Map<string, Point> {
-  const sums = new Map<string, { x: number; y: number; w: number }>();
+  const places = new Map<string, { at: Point; w: number }[]>();
   for (const [id, r] of Object.entries(state.regions)) {
     const p = map[id];
     if (!p?.at) continue;
-    const w = Math.max(1, peopleIn(r, p));
-    const s = sums.get(r.owner) ?? { x: 0, y: 0, w: 0 };
-    s.x += p.at[0] * w;
-    s.y += p.at[1] * w;
-    s.w += w;
-    sums.set(r.owner, s);
+    const list = places.get(r.owner) ?? [];
+    list.push({ at: p.at, w: Math.max(1, peopleIn(r, p)) });
+    places.set(r.owner, list);
   }
-  return new Map([...sums].map(([t, s]) => [t, [s.x / s.w, s.y / s.w] as Point]));
+  const out = new Map<string, Point>();
+  for (const [tag, list] of places) {
+    // Home is around the most populous province: an empire averaged with its far colonies would land nowhere.
+    const top = list.reduce((a, b) => (b.w > a.w ? b : a));
+    let x = 0;
+    let y = 0;
+    let w = 0;
+    for (const p of list) {
+      if (distanceKm(p.at, top.at) > HOME_KM) continue;
+      x += p.at[0] * p.w;
+      y += p.at[1] * p.w;
+      w += p.w;
+    }
+    out.set(tag, [x / w, y / w]);
+  }
+  return out;
 }
+
+/** How far from its most populous province a country's home reaches, for its centre. */
+const HOME_KM = 1500;
 
 export const distanceKm = (a: Point, b: Point) => {
   const rad = Math.PI / 180;
@@ -190,9 +210,18 @@ export function exportShares(state: Pick<GameState, "countries" | "regions" | "w
 }
 
 /**
+ * Sanctions imposed together with allies (engine/joint.ts) bite harder: the
+ * goods no longer come round through the partner's ports and banks, so a
+ * sanctioner's share of the target's trade counts half again.
+ */
+export const JOINT_BITE = 1.5;
+const bite = (s: Sanction) => (s.scope === "full" ? 1 : 0.5) * (s.joint ? JOINT_BITE : 1);
+
+/**
  * The share of each country's imports cut off by sanctions: what came from
  * those who sanction it, all of it under full sanctions and half under
- * partial ones, judged on trade as it would be without the sanctions.
+ * partial ones (half again under sanctions imposed together), judged on
+ * trade as it would be without the sanctions.
  */
 export function sanctionCuts(state: Pick<GameState, "countries" | "regions" | "wars" | "alliances" | "sanctions" | "scenarioId">, map: Record<string, MapRegion>): Map<string, number> {
   const out = new Map<string, number>();
@@ -205,7 +234,7 @@ export function sanctionCuts(state: Pick<GameState, "countries" | "regions" | "w
     let cut = 0;
     for (const s of sanctions.filter((x) => x.against === target)) {
       const p = book.from.find((x) => x.tag === s.by);
-      if (p) cut += (p.value / book.imports) * (s.scope === "full" ? 1 : 0.5);
+      if (p) cut += (p.value / book.imports) * bite(s);
     }
     out.set(target, Math.min(0.9, Math.round(cut * 100) / 100));
   }
@@ -229,7 +258,7 @@ export function sanctionExportCuts(state: Pick<GameState, "countries" | "regions
     let cut = 0;
     for (const s of sanctions.filter((x) => x.against === target)) {
       const p = book.toward.find((x) => x.tag === s.by);
-      if (p) cut += (p.value / book.exports) * (s.scope === "full" ? 1 : 0.5);
+      if (p) cut += (p.value / book.exports) * bite(s);
     }
     out.set(target, Math.min(0.9, Math.round(cut * 100) / 100));
   }
@@ -247,7 +276,7 @@ export function applySanctions(next: GameState, changes: z.infer<typeof sanction
       list = list.filter((s) => s !== existing);
       applied.push({ kind: "sanction", by: c.by, against: c.against, change: "lifted" });
     } else if (!existing || existing.scope !== c.scope) {
-      list = [...list.filter((s) => s !== existing), { by: c.by, against: c.against, scope: c.scope, since: ctx.to }];
+      list = [...list.filter((s) => s !== existing), { by: c.by, against: c.against, scope: c.scope, since: ctx.to, ...(existing?.joint ? { joint: existing.joint } : {}) }];
       applied.push({ kind: "sanction", by: c.by, against: c.against, change: c.scope });
     }
   }

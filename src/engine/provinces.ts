@@ -6,17 +6,20 @@ import { peopleIn } from "./population";
 import { countryName } from "./names";
 import { titleCase } from "./text";
 import type { GameState, Locale, MapIndex, MapRegion, RegionState, Scenario } from "./types";
+import { nameProvinces } from "./provinceNames";
 
 export type ProvinceTopology = Topology<{ regions: GeometryCollection<MapRegion> }>;
 
 /**
  * The owner tag of a province at the scenario's start: the finest correction
- * wins — the province itself, then its modern country, then the historical
- * polygon it lies in, then that polygon's owner as the map names it.
+ * wins — the province itself (on a finer map, the standard province it lies
+ * in), then its modern country, then the historical polygon it lies in, then
+ * that polygon's owner as the map names it.
  */
-export function startingOwner(scenario: Scenario, region: Pick<MapRegion, "id" | "hist" | "owner" | "adm0">): string {
+export function startingOwner(scenario: Scenario, region: Pick<MapRegion, "id" | "hist" | "owner" | "adm0" | "was">): string {
   return (
     scenario.provinceOwners?.[region.id] ??
+    (region.was !== undefined ? scenario.provinceOwners?.[region.was] : undefined) ??
     scenario.modernOwners?.[region.adm0] ??
     scenario.owners[region.hist] ??
     scenario.aliases[region.owner] ??
@@ -175,9 +178,11 @@ export function regionLabel(id: string, index: MapIndex | null, locale: Locale):
   return country ? country[locale] : titleCase(id);
 }
 
-/** Provinces by id and who borders whom, from the map's shared arcs. */
+/** Provinces by id and who borders whom, from the map's shared arcs; and each coastal province's shore, for the straits between them. */
 export function buildMapIndex(topology: ProvinceTopology): MapIndex {
   const geometries = topology.objects.regions.geometries;
+  // The names Natural Earth lacks in Russian and Ukrainian, on the map's own records, so the drawing reads them too.
+  nameProvinces(geometries.map((g) => g.properties as MapRegion));
   const ids = geometries.map((g) => (g.properties as MapRegion).id);
   const regions: Record<string, MapRegion> = {};
   geometries.forEach((g) => {
@@ -188,7 +193,90 @@ export function buildMapIndex(topology: ProvinceTopology): MapIndex {
   adjacency.forEach((list, i) => {
     neighbors[ids[i]] = list.map((j) => ids[j]);
   });
-  return { regions, neighbors };
+  return { regions, neighbors, coasts: shores(topology) };
+}
+
+/**
+ * The points of each province's shore: the vertices of the arcs no other
+ * province shares (a border runs along a shared arc, a coast along one of
+ * its own). The map is simplified, so a shore is a few dozen points at most;
+ * enough to measure a strait to some tens of kilometres.
+ */
+function shores(topology: ProvinceTopology): Record<string, [number, number][]> {
+  const arcs = (topology.arcs ?? []) as [number, number][][];
+  const t = topology.transform;
+  const decoded = arcs.map((arc) => {
+    if (!t) return arc.map(([x, y]) => [x, y] as [number, number]);
+    let x = 0;
+    let y = 0;
+    return arc.map(([dx, dy]) => {
+      x += dx;
+      y += dy;
+      return [x * t.scale[0] + t.translate[0], y * t.scale[1] + t.translate[1]] as [number, number];
+    });
+  });
+  const rings = (g: (typeof topology.objects.regions.geometries)[number]): number[][] =>
+    g.type === "Polygon" ? (g.arcs as number[][]) : g.type === "MultiPolygon" ? (g.arcs as number[][][]).flat() : [];
+  const uses = new Array<number>(decoded.length).fill(0);
+  for (const g of topology.objects.regions.geometries) for (const ring of rings(g)) for (const a of ring) uses[a < 0 ? ~a : a] += 1;
+  const out: Record<string, [number, number][]> = {};
+  for (const g of topology.objects.regions.geometries) {
+    const points: [number, number][] = [];
+    for (const ring of rings(g)) for (const a of ring) if (uses[a < 0 ? ~a : a] === 1) points.push(...decoded[a < 0 ? ~a : a]);
+    if (points.length) out[(g.properties as MapRegion).id] = points;
+  }
+  return out;
+}
+
+/** The largest landmass counted as an island, in provinces: Taiwan, Malta, Cyprus, Hainan, Sicily – not Britain or Honshu. */
+export const ISLAND_PROVINCES = 10;
+
+/** Each map's landmasses: the provinces joined by land, found once. */
+const LANDMASSES = new WeakMap<object, Map<string, string[]>>();
+
+/** The island a province lies on (the provinces joined to it by land), when it has no more than ISLAND_PROVINCES; null on a mainland. */
+export function islandOf(index: Pick<MapIndex, "neighbors">, id: string): string[] | null {
+  let masses = LANDMASSES.get(index.neighbors);
+  if (!masses) LANDMASSES.set(index.neighbors, (masses = new Map()));
+  let mass = masses.get(id);
+  if (!mass) {
+    const seen = new Set([id]);
+    const queue = [id];
+    while (queue.length && seen.size <= ISLAND_PROVINCES + 1) {
+      const x = queue.pop()!;
+      for (const y of index.neighbors[x] ?? []) {
+        if (seen.has(y)) continue;
+        seen.add(y);
+        queue.push(y);
+      }
+    }
+    mass = [...seen];
+    if (mass.length <= ISLAND_PROVINCES) for (const x of mass) masses.set(x, mass);
+    else masses.set(id, mass);
+  }
+  return mass.length <= ISLAND_PROVINCES ? mass : null;
+}
+
+/**
+ * About how much sea lies between two provinces, km: the shortest distance
+ * between their shores where the map has them, else centre to centre less
+ * the radius of a circle of each one's area. 0 for neighbours by land.
+ */
+export function seaGapKm(index: Pick<MapIndex, "regions" | "coasts" | "neighbors">, a: string, b: string): number {
+  if (a === b || (index.neighbors[a] ?? []).includes(b)) return 0;
+  const pa = index.regions[a];
+  const pb = index.regions[b];
+  if (!pa?.at || !pb?.at) return Infinity;
+  const sa = index.coasts?.[a];
+  const sb = index.coasts?.[b];
+  if (!sa?.length || !sb?.length) return coastGapKm(pa, pb);
+  // Two shores too far apart for any of their points to come close are measured once, by their centres.
+  const centres = distanceKm(pa.at, pb.at);
+  const reach = (p: MapRegion) => 2.5 * Math.sqrt(Math.max(1, p.area) / Math.PI);
+  if (centres - reach(pa) - reach(pb) > 3000) return coastGapKm(pa, pb);
+  let best = Infinity;
+  for (const p of sa) for (const q of sb) best = Math.min(best, distanceKm(p, q));
+  return best;
 }
 
 /**

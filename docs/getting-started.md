@@ -80,6 +80,6 @@ browser and your account, and appear on any computer you sign in from.
 | "The game server only answers this computer" | Open `http://127.0.0.1:3000`, not a LAN IP or a tunnel. |
 | The sign-in tab does not open | Allow pop-ups for 127.0.0.1:3000 and click again. |
 | "Plan usage was not allowed" | Sign in again and approve the plan-usage permission. |
-| "Usage limit for apps is reached" | Your plan's app allowance is spent; see ChatGPT → Settings → Usage. |
+| "ChatGPT plan limit reached" | Your plan's app allowance is spent. The dialog counts down to the reset when ChatGPT says when; meanwhile wait, play on with the offline game master, or see ChatGPT → Settings → Usage. |
 | "The game master's answer could not be read" | Try the turn again, or pick another model in Settings. |
 | Turns are slow | Pick a faster model in Settings; reasoning models think longer. |

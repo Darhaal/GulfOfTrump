@@ -23,6 +23,8 @@ interface Preferences {
   rate: string;
   /** "on" reads each new turn aloud as it arrives. */
   readTurns: string;
+  /** "off" reads people's words in the one voice picked; otherwise each person in a voice of their own (lib/voice/text.ts, personVoice). */
+  peopleVoices: string;
   /** Voice input: "off" hides the microphone buttons. */
   mic: string;
   /** The microphone picked in Settings (its deviceId), or "" for the system's. */
@@ -37,6 +39,8 @@ interface Preferences {
   tutorial: string;
   /** How many ministers report after a turn on their own, "0"–"5"; "" for the default (engine/reports.ts voicesFrom). */
   reports: string;
+  /** The army tab's open section (components/game/ArmyPanel.tsx): "forces", "fronts", "losses" or "command"; "" for the first. */
+  armySection: string;
 }
 
 const KEYS: Record<keyof Preferences, string> = {
@@ -47,6 +51,7 @@ const KEYS: Record<keyof Preferences, string> = {
   voice: "got_voice",
   rate: "got_rate",
   readTurns: "got_read_turns",
+  peopleVoices: "got_people_voices",
   mic: "got_mic",
   micDevice: "got_mic_device",
   volume: "got_volume",
@@ -54,6 +59,7 @@ const KEYS: Record<keyof Preferences, string> = {
   leftWidth: "got_left_width",
   tutorial: "got_tutorial",
   reports: "got_reports",
+  armySection: "got_army_section",
 };
 
 function browserLocale(): Locale {
@@ -67,7 +73,7 @@ function browserLocale(): Locale {
   return "en";
 }
 
-const DEFAULTS = (): Preferences => ({ locale: browserLocale(), theme: "system", model: "", speech: "", voice: "", rate: "", readTurns: "", mic: "", micDevice: "", volume: "", demo: "", leftWidth: "", tutorial: "", reports: "" });
+const DEFAULTS = (): Preferences => ({ locale: browserLocale(), theme: "system", model: "", speech: "", voice: "", rate: "", readTurns: "", peopleVoices: "", mic: "", micDevice: "", volume: "", demo: "", leftWidth: "", tutorial: "", reports: "", armySection: "" });
 
 function read<K extends keyof Preferences>(key: K): Preferences[K] {
   try {
@@ -79,6 +85,7 @@ function read<K extends keyof Preferences>(key: K): Preferences[K] {
     if (key === "leftWidth" && !/^\d{3,4}$/.test(value)) return DEFAULTS()[key];
     if (key === "tutorial" && value !== "done") return DEFAULTS()[key];
     if (key === "reports" && !/^[0-5]$/.test(value)) return DEFAULTS()[key];
+    if (key === "armySection" && !["forces", "fronts", "losses", "command"].includes(value)) return DEFAULTS()[key];
     return value as Preferences[K];
   } catch {
     return DEFAULTS()[key];

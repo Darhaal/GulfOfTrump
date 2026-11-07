@@ -76,6 +76,27 @@ world should move on its own, and every result should hold up to scrutiny.
   parliament, the army's command and the parties – the same moves on
   deputies in their ministry's tab, and loyalty itself seen through
   intelligence rather than in plain figures.
+- **International bodies that act, and a world that answers aggression**
+  (first pass). An attack on another country is weighed by the era's norm
+  against conquest, the attacker's weight against the victim's and its other
+  attacks within a year, which compound. Governments with a stake condemn it
+  and lose trust in the attacker; rivals, democracies and a great power's
+  allies sanction it; those who fear it arm and seek blocs; the strong send
+  the victim arms from their stores; since 1950 a great power pledges to
+  defend the next in line. The UN meets in emergency session and votes
+  condemnation, sanctions and collective action, with the veto in the
+  Security Council and Uniting for Peace moving a vetoed case to the General
+  Assembly from November 1950; the League of Nations does the same, weaker.
+  Members follow its calls. The war's card shows who answered and why.
+- **The space race and a ninth date.** Every country's rocket programme
+  races history's twelve feats, from the intercontinental missile and the
+  first satellite to the Moon, a station and navigation from orbit, by the
+  dice and its share of the research money; firsts bring prestige, missiles
+  and early warning deterrence, reconnaissance satellites a sharper fog of
+  war. Real launch sites change hands with their provinces and can be
+  ordered built; the head of the programme (Korolev, von Braun, Webb…)
+  sits in the cabinet while there is a programme. The date: 4 October 1957,
+  Sputnik's day, with its eve. Breakthroughs fall on their real days.
 - **Anonymous statistics, only with consent.** The first start asks once and
   Settings switches them; nothing is sent without a yes. The game's own
   Supabase learns which dates and countries are played, what turns take and
@@ -91,6 +112,13 @@ statistics bound the implausible – explosions, freezes, causeless flips,
 impossible conquests – and never ask for a minimum of wars: long quiet
 stretches are history too.
 
+The bar for 1.1.0: a hundred independent histories of twenty years from any
+of the eight dates, each different and each internally logical. The
+statistics move to all eight dates, the economies stop drifting to one era
+trend, elections and wartime follow real patterns, and the people of a
+country evolve with the game after the start instead of following the real
+history of their region.
+
 | Criterion | How it is measured | Assertion |
 |---|---|---|
 | Impossible wars | provinces taken (a front crossing the middle, or the whole) by a side whose best reach there is below 0.15, beyond its limited aims, or annexed unheld; wars begun far short of the means | none, in every seed; wars begun far short (attack means below 0.3) – none but history's dates |
@@ -99,7 +127,7 @@ stretches are history too.
 | Political stability | regime changes and course resets with their recorded cause; flips within a year (a regime back and forth, a course set twice, policies that undo each other, sanctions on and off) | no regime change or flip without a cause (an election, a coup, a new government, trouble at home) |
 | Blocs | trust, tension and threat inside every bloc and pact formed, and what explains it (a shared threat, an accord after talks, a trusted leader) | no bloc between open enemies (trust ≤ −50 or tension ≥ 60) |
 | Diversity | distinct histories, distinct sets of wars, and provinces whose owner differs between two seeds | at least half the seeds tell different histories |
-| Long runs | time a turn, economies out of bounds (debt, inflation, growth, joblessness), wars begun a decade | slowest turn under 20 s, median under 3 s; growth beyond ±15% in at most a handful of country-years; at most 8 wars a decade in 2022, 16 in 1939 |
+| Long runs | time a turn, economies out of bounds (debt, inflation, growth, joblessness), wars begun a decade | slowest turn under 20 s, median under 3 s; growth beyond ±15% in at most a handful of country-years a decade; at most 16 wars a decade in 1914 and 1939, 10 in 1950 and 1964, 12 after 1991's breakups, 8 from 1999 |
 | Causality | counterfactuals: the same seeds with one change (lower tension, more trust, a great power's word withdrawn, a government's support crashed before its election, no fleet for a distant war), paired, with a 95% interval and McNemar's test | no change moves the odds the wrong way beyond noise; the clearest (tension, guarantee, trouble at home, fleet, the fall of a crashed government) must move them the right way |
 
 **Done:** fair caps on the world's peaceful plans and incidents (every
@@ -118,18 +146,34 @@ a year. With them every seed of both dates and both modes passes every
 assertion (eight seeds each; two 2022 seeds played thirty years pass
 too), and every counterfactual moves the odds the expected way.
 
-**Remains** (docs/world.md, "Still open"): more seeds of 20–30 years (two
-so far) and the same statistics for the other six dates; a guarantee aimed at
-one power rather than any aggressor; a fleet that weighs more at the brink
-of a war across the sea (stripping a whole navy lowers the odds of such a
-war by only a few points – the fronts then stall it); every economy
-drifting to one trend growth for its era; fronts that move at one pace
-whatever the era; mobilisation that raises soldiers, not only readiness;
-a supporter already at war elsewhere counting fully behind its friends;
-wartime elections held on their dates; incumbents who lose most elections;
-the Sino-Japanese war and the Russo-Ukrainian war ending too soon by terms;
-and the statistics and counterfactuals run on a schedule rather than by
-hand.
+**Done, second pass** (docs/world.md, "Simulation quality, second pass"):
+the statistics on all eight dates for twenty years (up to a hundred seeds a
+date, in pieces, cached; date-aware bounds; one overview page,
+docs/playtests/world-stats.md); elections calibrated to reality (incumbents
+lose 35–50% of free elections, most after a slump, fewest in a boom) and put
+off in wartime – war on the country's soil or a strong enemy at its door,
+and the player's under martial law – in the news and for the game master;
+a trend of each country's own (the frontier, catching up by literacy,
+government, stability, openness and peace, and its people's growth), so
+Japan, West Germany and South Korea can grow fast and a closed or war-torn
+country lags; demography that follows the game (cohorts kept per country
+from the start's history, births and deaths by the game's own conditions,
+natural growth that moves the population; save step 38); a tutorial whose
+verdicts answer the orders its script does not expect; and an "other"
+budget line that matters (the state runs down below its usual share, so it
+is no longer every order's purse).
+
+**Remains** (docs/world.md, "Still open"): more seeds per date (four so
+far on a shared machine; the harness takes a hundred) and the historical
+mode on the dates after 1939; a guarantee aimed at one power rather than any aggressor; a fleet
+that weighs more at the brink of a war across the sea; fronts that move at
+one pace whatever the era; mobilisation that raises soldiers, not only
+readiness; a supporter already at war elsewhere counting fully behind its
+friends; the Sino-Japanese war and the Russo-Ukrainian war ending too soon
+by terms; human capital richer than literacy (schooling, institutions), so
+the modern eras' catching up is not ranked by literacy alone; cohort bulges
+(the baby boom, Korea's and China's) in the start's pyramids; and the
+statistics and counterfactuals run on a schedule rather than by hand.
 
 ## Next: turns that are cheaper and proven
 
@@ -249,8 +293,10 @@ the people around each role – an aide, a rival, a patron – as people.
 - **Actors beyond states**: parties, armed movements, companies and elites.
 - **Cascades.** A shock in one country spreads through prices, trade and
   politics, and reaches yours turns later.
-- **International bodies that act**: the UN calls an emergency session,
-  alliances consult, lenders step in before a default.
+- **International bodies that act**, next: alliances that consult before a
+  member goes to war, lenders that step in before a default, a world body's
+  session the player attends in person and votes in by its orders, and
+  peacekeepers once a war ends.
 - **The human cost of war, felt.** The engine now counts each war's dead,
   wounded and prisoners; next, they should matter:
   - prisoner exchanges and their terms, negotiated in talks, and what a
@@ -265,15 +311,31 @@ the people around each role – an aide, a rival, a patron – as people.
   game, kept so that every later answer builds on them.
 - **Technology over decades**, without a fixed tree: what a country invests
   in arrives sooner.
+- **Space, deeper.** Programmes for every country with the means, not only
+  those history gave one; launch sites leased abroad (Baikonur after 1991);
+  probes to the Moon and the planets; satellites for weather and
+  communications that the economy feels; a crew lost and what it costs.
 - **Cosmetics, paid.** The game stays free, and playing on your ChatGPT plan
   never costs anything: the terms forbid charging for it. Map skins and era
   themes (a 1914 atlas, a 1939 staff map) need:
   - accounts and payments;
   - a licence for paid assets, which stay out of the AGPL code.
+- **Armies as formations.** Fronts now weigh each side's whole strength
+  in a region. Next, armies of their own – an area of operations, a
+  commander, strength, supply and a task – so that massing tanks on one
+  sector changes the odds there, and a general's command (see "Play a
+  person") is a real formation.
+- **National strategies over decades.** Governments keep courses, aims and
+  plans now; next, a strategy for the next ten years – technological lead,
+  energy independence, regional influence, a bloc of its own – that steers
+  budgets, research, treaties and wars consistently, so a country acts as
+  one actor with a purpose.
 - **Multiplayer.** Several players, each governing a different country in
   one world on a server we host, each still playing on their own ChatGPT
   plan: the engine settles the shared world, and each player's plan writes
-  only that player's part of the turn, so the parts run side by side.
+  only that player's part of the turn, so the parts run side by side. It
+  starts as a local prototype – two players, two countries, one server that
+  takes both sets of orders and works out one turn – before anything else.
 - **More dates and countries,** chosen from what testers ask for.
 
 ## Upkeep, alongside

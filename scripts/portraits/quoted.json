@@ -39,32 +39,6 @@
   "image": "Aesop pushkin01.jpg"
  },
  {
-  "id": "albert-camus",
-  "qid": "Q34670",
-  "name": {
-   "en": "Albert Camus",
-   "ru": "Альбер Камю",
-   "uk": "Альбер Камю"
-  },
-  "gender": "male",
-  "born": 1913,
-  "died": 1960,
-  "image": "Albert Camus, gagnant de prix Nobel, portrait en buste, posé au bureau, faisant face à gauche, cigarette de tabagisme.jpg"
- },
- {
-  "id": "albert-einstein",
-  "qid": "Q937",
-  "name": {
-   "en": "Albert Einstein",
-   "ru": "Альберт Эйнштейн",
-   "uk": "Альберт Ейнштейн"
-  },
-  "gender": "male",
-  "born": 1879,
-  "died": 1955,
-  "image": "Albert Einstein Head cleaned.jpg"
- },
- {
   "id": "aldous-huxley",
   "qid": "Q81447",
   "name": {
@@ -261,32 +235,6 @@
   "image": "Joseph Siffrein Duplessis - Benjamin Franklin - Google Art Project.jpg"
  },
  {
-  "id": "bertolt-brecht",
-  "qid": "Q38757",
-  "name": {
-   "en": "Bertolt Brecht",
-   "ru": "Бертольт Брехт",
-   "uk": "Бертольт Брехт"
-  },
-  "gender": "male",
-  "born": 1898,
-  "died": 1956,
-  "image": "Bundesarchiv Bild 183-W0409-300, Bertolt Brecht.jpg"
- },
- {
-  "id": "bertrand-russell",
-  "qid": "Q33760",
-  "name": {
-   "en": "Bertrand Russell",
-   "ru": "Бертран Рассел",
-   "uk": "Бертран Расселл"
-  },
-  "gender": "male",
-  "born": 1872,
-  "died": 1970,
-  "image": "Bertrand Russell photo.jpg"
- },
- {
   "id": "blaise-pascal",
   "qid": "Q1290",
   "name": {
@@ -388,19 +336,6 @@
   ]
  },
  {
-  "id": "dag-hammarskjold",
-  "qid": "Q1267",
-  "name": {
-   "en": "Dag Hammarskjöld",
-   "ru": "Даг Хаммаршёльд",
-   "uk": "Даг Гаммаршельд"
-  },
-  "gender": "male",
-  "born": 1905,
-  "died": 1961,
-  "image": "Dag Hammarskjöld.jpg"
- },
- {
   "id": "demosthenes",
   "qid": "Q117253",
   "name": {
@@ -471,19 +406,6 @@
   ]
  },
  {
-  "id": "dwight-d-eisenhower",
-  "qid": "Q9916",
-  "name": {
-   "en": "Dwight D. Eisenhower",
-   "ru": "Дуайт Эйзенхауэр",
-   "uk": "Двайт Ейзенхауер"
-  },
-  "gender": "male",
-  "born": 1890,
-  "died": 1969,
-  "image": "Dwight D. Eisenhower, official photo portrait, May 29, 1959.jpg"
- },
- {
   "id": "edmund-burke",
   "qid": "Q165792",
   "name": {
@@ -495,19 +417,6 @@
   "born": 1729,
   "died": 1797,
   "image": "Sir Joshua Reynolds - Edmund Burke, 1729 - 1797. Statesman, orator and author - PG 2362 - National Galleries of Scotland.jpg"
- },
- {
-  "id": "eleanor-roosevelt",
-  "qid": "Q83396",
-  "name": {
-   "en": "Eleanor Roosevelt",
-   "ru": "Элеонора Рузвельт",
-   "uk": "Елеонора Рузвельт"
-  },
-  "gender": "female",
-  "born": 1884,
-  "died": 1962,
-  "image": "Eleanor Roosevelt at the United Nations, circa 1946-1947 (3x4 cropped).jpg"
  },
  {
   "id": "epictetus",
@@ -549,32 +458,6 @@
   "image": "Holbein-erasmus.jpg"
  },
  {
-  "id": "erich-maria-remarque",
-  "qid": "Q47293",
-  "name": {
-   "en": "Erich Maria Remarque",
-   "ru": "Эрих Мария Ремарк",
-   "uk": "Еріх Марія Ремарк"
-  },
-  "gender": "male",
-  "born": 1898,
-  "died": 1970,
-  "image": "Bundesarchiv Bild 183-R04034, Erich Maria Remarque (cropped).jpg"
- },
- {
-  "id": "ernest-hemingway",
-  "qid": "Q23434",
-  "name": {
-   "en": "Ernest Hemingway",
-   "ru": "Эрнест Хемингуэй",
-   "uk": "Ернест Гемінгвей"
-  },
-  "gender": "male",
-  "born": 1899,
-  "died": 1961,
-  "image": "ErnestHemingway.jpg"
- },
- {
   "id": "francis-bacon",
   "qid": "Q37388",
   "name": {
@@ -612,19 +495,6 @@
   "born": 1712,
   "died": 1786,
   "image": "Friedrich der Große (1781 or 1786) - Google Art Project.jpg"
- },
- {
-  "id": "friedrich-hayek",
-  "qid": "Q1325",
-  "name": {
-   "en": "Friedrich Hayek",
-   "ru": "Фридрих Хайек",
-   "uk": "Фрідріх Гаєк"
-  },
-  "gender": "male",
-  "born": 1899,
-  "died": 1992,
-  "image": "Friedrich Hayek portrait.jpg"
  },
  {
   "id": "friedrich-nietzsche",
@@ -679,45 +549,6 @@
   "image": "Tiutchev.jpg"
  },
  {
-  "id": "g-k-chesterton",
-  "qid": "Q183167",
-  "name": {
-   "en": "G. K. Chesterton",
-   "ru": "Гилберт Кит Честертон",
-   "uk": "Гілберт Кіт Честертон"
-  },
-  "gender": "male",
-  "born": 1874,
-  "died": 1936,
-  "image": "Gilbert Chesterton.jpg"
- },
- {
-  "id": "george-bernard-shaw",
-  "qid": "Q19185",
-  "name": {
-   "en": "George Bernard Shaw",
-   "ru": "Бернард Шоу",
-   "uk": "Бернард Шоу"
-  },
-  "gender": "male",
-  "born": 1856,
-  "died": 1950,
-  "image": "George Bernard Shaw.jpg"
- },
- {
-  "id": "george-orwell",
-  "qid": "Q3335",
-  "name": {
-   "en": "George Orwell",
-   "ru": "Джордж Оруэлл",
-   "uk": "Джордж Орвелл"
-  },
-  "gender": "male",
-  "born": 1903,
-  "died": 1950,
-  "image": "George Orwell, c. 1940 (41928180381).jpg"
- },
- {
   "id": "goethe",
   "qid": "Q5879",
   "name": {
@@ -731,19 +562,6 @@
   "image": "Goethe (Stieler 1828).jpg"
  },
  {
-  "id": "h-g-wells",
-  "qid": "Q42511",
-  "name": {
-   "en": "H. G. Wells",
-   "ru": "Герберт Уэллс",
-   "uk": "Герберт Веллс"
-  },
-  "gender": "male",
-  "born": 1866,
-  "died": 1946,
-  "image": "H.G. Wells by Beresford.jpg"
- },
- {
   "id": "h-l-mencken",
   "qid": "Q439204",
   "name": {
@@ -755,19 +573,6 @@
   "born": 1880,
   "died": 1956,
   "image": "H-L-Mencken-1928.jpg"
- },
- {
-  "id": "hannah-arendt",
-  "qid": "Q60025",
-  "name": {
-   "en": "Hannah Arendt",
-   "ru": "Ханна Арендт",
-   "uk": "Ганна Арендт"
-  },
-  "gender": "female",
-  "born": 1906,
-  "died": 1975,
-  "image": "Hannah Arendt auf dem 1. Kulturkritikerkongress, Barbara Niggl Radloff, FM-2019-1-5-9-16 (cropped).jpg"
  },
  {
   "id": "hegel",
@@ -807,19 +612,6 @@
   "born": 1817,
   "died": 1862,
   "image": "Benjamin D. Maxham - Henry David Thoreau - Restored - greyscale - straightened.jpg"
- },
- {
-  "id": "henry-kissinger",
-  "qid": "Q66107",
-  "name": {
-   "en": "Henry Kissinger",
-   "ru": "Генри Киссинджер",
-   "uk": "Генрі Кіссинджер"
-  },
-  "gender": "male",
-  "born": 1923,
-  "died": 2023,
-  "image": "Henry A. Kissinger, U.S. Secretary of State, 1973-1977.jpg"
  },
  {
   "id": "heraclitus",
@@ -1064,19 +856,6 @@
   "image": "Jerome K. Jerome 02.jpg"
  },
  {
-  "id": "john-f-kennedy",
-  "qid": "Q9696",
-  "name": {
-   "en": "John F. Kennedy",
-   "ru": "Джон Кеннеди",
-   "uk": "Джон Кеннеді"
-  },
-  "gender": "male",
-  "born": 1917,
-  "died": 1963,
-  "image": "John F. Kennedy, White House color photo portrait.jpg"
- },
- {
   "id": "john-kenneth-galbraith",
   "qid": "Q186042",
   "name": {
@@ -1103,19 +882,6 @@
   "image": "JohnLocke.png"
  },
  {
-  "id": "john-maynard-keynes",
-  "qid": "Q9317",
-  "name": {
-   "en": "John Maynard Keynes",
-   "ru": "Джон Мейнард Кейнс",
-   "uk": "Джон Мейнард Кейнс"
-  },
-  "gender": "male",
-  "born": 1883,
-  "died": 1946,
-  "image": "Keynes 1933.jpg"
- },
- {
   "id": "john-stuart-mill",
   "qid": "Q50020",
   "name": {
@@ -1140,50 +906,6 @@
   "born": 1667,
   "died": 1745,
   "image": "Jonathan Swift by Charles Jervas detail.jpg"
- },
- {
-  "id": "jorge-luis-borges",
-  "qid": "Q909",
-  "name": {
-   "en": "Jorge Luis Borges",
-   "ru": "Хорхе Луис Борхес",
-   "uk": "Хорхе Луїс Борхес"
-  },
-  "gender": "male",
-  "born": 1899,
-  "died": 1986,
-  "image": "Jorge Luis Borges 1951, by Grete Stern (full).jpg",
-  "crop": [
-   0.3,
-   0,
-   0.5
-  ],
-  "face": [
-   0.55,
-   0.25
-  ]
- },
- {
-  "id": "joseph-brodsky",
-  "qid": "Q862",
-  "name": {
-   "en": "Joseph Brodsky",
-   "ru": "Иосиф Бродский",
-   "uk": "Йосип Бродський"
-  },
-  "gender": "male",
-  "born": 1940,
-  "died": 1996,
-  "image": "Joseph Brodsky 1988.jpg",
-  "crop": [
-   0.25,
-   0.08,
-   0.5
-  ],
-  "face": [
-   0.55,
-   0.3
-  ]
  },
  {
   "id": "joseph-heller",
@@ -1344,19 +1066,6 @@
   ]
  },
  {
-  "id": "lee-kuan-yew",
-  "qid": "Q131248",
-  "name": {
-   "en": "Lee Kuan Yew",
-   "ru": "Ли Куан Ю",
-   "uk": "Лі Куан Ю"
-  },
-  "gender": "male",
-  "born": 1923,
-  "died": 2015,
-  "image": "Lee Kuan Yew.jpg"
- },
- {
   "id": "leo-tolstoy",
   "qid": "Q7243",
   "name": {
@@ -1415,19 +1124,6 @@
   "born": 1834,
   "died": 1902,
   "image": "Picture of John Dalberg-Acton, 1st Baron Acton.jpg"
- },
- {
-  "id": "mahatma-gandhi",
-  "qid": "Q1001",
-  "name": {
-   "en": "Mahatma Gandhi",
-   "ru": "Махатма Ганди",
-   "uk": "Махатма Ганді"
-  },
-  "gender": "male",
-  "born": 1869,
-  "died": 1948,
-  "image": "Mahatma-Gandhi, studio, 1931.jpg"
  },
  {
   "id": "marcus-aurelius",
@@ -1495,19 +1191,6 @@
   "image": "Cervantes Jáuregui.jpg"
  },
  {
-  "id": "mikhail-bulgakov",
-  "qid": "Q835",
-  "name": {
-   "en": "Mikhail Bulgakov",
-   "ru": "Михаил Булгаков",
-   "uk": "Михайло Булгаков"
-  },
-  "gender": "male",
-  "born": 1891,
-  "died": 1940,
-  "image": "Михаил-Булгаков.jpg"
- },
- {
   "id": "mikhail-lermontov",
   "qid": "Q46599",
   "name": {
@@ -1532,19 +1215,6 @@
   "born": 1929,
   "died": 2023,
   "image": "Milan Kundera redux.jpg"
- },
- {
-  "id": "milton-friedman",
-  "qid": "Q47426",
-  "name": {
-   "en": "Milton Friedman",
-   "ru": "Милтон Фридман",
-   "uk": "Мілтон Фрідман"
-  },
-  "gender": "male",
-  "born": 1912,
-  "died": 2006,
-  "image": "Portrait Of Milton Friedman (cropped).jpg"
  },
  {
   "id": "moliere",
@@ -1742,19 +1412,6 @@
   "image": "Pyotr Stolypin LOC 07327.jpg"
  },
  {
-  "id": "rabindranath-tagore",
-  "qid": "Q7241",
-  "name": {
-   "en": "Rabindranath Tagore",
-   "ru": "Рабиндранат Тагор",
-   "uk": "Рабіндранат Тагор"
-  },
-  "gender": "male",
-  "born": 1861,
-  "died": 1941,
-  "image": "Rabindranath Tagore in 1909.jpg"
- },
- {
   "id": "ralph-waldo-emerson",
   "qid": "Q48226",
   "name": {
@@ -1779,32 +1436,6 @@
   "born": 1918,
   "died": 1988,
   "image": "RichardFeynman-PaineMansionWoods1984 copyrightTamikoThiel bw.jpg"
- },
- {
-  "id": "ronald-reagan",
-  "qid": "Q9960",
-  "name": {
-   "en": "Ronald Reagan",
-   "ru": "Рональд Рейган",
-   "uk": "Рональд Рейган"
-  },
-  "gender": "male",
-  "born": 1911,
-  "died": 2004,
-  "image": "Ronald Reagan 1981 presidential portrait.jpg"
- },
- {
-  "id": "rudyard-kipling",
-  "qid": "Q34743",
-  "name": {
-   "en": "Rudyard Kipling",
-   "ru": "Редьярд Киплинг",
-   "uk": "Редьярд Кіплінг"
-  },
-  "gender": "male",
-  "born": 1865,
-  "died": 1936,
-  "image": "Kipling nd.jpg"
  },
  {
   "id": "rumi",
@@ -2037,19 +1668,6 @@
   "image": "10.12.12TerryPratchettByLuigiNovi1.jpg"
  },
  {
-  "id": "theodore-roosevelt",
-  "qid": "Q33866",
-  "name": {
-   "en": "Theodore Roosevelt",
-   "ru": "Теодор Рузвельт",
-   "uk": "Теодор Рузвельт"
-  },
-  "gender": "male",
-  "born": 1858,
-  "died": 1919,
-  "image": "Theodore Roosevelt by the Pach Bros.jpg"
- },
- {
   "id": "thomas-hobbes",
   "qid": "Q37621",
   "name": {
@@ -2100,19 +1718,6 @@
   "born": -460,
   "died": -395,
   "image": "Thucydides pushkin01.jpg"
- },
- {
-  "id": "umberto-eco",
-  "qid": "Q12807",
-  "name": {
-   "en": "Umberto Eco",
-   "ru": "Умберто Эко",
-   "uk": "Умберто Еко"
-  },
-  "gender": "male",
-  "born": 1932,
-  "died": 2016,
-  "image": "Italiaanse schrijver Umberto Eco , kop, Bestanddeelnr 932-9758.jpg"
  },
  {
   "id": "vasily-kliuchevsky",
@@ -2179,19 +1784,6 @@
   "born": 1802,
   "died": 1885,
   "image": "Victor Hugo by Étienne Carjat 1876 - full.jpg"
- },
- {
-  "id": "volodymyr-vynnychenko",
-  "qid": "Q2494143",
-  "name": {
-   "en": "Volodymyr Vynnychenko",
-   "ru": "Владимир Винниченко",
-   "uk": "Володимир Винниченко"
-  },
-  "gender": "male",
-  "born": 1880,
-  "died": 1951,
-  "image": "Vynnychenko.jpg"
  },
  {
   "id": "voltaire",

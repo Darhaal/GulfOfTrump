@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ADVISORS, type AdvisorId } from "./advisors";
+import { ADVISORS, forNew, type AdvisorId } from "./advisors";
 import { roll } from "./dice";
 import { STEP_YEARS } from "./economy";
 import { fogOn } from "./fog";
@@ -12,7 +12,7 @@ import { loyaltyOf } from "./politics";
 import { isOpposition } from "./role";
 import { applyOverthrow } from "./unrest";
 import { OFFICIAL_POSTS } from "./types";
-import type { AppliedChange, CabinetMove, CabinetResult, Deputy, GameState, Official, OfficialPost, OrderVerdict, Plot } from "./types";
+import type { AppliedChange, CabinetMove, CabinetResult, Deputy, GameState, Official, OfficialPost, OrderVerdict, Plot, RepressionCase } from "./types";
 
 /**
  * A cabinet that intrigues. The ministers and their deputies fall into
@@ -46,6 +46,9 @@ const LEANS: Lean[] = ["security", "hawks", "hardliners", "reformers", "doves"];
 /** Which wins a tie between a person's leanings: the security clique only on a clear lead. */
 const TIES: Lean[] = ["hawks", "doves", "reformers", "hardliners", "security"];
 
+/** A new ministry's causes (interests.ts, NEW_AGENDA). */
+const NEW_LEAN: Record<string, Partial<Record<Lean, number>>> = { remit: { hardliners: 1 }, budget: { reformers: 1 }, results: { reformers: 1, hawks: 1 }, loyal: { security: 1, hardliners: 1 }, reform: { reformers: 2 } };
+
 /** Which way each cause leans, by ministry and cause (AGENDAS). */
 const CAUSE_LEAN: Record<AdvisorId, Record<string, Partial<Record<Lean, number>>>> = {
   chief: { apparatus: { security: 1, hardliners: 1 }, ratings: { doves: 1 }, reform: { reformers: 2 }, loyalists: { hardliners: 1, security: 1 }, calm: { doves: 2 } },
@@ -56,6 +59,8 @@ const CAUSE_LEAN: Record<AdvisorId, Record<string, Partial<Record<Lean, number>>
   interior: { order: { hardliners: 2 }, press: { hardliners: 1, security: 1 }, lawful: { reformers: 2, doves: 1 }, votes: { reformers: 1 }, police: { security: 2, hardliners: 1 } },
   intelligence: { abroad: { security: 1, hawks: 1 }, watch: { security: 2 }, covert: { security: 1, hawks: 1 }, caution: { doves: 1 }, influence: { security: 2 } },
   science: { budget: { reformers: 1 }, weapons: { hawks: 2 }, pure: { doves: 1, reformers: 1 }, prestige: { reformers: 1 }, open: { reformers: 2, doves: 1 } },
+  space: { budget: { reformers: 1 }, moon: { reformers: 1 }, missiles: { hawks: 2, security: 1 }, safety: { doves: 1 } },
+  ...forNew(NEW_LEAN),
 };
 
 /** Causes that cannot both be served: people who push them are rivals. */
@@ -89,7 +94,7 @@ const FACTION_RIVALS: [Lean, Lean][] = [
 const POWER: AdvisorId[] = ["chief", "military", "interior", "intelligence"];
 
 /** How senior a cabinet post is: a move up pleases, a move down humiliates. */
-const POST_RANK: Record<AdvisorId, number> = { chief: 3, foreign: 3, interior: 3, military: 3, finance: 2, intelligence: 2, industry: 1, science: 1 };
+const POST_RANK: Record<AdvisorId, number> = { chief: 3, foreign: 3, interior: 3, military: 3, finance: 2, intelligence: 2, industry: 1, science: 1, space: 1, ...forNew(1) };
 
 /** Favour that moves loyalty a step. */
 export const FAVOUR_STEP = 3;
@@ -470,6 +475,16 @@ export function castCabinet(state: GameState): CabinetRoll {
   return { factions, obstruct, heldUp, leaks, plots };
 }
 
+/**
+ * Whether a cabinet plot against the leader strikes and succeeds this period, by the dice cast before the turn: the
+ * overthrow the game master reports for it then stands without the government's weakness being asked again
+ * (engine/unrest.ts applyOverthrow `struck`).
+ */
+export function cabinetStrikes(state: GameState): boolean {
+  if (!inPlay(state) || !cabinetPlots(state).some((p) => p.cabinet.target === "leader")) return false;
+  return castCabinet(state).plots.some((r) => r.event === "strikes" && r.success && cabinetPlots(state).find((p) => p.id === r.id)?.cabinet.target === "leader");
+}
+
 // ——— The turn ———
 
 /** How the game master says a turn touched people's causes (merged into OutcomeSchema as `cabinet`). */
@@ -606,6 +621,34 @@ function setPlot(next: GameState, id: string, patch: (p: Plot) => Plot | null): 
   next.politics = { ...next.politics, plots: next.politics.plots.flatMap((p) => (p.id === id ? (patch(p) ?? []) : [p])) };
 }
 
+/** How many cases the repressions' record keeps (engine/repressions.ts MAX_CASES). */
+const KEEP_CASES = 60;
+
+/**
+ * People of the cabinet the government arrested – a purge, a plot foiled where votes do not count – recorded as
+ * the repressions record keeps an arrest (engine/repressions.ts): not to be given a post again until rehabilitated,
+ * and a later government may clear their names. In place.
+ */
+function recordArrests(next: GameState, people: { name: string; title?: string; target: "official" | "deputy" }[], ctx: { turn: number; to: string }, tag: string): void {
+  if (!people.length) return;
+  const leader = leaderOf(next, next.player)?.name ?? next.countries[next.player]?.leader ?? "";
+  const prefix = `c${ctx.turn}-${tag}`;
+  const taken = (next.repressions?.cases ?? []).filter((c) => c.id.startsWith(prefix)).length;
+  const cases: RepressionCase[] = people.map((p, i) => ({
+    id: `${prefix}${taken + i + 1}`,
+    name: p.name,
+    target: p.target,
+    ...(p.title ? { title: p.title } : {}),
+    measure: "arrest",
+    by: "player",
+    result: "done",
+    ...(leader ? { leader } : {}),
+    date: ctx.to,
+    turn: ctx.turn,
+  }));
+  next.repressions = { ...next.repressions, cases: [...(next.repressions?.cases ?? []), ...cases].slice(-KEEP_CASES) };
+}
+
 /** Ministers of a list out of the government, in place: dismissed where votes count, arrested elsewhere. The ones removed. */
 function removeMinisters(next: GameState, names: string[], change: "dismissed" | "arrested", applied: AppliedChange[]): Official[] {
   const out = (next.officials ?? []).filter((o) => MINISTRY_OF[o.post] && names.includes(o.name));
@@ -653,6 +696,12 @@ export function applyCabinet(next: GameState, state: GameState, sway: CabinetSwa
   for (const m of moves) {
     const change = m.kind === "dismiss" ? "dismissed" : m.kind === "reshuffle" ? "resigned" : holdsElections(state) ? "dismissed" : "arrested";
     for (const o of m.removed ?? []) applied.push({ kind: "official", post: o.post, title: o.title, name: o.name, change });
+    // A purge's arrests go on the repressions' record: its ministers and the deputies caught with them.
+    if (m.kind === "purge" && change === "arrested") {
+      const ministers = m.removed ?? [];
+      const deputies = (m.names ?? []).filter((n) => !ministers.some((o) => o.name === n));
+      recordArrests(next, [...ministers.map((o) => ({ name: o.name, title: o.title, target: "official" as const })), ...deputies.map((n) => ({ name: n, target: "deputy" as const }))], ctx, "p");
+    }
   }
   // A government that fell this turn has no cabinet left to scheme in.
   if (next.defeat && !next.defeat.continued && next.defeat.turn === ctx.turn) return;
@@ -689,9 +738,10 @@ export function applyCabinet(next: GameState, state: GameState, sway: CabinetSwa
     if (r.event !== "strikes") continue;
     if (r.success) {
       if (target === "leader") {
-        applyOverthrow(next, { happened: true, how: "deposed", by: members[0], leader: members[0], note: "" }, ctx, applied);
+        // The dice already decided the strike: it is not asked again whether the government is weak enough to fall.
+        applyOverthrow(next, { happened: true, how: "deposed", by: members[0], leader: members[0], note: "" }, { ...ctx, struck: true }, applied);
         if (next.defeat?.turn === ctx.turn) return;
-        // A government the engine will not let fall stands; the attempt is logged as foiled.
+        // The government had already fallen another way this turn: the plot has nothing left to strike at.
         setPlot(next, r.id, () => null);
         continue;
       } else {
@@ -705,8 +755,10 @@ export function applyCabinet(next: GameState, state: GameState, sway: CabinetSwa
     } else {
       setPlot(next, r.id, () => null);
       applied.push({ kind: "plot", title: plot.title, change: "foiled", ...tag });
-      removeMinisters(next, members, free ? "dismissed" : "arrested", applied);
+      const ministers = removeMinisters(next, members, free ? "dismissed" : "arrested", applied);
+      const deputies = (next.deputies ?? []).filter((d) => members.includes(d.name));
       if (next.deputies) next.deputies = next.deputies.filter((d) => !members.includes(d.name));
+      if (!free) recordArrests(next, [...ministers.map((o) => ({ name: o.name, title: o.title, target: "official" as const })), ...deputies.map((d) => ({ name: d.name, target: "deputy" as const }))], ctx, "f");
       if (next.politics) {
         const pillars = loyaltyOf(next.politics);
         next.politics = { ...next.politics, loyalty: { ...pillars, elites: clamp(pillars.elites - 4, 0, 100) } };
@@ -1012,10 +1064,13 @@ export function describeCabinet(state: GameState, part: "story" | "home" | "full
     return `${MOVE_EN[m.kind]} ${target} (${m.result}${m.names?.length ? `: ${m.names.join(", ")}` : ""}${m.noticed ? ", noticed" : ""})`;
   });
   if (moves.length) lines.push(`- the government's moves since the last turn (done; tell what follows): ${moves.join("; ")}`);
-  const out = lines.length ? ["", "CABINET (the engine's dice for this period; tell them so, ministers in character):", ...lines] : [];
+  // A plot of the cabinet strikes by these dice alone, whatever its strength (engine/unrest.ts canFall leaves it out).
+  const out = lines.length ? ["", "CABINET (the engine's dice for this period; tell them so, ministers in character; a plot strikes only on STRIKES NOW):", ...lines] : [];
   if (part !== "story") {
     if (!out.length) out.push("");
-    out.push(`In "cabinet", name ministers or deputies whose causes this period's orders clearly served ("for") or went against ("against"), usually none to three; the engine counts the budget, laws, wars and deals itself.`);
+    out.push(
+      `In "cabinet", name ministers or deputies whose causes this period's orders clearly served ("for") or went against ("against"), usually none to three; the engine counts the budget, laws, wars and deals itself – and the unrest and loyalty that leaks, purges and foiled plots cost, already counted: do not move them again for them.`,
+    );
   }
   return out;
 }

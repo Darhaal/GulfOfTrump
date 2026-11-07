@@ -70,23 +70,59 @@ export const LOYAL = 70;
 /** Protests against the player's own government. */
 export const ownProtests = (protests: Protest[] | undefined, player: string) => (protests ?? []).filter((p) => !p.country || p.country === player);
 
+/** Why the player's government can fall this turn, or why not: each test canFall makes, as the state stands. */
+export interface FallReading {
+  can: boolean;
+  unrest: number;
+  uprising: boolean;
+  /** A coup plot of FALL_PLOT or more outside the cabinet (the cabinet's own plots strike by the engine's dice: engine/intrigue.ts). */
+  coup: boolean;
+  /** Riots or a rising with the army or the police at DEFECT_LOYALTY or below. */
+  defecting: boolean;
+  army?: number;
+  police?: number;
+  /** The army and the police both at LOYAL or more: the street alone cannot bring the government down. */
+  shielded: boolean;
+}
+
+export function fallReading(state: Pick<GameState, "politics" | "protests" | "player">): FallReading {
+  const own = ownProtests(state.protests, state.player);
+  const loyalty = state.politics ? loyaltyOf(state.politics) : null;
+  const coup = (state.politics?.plots ?? []).some((p) => p.kind === "coup" && !p.cabinet && p.strength >= FALL_PLOT);
+  const violent = own.some((p) => p.stage === "riot" || p.stage === "uprising");
+  const unrest = state.politics?.unrest ?? 0;
+  const uprising = own.some((p) => p.stage === "uprising");
+  const defecting = Boolean(loyalty && violent && Math.min(loyalty.army, loyalty.police) <= DEFECT_LOYALTY);
+  const weak = unrest >= FALL_UNREST || uprising || coup || defecting;
+  const shielded = Boolean(loyalty && loyalty.army >= LOYAL && loyalty.police >= LOYAL);
+  return { can: weak && (!shielded || coup), unrest, uprising, coup, defecting, ...(loyalty ? { army: loyalty.army, police: loyalty.police } : {}), shielded };
+}
+
 /**
  * Whether the player's government is weak enough to be overthrown this
  * turn: unrest, an uprising, ready plotters, or forces that no longer obey.
  * A loyal army and police shield it from the street: then only a coup can.
+ * The cabinet's own plots do not count: they strike by the engine's dice,
+ * which reach applyOverthrow directly (engine/intrigue.ts).
  */
-export function canFall(state: Pick<GameState, "politics" | "protests" | "player">): boolean {
-  const own = ownProtests(state.protests, state.player);
-  const loyalty = state.politics ? loyaltyOf(state.politics) : null;
-  const coup = (state.politics?.plots ?? []).some((p) => p.kind === "coup" && p.strength >= FALL_PLOT);
-  const violent = own.some((p) => p.stage === "riot" || p.stage === "uprising");
-  const weak =
-    (state.politics?.unrest ?? 0) >= FALL_UNREST ||
-    own.some((p) => p.stage === "uprising") ||
-    coup ||
-    Boolean(loyalty && violent && Math.min(loyalty.army, loyalty.police) <= DEFECT_LOYALTY);
-  const shielded = Boolean(loyalty && loyalty.army >= LOYAL && loyalty.police >= LOYAL);
-  return weak && (!shielded || coup);
+export const canFall = (state: Pick<GameState, "politics" | "protests" | "player">): boolean => fallReading(state).can;
+
+/**
+ * The fall test in a line for the game master, read from the state before the
+ * turn, so the story narrates a fall only where the engine will let it stand.
+ */
+export function fallLine(state: Pick<GameState, "politics" | "protests" | "player">): string {
+  const r = fallReading(state);
+  const pillars = r.army !== undefined ? `army ${r.army}, police ${r.police}` : "the army and police as the regime keeps them";
+  const why = [
+    r.unrest >= FALL_UNREST ? `unrest ${r.unrest} (${FALL_UNREST} or more)` : "",
+    r.uprising ? "an uprising in the streets" : "",
+    r.coup ? `a coup plot of strength ${FALL_PLOT} or more` : "",
+    r.defecting ? `riots with the army or police at ${DEFECT_LOYALTY} or below` : "",
+  ].filter(Boolean);
+  if (r.can) return `CAN THE GOVERNMENT FALL THIS PERIOD: YES, if events bring it down – ${why.join(", ")}; ${pillars}${r.shielded ? " (loyal, but a coup plot can still strike)" : ""}.`;
+  if (why.length && r.shielded) return `CAN THE GOVERNMENT FALL THIS PERIOD: NO – ${why.join(", ")}, but ${pillars}: both loyal (${LOYAL} or more), the street alone cannot bring it down; an attempt fails.`;
+  return `CAN THE GOVERNMENT FALL THIS PERIOD: NO – unrest ${r.unrest} (below ${FALL_UNREST}), no uprising, no coup plot of ${FALL_PLOT} or more outside the cabinet; ${pillars}. An attempt fails.`;
 }
 
 const rank = (stage: Protest["stage"]) => PROTEST_STAGES.indexOf(stage);
@@ -158,15 +194,19 @@ export function applyProtests(
   return list;
 }
 
-/** Sets a defeat when the government falls and the engine allows it; otherwise logs a failed attempt. */
+/**
+ * Sets a defeat when the government falls and the engine allows it; otherwise logs a failed attempt. `struck`: the
+ * engine's own dice already decided the fall (a cabinet plot that strikes and succeeds, engine/intrigue.ts), so the
+ * government's weakness is not asked again.
+ */
 export function applyOverthrow(
   next: GameState,
   overthrow: NonNullable<z.infer<typeof overthrowField>>,
-  ctx: { turn: number; to: string },
+  ctx: { turn: number; to: string; struck?: boolean },
   applied: AppliedChange[],
 ): void {
   if (next.defeat && !next.defeat.continued) return;
-  if (!canFall(next)) {
+  if (!ctx.struck && !canFall(next)) {
     applied.push({ kind: "plot", title: overthrow.by, change: "foiled" });
     return;
   }
@@ -183,7 +223,8 @@ export function applyOverthrow(
   // The leader who falls, kept for the player's choice: to play on with the country, or with them in opposition.
   const fallen = leaderOf(next, next.player);
   const party = next.politics?.parties.find((p) => p.status === "ruling")?.name;
-  const defeat: Defeat = { date: ctx.to, turn: ctx.turn, how: overthrow.how, by: overthrow.by, note: overthrow.note, ...(fallen ? { fallen } : {}), ...(party ? { party } : {}) };
+  // The regime text at the fall: a coup or a revolution pins the regime until the game master names another (engine/role.ts regimeNow).
+  const defeat: Defeat = { date: ctx.to, turn: ctx.turn, how: overthrow.how, by: overthrow.by, note: overthrow.note, ...(fallen ? { fallen } : {}), ...(party ? { party } : {}), ...(next.politics ? { regime: next.politics.regime } : {}) };
   next.defeat = defeat;
   if (overthrow.leader) player.leader = overthrow.leader;
   if (overthrow.government) player.government = overthrow.government;
@@ -223,11 +264,27 @@ export function updateExile(next: GameState, hostHint: string | undefined, ctx: 
   applied.push({ kind: "exile", country: tag, ...(host ? { host } : {}) });
 }
 
+/**
+ * Protests abroad against a government that no longer rules any land – its
+ * country conquered, annexed or gone, or its rulers in exile – end: there is
+ * no one left for the crowd to stand against. What the people of the land
+ * think of their new rulers is the occupation's resistance (engine/warMeans.ts).
+ */
+export function endOrphanedProtests(next: Pick<GameState, "protests" | "regions" | "countries">, applied: AppliedChange[]): void {
+  if (!next.protests?.some((p) => p.country)) return;
+  const rulers = new Set(Object.values(next.regions).map((r) => r.owner));
+  const ruling = (tag: string) => rulers.has(tag) && Boolean(next.countries[tag]) && !next.countries[tag].exile;
+  const kept = next.protests.filter((p) => !p.country || ruling(p.country));
+  for (const p of next.protests) if (!kept.includes(p)) applied.push({ kind: "protest", title: p.title, change: "gone" });
+  if (kept.length) next.protests = kept;
+  else delete next.protests;
+}
+
 /** The protests as the model reads them. */
 export function describeProtests(protests: Protest[] | undefined, name: (id: string) => string, player = ""): string[] {
   if (!protests?.length) return [];
   const line = (p: Protest) =>
-    `- ${p.title} | ${p.stage} | ${p.size}${p.grew ? ` (${p.grew > 0 ? "+" : ""}${p.grew})` : ""} | ${p.where.map(name).join(", ") || "-"} | ${p.demands || "-"} | ${p.by ?? "-"} | support ${p.support ?? "?"}% | organisation ${p.organisation ?? "?"} | ${p.backer ? `backed by ${p.backer}` : "-"} | killed ${p.killed ?? 0}`;
+    `- ${p.title}${p.kind === "mobilisation" ? " (the families of the men under arms, raised by the engine: refer to it by this title; dispersed or conceded, it stays home a while, then rises again while the men are kept)" : ""} | ${p.stage} | ${p.size}${p.grew ? ` (${p.grew > 0 ? "+" : ""}${p.grew})` : ""} | ${p.where.map(name).join(", ") || "-"} | ${p.demands || "-"} | ${p.by ?? "-"} | support ${p.support ?? "?"}% | organisation ${p.organisation ?? "?"} | ${p.backer ? `backed by ${p.backer}` : "-"} | killed ${p.killed ?? 0}`;
   const own = ownProtests(protests, player);
   const abroad = protests.filter((p) => !own.includes(p));
   return [

@@ -53,6 +53,7 @@ export default function VoiceSettings() {
   const [voice, setVoice] = usePreference("voice");
   const [rate, setRate] = usePreference("rate");
   const [readTurns, setReadTurns] = usePreference("readTurns");
+  const [peopleVoices, setPeopleVoices] = usePreference("peopleVoices");
   const [mic, setMic] = usePreference("mic");
   const [micDevice, setMicDevice] = usePreference("micDevice");
   const [volume, setVolume] = usePreference("volume");
@@ -161,6 +162,14 @@ export default function VoiceSettings() {
               <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium text-ink">
                 <input type="checkbox" checked={readTurns === "on"} onChange={(e) => setReadTurns(e.target.checked ? "on" : "")} className="h-4 w-4 accent-current" />
                 {t("voice.settings.readTurns")}
+              </label>
+              {/* Each minister, leader and speaker in a voice of their own (lib/voice/text.ts, personVoice), or all in the one picked. */}
+              <label className="flex cursor-pointer items-start gap-2.5 text-sm font-medium text-ink" title={t("voice.settings.peopleVoicesHint")}>
+                <input type="checkbox" checked={peopleVoices !== "off"} onChange={(e) => setPeopleVoices(e.target.checked ? "" : "off")} className="mt-0.5 h-4 w-4 accent-current" />
+                <span>
+                  {t("voice.settings.peopleVoices")}
+                  <span className="block text-xs text-muted">{t("voice.settings.peopleVoicesHint")}</span>
+                </span>
               </label>
               {!missing && (
                 <button

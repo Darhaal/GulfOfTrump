@@ -1,6 +1,8 @@
 import { grainBooks, type GrainBook } from "./deals";
-import { extractionOf, goodsLine, researchGoods } from "./development";
+import { extractionOf, goodsLine, leanOf, researchGoods } from "./development";
 import { type Accounts, nationalAccounts, reserveNorm, RICH_INCOME, socialNorm } from "./economy";
+import { shortOf } from "./energy";
+import { FOOD_TAKEN, GOODS_TAKEN, strainOf } from "./mobilisation";
 import { countsFor } from "./occupation";
 import { peopleIn } from "./population";
 import { aheadOf, harvestBonus, medicineBonus } from "./researchEffects";
@@ -8,8 +10,8 @@ import type { ResourceType } from "./resources";
 import type { GameState, MapRegion } from "./types";
 
 /**
- * How well a country's people are supplied: food, energy and fuel for their
- * homes, everyday goods, housing and medicine, each as a share of what they
+ * How well a country's people are supplied: food, energy – fuel and
+ * electricity – for their homes, everyday goods, housing and medicine, each as a share of what they
  * need, with what causes a shortfall. Read off what the game already keeps —
  * the land and its harvest, the strategic resources, trade and its cuts, the
  * budget's social spending, the war and the occupation — so it needs no
@@ -25,17 +27,23 @@ export const PROVISION_CAUSES = [
   "imports",
   "deals",
   "stores",
+  // Light industry past its usual share holds the goods up, heavy industry past it pulls them down (engine/industry.ts).
+  "light",
+  "heavy",
   "blockade",
   "broke",
   "shortage",
   "occupation",
   "war",
   "warEconomy",
+  "mobilisation",
   "inflation",
   "recession",
   "austerity",
+  "upkeep",
   "research",
   "industry",
+  "power",
 ] as const;
 export type ProvisionCause = (typeof PROVISION_CAUSES)[number];
 
@@ -61,21 +69,56 @@ const WEIGHTS: Record<ProvisionKind, number> = { food: 0.35, energy: 0.2, goods:
 const FUELS: ResourceType[] = ["coal", "gas", "oil"];
 /** Resources everyday goods are made of. */
 const METALS: ResourceType[] = ["iron", "copper", "nickel", "tin", "bauxite", "rubber"];
+/** How much of the energy line a shortage of electricity takes, for each share of demand unmet. */
+const POWER_WEIGHT = 0.7;
 /** The causes that hold a line up, where they are named: the rest pull it down. */
-const SUPPORTS: ProvisionCause[] = ["harvest", "imports", "deals", "stores", "industry"];
+const SUPPORTS: ProvisionCause[] = ["harvest", "imports", "deals", "stores", "industry", "light"];
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+
+/** A country's land as its provision reads it: its people, those under someone else's guns, the provinces a front runs through, and the people weighted by their land's income. */
+interface ProvisionLand {
+  people: number;
+  held: number;
+  front: number;
+  richness: number;
+}
 
 /** The books every country's provision is read from, worked out once for the world. */
 export interface ProvisionBooks {
   accounts: Map<string, Accounts>;
   grain: Map<string, GrainBook>;
+  land: Map<string, ProvisionLand>;
 }
 
-type ProvisionState = Pick<GameState, "countries" | "regions" | "scenarioId" | "date" | "wars"> & Partial<Pick<GameState, "player" | "deals" | "politics" | "research">>;
+type ProvisionState = Pick<GameState, "countries" | "regions" | "scenarioId" | "date" | "wars"> & Partial<Pick<GameState, "player" | "deals" | "politics" | "research" | "energy">>;
 
 export function provisionBooks(state: ProvisionState, map: Record<string, MapRegion>): ProvisionBooks {
-  return { accounts: nationalAccounts(state, map), grain: grainBooks(state, map) };
+  return { accounts: nationalAccounts(state, map), grain: grainBooks(state, map), land: provisionLand(state, map) };
+}
+
+/**
+ * Every country's land in one pass over the provinces, so a turn that reads
+ * every country's provision walks the map once. Land the front has left
+ * behind is its captor's to feed (engine/occupation.ts).
+ */
+function provisionLand(state: Pick<GameState, "regions">, map: Record<string, MapRegion>): Map<string, ProvisionLand> {
+  const out = new Map<string, ProvisionLand>();
+  for (const [id, r] of Object.entries(state.regions)) {
+    const tag = countsFor(r);
+    let land = out.get(tag);
+    if (!land) out.set(tag, (land = { people: 0, held: 0, front: 0, richness: 0 }));
+    const p = map[id];
+    const n = peopleIn(r, p);
+    land.people += n;
+    land.richness += n * (p?.inc ?? 3000);
+    if (r.controller !== tag) land.held += r.contested === tag ? (n * (100 - (r.held ?? 30))) / 100 : n;
+    else if (r.contested) {
+      land.held += (n * (r.held ?? 30)) / 100;
+      land.front += 1;
+    }
+  }
+  return out;
 }
 
 /** In a war that is not under a truce. */
@@ -89,23 +132,7 @@ export function provisionOf(state: ProvisionState, tag: string, map: Record<stri
   const e = country?.economy;
   if (!e) return null;
   // The land: how many of its people live under someone else's guns or on a front, and how rich it is.
-  // Land the front has left behind is its captor's to feed (engine/occupation.ts).
-  let people = 0;
-  let held = 0;
-  let front = 0;
-  let richness = 0;
-  for (const [id, r] of Object.entries(state.regions)) {
-    if (countsFor(r) !== tag) continue;
-    const p = map[id];
-    const n = peopleIn(r, p);
-    people += n;
-    richness += n * (p?.inc ?? 3000);
-    if (r.controller !== tag) held += r.contested === tag ? (n * (100 - (r.held ?? 30))) / 100 : n;
-    else if (r.contested) {
-      held += (n * (r.held ?? 30)) / 100;
-      front += 1;
-    }
-  }
+  const { people, held, front, richness } = books.land.get(tag) ?? { people: 0, held: 0, front: 0, richness: 0 };
   if (people <= 0) return null;
   const occupied = held / people;
   const atWar = fighting(state, tag);
@@ -116,6 +143,8 @@ export function provisionOf(state: ProvisionState, tag: string, map: Record<stri
   const broke = e.reserves / gdp < 0.01;
   const rich = richness / people >= RICH_INCOME;
   const social = e.budget.social / gdp / Math.max(0.001, socialNorm(state.scenarioId, rich));
+  // A long mobilisation: the men missing from the fields and the factories (engine/mobilisation.ts).
+  const strain = (strainOf(state, tag, people)?.strain ?? 0) / 100;
 
   const lines: ProvisionLine[] = [];
   const line = (kind: ProvisionKind, value: number, causes: ProvisionCause[], up: ProvisionCause[] = causes.filter((c) => SUPPORTS.includes(c))) =>
@@ -157,6 +186,10 @@ export function provisionOf(state: ProvisionState, tag: string, map: Record<stri
       food -= 0.05;
       causes.unshift("war");
     }
+    if (strain >= 0.1) {
+      food -= FOOD_TAKEN * strain;
+      causes.push("mobilisation");
+    }
     line("food", food, causes, causes.filter((c) => SUPPORTS.includes(c) || (c === "research" && harvest > 0)));
   }
 
@@ -194,6 +227,12 @@ export function provisionOf(state: ProvisionState, tag: string, map: Record<stri
     if (broke) causes.push("broke");
     if (bought && !causes.length) causes.push("imports");
     if (dug && need > 0 && extractionOf(e) >= 1.02) causes.push("industry");
+    // Electricity the plants could not give over the last turn: dark flats, cold radiators, trams that stand (engine/energy.ts).
+    const power = shortOf(state, tag);
+    if (power >= 0.02) {
+      energy -= POWER_WEIGHT * power;
+      causes.unshift("power");
+    }
     if (atHome) {
       energy -= 0.05;
       causes.unshift("war");
@@ -215,8 +254,11 @@ export function provisionOf(state: ProvisionState, tag: string, map: Record<stri
       research: researched ? researchGoods(aheadOf(state, "industry")) : 0,
       reserves: e.reserves / gdp,
       reserveNorm: reserveNorm(state.scenarioId),
+      lean: leanOf(e),
     });
-    line("goods", g.level, g.causes, g.up);
+    // The factories short of hands under a long mobilisation make less for the people.
+    if (strain >= 0.1) line("goods", g.level - GOODS_TAKEN * strain, [...g.causes, "mobilisation"], g.up);
+    else line("goods", g.level, g.causes, g.up);
   }
 
   // Housing: homes lost to the war and the occupation, and what the state spends on its people.
@@ -238,6 +280,11 @@ export function provisionOf(state: ProvisionState, tag: string, map: Record<stri
     if (e.growth < -5) {
       housing -= 0.05;
       causes.push("recession");
+    }
+    // Housing offices, utilities and repairs the "other" line pays for, run down when it is kept low (engine/economy.ts).
+    if ((e.neglect ?? 0) >= 0.05) {
+      housing -= 0.25 * e.neglect!;
+      causes.push("upkeep");
     }
     line("housing", housing, causes);
   }

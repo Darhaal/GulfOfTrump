@@ -1,43 +1,76 @@
 "use client";
 
-import { Banknote, Check, ClipboardList, Crosshair, Eye, Factory, FlaskConical, Globe, IdCard, Landmark, Loader2, MessageCircle, Plus, RotateCw, Send, Shield, ShieldHalf, UserRound, UserRoundPen, Users, X, type LucideIcon } from "lucide-react";
+import { Banknote, Briefcase, Check, ClipboardList, Crosshair, Eye, Factory, FlaskConical, Globe, IdCard, Landmark, Loader2, type LucideIcon, MessageCircle, Plus, Rocket, RotateCw, Send, Shield, ShieldHalf, UserRound, UserRoundPen, Users, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import ChatScroll from "@/components/ui/ChatScroll";
+import Dialog from "@/components/ui/Dialog";
 import { ui } from "@/components/ui/classes";
 import DoneButton from "@/components/ui/DoneButton";
 import Dictation from "@/components/voice/Dictation";
 import SpeakButton from "@/components/voice/SpeakButton";
-import { ADVISOR_TITLES, ADVISORS, MAX_DIRECTIVES, type AdvisorId } from "@/engine/advisors";
+import { ADVISORS, forNew, MAX_DIRECTIVES, type AdvisorId } from "@/engine/advisors";
 import { formatDate } from "@/engine/calendar";
-import { ADVISOR_POST, officialAt, type Candidate } from "@/engine/government";
+import { ADVISOR_POST, type Candidate, officialAt, officialTitle, postTitle } from "@/engine/government";
 import { agendaOf } from "@/engine/interests";
 import { factionOf, factionsOf } from "@/engine/intrigue";
 import { leaderOf, leaderOfficial } from "@/engine/people";
 import { bioKey, bioOf } from "@/engine/bios";
 import { reportsDue } from "@/engine/reports";
+import { cabinetAdvisors } from "@/engine/space";
 import AppointmentDialog, { Pips, Traits } from "./AppointmentDialog";
 import CabinetFactions, { FactionBadge, MinisterMarks, MinisterMoves } from "./CabinetFactions";
 import { factionName } from "./changes";
 import LeaderCard, { Bio } from "./LeaderCard";
-import DraftedOrders from "./DraftedOrders";
+import DraftedOrders, { ordersFull } from "./DraftedOrders";
+import RenameOrder from "./RenameOrder";
+import type { Suggest } from "./Suggestions";
 import Portrait, { ARCH } from "./Portrait";
 import ProposalCard from "./ProposalCard";
 import MinistryPeople from "./MinistryPeople";
+import { RoutineToggle } from "./MinisterRoutine";
+import { governs } from "@/engine/figures";
+import MinistryShape from "./MinistryShape";
+import { isNewMinistry, ministryColour, ministryIcon, ministryOpen, ministryTitle, newMinistry, openMinistries, postClosed, setMinistryIcon, shortMinistryName, withSpaceHead } from "@/engine/ministries";
+import { IconPicker, MINISTRY_ICON_SET } from "./ministryIcons";
 import { OFFICIAL_POSTS, type Directive, type DirectiveStatus, type GameState, type MinisterStance, type Official, type OfficialPost, type Operation } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
 
-export const MINISTRY_ICONS: Record<AdvisorId, LucideIcon> = { chief: UserRound, military: Shield, finance: Banknote, industry: Factory, foreign: Globe, interior: ShieldHalf, intelligence: Eye, science: FlaskConical };
-
 const surname = (name: string) => name.trim().split(/\s+/).at(-1) ?? name;
 
-const POST_ICONS: Record<OfficialPost, LucideIcon> = { head: Landmark, government: Landmark, chief: UserRound, military: Shield, finance: Banknote, industry: Factory, foreign: Globe, interior: ShieldHalf, intelligence: Eye, science: FlaskConical, bank: Banknote };
+const POST_ICONS: Record<OfficialPost, LucideIcon> = { head: Landmark, government: Landmark, chief: UserRound, military: Shield, finance: Banknote, industry: Factory, foreign: Globe, interior: ShieldHalf, intelligence: Eye, science: FlaskConical, bank: Banknote, space: Rocket, ...forNew(Briefcase), ...forNew(Briefcase) };
+
+/** A ministry's icon by its name, a click away from another (components/game/ministryIcons.tsx): the interface's, changed at once. */
+function MinistryIconButton({ state, advisor, disabled, onChange }: { state: GameState; advisor: AdvisorId; disabled: boolean; onChange: (next: GameState) => void }) {
+  const { t, text } = useI18n();
+  const [open, setOpen] = useState(false);
+  const Icon = MINISTRY_ICON_SET[ministryIcon(state, advisor)];
+  return (
+    <>
+      <button type="button" disabled={disabled} onClick={() => setOpen(true)} title={t("ministry.icon.change")} aria-label={t("ministry.icon.change")} className="shrink-0 rounded-md p-1 text-muted transition-colors hover:bg-page hover:text-ink disabled:opacity-50">
+        <Icon className="h-3.5 w-3.5" style={{ color: ministryColour(state, advisor) }} />
+      </button>
+      <Dialog open={open} onClose={() => setOpen(false)} title={t("ministry.icon.title", { ministry: text(ministryTitle(state, advisor)) })}>
+        <IconPicker
+          value={ministryIcon(state, advisor)}
+          label={t("ministry.icon")}
+          onPick={(icon) => {
+            onChange(setMinistryIcon(state, advisor, icon));
+            setOpen(false);
+          }}
+        />
+      </Dialog>
+    </>
+  );
+}
 
 /** The minister a post speaks through in the cabinet, if any. */
 const ADVISOR_OF: Partial<Record<OfficialPost, AdvisorId>> = Object.fromEntries(ADVISORS.map((a) => [ADVISOR_POST[a], a]));
 
 interface CabinetPanelProps {
   state: GameState;
+  /** Names from the game master for a rename by order (engine/suggest.ts); missing without one. */
+  onSuggest?: Suggest;
   /** Add an order a minister drafted to the turn's orders. */
   onAddOrder: (order: string) => void;
   /** Apply the proposal (a research split, a budget) in message `at` of a minister's conversation. */
@@ -66,6 +99,8 @@ interface CabinetPanelProps {
   bioStatus?: Record<string, "loading" | "failed">;
   /** Ask for a person's short biography; it lands in the save when it comes. */
   onRequestBio?: (name: string) => void;
+  /** Ask for a person's own way of speaking (engine/speech.ts) once the player starts a question to them; it lands in the save when it comes. */
+  onRequestSpeech?: (name: string) => void;
 }
 
 /** A minister's view of the last turn while it is being given, or after it failed to come. */
@@ -125,18 +160,23 @@ const SECRECY_TONE: Record<Operation["secrecy"], string> = { open: "bg-page text
  * reports of their plots, each minister's faction and where their loyalty
  * is heading, and the moves the government can make on them (CabinetFactions).
  */
-export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, onAddOrder, onApply, onDirectives, onSetup, onFind, onAppoint, prefill, reporting, onRequestReport, onSetupDeputies, onAskDeputy, onChange, bioStatus, onRequestBio }: CabinetPanelProps) {
+export default function CabinetPanel({ state, onSuggest, busy, anyBusy, disabled, onAsk, onAddOrder, onApply, onDirectives, onSetup, onFind, onAppoint, prefill, reporting, onRequestReport, onSetupDeputies, onAskDeputy, onChange, bioStatus, onRequestBio, onRequestSpeech }: CabinetPanelProps) {
   const { t, text, locale } = useI18n();
   const [section, setSection] = useState<"ministries" | "ministers">("ministries");
   const [replacing, setReplacing] = useState<OfficialPost | null>(null);
-  const [advisor, setAdvisor] = useState<AdvisorId>(prefill?.advisor ?? "chief");
+  const [picked, setAdvisor] = useState<AdvisorId>(prefill?.advisor ?? "chief");
+  // A ministry closed since it was picked gives way to the chief of staff.
+  const advisor: AdvisorId = ministryOpen(state, picked) ? picked : "chief";
   const [view, setView] = useState<View>("talk");
   const [question, setQuestion] = useState(prefill?.question ?? "");
   const [task, setTask] = useState("");
+  // The post's new name being written, when the government renames it.
   const thread = state.advice?.[advisor] ?? [];
   const personOf = (id: AdvisorId) => officialAt(state, ADVISOR_POST[id]);
   const person = personOf(advisor);
-  const title = person?.name ?? text(ADVISOR_TITLES[advisor]);
+  const title = person?.name ?? text(ministryTitle(state, advisor));
+  // Who said a line: a minister of the government, past or present, with their sex where the game knows it.
+  const speakerOf = (name: string) => ({ name, gender: (state.officials ?? []).find((o) => o.name === name)?.gender ?? (person?.name === name ? person.gender : undefined) });
   const directives = state.directives ?? [];
   const mine = directives.filter((d) => d.ministry === advisor);
   const directivesFull = directives.length >= MAX_DIRECTIVES;
@@ -189,6 +229,11 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
   useEffect(() => {
     if (view === "about" && person && !personBio) onRequestBio?.(person.name);
   }, [view, person, personBio, onRequestBio]);
+  // The minister's own way of speaking, asked for while the player writes them their first question.
+  const asking = question.trim().length > 0;
+  useEffect(() => {
+    if (asking && person) onRequestSpeech?.(person.name);
+  }, [asking, person, onRequestSpeech]);
 
   const people = (
     <div className="flex flex-col gap-3">
@@ -199,13 +244,14 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
             const o = officials.find((x) => x.post === post);
             const Icon = POST_ICONS[post];
             const minister = ADVISOR_OF[post];
-            if ((!o && (post === "head" || post === "government")) || own?.post === post) return null;
+            // A closed ministry, or a new one's place left empty, has no post to show.
+            if ((!o && (post === "head" || post === "government" || postClosed(state, post))) || own?.post === post) return null;
             return (
               <li key={post} className="grid gap-1.5 rounded-xl border border-line sheet p-3">
                 <div className="flex items-start gap-2">
                   {o ? <Portrait portrait={o.portrait} gender={o.gender} name={o.name} size="md" /> : <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted" />}
                   <div className="min-w-0 flex-1">
-                    <div className="text-2xs font-black uppercase tracking-wider text-muted">{o?.title ?? t(`post.${post}` as MessageKey)}</div>
+                    <div className="text-2xs font-black uppercase tracking-wider text-muted">{postTitle(state, post, locale)}</div>
                     <div className="text-sm font-black text-ink">{o?.name ?? t("gov.vacant")}</div>
                     {o?.bio && <div className="text-xs font-medium text-muted">{o.bio}</div>}
                   </div>
@@ -255,7 +301,7 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
                       {o ? t("gov.replace") : t("gov.appoint")}
                     </button>
                   )}
-                  {minister && o && <MinisterMoves state={state} person={o} disabled={Boolean(anyBusy)} onChange={onChange} />}
+                  {minister && o && <MinisterMoves state={state} person={o} disabled={Boolean(anyBusy)} onChange={onChange} onOrder={onAddOrder} />}
                 </div>
               </li>
             );
@@ -291,11 +337,12 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
         people
       ) : (
       <>
-      <LeaderCard state={state} bio={leaderBio} bioLoading={leader ? bioLoading(leader.name) : false} />
+      <LeaderCard state={state} bio={leaderBio} bioLoading={leader ? bioLoading(leader.name) : false} onChange={onChange} />
 
       <div className="grid grid-cols-4 gap-2">
-        {ADVISORS.map((id) => {
-          const Icon = MINISTRY_ICONS[id];
+        {/* The head of the space programme only while the government runs one (engine/space.ts); the ministries closed and created (engine/ministries.ts). */}
+        {cabinetAdvisors(state, withSpaceHead(openMinistries(state))).map((id) => {
+          const Icon = MINISTRY_ICON_SET[ministryIcon(state, id)];
           const on = id === advisor;
           const p = personOf(id);
           const count = directives.filter((d) => d.ministry === id).length;
@@ -305,28 +352,33 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
             <button
               key={id}
               type="button"
-              onClick={() => setAdvisor(id)}
+              onClick={() => {
+                setAdvisor(id);
+              }}
               aria-pressed={on}
-              title={p ? `${p.name} · ${p.title}${camp ? ` · ${factionName(camp.id, t)}` : ""}` : text(ADVISOR_TITLES[id])}
+              title={p ? `${p.name} · ${officialTitle(p, text)}${camp ? ` · ${factionName(camp.id, t)}` : ""}` : text(ministryTitle(state, id))}
               className="group flex min-w-0 flex-col items-center gap-1"
             >
               {/* A quiet tile on the paper: the portrait or the ministry's ink icon, a thin line, a soft accent ring when chosen. */}
               <span
                 className={`relative grid h-20 w-16 place-items-center ${ARCH} border border-line/60 bg-page text-muted transition-all ${on ? "text-ink ring-1 ring-accent/60 ring-offset-2 ring-offset-page" : "opacity-85 group-hover:text-ink group-hover:opacity-100"}`}
               >
-                {p ? <Portrait portrait={p.portrait} gender={p.gender} name={p.name} size="card" className="border-0" /> : <Icon className="h-5 w-5" />}
-                <span className="absolute -bottom-1 -right-1 grid h-4.5 w-4.5 place-items-center rounded-full border border-line sheet text-muted">
+                {p ? <Portrait portrait={p.portrait} gender={p.gender} name={p.name} size="card" className="border-0" /> : <Icon className="h-5 w-5" style={{ color: ministryColour(state, id) }} />}
+                {/* The ministry's badge: its icon, in the ministry's own colour when the player gave it one. */}
+                <span className="absolute -bottom-1 -right-1 grid h-4.5 w-4.5 place-items-center rounded-full border border-line sheet text-muted" style={ministryColour(state, id) ? { background: ministryColour(state, id), color: "var(--on-ink)" } : undefined}>
                   <Icon className="h-2.5 w-2.5" />
                 </span>
                 {count > 0 && <span className="absolute -top-1 -right-1 min-w-4 rounded-full bg-accent px-1 text-center text-[9px] font-black leading-4 text-on-ink">{count}</span>}
                 {reporting[id]?.status === "writing" && <span className="absolute -top-1 -left-1 h-3 w-3 animate-pulse rounded-full border-2 border-page bg-accent" aria-hidden />}
                 {camp && camp.temper !== "loyal" && <span className={`absolute -bottom-1 -left-1 h-2.5 w-2.5 rounded-full border-2 border-page ${camp.temper === "disloyal" ? "bg-red-600" : "bg-amber-500"}`} aria-hidden />}
               </span>
-              <span className={`w-full truncate text-center text-2xs font-bold ${on ? "text-ink" : "text-muted"}`}>{p ? surname(p.name) : t(`post.${ADVISOR_POST[id]}` as MessageKey)}</span>
+              <span className={`w-full truncate text-center text-2xs font-bold ${on ? "text-ink" : "text-muted"}`}>{p ? surname(p.name) : isNewMinistry(id) ? shortMinistryName(text(ministryTitle(state, id))) : t(`post.${ADVISOR_POST[id]}` as MessageKey)}</span>
             </button>
           );
         })}
       </div>
+
+      <MinistryShape state={state} advisor={advisor} disabled={disabled || Boolean(anyBusy)} onChange={onChange} onPick={setAdvisor} onSuggest={onSuggest} onAsk={onAsk} asking={busy?.advisor ?? null} />
 
       {owed ? (
         <section className="rounded-2xl bg-page p-3.5">
@@ -374,7 +426,7 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
                 <span className={ui.label}>{t("cabinet.report", { date: formatDate(report.date, locale) })}</span>
                 <span className="flex items-center gap-2">
                   {report.report.stance && <StanceChip stance={report.report.stance} />}
-                  <SpeakButton id={`cabinet-report-${advisor}-${report.date}`} text={report.report.text} className="-my-1" />
+                  <SpeakButton id={`cabinet-report-${advisor}-${report.date}`} text={report.report.text} who={speakerOf(report.report.by ?? person?.name ?? title)} className="-my-1" />
                 </span>
               </div>
               <blockquote className="text-sm font-medium leading-relaxed text-ink">{t("report.quote", { text: report.report.text })}</blockquote>
@@ -386,8 +438,20 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
 
       {/* The minister's own post as the country called it (the ministry's name while it is vacant), the full name under it, wrapped rather than cut. */}
       <div className="grid gap-0.5 px-0.5">
-        <span className="text-sm font-black leading-snug text-ink">{person?.title || text(ADVISOR_TITLES[advisor])}</span>
+        {/* A pencil writes an order: the post is renamed by the next game master, its holder kept (officials "retitled"). */}
+        <span className="flex flex-wrap items-start gap-x-1.5">
+          <span className="min-w-0 flex-1 text-sm font-black leading-snug text-ink">{postTitle(state, ADVISOR_POST[advisor], locale)}</span>
+          {person && <RenameOrder key={`post-${advisor}`} what="post" current={postTitle(state, ADVISOR_POST[advisor], locale)} onOrder={onAddOrder} onSuggest={onSuggest} disabled={disabled} full={ordersFull(state)} />}
+        </span>
         {person && <span className="text-xs font-bold leading-snug text-muted">{person.name}</span>}
+        {/* The ministry's own name, which an order may change too (engine/acts.ts), and its icon, the player's to choose. */}
+        <span className="flex flex-wrap items-start gap-x-1.5">
+          <span className="min-w-0 flex-1 text-2xs font-bold leading-snug text-muted">{text(ministryTitle(state, advisor))}</span>
+          <MinistryIconButton key={`icon-${advisor}`} state={state} advisor={advisor} disabled={disabled} onChange={onChange} />
+          <RenameOrder key={`ministry-${advisor}`} what="ministry" current={text(ministryTitle(state, advisor))} onOrder={onAddOrder} onSuggest={onSuggest} disabled={disabled} full={ordersFull(state)} />
+        </span>
+        {/* A ministry the government created: its portfolio, in the player's own words. */}
+        {newMinistry(state, advisor)?.portfolio && <span className="text-2xs font-medium leading-snug text-muted">{t("ministry.portfolioOf", { portfolio: newMinistry(state, advisor)!.portfolio })}</span>}
       </div>
       <div className="grid grid-cols-4 gap-1 rounded-xl bg-page p-1">
         {views.map(({ id, label, icon: Icon }) => (
@@ -409,9 +473,9 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
                 }`}
               >
                 <div className={`mb-1 flex items-center gap-2 text-2xs font-black uppercase tracking-widest ${m.from === "player" ? "text-on-ink/60" : "text-muted"}`}>
-                  {m.from === "player" ? t("diplomacy.you") : title}
+                  {m.from === "player" ? t("diplomacy.you") : (m.by ?? title)}
                   <span className="font-medium normal-case tracking-normal tabular-nums">{m.date}</span>
-                  {m.from !== "player" && <SpeakButton id={`cabinet-${advisor}-${i}`} text={m.text} className="-my-1 ml-auto" />}
+                  {m.from !== "player" && <SpeakButton id={`cabinet-${advisor}-${i}`} text={m.text} who={speakerOf(m.by ?? title)} className="-my-1 ml-auto" />}
                 </div>
                 <p className="whitespace-pre-wrap break-words font-medium leading-relaxed">{m.text}</p>
                 {m.from === "advisor" && m.orders && m.orders.length > 0 && <DraftedOrders orders={m.orders} state={state} disabled={disabled || Boolean(anyBusy)} onAdd={onAddOrder} />}
@@ -546,7 +610,7 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
         ) : (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-page p-3">
             <div className="min-w-0">
-              <div className="text-sm font-black text-ink">{text(ADVISOR_TITLES[advisor])}</div>
+              <div className="text-sm font-black text-ink">{text(ministryTitle(state, advisor))}</div>
               <div className="text-xs font-medium text-muted">{t("gov.vacant")}</div>
             </div>
             {officials.length > 0 && (
@@ -560,6 +624,8 @@ export default function CabinetPanel({ state, busy, anyBusy, disabled, onAsk, on
 
       {current === "tasks" && (
         <>
+          {/* Whether the minister does his ministry's routine on his own or only on the government's orders (engine/ministers.ts). */}
+          {governs(state) && person && <RoutineToggle state={state} ministry={advisor} disabled={disabled} onChange={onChange} />}
           {mine.length === 0 ? (
             <p className="text-xs font-medium text-muted">{t("cabinet.tasks.empty")}</p>
           ) : (

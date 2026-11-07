@@ -1,6 +1,6 @@
 # Gulf of Trump
 
-[![Microsoft Store](https://img.shields.io/badge/Microsoft%20Store-Get%20it-0078D4.svg)](https://apps.microsoft.com/detail/9n07jx2chmw0) ![Version](https://img.shields.io/badge/version-1.0.6--beta-blue.svg) ![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg) ![Node](https://img.shields.io/badge/node-%E2%89%A522.12-339933.svg)
+[![Microsoft Store](https://img.shields.io/badge/Microsoft%20Store-Get%20it-0078D4.svg)](https://apps.microsoft.com/detail/9n07jx2chmw0) ![Version](https://img.shields.io/badge/version-1.0.7--beta-blue.svg) ![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg) ![Node](https://img.shields.io/badge/node-%E2%89%A522.12-339933.svg)
 
 An alternate-history grand strategy game where a language model is the game
 master. Pick a turning point of the 20th or 21st century, pick any country,
@@ -15,7 +15,7 @@ front of every turn.
 ![A 2022 game as Ukraine: the turn Kherson was freed, with the front running through the provinces between the towns each side holds](public/screens/turn.jpg)
 
 > **Beta. A sandbox: no goals and no victory screen — your country, your
-> plan.** Eight dates; about 2,700 provinces with terrain, people, resources and
+> plan.** Nine dates; about 2,700 provinces with terrain, people, resources and
 > railways, and fronts that run between the towns each side holds; an army
 > counted piece by piece; an economy for every country with trade, sanctions
 > and trade deals; seven directions of research racing history; eight
@@ -47,9 +47,13 @@ timelapse video of its borders:
 | Date | Scenario | Start |
 |------|----------|-------|
 | **28 June 1914** | The Shot at Sarajevo | The Archduke is dead; the July Crisis has not started. The war can still be avoided. |
+| **30 January 1933** | Hitler Comes to Power | Hindenburg makes Hitler Chancellor in the depth of the Depression; Japan holds Manchukuo and eyes Jehol, Bolivia and Paraguay fight over the Chaco, Mao's soviet holds out in Jiangxi. |
 | **1 September 1939** | The Invasion of Poland | The Wehrmacht crosses the border; London and Paris have two days to decide. |
 | **25 June 1950** | The Korean War | North Korean tanks cross the 38th parallel; the Soviets boycott the Security Council, Mao eyes Taiwan, France fights in Indochina. |
+| **4 October 1957** | The Space Race | Sputnik is in orbit and America is caught off guard; France fights in Algeria, Turkey's army stands on Syria's border. Every country's rocket programme races history's feats, from the first satellite to the Moon. |
 | **2 August 1964** | The Gulf of Tonkin | Torpedo boats attack the USS Maddox. The Viet Cong hold half the South's countryside, the Pathet Lao the Plain of Jars; Sukarno confronts Malaysia. |
+| **6 October 1973** | The Yom Kippur War | Egypt crosses the Suez Canal and Syria storms the Golan; the oil embargo is days away, Nixon sinks in Watergate, Portugal fights three colonial wars. |
+| **25 December 1979** | Into Afghanistan | Soviet troops cross the Amu Darya; Khomeini holds the American hostages, Vietnam occupies Cambodia, Rhodesia's ceasefire is three days away. |
 | **19 August 1991** | The August Coup | Gorbachev is isolated in Foros, tanks are in Moscow; the USSR still exists. Every Soviet and Yugoslav republic is playable. |
 | **24 March 1999** | NATO Bombs Yugoslavia | Rambouillet has failed; Allied Force begins without a UN mandate. Play Milošević, NATO, Russia, the KLA or Đukanović's Montenegro. |
 | **16 January 2014** | Euromaidan | The eighth week of the Maidan; parliament has passed the "dictatorship laws". Yanukovych's police are loyal, the army wavers, the oligarchs wait. |

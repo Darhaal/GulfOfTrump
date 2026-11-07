@@ -13,7 +13,7 @@
  * For each person with a Wikidata id it reads the picture (P18) and sex
  * (P21), keeps the picture only if Commons gives it a free licence (public
  * domain, CC0, CC BY, CC BY-SA, OGL, GODL-India, KOGL Type 1, FAL, the European
- * Parliament's, or "no known restrictions"
+ * Parliament's, France's Licence Ouverte (Etalab), or "no known restrictions"
  * — never NC, ND or GFDL alone), downloads
  * it into scripts/.cache/portraits, crops head and shoulders 4:5 (a `crop`
  * in people.json overrides the guess; `group` marks a cut from a group photo), paints it and writes
@@ -108,7 +108,9 @@ function guessCrop(w, h) {
 }
 
 async function greyFrom(buf, crop) {
-  const meta = await sharp(buf).rotate().metadata();
+  // Some Commons JPEGs carry a scan header libjpeg only warns about ("Invalid SOS parameters"): read past warnings.
+  const open = () => sharp(buf, { failOn: "none" });
+  const meta = await open().rotate().metadata();
   const w = meta.autoOrient?.width ?? meta.width;
   const h = meta.autoOrient?.height ?? meta.height;
   const guess = crop ? null : guessCrop(w, h);
@@ -120,7 +122,7 @@ async function greyFrom(buf, crop) {
         return { left: Math.round(crop[0] * w), top: Math.round(crop[1] * h), width: Math.min(width, w - Math.round(crop[0] * w)), height };
       })()
     : guess.box;
-  const data = await sharp(buf).rotate().flatten({ background: "#ffffff" }).extract(box).resize(W, H, guess?.attention ? { fit: "cover", position: sharp.strategy.attention, kernel: "lanczos3" } : { fit: "fill", kernel: "lanczos3" }).grayscale().raw().toBuffer();
+  const data = await open().rotate().flatten({ background: "#ffffff" }).extract(box).resize(W, H, guess?.attention ? { fit: "cover", position: sharp.strategy.attention, kernel: "lanczos3" } : { fit: "fill", kernel: "lanczos3" }).grayscale().raw().toBuffer();
   const g = new Float32Array(W * H);
   for (let i = 0; i < g.length; i++) g[i] = data[i] / 255;
   return autocontrast(g);
@@ -261,7 +263,10 @@ async function paintPeople(todo, credits) {
     }
     try {
       const ext = (meta.url.match(/\.(jpe?g|png|webp|tiff?|gif)(?:$|\?)/i)?.[1] ?? "jpg").toLowerCase();
-      const buf = await fetchFile(meta.url, path.join(CACHE, `${p.qid}.${ext}`));
+      const cached = path.join(CACHE, `${p.qid}.${ext}`);
+      // The cache keeps one picture a person: a new one (a photo chosen by hand, Wikidata's changed) is downloaded afresh, so the credits name what is painted.
+      if (credits[p.id] && credits[p.id].file !== meta.file && existsSync(cached)) unlinkSync(cached);
+      const buf = await fetchFile(meta.url, cached);
       const g = await greyFrom(buf, p.crop);
       const [fx, fy] = p.face ?? [0.5, 0.36];
       writeFileSync(target, await paint(g, faceMask(fx, fy)));

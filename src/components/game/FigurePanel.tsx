@@ -12,6 +12,8 @@ import type { GameState } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
 import { ordersFull } from "./DraftedOrders";
+import InsideView from "./InsideView";
+import { LeaderDemands, roomOf } from "./politics/Repressions";
 import Portrait, { ARCH } from "./Portrait";
 import ResignButton from "./ResignButton";
 
@@ -21,9 +23,26 @@ const GENERAL_ACTIONS = ["attack", "hold", "reinforce", "officers", "coup"] as c
  * The player as a minister or a general (engine/figures.ts), in the manner of
  * the opposition's panel: who they are and whom they serve, their standing,
  * how often the government takes up their orders and how close they are to
- * dismissal, actions to add to the turn, the ways up, and resignation.
+ * dismissal, the game inside the government (InsideView: the leader's ear,
+ * colleagues or the general staff, intrigue, career, proposals), actions to
+ * add to the turn, the ways up, and resignation.
  */
-export default function FigurePanel({ state, disabled, onOrder, onResign, onStay }: { state: GameState; disabled: boolean; onOrder: (order: string) => void; onResign: () => void; onStay: () => void }) {
+export default function FigurePanel({
+  state,
+  disabled,
+  onOrder,
+  onResign,
+  onStay,
+  onWithdraw,
+}: {
+  state: GameState;
+  disabled: boolean;
+  onOrder: (order: string) => void;
+  onResign: () => void;
+  onStay: () => void;
+  /** Takes back a proposal to the leader (engine/remit.ts). */
+  onWithdraw: (id: string) => void;
+}) {
   const { t, text, locale } = useI18n();
   const role = state.role;
   if (!role || (role.kind !== "minister" && role.kind !== "general")) return null;
@@ -117,6 +136,11 @@ export default function FigurePanel({ state, disabled, onOrder, onResign, onStay
         </div>
         <p className="text-2xs font-medium leading-snug text-muted">{t("figure.deathNote", { n: death })}</p>
       </section>
+
+      {/* The leader's order to repress someone, for a minister of the security services to obey or refuse (engine/repressions.ts). */}
+      <LeaderDemands state={state} room={roomOf(state, disabled, onOrder)} />
+
+      <InsideView state={state} disabled={disabled} onWithdraw={onWithdraw} />
 
       <section>
         <div className={`${ui.label} mb-1`}>{t("movement.actions")}</div>

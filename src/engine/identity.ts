@@ -1,7 +1,9 @@
 import { isHexColor } from "./colors";
+import { isNewMinistry } from "./ministries";
 import { en } from "./text";
 import { reactionLine } from "./acts";
-import type { AppliedChange, GameState, Localized, Proclamation, Reaction } from "./types";
+import type { AdvisorId } from "./advisors";
+import type { AppliedChange, GameState, Localized, Proclamation, Reaction, Rename } from "./types";
 
 /**
  * The player's government proclaims what its state is called, the colour
@@ -88,10 +90,57 @@ export function applyProclamation(next: GameState, p: Proclamation | undefined, 
     applied.push({ kind: "identity", what: "place", from: key, to: n });
     next.placeNames = { ...(next.placeNames ?? {}), [key]: n };
   }
+  for (const r of p.renames ?? []) applyRename(next, r, applied);
   // How the country takes it: unrest moves by the reactions, within reason.
   const delta = Object.values(p.reactions ?? {}).reduce((s, r) => s + r.unrest, 0);
   if (delta && next.politics) next.politics = { ...next.politics, unrest: Math.max(0, Math.min(100, Math.round(next.politics.unrest + Math.max(-10, Math.min(25, delta))))) };
   delete next.proclamation;
+}
+
+/**
+ * One thing renamed by order: a ministry (a created one takes the new name, a standard one keeps it beside its usual
+ * title), the ruling party, the movement, a war or a formation. What has gone since the order was answered is left.
+ */
+function applyRename(next: GameState, r: Rename, applied: AppliedChange[]): void {
+  const key = r.target.slice(r.target.indexOf(":") + 1);
+  const name = r.name.trim().slice(0, NAME);
+  if (!name) return;
+  let from: string | undefined;
+  if (r.what === "ministry") {
+    const id = key as AdvisorId;
+    const shape = next.cabinetShape ?? {};
+    if (isNewMinistry(id)) {
+      const m = shape.created?.find((x) => x.id === id);
+      if (!m) return;
+      from = m.name;
+      next.cabinetShape = { ...shape, created: shape.created!.map((x) => (x.id === id ? { ...x, name, names: r.names } : x)) };
+    } else {
+      from = undefined;
+      next.cabinetShape = { ...shape, renamed: { ...(shape.renamed ?? {}), [id]: r.names } };
+    }
+  } else if (r.what === "party") {
+    const party = next.politics?.parties.find((x) => x.id === key);
+    if (!party || !next.politics) return;
+    from = party.name;
+    next.politics = { ...next.politics, parties: next.politics.parties.map((x) => (x.id === key ? { ...x, name } : x)) };
+  } else if (r.what === "movement") {
+    const m = next.role?.movement;
+    if (!m || !next.role) return;
+    from = m.name;
+    next.role = { ...next.role, movement: { ...m, name } };
+  } else if (r.what === "war") {
+    const war = next.wars.find((w) => w.id === key);
+    if (!war) return;
+    from = en(war.name);
+    next.wars = next.wars.map((w) => (w.id === key ? { ...w, name: r.names } : w));
+  } else {
+    const c = next.countries[next.player];
+    const org = c?.arsenal?.organisation;
+    if (!c?.arsenal || !org?.formations.some((f) => f.name === key)) return;
+    from = key;
+    next.countries[next.player] = { ...c, arsenal: { ...c.arsenal, organisation: { ...org, formations: org.formations.map((f) => (f.name === key ? { ...f, name } : f)) } } };
+  }
+  applied.push({ kind: "identity", what: r.what, ...(from ? { from } : {}), to: r.what === "war" || r.what === "ministry" ? r.names : name });
 }
 
 /** The proclamation and the places renamed so far, for the game master. */

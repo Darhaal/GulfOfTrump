@@ -70,7 +70,7 @@ export default function TalksThread({ state, target, busy, disabled, onSend, pre
                 <div className={`mb-1 flex items-center gap-2 text-2xs font-black uppercase tracking-widest ${m.from === "player" ? "text-on-ink/60" : "text-muted"}`}>
                   {m.from === "player" ? t("diplomacy.you") : text(them.name)}
                   <span className="font-medium normal-case tracking-normal tabular-nums">{m.date}</span>
-                  {m.from !== "player" && <SpeakButton id={`letter-${target}-${i}`} text={m.text} className="-my-1 ml-auto" />}
+                  {m.from !== "player" && <SpeakButton id={`letter-${target}-${i}`} text={m.text} who={{ name: theirLeader?.name ?? them.leader ?? target, gender: theirLeader?.gender }} className="-my-1 ml-auto" />}
                 </div>
                 <p className="whitespace-pre-wrap break-words font-medium leading-relaxed">{m.text}</p>
                 {m.stance && (

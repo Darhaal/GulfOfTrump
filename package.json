@@ -1,6 +1,6 @@
 {
   "name": "gulf-of-trump",
-  "version": "1.0.6-beta",
+  "version": "1.0.7-beta",
   "private": true,
   "description": "Open-source alternate-history grand strategy where a language model is the game master. Plays on your own ChatGPT plan.",
   "license": "AGPL-3.0-only",
@@ -22,6 +22,7 @@
     "flags": "node scripts/flags.mjs",
     "portraits": "node scripts/portraits.mjs",
     "scenes": "node scripts/scenes.mjs",
+    "og": "node scripts/og.mjs",
     "quotes": "node scripts/quotes.mjs",
     "desktop": "node desktop/build.mjs"
   },

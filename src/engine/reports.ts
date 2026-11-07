@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { ADVISORS, DIRECTIVE_STATUSES, type AdvisorId } from "./advisors";
+import { ADVISORS, DIRECTIVE_STATUSES, forNew, type AdvisorId } from "./advisors";
 import { ADVISOR_POST } from "./government";
 import { MINISTER_STANCES, type ChronicleEntry, type GameState, type MinisterStance, type MinistryBrief, type MinistryReport } from "./types";
+import { ministryOpen, openMinistries } from "./ministries";
 
 /**
  * The ministers' word follows the turn instead of riding in it. The turn's
@@ -26,6 +27,8 @@ export const ministriesField = z
         .max(12)
         .catch([])
         .default([]),
+      // A ministry the government created: its name as each language would really write it (engine/ministries.ts).
+      names: z.object({ ru: z.string().trim().min(1).max(80), uk: z.string().trim().min(1).max(80), en: z.string().trim().min(1).max(80) }).optional().catch(undefined),
     }),
   )
   .max(6)
@@ -73,9 +76,11 @@ export interface MinisterReport {
 }
 
 /** One word per ministry, about directives of that ministry that exist. */
-export function sanitizeMinistries(state: Pick<GameState, "directives">, word: MinistriesWord): MinistriesWord {
+export function sanitizeMinistries(state: Pick<GameState, "directives" | "cabinetShape">, word: MinistriesWord): MinistriesWord {
   const directives = state.directives ?? [];
   return word
+    // A ministry closed, or a new one's place left empty, has nothing to say.
+    .filter((m) => ministryOpen(state, m.ministry))
     .filter((m, i, list) => list.findIndex((o) => o.ministry === m.ministry) === i)
     .map((m) => ({ ...m, directives: m.directives.filter((d, i, list) => list.findIndex((o) => o.id === d.id) === i && directives.some((x) => x.id === d.id && x.ministry === m.ministry)) }));
 }
@@ -94,7 +99,7 @@ const urgency = (b: MinistryBrief) => (b.asked ? 8 : 0) + (b.directives.some((d)
  * speak on their own; the rest are quiet, their directives shown without a
  * word, until the government asks them.
  */
-export function briefsFor(state: Pick<GameState, "directives" | "advice" | "turn">, word: MinistriesWord): MinistryBrief[] {
+export function briefsFor(state: Pick<GameState, "directives" | "advice" | "turn" | "cabinetShape">, word: MinistriesWord): MinistryBrief[] {
   const all = allBriefs(state, word);
   const speak = new Set(
     [...all]
@@ -105,9 +110,9 @@ export function briefsFor(state: Pick<GameState, "directives" | "advice" | "turn
   return all.map((b) => (speak.has(b.ministry) ? b : { ...b, quiet: true }));
 }
 
-function allBriefs(state: Pick<GameState, "directives" | "advice" | "turn">, word: MinistriesWord): MinistryBrief[] {
+function allBriefs(state: Pick<GameState, "directives" | "advice" | "turn" | "cabinetShape">, word: MinistriesWord): MinistryBrief[] {
   const directives = state.directives ?? [];
-  return ADVISORS.flatMap((ministry) => {
+  return openMinistries(state).flatMap((ministry) => {
     const said = word.find((m) => m.ministry === ministry);
     const mine = directives.filter((d) => d.ministry === ministry);
     const asked = (state.advice?.[ministry] ?? []).some((m) => m.from === "player" && m.turn === state.turn);
@@ -146,10 +151,12 @@ const TOUCHED_MATTER: Record<AdvisorId, string> = {
   finance: "The swing of the economy this period.",
   industry: "Production, supply and trade this period.",
   science: "The laboratories' work this period.",
+  space: "The rockets and launches this period.",
+  ...forNew("The ministry's own portfolio this period."),
 };
 
 /** A little of each ministry's weight when nothing else tells them apart: the closest adviser first, then the money, then the army. */
-const STANDING: Record<AdvisorId, number> = { chief: 0.3, finance: 0.25, military: 0.2, foreign: 0.15, interior: 0.1, industry: 0.05, intelligence: 0.04, science: 0.03 };
+const STANDING: Record<AdvisorId, number> = { chief: 0.3, finance: 0.25, military: 0.2, foreign: 0.15, interior: 0.1, industry: 0.05, intelligence: 0.04, science: 0.03, space: 0.02, ...forNew(0.02) };
 
 type TouchState = Pick<GameState, "player" | "wars" | "diplomacy"> & Partial<Pick<GameState, "protests" | "politics" | "plans">>;
 
@@ -162,7 +169,7 @@ type TouchState = Pick<GameState, "player" | "wars" | "diplomacy"> & Partial<Pic
  * the intelligence service, deals industry, breakthroughs science.
  */
 export function turnTouches(state: TouchState, entry: Pick<ChronicleEntry, "turn" | "applied" | "events" | "economy">): Record<AdvisorId, number> {
-  const t: Record<AdvisorId, number> = { chief: 0, foreign: 0, interior: 0, military: 0, intelligence: 0, finance: 0, industry: 0, science: 0 };
+  const t: Record<AdvisorId, number> = { chief: 0, foreign: 0, interior: 0, military: 0, intelligence: 0, finance: 0, industry: 0, science: 0, space: 0, ...forNew(0) };
   const me = state.player;
   const add = (points: Partial<Record<AdvisorId, number>>) => {
     for (const [m, n] of Object.entries(points)) t[m as AdvisorId] += n;
@@ -230,10 +237,19 @@ export function turnTouches(state: TouchState, entry: Pick<ChronicleEntry, "turn
         break;
       case "protest":
       case "election":
+      case "parliament":
       case "party":
       case "repression":
       case "movement":
         add({ interior: 2 });
+        break;
+      // Repressions and crimes (engine/repressions.ts): the security services' own, the player's when theirs.
+      case "case":
+      case "demand":
+        add({ intelligence: 2, interior: 1 });
+        break;
+      case "crime":
+        if (a.by === me) add({ interior: 2, intelligence: 1, foreign: 1 });
         break;
       case "vote":
       case "coup":
@@ -245,6 +261,7 @@ export function turnTouches(state: TouchState, entry: Pick<ChronicleEntry, "turn
       case "official":
       case "cabinet":
       case "intrigue":
+      case "ministry":
         add({ chief: 2 });
         break;
       case "law":
@@ -254,6 +271,11 @@ export function turnTouches(state: TouchState, entry: Pick<ChronicleEntry, "turn
         break;
       case "research":
         if (a.change === "done" || a.change === "setback") add({ science: 2 });
+        break;
+      // The space race: the player's own launches most, a rival's first too (engine/space.ts).
+      case "space":
+        if (a.country === me) add({ space: 3 });
+        else if (a.first || a.change === "captured") add({ space: 1, intelligence: a.milestone === "icbm" ? 1 : 0 });
         break;
       case "captured":
         if (a.by === me || a.from === me) add({ military: 1 });
@@ -305,7 +327,8 @@ export function chooseVoices(state: GameState, turn: number, count: number): Gam
     const brief = briefs.find((b) => b.ministry === m);
     return (brief ? urgency(brief) : 0) + touches[m] + STANDING[m];
   };
-  const eligible = ADVISORS.filter((m) => briefs.some((b) => b.ministry === m) || touches[m] >= STRONG);
+  // Only the ministries of the cabinet now: one closed since the turn says nothing.
+  const eligible = openMinistries(state).filter((m) => briefs.some((b) => b.ministry === m) || touches[m] >= STRONG);
   const speak = new Set([...eligible].sort((a, b) => score(b) - score(a) || ADVISORS.indexOf(a) - ADVISORS.indexOf(b)).slice(0, n));
   const next: MinistryBrief[] = ADVISORS.flatMap((ministry): MinistryBrief[] => {
     const brief = briefs.find((b) => b.ministry === ministry);

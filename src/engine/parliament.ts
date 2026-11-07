@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { regimeAtStart, regimeFromText } from "./abroad";
 import { roll } from "./dice";
 import { LAW_IDS, LAWS, type LawId, type Laws } from "./laws";
+import { movementParty, regimeNow } from "./role";
 import type { GameState, Motion, MotionKind, Party, Politics, RegimeKind, Session, SessionLine, SessionVote } from "./types";
 
 /**
@@ -14,6 +14,11 @@ import type { GameState, Motion, MotionKind, Party, Politics, RegimeKind, Sessio
  * government and its ideas, how far speeches can move it, and the vote,
  * seat by seat, with seeded dice for the waverers. What a passed motion
  * changes takes effect at once; the next turn's game master is told.
+ *
+ * A player who leads the opposition brings motions from its benches, as far
+ * as its party holds seats: a bill, a change of a law, a motion of no
+ * confidence or an early election. The house then leans the other way: the
+ * government's parties against, the other opposition for, by their ideas.
  */
 
 /** The most one reply can move a party, and all the speeches of a sitting together. */
@@ -26,6 +31,15 @@ export const WHIP = 0.25;
 /** How many sittings a save keeps. */
 export const KEEP_SESSIONS = 8;
 
+/** The motions an opposition party can bring: on "confidence" it is a motion of no confidence. */
+export const OPPOSITION_MOTIONS: MotionKind[] = ["bill", "law", "confidence", "election"];
+
+type MotionState = Pick<GameState, "politics" | "scenarioId" | "player"> & Partial<Pick<GameState, "role" | "defeat">>;
+
+/** Whether the player's opposition can bring motions: its party is listed and holds seats in a parliament that sits. */
+export const opposesInHouse = (state: MotionState): boolean =>
+  state.role?.kind === "opposition" && Boolean(state.politics?.parliament) && (movementParty({ politics: state.politics, role: state.role })?.seats ?? 0) > 0;
+
 /** The motions that need two thirds of the seats; the rest a simple majority. */
 const TWO_THIRDS: MotionKind[] = ["constitution", "postpone"];
 
@@ -33,9 +47,13 @@ export const seatsNeeded = (kind: MotionKind, total: number) => (TWO_THIRDS.incl
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
-/** How the player's state is governed: read from the regime the game master described, else the date's table. */
-export function regimeKindOf(state: Pick<GameState, "politics" | "scenarioId" | "player">): RegimeKind {
-  return state.politics?.regime ? regimeFromText(state.politics.regime) : regimeAtStart(state.scenarioId, state.player);
+/**
+ * How the player's state is governed: engine/role.ts regimeNow – the regime the
+ * game master described, else the date's table, and a coup's or a revolution's
+ * rule while the old description stands.
+ */
+export function regimeKindOf(state: Pick<GameState, "politics" | "scenarioId" | "player"> & { defeat?: GameState["defeat"] }): RegimeKind {
+  return regimeNow(state);
 }
 
 /**
@@ -43,11 +61,14 @@ export function regimeKindOf(state: Pick<GameState, "politics" | "scenarioId" | 
  * stage: not under one party, a junta or a dictator, nor with elections
  * suspended by law.
  */
-export function holdsElections(state: Pick<GameState, "politics" | "scenarioId" | "player">): boolean {
+export function holdsElections(state: Pick<GameState, "politics" | "scenarioId" | "player"> & { defeat?: GameState["defeat"] }): boolean {
   if (state.politics?.laws?.elections === "suspended") return false;
   const kind = regimeKindOf(state);
   return kind === "democracy" || kind === "limited";
 }
+
+/** A minister who governs politics (the interior) brings only bills and laws; the motions of state are the leader's, put to him as a proposal (engine/remit.ts). */
+export const MINISTER_MOTIONS: MotionKind[] = ["bill", "law"];
 
 /**
  * The motions the player can bring now: none without a parliament that sits,
@@ -55,10 +76,13 @@ export function holdsElections(state: Pick<GameState, "politics" | "scenarioId" 
  * for most and the form's first choice – then the other laws, the motions of
  * government and the elections, the state of emergency last.
  */
-export function availableMotions(state: Pick<GameState, "politics" | "scenarioId" | "player">): MotionKind[] {
+export function availableMotions(state: MotionState): MotionKind[] {
   if (!state.politics?.parliament) return [];
   const elections = holdsElections(state);
-  return (["bill", "law", "constitution", "confidence", "election", "postpone", "emergency"] as const).filter((k) => (k === "election" || k === "postpone" ? elections : true));
+  const role = state.role?.kind;
+  const kinds: readonly MotionKind[] =
+    role === "opposition" ? (opposesInHouse(state) ? OPPOSITION_MOTIONS : []) : role === "minister" || role === "general" ? MINISTER_MOTIONS : ["bill", "law", "constitution", "confidence", "election", "postpone", "emergency"];
+  return kinds.filter((k) => (k === "election" || k === "postpone" ? elections : true));
 }
 
 /** Which way a law's change leans on the parties' three axes: +1 toward the closed end of its options. */
@@ -98,11 +122,29 @@ function lawDirection(motion: Motion, laws: Laws | undefined): { axis: "economy"
  * fights.
  */
 export function baseLean(party: Party, motion: Motion, laws: Laws | undefined): number {
+  if (motion.by === "opposition") return oppositionLean(party, motion, laws);
   const side = party.status === "ruling" ? 0.7 : party.status === "coalition" ? 0.4 : -0.35;
   let lean = side;
   if (motion.kind === "confidence") lean = party.status === "ruling" ? 0.9 : party.status === "coalition" ? 0.5 : -0.6;
   if (motion.kind === "election") lean = party.status === "ruling" ? 0.4 : party.status === "coalition" ? 0.1 : 0.5;
   if (motion.kind === "postpone") lean = party.status === "ruling" ? 0.6 : party.status === "coalition" ? 0.1 : -0.8;
+  const direction = lawDirection(motion, laws);
+  if (direction) lean += (direction.sign * party.stance[direction.axis]) / 10 * 0.5;
+  return clamp(lean, -1, 1);
+}
+
+/**
+ * Where a party starts on a motion the opposition brought: the party that
+ * brought it is for, the government's parties against (on no confidence,
+ * firmly), the rest of the opposition inclined to it, and ideas pull as on
+ * any law.
+ */
+function oppositionLean(party: Party, motion: Motion, laws: Laws | undefined): number {
+  if (party.id === motion.party) return 1;
+  const gov = party.status === "ruling" ? -0.7 : party.status === "coalition" ? -0.4 : 0.2;
+  let lean = gov;
+  if (motion.kind === "confidence") lean = party.status === "ruling" ? -0.9 : party.status === "coalition" ? -0.5 : 0.45;
+  if (motion.kind === "election") lean = party.status === "ruling" ? -0.3 : party.status === "coalition" ? -0.1 : 0.5;
   const direction = lawDirection(motion, laws);
   if (direction) lean += (direction.sign * party.stance[direction.axis]) / 10 * 0.5;
   return clamp(lean, -1, 1);
@@ -144,19 +186,22 @@ export function forecast(politics: Pick<Politics, "parties" | "parliament" | "la
 }
 
 /** A motion as the player brings it, checked: its kind allowed, its law and option real and a change, its words short. */
-export function checkMotion(state: Pick<GameState, "politics" | "scenarioId" | "player">, motion: Motion): Motion | null {
+export function checkMotion(state: MotionState, motion: Motion): Motion | null {
   if (!availableMotions(state).includes(motion.kind)) return null;
   const text = motion.text.trim().slice(0, 600);
+  // An opposition's motion carries its party, so the house knows whose it is.
+  const own = state.role?.kind === "opposition" ? movementParty({ politics: state.politics, role: state.role }) : undefined;
+  const by = own ? { by: "opposition" as const, party: own.id } : {};
   if (motion.kind === "law") {
     if (!motion.law || !LAW_IDS.includes(motion.law as LawId)) return null;
     const options = LAWS[motion.law as LawId] as readonly string[];
     if (!motion.option || !options.includes(motion.option)) return null;
     if (state.politics?.laws?.[motion.law as LawId] === motion.option) return null;
-    return { kind: "law", text, law: motion.law, option: motion.option };
+    return { kind: "law", text, law: motion.law, option: motion.option, ...by };
   }
   if ((motion.kind === "bill" || motion.kind === "constitution") && text.length < 3) return null;
   if (motion.kind === "emergency" && (state.politics?.laws?.martial === "emergency" || state.politics?.laws?.martial === "martial")) return null;
-  return { kind: motion.kind, text };
+  return { kind: motion.kind, text, ...by };
 }
 
 /** The sitting under way, if there is one: a parliament sits on one motion at a time. */
@@ -204,7 +249,9 @@ export function speakInSession(state: GameState, id: string, said: string | null
   const session = politics?.sessions?.find((s) => s.id === id && s.status === "open");
   if (!politics || !session) return state;
   const lines: SessionLine[] = [];
-  if (said?.trim()) lines.push({ speaker: state.countries[state.player]?.leader?.split(";")[0].trim() ?? "", text: said.trim().slice(0, 2000), player: true });
+  // The player speaks as the leader, or from the opposition benches as its leader.
+  const speaker = session.motion.by === "opposition" ? (state.role?.person?.name ?? "") : (state.countries[state.player]?.leader?.split(";")[0].trim() ?? "");
+  if (said?.trim()) lines.push({ speaker, ...(session.motion.party ? { party: session.motion.party } : {}), text: said.trim().slice(0, 2000), player: true });
   for (const s of answer.speeches) {
     const party = findParty(politics.parties, s.party);
     lines.push({ speaker: s.speaker, ...(party ? { party: party.id } : {}), text: s.text });
@@ -274,7 +321,8 @@ export function takeVote(state: GameState, id: string, now = new Date()): GameSt
   if (passed && m.kind === "emergency") next = { ...next, laws: { ...(next.laws ?? {}), martial: "emergency" } };
   if (passed && m.kind === "election") next = { ...next, nextElection: daysAfter(state.date, 60) };
   if (passed && m.kind === "postpone") next = { ...next, nextElection: daysAfter(next.nextElection && next.nextElection > state.date ? next.nextElection : state.date, 365), unrest: clamp(next.unrest + 4, 0, 100) };
-  if (m.kind === "confidence") next = { ...next, unrest: clamp(next.unrest + (passed ? -2 : 6), 0, 100) };
+  // The government loses a vote of confidence it called, or a motion of no confidence the opposition carries.
+  if (m.kind === "confidence") next = { ...next, unrest: clamp(next.unrest + ((m.by === "opposition" ? passed : !passed) ? 6 : -2), 0, 100) };
   return { ...state, politics: next, updatedAt: now.toISOString() };
 }
 
@@ -283,11 +331,14 @@ function motionLine(m: Motion): string {
   if (m.kind === "law") return `change the ${m.law} law to "${m.option}"${m.text ? ` (${m.text})` : ""}`;
   if (m.kind === "bill") return `bill: ${m.text}`;
   if (m.kind === "constitution") return `constitutional amendment: ${m.text}`;
-  if (m.kind === "confidence") return "a vote of confidence in the government";
+  if (m.kind === "confidence") return m.by === "opposition" ? "a motion of no confidence in the government" : "a vote of confidence in the government";
   if (m.kind === "election") return "an early national election";
   if (m.kind === "postpone") return "putting the national election off";
   return "a state of emergency";
 }
+
+/** Whether the government lost a sitting's vote on its confidence: one it called failed, or the opposition's no confidence passed. */
+export const confidenceLost = (s: Pick<Session, "motion" | "status">) => s.motion.kind === "confidence" && (s.motion.by === "opposition" ? s.status === "passed" : s.status === "failed");
 
 /**
  * The sittings since the last turn, for the game master: what passed must
@@ -299,7 +350,10 @@ export function describeSessions(politics: Politics | undefined, turn: number): 
   if (!held.length) return [];
   return [
     "",
-    "PARLIAMENT SINCE THE LAST TURN (sittings the government held; the votes are the engine's and final – carry out what passed, a passed law is already in force; a bill or amendment that passed must now be put into effect):",
-    ...held.map((s) => `- ${motionLine(s.motion)}: ${s.status.toUpperCase()} ${s.vote?.for ?? 0}–${s.vote?.against ?? 0} (abstained ${s.vote?.abstain ?? 0}, needed ${s.vote?.need ?? 0})${s.motion.kind === "confidence" && s.status === "failed" ? " – the government LOST the confidence of parliament" : ""}`),
+    "PARLIAMENT SINCE THE LAST TURN (sittings held on the player's motions; the votes are the engine's and final – carry out what passed, a passed law is already in force; a bill or amendment that passed must now be put into effect; the unrest a postponement or a lost vote of confidence brings is the engine's, already counted – do not move unrest again for it):",
+    ...held.map(
+      (s) =>
+        `- ${motionLine(s.motion)}${s.motion.by === "opposition" ? " (brought by the player's opposition party)" : ""}: ${s.status.toUpperCase()} ${s.vote?.for ?? 0}–${s.vote?.against ?? 0} (abstained ${s.vote?.abstain ?? 0}, needed ${s.vote?.need ?? 0})${confidenceLost(s) ? " – the government LOST the confidence of parliament: where the government answers to parliament it must resign or win a new majority; if its party leaves the government, set its status in politics and the engine counts the leader's fall" : ""}`,
+    ),
   ];
 }

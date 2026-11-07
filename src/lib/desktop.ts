@@ -14,6 +14,8 @@ export interface DesktopWindow {
   openSoundSettings?(): Promise<void>;
   /** Missing in an app built before it: Windows' speech settings, where a voice for the game's language is added. */
   openSpeechSettings?(): Promise<void>;
+  /** Missing in an app built before it: the game's page in the Microsoft Store, at its reviews (the Store copy only). */
+  openStoreReview?(): Promise<void>;
   /** Missing in an app built before visible updates. */
   updates?: {
     get(): Promise<UpdateSnapshot | null>;

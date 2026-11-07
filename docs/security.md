@@ -67,6 +67,9 @@ sign-in routes refuse with `demo`, so no tokens are ever handled there.
   (on Windows these modes are not enforced; the files inherit the ACLs of
   your user profile, which other standard users cannot read).
 - A file that fails to decrypt is treated as no connection (sign in again).
+- `plan-usage.json` beside it is plain JSON: the plan's latest usage shares
+  and reset times (`chatgpt/usage.ts`), no token, no account or request id.
+  It is deleted on sign-in and sign-out.
 
 **Accepted risk:** the key sits beside the ciphertext. This protects against
 accidental disclosure (a copied file, a screen share, a backup of one file); it

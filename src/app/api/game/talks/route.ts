@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       const end = await completeJson({ model, demo, locale, instructions: TALK_END_INSTRUCTIONS(locale), input: [{ role: "user", content: buildTalkPrompt(state, talk) }], signal, onDelta }, TalkEndSchema);
       return { result: end.result, note: end.note };
     }
-    const reply = await completeJson({ model, demo, locale, instructions: TALK_INSTRUCTIONS(locale), input: [{ role: "user", content: buildTalkPrompt(state, talk, line) }], signal, onDelta }, TalkReplySchema);
+    const reply = await completeJson({ model, demo, locale, instructions: TALK_INSTRUCTIONS(locale), input: [{ role: "user", content: buildTalkPrompt(state, talk, line, locale) }], signal, onDelta }, TalkReplySchema);
     return { speaker: reply.speaker, said: reply.said };
   });
 }

@@ -3,6 +3,7 @@ import { seatFigure } from "@/engine/figures";
 import { OfficialsSetupSchema, startOfficials } from "@/engine/government";
 import { PoliticsSetupSchema, startPolitics } from "@/engine/politics";
 import { buildPoliticsPrompt, SETUP_INSTRUCTIONS, type SetupPart } from "@/engine/prompts";
+import { withSpaceHead } from "@/engine/space";
 import { wantsDemo } from "@/server/demo";
 import { rejectNonLocal } from "@/server/guard";
 import { completeJson } from "@/server/llm";
@@ -47,8 +48,8 @@ export async function POST(request: Request) {
     );
     return {
       ...(withPolitics ? { politics: startPolitics(raw as never, state.date) } : {}),
-      // The player's minister holds their own post (engine/figures.ts).
-      ...(withOfficials ? { officials: seatFigure(startOfficials(raw as never, state.date), state) } : {}),
+      // The player's minister holds their own post (engine/figures.ts); the head of the space programme is history's where the game master left the post out (engine/space.ts).
+      ...(withOfficials ? { officials: seatFigure(withSpaceHead(startOfficials(raw as never, state.date), state, locale), state) } : {}),
     };
   });
 }

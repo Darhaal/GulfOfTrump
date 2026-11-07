@@ -53,6 +53,23 @@ from two pinned sources:
    the historical polygon it lies in (`hist`, `owner`); the scenarios turn
    those into owners for their own date, in code (`src/engine/scenarios/`).
 
+**The finer maps, which the game plays.** `world_<year>_fine.json` (`npm
+run maps -- --fine <year>`, after the standard map of that year) is the
+era's map with about 6,300 provinces instead of 2,700: the divisions step 1
+merges by region are kept where they average 2,500 km² or more, and the
+large ones are split by land and people into parts seeded at their towns
+([`scripts/split.mjs`](../../scripts/split.mjs)), named after their largest
+Natural Earth place, else their largest town in `towns.json` (GeoNames, CC
+BY 4.0), else the Natural Earth landform they lie in. A historical side
+holding enough of a whole division for a province of its own keeps one
+though no single part holds enough of it, and the output of a region whose
+mines the table places (`RESOURCE_POINTS` in `scripts/resources.mjs`) goes
+to the provinces holding them. Each province records the province of
+`world_<year>.json` it lies in (`was`, where the id differs), so every
+standard id stays resolvable for saves and scenario data
+(docs/map-plan.md, "Finer provinces"). The standard files stay: the finer
+ones are built from them.
+
 **Shared layers.** `water.json` holds Natural Earth rivers (scale rank up to
 7) and lakes (up to 5); `transport.json` the railways of scale rank up to 8
 (`r`, and `s`, the year a line opened where after 1914) and about 1,100 ports;

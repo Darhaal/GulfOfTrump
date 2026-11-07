@@ -77,7 +77,10 @@ export function clearOrphanFronts(state: Pick<GameState, "regions" | "wars">): {
  * country that drove the enemy out of a co-belligerent's province kept it,
  * and held another government's land with no war between them (the 1939
  * statistics runs: the Soviet Union and Germany in Slovakia's Prešov, taken
- * back from Poland). A government in exile or a movement without land takes
+ * back from Poland). A government in exile takes its land back as any other,
+ * and comes home with it (engine/warEnd.ts settleWars) – Germany held a
+ * Finnish province it freed for years once Finland's government had gone
+ * into exile. A government that is gone or a movement without land takes
  * nothing back, nor an owner that is not at war with the side still fighting
  * in the province. Returns the provinces handed back, with who held them.
  */
@@ -95,7 +98,7 @@ export function returnToAllies(state: Pick<GameState, "regions" | "wars" | "coun
   for (const [id, r] of Object.entries(state.regions)) {
     if (r.controller === r.owner) continue;
     const owner = state.countries[r.owner];
-    if (!owner || owner.exile || owner.dormant || at(r.controller, r.owner) || !together(r.controller, r.owner)) continue;
+    if (!owner || owner.dormant || at(r.controller, r.owner) || !together(r.controller, r.owner)) continue;
     if (r.contested && !at(r.contested, r.owner)) continue;
     out.push({ id, from: r.controller });
     r.controller = r.owner;

@@ -13,6 +13,7 @@ import { LOCALES, type Locale } from "@/engine/types";
 import { errorKey, useI18n } from "@/i18n/useI18n";
 import { ApiError, connectAi, disconnectAi, getModels } from "@/lib/api";
 import { useDesktopWindow } from "@/lib/desktop";
+import PlanUsageBlock from "./PlanUsageBlock";
 import TelemetrySection from "./TelemetrySection";
 import UpdatesSection from "./UpdatesSection";
 import { usePreference, type Theme } from "@/lib/preferences";
@@ -192,6 +193,8 @@ export default function SettingsClient({ embedded = false, onOpenAbout }: { embe
                 {modelsFailed && <span className="mt-1 block text-xs font-medium text-red-600">{t("ai.modelsFailed")}</span>}
               </label>
             )}
+
+            {connected && <PlanUsageBlock mock={status?.provider === "mock"} offline={gameMaster.limited && gameMaster.demo} />}
 
             <div className="grid gap-1.5 text-xs font-medium text-muted">
               <p>{t("ai.planNote")}</p>

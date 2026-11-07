@@ -8,6 +8,16 @@
   "licenceName": "Public domain",
   "changes": "cropped to 5:3, toned and painted in oil"
  },
+ "1933": {
+  "name": "The torchlight march through Berlin on the evening of 30 January 1933",
+  "source": "https://commons.wikimedia.org/wiki/File:Bundesarchiv_Bild_102-02985A,_Berlin,_Fackelzug_zur_Machtergreifung_Hitlers.jpg",
+  "file": "File:Bundesarchiv Bild 102-02985A, Berlin, Fackelzug zur Machtergreifung Hitlers.jpg",
+  "author": "Unknown Unknown",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 3.0 de",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0/de/deed.en",
+  "changes": "cropped to 5:3, toned and painted in oil"
+ },
  "1939": {
   "name": "German soldiers remove the barrier on the Polish border, September 1939",
   "source": "https://commons.wikimedia.org/wiki/File:Bundesarchiv_Bild_183-51909-0003,_Polen,_Schlagbaum,_deutsche_Soldaten.jpg",
@@ -27,6 +37,15 @@
   "licenceName": "Public domain",
   "changes": "cropped to 5:3, toned and painted in oil"
  },
+ "1957": {
+  "name": "A replica of Sputnik 1, the first artificial satellite, launched 4 October 1957",
+  "source": "https://commons.wikimedia.org/wiki/File:Sputnik_asm.jpg",
+  "file": "File:Sputnik asm.jpg",
+  "author": "NSSDC, NASA [1]",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to 5:3, toned and painted in oil"
+ },
  "1964": {
   "name": "The destroyer USS Maddox at sea, early 1960s",
   "source": "https://commons.wikimedia.org/wiki/File:USS_Maddox_(DD-731)_underway_at_sea,_circa_the_early_1960s_(NH_97900).jpg",
@@ -34,6 +53,25 @@
   "author": "Unknown author Unknown author",
   "licence": "public domain",
   "licenceName": "Public domain",
+  "changes": "cropped to 5:3, toned and painted in oil"
+ },
+ "1973": {
+  "name": "Egyptian troops cross the Suez Canal, October 1973",
+  "source": "https://commons.wikimedia.org/wiki/File:Egyptians_Crossing_Suez_Canal_-_Flickr_-_The_Central_Intelligence_Agency.jpg",
+  "file": "File:Egyptians Crossing Suez Canal - Flickr - The Central Intelligence Agency.jpg",
+  "author": "The Central Intelligence Agency",
+  "licence": "public domain",
+  "licenceName": "Public domain",
+  "changes": "cropped to 5:3, toned and painted in oil"
+ },
+ "1979": {
+  "name": "The Tajbeg Palace in Kabul, stormed by Soviet special forces on 27 December 1979, later the 40th Army's headquarters",
+  "source": "https://commons.wikimedia.org/wiki/File:Evstafiev-40th_army_HQ-Amin-palace-Kabul.jpg",
+  "file": "File:Evstafiev-40th army HQ-Amin-palace-Kabul.jpg",
+  "author": "Photo: Mikhail Evstafiev",
+  "licence": "CC BY-SA",
+  "licenceName": "CC BY-SA 3.0",
+  "licenceUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
   "changes": "cropped to 5:3, toned and painted in oil"
  },
  "1991": {

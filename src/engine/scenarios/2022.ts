@@ -1,6 +1,6 @@
 import type { Scenario } from "../types";
 import { TERMS_2022, TREATIES_2022, withTreaties } from "./treaties";
-import { COUNTRIES_TODAY, ISLANDS_TODAY } from "./islands";
+import { BORDERS_TODAY, COUNTRIES_TODAY, ISLANDS_TODAY } from "./islands";
 
 const NATO_2022 = [
   "albania", "belgium", "bulgaria", "canada", "croatia", "czechia", "denmark", "estonia", "france",
@@ -86,6 +86,7 @@ Real history for reference: Kyiv holds; Russia withdraws from the north at the e
   modernOwners: {
     SDS: "south-sudan",
     KOS: "kosovo",
+    ...BORDERS_TODAY,
     ...COUNTRIES_TODAY,
   },
   provinceOwners: {

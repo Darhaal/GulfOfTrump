@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Building2, Coins, Crosshair, Eye, Handshake, Landmark, MapPin, Swords, Users, type LucideIcon } from "lucide-react";
+import { BookOpen, Building2, Coins, Crosshair, Eye, Handshake, Landmark, MapPin, Swords, Unlink, Users, type LucideIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { ui } from "@/components/ui/classes";
 import { leaderName } from "@/i18n/leaders";
@@ -11,7 +11,9 @@ import { coupLevel, type Estimate, type ForeignView, type KnowledgeLevel } from 
 import type { MessageKey } from "@/i18n/messages";
 import Flag from "@/components/Flag";
 import { LAW_IDS, type Laws } from "@/engine/laws";
-import { WEAPON_KINDS, type Alliance, type CountryState, type Domestic, type Plan, type ScenarioId, type War } from "@/engine/types";
+import { isTyped, typesOf } from "@/engine/forces";
+import { relationsOf } from "@/engine/envoys";
+import { WEAPON_KINDS, type Alliance, type ArmsType, type CountryState, type Domestic, type Envoy, type Plan, type ScenarioId, type War } from "@/engine/types";
 import { ARMS_ICONS } from "./armsText";
 import CourseBlock from "./CourseBlock";
 import EconomyPanel from "./EconomyPanel";
@@ -51,8 +53,12 @@ interface CountryDetailsProps {
   province?: ReactNode;
   provinceKey?: string | null;
   footer?: ReactNode;
+  /** Who governs it after a war: a provisional government, one in exile, or the order to set one up (components/game/SettlementCard.tsx). */
+  settlement?: ReactNode;
   /** Its people in numbers (engine/society.ts); another country's under fog of war as estimates. */
   society?: { society: Society; estimates?: Record<SocietyFigure, Estimate>; level?: KnowledgeLevel };
+  /** Relations that are not normal between the player's government and this one (engine/envoys.ts). */
+  envoys?: Record<string, Envoy>;
 }
 
 type Section = "province" | "power" | "economy" | "army" | "laws";
@@ -147,7 +153,7 @@ function DomesticBlock({ d, coupRisk, view }: { d: Domestic; coupRisk?: number; 
 }
 
 /** Everything the player can know about one country at a glance: in the game, in sections the player switches between. */
-export default function CountryDetails({ country, scenario, regionCount, population, accounts, detailed, wars, alliances, countries, isPlayer, brief, coupRisk, view, plans, player, laws, province, provinceKey, footer, society }: CountryDetailsProps) {
+export default function CountryDetails({ country, scenario, regionCount, population, accounts, detailed, wars, alliances, countries, isPlayer, brief, coupRisk, view, plans, player, laws, province, provinceKey, footer, settlement, society, envoys }: CountryDetailsProps) {
   const { t, text, people, locale } = useI18n();
   const name = (tag: string) => text(countries[tag]?.name ?? tag);
   const enemies = [
@@ -164,12 +170,15 @@ export default function CountryDetails({ country, scenario, regionCount, populat
       : [{ key: "organisations", icon: Building2, label: t("country.organisations"), blocs: memberOf.filter((a) => a.kind === "organization" || a.kind === "trade") }]),
   ];
 
-  // A newly chosen province opens its section; a click on the sea closes it.
+  // The section the player picked stays open from country to country and province to province ("Power" while
+  // looking around the map); a newly chosen province opens its own section only while the player has picked none
+  // or was reading a province, and a click on the sea closes it.
+  const [picked, setPicked] = useState<Section | null>(null);
   const [section, setSection] = useState<Section>(province ? "province" : "power");
   const [seen, setSeen] = useState(provinceKey ?? null);
   if ((provinceKey ?? null) !== seen) {
     setSeen(provinceKey ?? null);
-    setSection(provinceKey ? "province" : "power");
+    setSection(picked && picked !== "province" ? picked : provinceKey ? "province" : "power");
   }
   const sections: { id: Section; label: string; icon: LucideIcon }[] = [
     ...(province ? [{ id: "province" as const, label: t("country.section.province"), icon: MapPin }] : []),
@@ -220,6 +229,18 @@ export default function CountryDetails({ country, scenario, regionCount, populat
     </div>
   );
 
+  // Our relations with it when they are not normal: closed by a war, broken off, ambassadors recalled (engine/envoys.ts).
+  const ties = player && !isPlayer ? relationsOf({ wars, envoys }, player, country.tag) : "normal";
+  const tie = envoys?.[[player ?? "", country.tag].sort().join("|")];
+  const relations = ties !== "normal" && (
+    <div className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold ${ties === "war" ? "bg-war/10 text-war" : "bg-page text-muted"}`}>
+      <Unlink className="h-3.5 w-3.5 shrink-0" />
+      <span className="min-w-0">
+        {t(`relations.${ties}` as MessageKey)}
+        {ties !== "war" && tie ? ` ${t("relations.since", { date: formatDate(tie.since, locale) })}` : ""}
+      </span>
+    </div>
+  );
   const leader = country.leader && (
     <div className="rounded-xl bg-page p-3">
       <div className={ui.label}>{t("country.leader")}</div>
@@ -300,7 +321,10 @@ export default function CountryDetails({ country, scenario, regionCount, populat
             key={id}
             type="button"
             role="tab"
-            onClick={() => setSection(id)}
+            onClick={() => {
+              setSection(id);
+              setPicked(id);
+            }}
             aria-selected={current === id}
             title={label}
             className={`flex min-w-0 flex-col items-center gap-0.5 rounded-lg px-0.5 py-1.5 text-[10px] font-bold tracking-tight transition-all ${current === id ? `${ui.segmentOn} bg-surface shadow-sm` : ui.segmentOff}`}
@@ -311,11 +335,18 @@ export default function CountryDetails({ country, scenario, regionCount, populat
         ))}
       </div>
 
-      {current === "province" && province}
+      {current === "province" && (
+        <>
+          {province}
+          {settlement}
+        </>
+      )}
 
       {current === "power" && (
         <div className="flex flex-col gap-4">
           {leader}
+          {relations}
+          {settlement}
           {country.domestic && !isPlayer && <DomesticBlock d={country.domestic} coupRisk={coupRisk} view={view} />}
           {plans && player && <CourseBlock country={country} countries={countries} plans={plans} player={player} />}
           {groups.filter((g) => g.key === "organisations").map(blocList)}
@@ -342,8 +373,11 @@ export default function CountryDetails({ country, scenario, regionCount, populat
             <ul className="grid grid-cols-2 gap-1.5">
               {arsenal.map((k) => {
                 const Icon = ARMS_ICONS[k];
+                // Aircraft, ships and armour list their types on hover (engine/forces.ts).
+                const types = isTyped(k) ? (Object.entries(typesOf(country.arsenal!.stock[k], k, Number(scenario))) as [ArmsType, number][]).filter(([, n]) => n > 0) : [];
+                const hint = types.map(([type, n]) => `${t(`arms.type.${type}` as MessageKey)}: ${n.toLocaleString(locale)}`).join("\n");
                 return (
-                  <li key={k} className="flex items-center justify-between gap-2 rounded-lg bg-page px-2.5 py-1.5">
+                  <li key={k} title={hint || undefined} className={`flex items-center justify-between gap-2 rounded-lg bg-page px-2.5 py-1.5${hint ? " cursor-help" : ""}`}>
                     <span className="flex min-w-0 items-center gap-1.5 text-2xs font-bold text-muted">
                       <Icon className="h-3.5 w-3.5 shrink-0" />
                       <span className="truncate">{t(`arms.kind.${k}` as MessageKey)}</span>

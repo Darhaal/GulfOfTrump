@@ -1,24 +1,38 @@
 "use client";
 
-import { ArrowDownRight, ArrowUpRight, Briefcase, Check, ChevronDown, Clock, Gavel, Handshake, Landmark, Loader2, type LucideIcon, Megaphone, MessagesSquare, Plus, Shield, ShieldAlert, ShieldX, Siren, Tv, Unlock, Users, Vote } from "lucide-react";
+import Dictation from "@/components/voice/Dictation";
+import { ArrowDownRight, ArrowUpRight, Briefcase, Check, ChevronDown, Clock, Gavel, Handshake, Landmark, Loader2, type LucideIcon, Megaphone, MessagesSquare, Plus, Shield, ShieldAlert, ShieldX, Siren, Tv, Unlock, Users, UsersRound, Vote } from "lucide-react";
 import { type ReactNode, useId, useMemo, useState } from "react";
 import { ui } from "@/components/ui/classes";
 import DoneButton, { Hint } from "@/components/ui/DoneButton";
 import { MAX_ORDERS } from "@/constants/app";
 import { formatDate } from "@/engine/calendar";
 import { LAW_IDS, LAWS, type LawId } from "@/engine/laws";
-import { availableMotions, checkMotion, holdsElections, openSession, seatsNeeded } from "@/engine/parliament";
+import { availableMotions, checkMotion, holdsElections, openSession, opposesInHouse, seatsNeeded } from "@/engine/parliament";
 import { governmentSeats, loyaltyOf } from "@/engine/politics";
+import type { Access } from "@/engine/remit";
+import { movementParty } from "@/engine/role";
 import { talksWith } from "@/engine/talks";
 import { ownProtests } from "@/engine/unrest";
 import { type GameState, type Loyalty, type Motion, type MotionKind, type Parliament, type Party, PILLARS, type Protest, type Session, type Talk } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
 import { plotTitle } from "./changes";
-import { partyActions, type PoliticsAction } from "./politics/actions";
-import { abbreviation, hemicycle, INNER, inkOn, partyColors, seatingOrder, spread } from "./politics/layout";
+import RenameOrder from "./RenameOrder";
+import type { Suggest } from "./Suggestions";
+import { OPPOSITION_STREET, oppositionActions, partyActions, type PoliticsAction, pressureActions } from "./politics/actions";
+import { abbreviation, hemicycle, INNER, inkOn, partyColors, seatingOrder, shade, spread } from "./politics/layout";
 import { useMotionLabel } from "./politics/motion";
-import { OilDefs, oilFills, oilFilter } from "./politics/oil";
+import { ColourPicker, EmblemPicker, OilDefs, oilFills, oilFilter, PartyEmblem } from "./politics/oil";
+import { GoneParties, partyName, UndergroundStrength } from "./politics/PartyLife";
+import { RepressionRecord, RepressMenu, type OrderRoom } from "./politics/Repressions";
+import { targetsOf } from "@/engine/repressions";
+import { partyEmblem, setPartyColour, setPartyEmblem, setPartyImage, withPartyColours } from "@/engine/partyEmblems";
+import { personFor } from "@/engine/people";
+import { yearOf } from "@/engine/calendar";
+import Dialog from "@/components/ui/Dialog";
+import Portrait from "./Portrait";
+import { ReadOnlyNote } from "./RoleView";
 
 interface PoliticsPanelProps {
   state: GameState;
@@ -27,6 +41,8 @@ interface PoliticsPanelProps {
   onLoad: () => void;
   /** Adds an order to the turn; moves here are orders the game master judges. */
   onOrder: (order: string) => void;
+  /** Names from the game master for a rename by order (engine/suggest.ts); missing without one. */
+  onSuggest?: Suggest;
   /** A province's name in the interface language. */
   regionName: (id: string) => string;
   /** Opens a sitting of parliament on a motion (engine/parliament.ts). */
@@ -35,9 +51,23 @@ interface PoliticsPanelProps {
   onResumeSession: (id: string) => void;
   /** Opens talks with a protest's leaders or with plotters, or takes them up again (engine/talks.ts). */
   onTalks: (kind: Talk["with"], target: string) => void;
+  /**
+   * How the player's role stands to politics (engine/remit.ts): the government's moves; the
+   * opposition's own – its motions from the benches, its moves on other parties and in the
+   * street; or none, only to read.
+   */
+  mode?: Access;
+  /** The sport section (components/game/SportPanel.tsx): the Games, the bids and boycotts, the money for sport; its tab shows only with it. */
+  sport?: ReactNode;
+  /** The society section (components/game/SocietyTab.tsx): the people, their classes and how they moved turn by turn; its tab shows only with it. */
+  society?: ReactNode;
+  /** Opens the street on a protest picked on the map, once per key. */
+  focusProtest?: { key: number; id: string };
+  /** The interface's own changes to the game: the emblem of the player's party (engine/partyEmblems.ts). */
+  onChange?: (next: GameState) => void;
 }
 
-type Tab = "parliament" | "parties" | "street";
+type Tab = "parliament" | "parties" | "street" | "society";
 
 const STAGE_TONE: Record<Protest["stage"], string> = {
   rally: "bg-amber-50 text-amber-700",
@@ -133,6 +163,9 @@ interface Ordering {
   order: (line: string) => boolean;
 }
 
+/** The turn's room for orders, for the repression controls (politics/Repressions.tsx). */
+const roomFor = (ordering: Ordering): OrderRoom => ({ orders: ordering.orders, full: ordering.full, disabled: ordering.disabled, onOrder: (line) => void ordering.order(line) });
+
 /** A small square control on a card, so the card's title keeps its width; its words show in a hint above the row it sits in (made `relative`). */
 const SQUARE = "grid h-7 w-7 shrink-0 place-items-center rounded-lg border sheet transition-colors disabled:cursor-not-allowed disabled:border-line disabled:text-faded";
 
@@ -173,19 +206,24 @@ function OrderSquare({ id, icon, line, ordering, align, tone = "text-muted hover
  * security services and elites; the protests at home, with talks in person
  * and every other measure against them; protests abroad to condemn or back.
  */
-function Street({ state, ordering, regionName, onTalks }: { state: GameState; ordering: Ordering; regionName: (id: string) => string; onTalks: (kind: Talk["with"], target: string) => void }) {
+function Street({ state, ordering, regionName, onTalks, mode }: { state: GameState; ordering: Ordering; regionName: (id: string) => string; onTalks: (kind: Talk["with"], target: string) => void; mode: Access }) {
   const { t, text } = useI18n();
   const [open, setOpen] = useState<string | null>(null);
   const loyalty = state.politics ? loyaltyOf(state.politics) : null;
-  const home = ownProtests(state.protests, state.player);
-  const abroad = (state.protests ?? []).filter((p) => !home.includes(p));
+  const room = roomFor(ordering);
+  const targets = targetsOf(state);
+  const own = ownProtests(state.protests, state.player);
+  const abroad = (state.protests ?? []).filter((p) => !own.includes(p));
+  // The families' protest the engine raised against a long mobilisation reads in the player's language (engine/mobilisation.ts).
+  const home = own.map((p) => (p.kind === "mobilisation" ? { ...p, title: t("protest.mobilisation"), demands: t("protest.mobilisationDemands") } : p));
   const row = (action: PoliticsAction, line: string) => (
     <ActionRow key={action.id} action={action} label={t(`politics.act.${action.id}` as MessageKey)} desc={t(`politics.desc.${action.id}` as MessageKey)} line={line} ordering={ordering} />
   );
 
   return (
     <div className="flex flex-col gap-4">
-      {loyalty && <Pillars loyalty={loyalty} was={state.politics?.loyaltyWas} />}
+      {/* The pillars' loyalty is the government's own knowledge. */}
+      {loyalty && mode === "govern" && <Pillars loyalty={loyalty} was={state.politics?.loyaltyWas} />}
 
       <section>
         <div className={`${ui.label} mb-2 flex items-center gap-1.5`}>
@@ -206,11 +244,21 @@ function Street({ state, ordering, regionName, onTalks }: { state: GameState; or
                   <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-2xs font-black uppercase tracking-wider ${STAGE_TONE[p.stage]}`}>{t(`politics.protest.${p.stage}` as MessageKey)}</span>
                 </div>
                 {p.demands && <p className="mt-1.5 text-xs font-medium text-ink">{t("politics.protest.demands", { demands: p.demands })}</p>}
+                {mode === "opposition" && (
+                  <div className="relative mt-2 flex flex-wrap items-center gap-1.5">
+                    {OPPOSITION_STREET.map((a) => (
+                      <OrderSquare key={a.id} id={a.id} icon={a.icon} line={t(`politics.order.${a.id}` as MessageKey, { title: p.title })} ordering={ordering} align="start" />
+                    ))}
+                  </div>
+                )}
+                {mode === "govern" && (
                 <div className="relative mt-2 flex flex-wrap items-center gap-1.5">
                   <TalksButton under={Boolean(talksWith(state.politics, p.id))} disabled={ordering.disabled} onClick={() => onTalks("protest", p.id)} align="start" />
                   {(["concede", "disperse", "troops"] as const).map((action) => (
                     <OrderSquare key={action} id={action} icon={HOME_ICONS[action]} line={t(`politics.order.${action}` as MessageKey, { title: p.title, demands: p.demands || "–" })} ordering={ordering} align="start" />
                   ))}
+                  {/* Its leader by name, repressed by the engine (engine/repressions.ts). */}
+                  {targets.some((x) => x.kind === "protest" && x.ref === p.id) && <RepressMenu state={state} target={targets.find((x) => x.kind === "protest" && x.ref === p.id)!} room={room} align="start" />}
                   <button
                     type="button"
                     onClick={() => setOpen(open === p.id ? null : p.id)}
@@ -221,7 +269,8 @@ function Street({ state, ordering, regionName, onTalks }: { state: GameState; or
                     <ChevronDown className={`h-3 w-3 transition-transform ${open === p.id ? "rotate-180" : ""}`} />
                   </button>
                 </div>
-                {open === p.id && (
+                )}
+                {mode === "govern" && open === p.id && (
                   <div className="mt-2 grid gap-1.5">
                     {HOME_MEASURES.map((id) => {
                       const risk = id === "disperse" && loyalty ? riskOf(loyalty.police) : id === "troops" && loyalty ? (loyalty.army < 60 ? "high" : "medium") : (["concede", "offerElections", "protestAmnesty"] as string[]).includes(id) ? "low" : "medium";
@@ -251,6 +300,7 @@ function Street({ state, ordering, regionName, onTalks }: { state: GameState; or
                     </div>
                     <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-2xs font-black uppercase tracking-wider ${STAGE_TONE[p.stage]}`}>{t(`politics.protest.${p.stage}` as MessageKey)}</span>
                   </div>
+                  {mode === "govern" && (
                   <button
                     type="button"
                     onClick={() => setOpen(open === p.id ? null : p.id)}
@@ -260,7 +310,8 @@ function Street({ state, ordering, regionName, onTalks }: { state: GameState; or
                     {t("politics.partyActions")}
                     <ChevronDown className={`h-3 w-3 transition-transform ${open === p.id ? "rotate-180" : ""}`} />
                   </button>
-                  {open === p.id && <div className="mt-2 grid gap-1.5">{ABROAD_MEASURES.map((a) => row(a, t(`politics.order.${a.id}` as MessageKey, { title: p.title, country })))}</div>}
+                  )}
+                  {mode === "govern" && open === p.id && <div className="mt-2 grid gap-1.5">{ABROAD_MEASURES.map((a) => row(a, t(`politics.order.${a.id}` as MessageKey, { title: p.title, country })))}</div>}
                 </li>
               );
             })}
@@ -429,7 +480,7 @@ function IdeasCompass({ parties, colors, focus, onFocus }: { parties: Party[]; c
                   <circle cx={tx} cy={ty} r="2" fill={color} />
                 </>
               )}
-              <circle cx={x} cy={dy} r={r} fill={fills.get(p.id)} filter={oilFilter(id)} stroke={focus === p.id ? "var(--ink)" : "var(--surface)"} strokeWidth={focus === p.id ? 2.5 : 1.5} />
+              <circle cx={x} cy={dy} r={r} fill={fills.get(p.id)} filter={oilFilter(id)} stroke={focus === p.id ? "var(--ink)" : shade(color, -0.42)} strokeWidth={focus === p.id ? 2.2 : 1} />
               <text x={x} y={dy + font * 0.36} textAnchor="middle" fontSize={font} fontWeight="900" fill={inkOn(color)}>
                 {text}
               </text>
@@ -478,7 +529,7 @@ function ActionRow({ action, label, desc, line, ordering }: { action: PoliticsAc
 }
 
 /** A small mark of where a party stands on one axis, and where it stood a turn ago. */
-function AxisBar({ name, left, right, value, was, color }: { name: string; left: string; right: string; value: number; was?: number; color: string }) {
+export function AxisBar({ name, left, right, value, was, color }: { name: string; left: string; right: string; value: number; was?: number; color: string }) {
   const pos = (v: number) => `${((v + 10) / 20) * 100}%`;
   return (
     <div>
@@ -504,6 +555,9 @@ function AxisBar({ name, left, right, value, was, color }: { name: string; left:
  */
 function MotionForm({ state, disabled, onConvene }: { state: GameState; disabled: boolean; onConvene: (motion: Motion) => void }) {
   const { t } = useI18n();
+  // From the opposition benches, "confidence" is a motion of no confidence.
+  const opposition = state.role?.kind === "opposition";
+  const kindLabel = (k: MotionKind) => t(opposition && k === "confidence" ? "politics.motion.noconfidence" : (`politics.motion.${k}` as MessageKey));
   const kinds = availableMotions(state);
   const laws = state.politics?.laws;
   const [kind, setKind] = useState<MotionKind>(kinds[0] ?? "bill");
@@ -518,11 +572,11 @@ function MotionForm({ state, disabled, onConvene }: { state: GameState; disabled
   if (!kinds.length || !house) return null;
   return (
     <section className="grid gap-2 rounded-xl border border-line sheet p-3">
-      <div className={ui.label}>{t("politics.session.new")}</div>
+      <div className={ui.label}>{t(opposition ? "politics.session.newOpposition" : "politics.session.new")}</div>
       <select value={kind} onChange={(e) => setKind(e.target.value as MotionKind)} aria-label={t("politics.session.motion")} className={`${ui.input} py-2 text-xs`}>
         {kinds.map((k) => (
           <option key={k} value={k}>
-            {t(`politics.motion.${k}` as MessageKey)}
+            {kindLabel(k)}
           </option>
         ))}
       </select>
@@ -545,13 +599,15 @@ function MotionForm({ state, disabled, onConvene }: { state: GameState; disabled
         </div>
       )}
       {(kind === "law" || kind === "bill" || kind === "constitution") && (
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value.slice(0, 600))}
-          rows={2}
-          placeholder={t(`politics.session.text.${kind}` as MessageKey)}
-          className={`${ui.input} resize-none py-2 text-xs`}
-        />
+        <Dictation id="motion" set={setText} max={600}>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value.slice(0, 600))}
+            rows={2}
+            placeholder={t(`politics.session.text.${kind}` as MessageKey)}
+            className={`${ui.input} resize-none py-2 text-xs`}
+          />
+        </Dictation>
       )}
       <div className="flex items-center justify-between gap-2">
         <span className="text-2xs font-bold tabular-nums text-muted">{t("politics.session.needs", { n: seatsNeeded(kind, house.seats), total: house.seats })}</span>
@@ -596,10 +652,16 @@ function RecentSessions({ sessions }: { sessions: Session[] }) {
  * ideas; and the threats in the street and in the shadows, with talks in
  * person. The other moves become orders the game master judges.
  */
-export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, regionName, onConvene, onResumeSession, onTalks }: PoliticsPanelProps) {
+export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, onSuggest, regionName, onConvene, onResumeSession, onTalks, mode = "govern", sport, society, focusProtest, onChange }: PoliticsPanelProps) {
   const { t, text, locale } = useI18n();
   const politics = state.politics;
-  const [tab, setTab] = useState<Tab>("parliament");
+  const [picked, setTab] = useState<Tab>(focusProtest ? "street" : "parliament");
+  // A protest picked on the map opens the street, once per pick.
+  const [seenProtest, setSeenProtest] = useState(focusProtest?.key);
+  if (focusProtest && focusProtest.key !== seenProtest) {
+    setSeenProtest(focusProtest.key);
+    setTab("street");
+  }
   const [focus, setFocus] = useState<string | null>(null);
   const label = useMotionLabel();
   const orders = useMemo(() => new Set([...state.draft, ...(state.standing ?? [])]), [state.draft, state.standing]);
@@ -608,7 +670,8 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
   const ordering: Ordering = {
     orders,
     full,
-    disabled,
+    // A role that only reads politics adds no orders here.
+    disabled: disabled || mode === "read",
     order: (line) => {
       if (orders.has(line) || full) return false;
       onOrder(line);
@@ -616,12 +679,22 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
     },
   };
 
-  const parties = useMemo(() => [...(politics?.parties ?? [])].sort((a, b) => (b.seats ?? -1) - (a.seats ?? -1) || b.support - a.support), [politics?.parties]);
+  // A party the engine made reads by its camp until the game master names it (engine/partyLife.ts).
+  const parties = useMemo(
+    () => withPartyColours(state, [...(politics?.parties ?? [])].map((p) => (p.unnamed ? { ...p, name: partyName(p, t) } : p))).sort((a, b) => (b.seats ?? -1) - (a.seats ?? -1) || b.support - a.support),
+    [politics?.parties, state, t],
+  );
   const colors = useMemo(() => partyColors(parties), [parties]);
   const house = politics?.parliament;
+  // No parliament sits – dissolved in play, or none under the regime: its tab goes, and the parties lead.
+  const tab: Tab = picked === "parliament" && !house ? "parties" : picked;
+  const gone = politics?.parliamentGone;
   const held = politics ? governmentSeats(politics) : 0;
   const majority = house ? Math.floor(house.seats / 2) + 1 : 0;
-  const plots = politics?.plots.filter((p) => p.known) ?? [];
+  // The plots the government knows of are its own secret: an opposition does not read them.
+  const plots = mode === "opposition" ? [] : (politics?.plots.filter((p) => p.known) ?? []);
+  const own = mode === "opposition" ? movementParty(state) : undefined;
+  const actionsFor = (p: Party): PoliticsAction[] => (mode === "govern" ? partyActions(p) : mode === "opposition" && p.id !== own?.id ? oppositionActions(p) : []);
   const threats = ownProtests(state.protests, state.player).length + plots.length;
   const elections = holdsElections(state);
   const sitting = openSession(politics);
@@ -633,23 +706,56 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
       {busy && busy.chars > 0 && <span className="tabular-nums">· {busy.chars}</span>}
     </button>
   );
+  const targets = useMemo(() => targetsOf(state), [state]);
+  const partyLeader = (id: string) => targets.find((x) => x.kind === "party" && x.ref === id);
   const focusParty = (id: string) => {
     setFocus((f) => (f === id ? null : id));
     setTab("parties");
   };
+  // Each party's leader as a person, with a portrait when the people data knows them (engine/people.ts).
+  const year = yearOf(state.date);
+  const leaders = useMemo(() => new Map(parties.filter((p) => p.leader?.trim() && p.leader.trim() !== "-").map((p) => [p.id, personFor(p.leader!, year)])), [parties, year]);
+  const leaderOf = (p: Party) => leaders.get(p.id);
+  // The player's own party wears the emblem the player picks: the ruling one when governing, the movement's in opposition.
+  const ownParty = (p: Party) => (mode === "govern" ? p.status === "ruling" : p.id === own?.id);
+  const [emblemFor, setEmblemFor] = useState<Party | null>(null);
+  const [colourFor, setColourFor] = useState<Party | null>(null);
   const partyOrder = (action: PoliticsAction, party: Party) => {
     const line = t(`politics.order.${action.id}` as MessageKey, { party: party.name });
     return action.id === "arrest" && party.leader ? `${line} (${party.leader})` : line;
   };
 
+  // The last election's results: under the parliament, or with the parties where none sits.
+  const lastElection = elections && politics?.lastElection && (
+    <section>
+      <div className={`${ui.label} mb-2`}>{t("politics.lastElection", { date: formatDate(politics.lastElection.date, locale) })}</div>
+      <ul className="flex flex-col gap-1">
+        {politics.lastElection.results.map((r) => (
+          <li key={r.party} className="flex items-center justify-between gap-2 rounded-lg bg-page px-3 py-1.5 text-xs font-bold text-ink">
+            <span className="min-w-0 truncate">{r.party}</span>
+            <span className="shrink-0 tabular-nums">
+              {r.share}%{r.seats !== undefined && <span className="ml-2 text-muted">{t("politics.seatsN", { n: r.seats })}</span>}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {politics.lastElection.note && <p className="mt-1.5 text-xs font-medium text-muted">{politics.lastElection.note}</p>}
+    </section>
+  );
+
+  // Until the game master has described the politics, the sections have nothing to show: only the button that asks.
+  const studied = parties.length > 0;
+  // Sport is part of society (Artem, 6 November): one tab, the people first, their games after.
   const tabs: { id: Tab; icon: typeof Landmark; badge?: number }[] = [
-    { id: "parliament", icon: Landmark },
+    ...(house ? [{ id: "parliament" as const, icon: Landmark }] : []),
     { id: "parties", icon: Users },
     { id: "street", icon: ShieldAlert, badge: threats },
+    ...(society || sport ? [{ id: "society" as const, icon: UsersRound }] : []),
   ];
 
   return (
     <div className="flex flex-col gap-3">
+      {mode === "read" && <ReadOnlyNote state={state} area="politics" />}
       <section className="rounded-xl bg-page p-3">
         <div className={ui.label}>{t("politics.regime")}</div>
         <div className="mt-1 text-sm font-black leading-snug text-ink">{politics?.regime || text(state.countries[state.player]?.government)}</div>
@@ -660,19 +766,25 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
               {!elections ? t("politics.noElections") : politics?.nextElection ? formatDate(politics.nextElection, locale) : "–"}
             </div>
           </div>
-          <div className="min-w-0 rounded-lg border border-line sheet p-2">
-            <div className="truncate text-2xs font-bold text-muted">{t("politics.majorityTile")}</div>
-            {house ? (
+          {house ? (
+            <div className="min-w-0 rounded-lg border border-line sheet p-2">
+              <div className="truncate text-2xs font-bold text-muted">{t("politics.majorityTile")}</div>
               <div className={`mt-0.5 flex items-center gap-1 text-sm font-black tabular-nums ${held >= majority ? "text-emerald-700" : "text-amber-700"}`}>
                 {held}/{majority}
                 {held >= majority && <Check className="h-3.5 w-3.5" />}
               </div>
-            ) : (
-              <div className="mt-0.5 text-sm font-black text-muted">–</div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="min-w-0 rounded-lg border border-line sheet p-2">
+              <div className="truncate text-2xs font-bold text-muted">{t("politics.tab.parliament")}</div>
+              <div className="mt-0.5 text-xs font-black leading-tight text-muted">{gone?.name ? t("politics.parliament.dissolvedTile", { date: formatDate(gone.date, locale) }) : t("politics.parliament.noneTile")}</div>
+            </div>
+          )}
         </div>
         {!elections && <p className="mt-2 text-2xs font-medium text-muted">{t("politics.noElectionsNote")}</p>}
+        {!house && parties.length > 0 && (
+          <p className="mt-2 text-2xs font-medium text-muted">{gone?.name ? t("politics.parliament.dissolvedNote", { name: gone.name, date: formatDate(gone.date, locale) }) : t("politics.noSitting")}</p>
+        )}
       </section>
 
       {parties.length === 0 && (
@@ -682,7 +794,8 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
         </section>
       )}
 
-      <div className="grid grid-cols-3 gap-1 rounded-xl bg-page p-1">
+      {studied && (
+      <div className="grid gap-1 rounded-xl bg-page p-1" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
         {tabs.map(({ id, icon: Icon, badge }) => (
           <button key={id} type="button" onClick={() => setTab(id)} aria-pressed={tab === id} className={`${ui.segment} ${tab === id ? ui.segmentOn : ui.segmentOff} relative flex flex-col items-center gap-0.5 px-1`}>
             <Icon className="h-3.5 w-3.5" />
@@ -691,8 +804,9 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
           </button>
         ))}
       </div>
+      )}
 
-      {tab === "parliament" && (
+      {studied && tab === "parliament" && (
         <div className="flex flex-col gap-3">
           {house ? (
             <section className="rounded-xl border border-line sheet p-3">
@@ -702,9 +816,7 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
                 <GovernmentBar house={house} parties={parties} colors={colors} />
               </div>
             </section>
-          ) : (
-            parties.length > 0 && <p className="rounded-xl bg-page px-3 py-2 text-xs font-medium text-muted">{t("politics.noSitting")}</p>
-          )}
+          ) : null}
           {house && sitting && (
             <section className="flex items-center justify-between gap-2 rounded-xl border border-accent/40 sheet p-3">
               <div className="min-w-0">
@@ -716,7 +828,8 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
               </button>
             </section>
           )}
-          {house && !sitting && parties.length > 0 && <MotionForm state={state} disabled={disabled} onConvene={onConvene} />}
+          {house && !sitting && parties.length > 0 && mode !== "read" && <MotionForm state={state} disabled={disabled} onConvene={onConvene} />}
+          {house && mode === "opposition" && !opposesInHouse(state) && <p className="rounded-xl bg-page px-3 py-2 text-2xs font-medium text-muted">{t("politics.session.noSeats")}</p>}
           {parties.length > 0 && (
             <ul className="flex flex-col gap-0.5">
               {parties.map((p) => {
@@ -748,22 +861,7 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
             </ul>
           )}
           <RecentSessions sessions={pastSessions} />
-          {elections && politics?.lastElection && (
-            <section>
-              <div className={`${ui.label} mb-2`}>{t("politics.lastElection", { date: formatDate(politics.lastElection.date, locale) })}</div>
-              <ul className="flex flex-col gap-1">
-                {politics.lastElection.results.map((r) => (
-                  <li key={r.party} className="flex items-center justify-between gap-2 rounded-lg bg-page px-3 py-1.5 text-xs font-bold text-ink">
-                    <span className="min-w-0 truncate">{r.party}</span>
-                    <span className="shrink-0 tabular-nums">
-                      {r.share}%{r.seats !== undefined && <span className="ml-2 text-muted">{t("politics.seatsN", { n: r.seats })}</span>}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              {politics.lastElection.note && <p className="mt-1.5 text-xs font-medium text-muted">{politics.lastElection.note}</p>}
-            </section>
-          )}
+          {lastElection}
         </div>
       )}
 
@@ -779,16 +877,21 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
               return (
                 <li key={p.id} className={`overflow-hidden rounded-xl border sheet ${open ? "border-accent/40 shadow-sm" : "border-line"}`} style={{ borderLeftWidth: 4, borderLeftColor: color }}>
                   <button type="button" onClick={() => setFocus(open ? null : p.id)} aria-expanded={open} className="block w-full p-3 text-left">
-                    <div className="flex items-start gap-2.5">
-                      <span className="grid h-9 min-w-9 shrink-0 place-items-center rounded-lg px-1 text-2xs font-black" style={{ background: color, color: inkOn(color) }}>
-                        {abbreviation(p)}
-                      </span>
+                    <div className="flex items-start gap-3">
+                      <PartyEmblem emblem={partyEmblem(state, p)} color={color} name={p.name} image={state.partyImages?.[p.id]} size="md" />
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-black leading-tight text-ink">{p.name}</div>
-                        <div className="mt-0.5 truncate text-xs font-medium text-muted">{[p.leader, p.ideology].filter(Boolean).join(" · ")}</div>
+                        <div className="mt-0.5 truncate text-xs font-medium text-muted">{p.unnamed ? t("politics.unnamedNote") : p.ideology}</div>
+                        {!p.unnamed && leaderOf(p) && (
+                          <div className="mt-1.5 flex min-w-0 items-center gap-1.5">
+                            <Portrait portrait={leaderOf(p)!.portrait} gender={leaderOf(p)!.gender} name={leaderOf(p)!.name} size="xs" />
+                            <span className="min-w-0 truncate text-xs font-bold text-ink">{p.leader}</span>
+                          </div>
+                        )}
                       </div>
                       <div className="shrink-0 text-right">
                         <div className="text-base font-black tabular-nums text-ink">{p.support}%</div>
+                        {p.seats !== undefined && house && <div className="text-2xs font-bold tabular-nums text-muted">{t("politics.seatsN", { n: p.seats })}</div>}
                         {p.trend ? (
                           <div className={`flex items-center justify-end text-2xs font-black tabular-nums ${p.trend > 0 ? "text-emerald-700" : "text-red-600"}`}>
                             {p.trend > 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
@@ -802,22 +905,50 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
                       <span className={`rounded-md px-1.5 py-0.5 text-2xs font-black uppercase tracking-wider ${gov ? "bg-emerald-50 text-emerald-700" : outlawed ? "bg-red-50 text-red-700" : "bg-page text-muted"}`}>
                         {t(`politics.status.${p.status}` as MessageKey)}
                       </span>
-                      {p.seats !== undefined && house && <span className="text-2xs font-bold tabular-nums text-muted">{t("politics.seatsN", { n: p.seats })}</span>}
-                      <span className="ml-auto flex items-center gap-1 text-2xs font-black uppercase tracking-wider text-muted">
-                        {t("politics.partyActions")}
+                      {p.id === own?.id && <span className="rounded-md bg-accent/10 px-1.5 py-0.5 text-2xs font-black uppercase tracking-wider text-accent">{t("politics.ownParty")}</span>}
+                      <span className="ml-auto flex items-center gap-1 whitespace-nowrap text-2xs font-black uppercase tracking-wider text-muted">
+                        {t(actionsFor(p).length ? "politics.partyActions" : "politics.partyIdeas")}
                         <ChevronDown className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} />
                       </span>
                     </div>
+                    {outlawed && <UndergroundStrength party={p} backer={p.backer ? text(state.countries[p.backer]?.name) || p.backer : undefined} />}
                   </button>
+                  {/* The pressure on the party and its leader, a row of red squares under the card's head (engine/repressions.ts). */}
+                  {mode === "govern" && (pressureActions(p).length > 0 || partyLeader(p.id)) && (
+                    <div className="relative -mt-1 flex flex-wrap items-center gap-1 px-3 pb-3" aria-label={t("politics.pressure")}>
+                      {pressureActions(p).map((action) => (
+                        <OrderSquare key={action.id} id={action.id} icon={action.icon} line={partyOrder(action, p)} ordering={ordering} tone="text-red-700 hover:border-red-300" align="start" />
+                      ))}
+                      {partyLeader(p.id) && <RepressMenu state={state} target={partyLeader(p.id)!} room={roomFor(ordering)} align="start" />}
+                    </div>
+                  )}
                   {open && (
                     <div className="flex flex-col gap-3 border-t border-divider p-3">
+                      {ownParty(p) && onChange && (
+                        <div className="flex items-center gap-2">
+                          <span className="min-w-0 flex-1 text-2xs font-black uppercase tracking-wider text-muted">{t("politics.look")}</span>
+                          <button type="button" onClick={() => setEmblemFor(p)} title={t("politics.emblem.change")} aria-label={t("politics.emblem.change")} className="rounded-lg p-0.5 transition-colors hover:bg-page">
+                            <PartyEmblem emblem={partyEmblem(state, p)} color={color} name={p.name} image={state.partyImages?.[p.id]} size="xs" />
+                          </button>
+                          <button type="button" onClick={() => setColourFor(p)} title={t("politics.colour.change")} aria-label={t("politics.colour.change")} className="grid h-8 w-8 place-items-center rounded-lg transition-colors hover:bg-page">
+                            <span className="h-6 w-6 rounded-full border border-shade/30 shadow-sm" style={{ background: `radial-gradient(circle at 35% 30%, ${shade(color, 0.25)}, ${color} 60%, ${shade(color, -0.25)})` }} />
+                          </button>
+                        </div>
+                      )}
+                      {/* The ruling party, the government's own, may take a new name by order (engine/acts.ts). */}
+                      {p.status === "ruling" && mode === "govern" && (
+                        <div className="flex flex-wrap items-center gap-x-1.5">
+                          <span className="min-w-0 flex-1 text-2xs font-black uppercase tracking-wider text-muted">{t("rename.party.label")}</span>
+                          <RenameOrder key={`party-${p.id}`} what="party" current={p.name} onOrder={(line) => void ordering.order(line)} onSuggest={onSuggest} disabled={ordering.disabled} full={ordering.full} />
+                        </div>
+                      )}
                       <div className="grid gap-2.5">
                         <AxisBar name={t("politics.axisName.economy")} left={t("politics.axis.left")} right={t("politics.axis.right")} value={p.stance.economy} was={p.was?.economy} color={color} />
                         <AxisBar name={t("politics.axisName.freedom")} left={t("politics.axis.authoritarian")} right={t("politics.axis.liberal")} value={p.stance.freedom} was={p.was?.freedom} color={color} />
                         <AxisBar name={t("politics.axisName.nation")} left={t("politics.axis.open")} right={t("politics.axis.nationalist")} value={p.stance.nation} was={p.was?.nation} color={color} />
                       </div>
                       <div className="grid gap-1.5">
-                        {partyActions(p).map((action) => (
+                        {actionsFor(p).map((action) => (
                           <ActionRow
                             key={action.id}
                             action={action}
@@ -834,14 +965,48 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
               );
             })}
           </ul>
+          <GoneParties gone={politics?.gone ?? []} />
+          {!house && lastElection}
+          <Dialog open={Boolean(colourFor)} onClose={() => setColourFor(null)} title={t("politics.colour.title", { party: colourFor?.name ?? "" })}>
+            {colourFor && (
+              <ColourPicker
+                chosen={state.partyColours?.[colourFor.id]}
+                labels={{ colour: t("politics.colour"), palette: t("politics.colour.palette"), usual: t("politics.colour.usual") }}
+                onColour={(hex) => onChange?.(setPartyColour(state, colourFor.id, hex))}
+              />
+            )}
+          </Dialog>
+          <Dialog open={Boolean(emblemFor)} onClose={() => setEmblemFor(null)} title={t("politics.emblem.title", { party: emblemFor?.name ?? "" })}>
+            {emblemFor && (
+              <EmblemPicker
+                value={partyEmblem(state, emblemFor)}
+                color={colors.get(emblemFor.id) ?? "#5a6b80"}
+                image={state.partyImages?.[emblemFor.id]}
+                label={t("politics.emblem")}
+                labels={{ upload: t("politics.emblem.upload"), painting: t("politics.emblem.painting"), remove: t("politics.emblem.remove"), failed: t("politics.emblem.failed") }}
+                onPick={(emblem) => {
+                  // A stock emblem picked puts the player's own picture away.
+                  onChange?.(setPartyImage(setPartyEmblem(state, emblemFor, emblem), emblemFor.id, null));
+                  setEmblemFor(null);
+                }}
+                onImage={(url) => onChange?.(setPartyImage(state, emblemFor.id, url))}
+              />
+            )}
+          </Dialog>
         </div>
       )}
 
-      {tab === "parties" && parties.length === 0 && <p className="text-xs font-medium text-muted">{t("politics.loadNote")}</p>}
-
-      {tab === "street" && (
+      {studied && tab === "society" && (
         <div className="flex flex-col gap-4">
-          <Street state={state} ordering={ordering} regionName={regionName} onTalks={onTalks} />
+          {society}
+          {sport}
+        </div>
+      )}
+
+      {studied && tab === "street" && (
+        <div className="flex flex-col gap-4">
+          <Street state={state} ordering={ordering} regionName={regionName} onTalks={onTalks} mode={mode} />
+          {mode !== "opposition" && (
           <section>
             <div className={`${ui.label} mb-2`}>{t("politics.plots")}</div>
             {plots.length === 0 ? (
@@ -857,14 +1022,17 @@ export default function PoliticsPanel({ state, busy, disabled, onLoad, onOrder, 
                       <div className="mr-1 h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-divider">
                         <div className="h-full rounded-full bg-red-600" style={{ width: `${p.strength}%` }} />
                       </div>
-                      <TalksButton under={Boolean(talksWith(politics, p.id))} disabled={disabled} onClick={() => onTalks("plot", p.id)} />
-                      <OrderSquare id="foil" icon={ShieldX} line={t("politics.order.foil", { title: plotTitle(p, t) })} ordering={ordering} tone="text-red-700 hover:border-red-300" />
+                      {mode === "govern" && <TalksButton under={Boolean(talksWith(politics, p.id))} disabled={disabled} onClick={() => onTalks("plot", p.id)} />}
+                      {mode === "govern" && <OrderSquare id="foil" icon={ShieldX} line={t("politics.order.foil", { title: plotTitle(p, t) })} ordering={ordering} tone="text-red-700 hover:border-red-300" />}
                     </div>
                   </li>
                 ))}
               </ul>
             )}
           </section>
+          )}
+          {/* What the state has done to its people, history's course ahead, and the orders to stop or undo it (engine/repressions.ts). */}
+          {mode === "govern" && <RepressionRecord state={state} room={roomFor(ordering)} />}
         </div>
       )}
     </div>

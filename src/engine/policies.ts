@@ -1,10 +1,12 @@
 import { addYears, yearsBetween } from "./abroad";
 import { fixed, roll } from "./dice";
 import { interestOf } from "./crises";
-import { balance, money } from "./economy";
+import { balance, mobiliseNorm, money } from "./economy";
 import { countryName } from "./names";
+import { countsFor } from "./occupation";
 import { peopleIn } from "./population";
 import { PROGRAMMES } from "./programmes";
+import { relationsOf } from "./envoys";
 import { homeFront } from "./politics";
 import { addTension, allied, enemiesOf, isMilitary, pacted, powers, tieOf, warBetween } from "./relations";
 import { homeBecause, homeEnd, lensOf, mediatorOf, originOf, pickFade } from "./standoffs";
@@ -54,16 +56,16 @@ const DEAL_YEARS = 8;
 /** Policies a government starts a year, before its size and how much it needs one. */
 const POLICY_RATE = 0.22;
 /** Trade agreements a government seeks a year, by era. */
-const DEAL_RATE: Record<ScenarioId, number> = { "1914": 0.03, "1939": 0.02, "1950": 0.04, "1964": 0.05, "1991": 0.07, "1999": 0.08, "2014": 0.07, "2022": 0.06 };
+const DEAL_RATE: Record<ScenarioId, number> = { "1914": 0.03, "1933": 0.02, "1939": 0.02, "1950": 0.04, "1957": 0.045, "1964": 0.05, "1973": 0.055, "1979": 0.06, "1991": 0.07, "1999": 0.08, "2014": 0.07, "2022": 0.06 };
 /** How much each era leaned to a policy, against the rest. */
-const INDUSTRY_ERA: Record<ScenarioId, number> = { "1914": 0.7, "1939": 1, "1950": 1, "1964": 0.9, "1991": 0.5, "1999": 0.45, "2014": 0.5, "2022": 0.55 };
-const TECH_ERA: Record<ScenarioId, number> = { "1914": 0.3, "1939": 0.5, "1950": 0.8, "1964": 1, "1991": 0.9, "1999": 1, "2014": 1, "2022": 1 };
-const MARKET_ERA: Record<ScenarioId, number> = { "1914": 0.4, "1939": 0.3, "1950": 0.5, "1964": 0.6, "1991": 1.4, "1999": 1.1, "2014": 0.9, "2022": 0.8 };
-const ARM_ERA: Record<ScenarioId, number> = { "1914": 1.3, "1939": 1.5, "1950": 1.1, "1964": 1, "1991": 0.6, "1999": 0.6, "2014": 0.8, "2022": 1 };
+const INDUSTRY_ERA: Record<ScenarioId, number> = { "1914": 0.7, "1933": 0.9, "1939": 1, "1950": 1, "1957": 0.95, "1964": 0.9, "1973": 0.8, "1979": 0.7, "1991": 0.5, "1999": 0.45, "2014": 0.5, "2022": 0.55 };
+const TECH_ERA: Record<ScenarioId, number> = { "1914": 0.3, "1933": 0.45, "1939": 0.5, "1950": 0.8, "1957": 0.9, "1964": 1, "1973": 1, "1979": 1, "1991": 0.9, "1999": 1, "2014": 1, "2022": 1 };
+const MARKET_ERA: Record<ScenarioId, number> = { "1914": 0.4, "1933": 0.25, "1939": 0.3, "1950": 0.5, "1957": 0.55, "1964": 0.6, "1973": 0.7, "1979": 0.9, "1991": 1.4, "1999": 1.1, "2014": 0.9, "2022": 0.8 };
+const ARM_ERA: Record<ScenarioId, number> = { "1914": 1.3, "1933": 1.3, "1939": 1.5, "1950": 1.1, "1957": 1.05, "1964": 1, "1973": 0.9, "1979": 0.9, "1991": 0.6, "1999": 0.6, "2014": 0.8, "2022": 1 };
 /** Waves of political opening: strong after the Cold War, faint before. */
-const WAVE: Record<ScenarioId, number> = { "1914": 0.05, "1939": 0.02, "1950": 0.05, "1964": 0.06, "1991": 0.45, "1999": 0.25, "2014": 0.12, "2022": 0.08 };
+const WAVE: Record<ScenarioId, number> = { "1914": 0.05, "1933": 0.02, "1939": 0.02, "1950": 0.05, "1957": 0.05, "1964": 0.06, "1973": 0.08, "1979": 0.1, "1991": 0.45, "1999": 0.25, "2014": 0.12, "2022": 0.08 };
 /** An army budget this share of GDP or more is heavy for the era. */
-const HEAVY_ARMY: Record<ScenarioId, number> = { "1914": 0.05, "1939": 0.08, "1950": 0.07, "1964": 0.06, "1991": 0.04, "1999": 0.035, "2014": 0.03, "2022": 0.03 };
+const HEAVY_ARMY: Record<ScenarioId, number> = { "1914": 0.05, "1933": 0.07, "1939": 0.08, "1950": 0.07, "1957": 0.065, "1964": 0.06, "1973": 0.055, "1979": 0.05, "1991": 0.04, "1999": 0.035, "2014": 0.03, "2022": 0.03 };
 /** Appetite for force by kind of government, for a state without a course (as engine/relations.ts starts one). */
 const HAWK_BASE: Record<RegimeKind, number> = { democracy: 35, limited: 45, party: 50, autocracy: 55, military: 65 };
 
@@ -93,6 +95,15 @@ function undoing(state: GameState, tag: string, kind: PolicyKind): boolean {
   if (!undo || !c) return false;
   const since = c.domestic?.changed?.date ?? "";
   return (c.programmes ?? []).some((p) => p.kind === undo && p.until > state.date && p.since >= since && yearsBetween(p.since, state.date) < 1);
+}
+
+/** Whether a government could start a policy now: none under way, room for another programme, not running it already nor undoing its own. */
+export function canStartPolicy(state: GameState, tag: string, policy: PolicyKind): boolean {
+  const c = state.countries[tag];
+  if (!c?.economy || !c.domestic || c.exile || c.dormant || tag === state.player) return false;
+  if ((state.plans ?? []).some((p) => !p.end && p.by === tag && p.kind === "policy")) return false;
+  if ((c.programmes ?? []).filter((p) => p.kind !== "trade" && p.until > state.date).length >= MAX_PROGRAMMES) return false;
+  return !running(state, tag, policy) && !undoing(state, tag, policy);
 }
 
 /** A country's name in each language. */
@@ -139,11 +150,13 @@ export function peacefulRates(state: GameState, p: Plan): { min: number; advance
       // A government in trouble at home lifts sanctions that cost it sooner, and keeps those it means to lift.
       if (p.lift) return { min: 1 / 24, advance: 3 * (1 + home.trouble), fade: Math.max(0.2, 0.6 + t.tension / 50 - home.trouble), why: "government" };
       // A government that sells much to the target thinks twice; one in trouble at home thinks three times about sanctions that cost it trade.
+      // Sanctions that answer an act of aggression (engine/aggression.ts) come sooner and are seldom bargained away.
+      const answer = p.cause === "aggression" || Boolean(p.origin?.startsWith("g"));
       const f = pickFade([
-        ["compromise", 0.6 * (1 + 4 * trade), trade >= 0.12 ? { kind: "trade" } : undefined],
+        ["compromise", 0.6 * (1 + 4 * trade) * (answer ? 0.3 : 1), trade >= 0.12 ? { kind: "trade" } : undefined],
         [homeEnd(home), home.trouble * (0.5 + 4 * trade), homeBecause(home)],
       ]);
-      return { min: 1 / 24, advance: 3 * (1 + t.tension / 100), fade: f.fade, why: f.why, ...(f.because ? { because: f.because } : {}) };
+      return { min: 1 / 24, advance: 3 * (1 + t.tension / 100) * (answer ? 1.5 : 1), fade: f.fade, why: f.why, ...(f.because ? { because: f.because } : {}) };
     }
     case "deal": {
       if (p.stage !== "preparation" || !p.target) return stay;
@@ -189,7 +202,8 @@ export function settlePeaceful(state: GameState, p: Plan, stands: (tag: string |
       if (!p.lift) return sanctions(state).some((s) => s.by === p.by && s.against === p.target && s.scope === "full") ? "overtaken" : null;
       return !sanctioning(state, p.by, p.target!) ? "overtaken" : null;
     case "deal":
-      if (warBetween(state, p.by, p.target!) || sanctionedEither(state, p.by, p.target!)) return "refused";
+      // No treaty while relations are broken; talks go on, they are how relations come back (engine/envoys.ts).
+      if (warBetween(state, p.by, p.target!) || sanctionedEither(state, p.by, p.target!) || relationsOf(state, p.by, p.target!) === "broken") return "refused";
       return tradeBloc(state, p.by, p.target!) ? "overtaken" : null;
     case "talks": {
       if (warBetween(state, p.by, p.target!)) return "overtaken";
@@ -213,6 +227,30 @@ function addProgramme(state: GameState, tag: string, p: Programme): void {
   c.programmes = [...(c.programmes ?? []).filter((x) => x.until > p.since), p].slice(-6);
 }
 
+/** Of its soldiers, how many more an armament policy calls up at most. */
+const ARMAMENT_CALL_UP = 0.08;
+
+/**
+ * The soldiers an armament policy calls up: 8% more at most, within those left to call up (the era's share of
+ * the people the country holds, engine/economy.ts mobiliseNorm), and none where most of its own land is lost – a
+ * government whose country is overrun raises no army by decree.
+ */
+export function armamentCallUp(state: Pick<GameState, "regions" | "scenarioId">, tag: string, troops: number): number {
+  let own = 0;
+  let held = 0;
+  let people = 0;
+  for (const r of Object.values(state.regions)) {
+    if (r.owner === tag) {
+      own += 1;
+      if (r.controller === tag) held += 1;
+    }
+    if (countsFor(r) === tag) people += peopleIn(r, undefined);
+  }
+  if (!own || held / own < 0.5) return 0;
+  const room = people > 0 ? Math.max(0, people * mobiliseNorm(state.scenarioId) - troops) : Infinity;
+  return Math.min(troops * ARMAMENT_CALL_UP, room);
+}
+
 /** A policy adopted: its budget lines, its once-for-all changes, the regime, the ties, and the programme it starts. */
 function adopt(next: GameState, p: Plan, when: string, applied: AppliedChange[]): PlanEnd {
   const c = next.countries[p.by];
@@ -234,7 +272,7 @@ function adopt(next: GameState, p: Plan, when: string, applied: AppliedChange[])
       // A government already deep in deficit arms only as far as it can pay: a third more at most, within five points of GDP of deficit.
       const room = Math.max(0, 0.05 * e.gdp + balance(e));
       e.budget.army = money(e.budget.army + Math.min(0.35 * e.budget.army, room));
-      e.troops = Math.round(e.troops * 1.08);
+      e.troops = Math.round(e.troops + armamentCallUp(next, p.by, e.troops));
       // Those who fear it fear it more.
       for (const o of Object.values(next.countries)) if (o.course?.ties[p.by] && o.course.ties[p.by].threat >= 35) addTension(next, o.tag, p.by, 8);
       break;
@@ -281,6 +319,9 @@ function sanctionBecause(state: GameState, p: Plan): Because | undefined {
     const home = homeFront(state, p.by);
     return home.why ? { kind: home.why } : undefined;
   }
+  // The answer to an act of aggression (engine/aggression.ts): over the war on its victim, or at the world body's call.
+  const answered = p.origin?.startsWith("g") ? state.aggressions?.find((a) => a.id === p.origin) : undefined;
+  if (!p.lift && answered) return p.cause === "treaty" ? { kind: answered.body === "un" ? "un-call" : "league-call", country: answered.against } : { kind: "war-on", country: answered.against };
   if (!p.lift && p.target && (p.cause === "threat" || p.cause === "treaty")) {
     const war = state.wars.find((w) => !w.truce && w.attackers.includes(p.target!));
     if (war?.defenders[0]) return { kind: "war-on", country: war.defenders[0] };
@@ -300,6 +341,8 @@ export function enactPeaceful(next: GameState, p: Plan, ctx: { turn: number; whe
       return adopt(next, p, when, applied);
     case "sanction": {
       if (!p.target || !next.countries[p.target]) return "target-gone";
+      // A government at war with the target by now fights it: its sanctions are the war's own blockade, not a new deed.
+      if (!p.lift && warBetween(next, p.by, p.target)) return "overtaken";
       const list = next.sanctions ?? [];
       const because = sanctionBecause(next, p);
       const extra = because ? { because } : {};
@@ -712,10 +755,12 @@ export function peacefulCandidates(next: GameState, ctx: PeacefulContext): { pol
         }
       }
       // The bloc's leader's sanctions on an aggressor, never on a fellow member: a bloc closes ranks against a war, not over its leader's own quarrels.
+      // A leader that went to war against the aggressor leads as much as one that sanctions it.
       const aggressors = new Set(next.wars.filter((w) => !w.truce).flatMap((w) => w.attackers));
       for (const { lead, members } of leadersOf(next, tag, ctx.power)) {
         if (course?.ties[lead] && course.ties[lead].trust < 10) continue;
         for (const s of sanctions(next).filter((x) => x.by === lead && !members.includes(x.against) && aggressors.has(x.against)).sort((a, b) => a.against.localeCompare(b.against))) consider(s.against, course ? 0.6 : 0.35, "treaty");
+        for (const w of next.wars) if (!w.truce && w.defenders.includes(lead)) for (const a of [...w.attackers].sort()) if (!members.includes(a)) consider(a, course ? 0.5 : 0.3, "treaty");
       }
       const best = candidates.sort((a, b) => b.weight - a.weight || a.target.localeCompare(b.target))[0];
       if (best) {

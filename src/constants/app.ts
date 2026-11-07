@@ -1,5 +1,5 @@
 export const APP_NAME = "Gulf of Trump";
-export const APP_VERSION = "1.0.6";
+export const APP_VERSION = "1.0.7";
 export const APP_STAGE = "beta";
 export const REPO_URL = "https://github.com/Darhaal/GulfOfTrump";
 /** The public demo site, the address its sitemap and robots.txt give search engines. */
@@ -30,6 +30,23 @@ export const isDesktopApp = () => typeof navigator !== "undefined" && /\bElectro
 export const DOWNLOAD_URL = `${REPO_URL}/releases/latest`;
 /** The game's page in the Microsoft Store: the same app, signed by Microsoft and updated by the Store. */
 export const STORE_URL = "https://apps.microsoft.com/detail/9n07jx2chmw0";
+/** The game's page on itch.io, with the same Windows installer. */
+export const ITCH_URL = "https://darhaal.itch.io/gulf-of-trump";
+/** The code's licence, for the site's structured data. */
+export const LICENSE_URL = "https://www.gnu.org/licenses/agpl-3.0.html";
+/**
+ * Search engines' proof that the demo site is ours, from their webmaster
+ * tools: Google's is fixed, Yandex's and Bing's are set on the host
+ * (NEXT_PUBLIC_YANDEX_VERIFICATION, NEXT_PUBLIC_BING_VERIFICATION) and read at
+ * build. An empty one adds no tag. docs/seo.md says where each comes from.
+ */
+export const SITE_VERIFICATION = {
+  google: "Uf2dB5O6FWcwR6d-kSoT59ECv9t65HY8yGvp3sji8ZE",
+  yandex: () => process.env.NEXT_PUBLIC_YANDEX_VERIFICATION?.trim() ?? "",
+  bing: () => process.env.NEXT_PUBLIC_BING_VERIFICATION?.trim() ?? "",
+};
 export const CHATGPT_USAGE_URL = "https://chatgpt.com/settings/usage";
-/** Orders the player may give in one turn; the server enforces the same cap. */
-export const MAX_ORDERS = 12;
+/** Orders the player may give in one turn; the server enforces the same cap (server/requests.ts). Raised from 12 (Artem, 5 November). */
+export const MAX_ORDERS = 20;
+/** Past this many orders the panel says that each more makes the turn longer to write: the game master answers every one. */
+export const LONG_ORDERS = 12;

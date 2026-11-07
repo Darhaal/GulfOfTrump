@@ -40,6 +40,18 @@ export function addStep(date: string, step: TimeStep): string {
   return format(d);
 }
 
+/** The date so many days later (or earlier, for a negative number). */
+export function addDays(date: string, days: number): string {
+  const d = parse(date);
+  d.setUTCDate(d.getUTCDate() + Math.round(days));
+  return format(d);
+}
+
+/** Whole days from one date to another. */
+export function daysBetween(from: string, to: string): number {
+  return Math.round((parse(to).getTime() - parse(from).getTime()) / 86_400_000);
+}
+
 const INTL_LOCALE: Record<Locale, string> = { ru: "ru-RU", uk: "uk-UA", en: "en-GB" };
 
 /** "28 июня 1914 г." / "28 June 1914". */

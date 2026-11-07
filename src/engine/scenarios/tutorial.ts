@@ -4,7 +4,7 @@
 // the replies to letters, and the government it starts with. Every text in the
 // three languages, with short dashes. The engine decides what comes of them:
 // each answer goes through the same schema and sanitizer as the model's.
-import type { AdvisorId } from "../advisors";
+import type { StandardMinistry } from "../advisors";
 import type { EventKind, Localized } from "../types";
 
 /** What the guide offers to write: the first order, a question for the commander, a letter to Poland, and orders to try next. */
@@ -35,20 +35,64 @@ export const TUTORIAL_SUGGESTIONS = {
 } satisfies Record<string, unknown>;
 
 /** What an order is about, read from its words in any of the three languages; each kind has its verdict. */
-export const ORDER_KINDS = ["surrender", "talks", "attack", "kyiv", "civilians", "allies", "economy", "army", "other"] as const;
+export const ORDER_KINDS = ["nonsense", "surrender", "resign", "notalks", "talks", "relocate", "withdraw", "strike", "attack", "civilians", "kyiv", "allies", "economy", "army", "other"] as const;
 export type OrderKind = (typeof ORDER_KINDS)[number];
 
-/** The first kind whose words an order has, in this order: giving up and talking before fighting, Kyiv before the army in general. */
-export const ORDER_WORDS: [Exclude<OrderKind, "other">, RegExp][] = [
-  ["surrender", /капитул|капітул|сдать|сдаться|сдаём|здати|здатися|surrender|capitulat|give up/i],
+/** Before a negation (not after a letter: "Украине удержать" is no "не удержать"). */
+const NOT = String.raw`(?:^|[^\p{L}])`;
+
+/** Words that say "never give up": taken out of an order before it is read, so "never give up, hold Kyiv" is about Kyiv. */
+export const NO_SURRENDER = new RegExp(
+  String.raw`${NOT}(?:no|never|not|don't|do not|won't|will not|refuse to|ни за что не|никогда не|не будем|не|ні|ніколи не|не будемо)\s+(?:\S+\s+)?(?:surrender|give up|capitulat\S*|сда\S*|здава\S*|здат\S*|капитул\S*|капітул\S*)`,
+  "giu",
+);
+
+/** The first kind whose words an order has, in this order: giving up and talking before fighting, pulling back before Kyiv, people before Kyiv, Kyiv before the army in general. */
+export const ORDER_WORDS: [Exclude<OrderKind, "other" | "nonsense">, RegExp][] = [
+  ["surrender", /капитул|капітул|сдать|сдаться|сдаём|здати|здатися|surrender|capitulat|give up|lay down (our |your |the )?arms|сложить оружие|скласти зброю|accept\S* (the |russia's |moscow's |putin's )?(terms|ultimatum|demands)|прин(ять|имаем) (условия|ультиматум|требования)|прийня(ти|ймаємо) (умови|ультиматум|вимоги)/i],
+  ["resign", /resign|step down|abdicat|в отставку|у відставку|сложить полномочия|скласти повноваження|уйти с поста|піти з посади/i],
+  [
+    "notalks",
+    new RegExp(
+      String.raw`${NOT}(?:no|never|refuse|reject|stop|end|break off|cancel|don't|do not|not|won't|will not)\s+(?:\S+\s+){0,2}(?:talks|negotiat)|отказ\S*\s+(?:\S+\s+)?от переговор|никаких переговор|без переговор|прекратить переговор|прервать переговор|${NOT}не (?:вести|будем|надо)\s+(?:\S+\s+)?переговор|жодних переговор|припинити переговор|перервати переговор|відмов\S*\s+(?:\S+\s+)?від переговор|${NOT}не (?:вести|будемо|треба)\s+(?:\S+\s+)?переговор`,
+      "iu",
+    ),
+  ],
   ["talks", /переговор|negotiat|talks|перемири|перемир|ceasefire|прекращени. огня|припиненн. вогню|мирн(ый|ий|ые|і) (договор|план|переговор|угод)|peace/i],
+  [
+    "relocate",
+    /(move|relocate|evacuate|transfer)\s+(the\s+)?(government|capital|ministries|cabinet|president)|(government|capital)\s+(to|in)\s+lviv|перенести (столиц|правительств|уряд)|эвакуировать правительство|евакуювати уряд|переехать во львов|переїхати до львова|(правительств\S*|министерств\S*) во львов|(уряд\S*|міністерств\S*) до львова/i,
+  ],
+  [
+    "withdraw",
+    new RegExp(
+      String.raw`withdraw|retreat|pull back|fall back|abandon|let (?:kyiv|kiev|the capital) fall|отступ|відступ|отвести войск|відвести військ|вывести войск|вивести військ|оставить (?:киев|столиц)|залишити (?:київ|столиц)|покинуть (?:киев|столиц)|покинути (?:київ|столиц)|${NOT}(?:not|don't|do not|won't|will not|never|refuse to|stop|no longer|ignore|forget)\s+(?:\S+\s+)?(?:hold|defend|keep|protect|save|fight for)|${NOT}(?:не|ні|отказ\S*|відмов\S*|перестать|перестати|прекратить|припинити)\s+(?:\S+\s+)?(?:удерж|оборон|защищ|утрим|захищ|трима|держать)`,
+      "iu",
+    ),
+  ],
+  ["strike", /москв|moscow|kremlin|кремл|бомбить|бомбит|бомбард|bomb|missile strike|ракетн\S* удар|удар\S* по (росси|москв|белгород|росі|бєлгород)|strike (on|at|against|russia|moscow|belgorod)|белгород|бєлгород|belgorod|russian territory|территори\S* росси|територі\S* росі|deep strike|into russia|вглубь росси|вглиб росі/i],
   ["attack", /контрнаступ|контратак|counter|наступлени|наступ |атак|attack|offensive|освобод|звільн|liberat|retake|recapture|отвоева|відвоюва|крым|крим|crimea/i],
-  ["kyiv", /ки[еєї]в|kyiv|kiev|столиц|capital|гостомел|hostomel|ирпен|ірпін|irpin|бучу|буча|bucha/i],
   ["civilians", /эвакуа|евакуа|evacu|беженц|біженц|refugee|гуманитар|гуманітар|humanitar|мирн(ое|е) населени|мирних|civilian|коридор|corridor|укрыт|укритт|shelter/i],
-  ["allies", /запад|захід|заходу|west|союзн|allies|ally|сша|usa|united states|америк|americ|nato|нато|евросоюз|євросоюз|\beu\b|europ|европ|європ|оружи|зброю|зброя|зброї|weapon|arms|javelin|stinger|санкц|sanction|swift|помощ|допомог|\baid\b|help|польш|польщ|poland|британ|британі|britain|\buk\b|пво|ппо|air defen/i],
+  ["kyiv", /ки[еєї]в|kyiv|kiev|столиц|capital|гостомел|hostomel|ирпен|ірпін|irpin|бучу|буча|bucha/i],
+  // The West, not the west of the country ("move the factories to the west of the country" is about the economy).
+  ["allies", /запад(?!\S*\s+страны)|захід(?!\s+країни)|заходу(?!\s+країни)|west(?!\s+of\s+the\s+country)|союзн|allies|ally|сша|usa|united states|америк|americ|nato|нато|евросоюз|євросоюз|\beu\b|europ|европ|європ|оружи|зброю|зброя|зброї|weapon|arms|javelin|stinger|санкц|sanction|swift|помощ|допомог|\baid\b|help|польш|польщ|poland|британ|британі|britain|\buk\b|пво|ппо|air defen/i],
   ["economy", /экономик|економік|econom|бюджет|budget|деньг|грош|money|финанс|фінанс|financ|банк|bank|зарплат|salar|налог|подат|\btax|цен[аы]|ціни|price|топлив|пальн|fuel|завод|factor/i],
   ["army", /мобилиз|мобіліз|mobili|арми|армі|army|військ|войск|troops|оборон|defen|терооборон|тероборон|territorial|резерв|reserve|фронт|front|харьков|харків|kharkiv|херсон|kherson|мариупол|маріупол|mariupol|чернигов|чернігів|chernihiv|сум[ыи]|sumy|одесс|одес|odesa|odessa/i],
 ];
+
+/** Words that are no order at all: a greeting, a test, a yes or no. */
+const NOT_AN_ORDER = /^\s*(hi|hello|hey|test|testing|ok|okay|yes|no|lol|hmm+|ага|да|нет|ні|так|привет|привіт|тест|ок)\s*[.!?]*\s*$/iu;
+/** Keys struck in a row, not words. */
+const MASHED = /qwer|rtyu|tyui|yuio|uiop|asdf|sdfg|dfgh|fghj|ghjk|hjkl|zxcv|xcvb|cvbn|vbnm|йцук|цуке|фыва|ывап|олдж|ячсм|чсми|фіва/iu;
+const VOWELS = /[aeiouyаеёиоуыэюяієї]/u;
+
+/** An order that makes no sense: too few letters, no words but keys struck in a row or runs of consonants, or no order at all. */
+export function nonsenseOrder(order: string): boolean {
+  const letters = order.toLowerCase().match(/\p{L}/gu) ?? [];
+  if (letters.length < 3 || NOT_AN_ORDER.test(order) || MASHED.test(order)) return true;
+  if (letters.filter((c) => VOWELS.test(c)).length / letters.length < 0.2) return true;
+  return (order.toLowerCase().match(/\p{L}+/gu) ?? []).some((w) => /[^aeiouyаеёиоуыэюяієїьъ']{6,}/u.test(w));
+}
 
 /** A verdict in the three languages: the same for both written turns, or one for each. */
 export interface Verdict {
@@ -57,6 +101,68 @@ export interface Verdict {
 }
 
 export const VERDICTS: Record<OrderKind, Verdict> = {
+  nonsense: {
+    result: "failed",
+    note: {
+      en: "The ministries could make nothing of the order, and nothing was done: the war leaves no time to puzzle over it.",
+      ru: "Министерства не поняли приказа, и ничего не было сделано: война не оставляет времени его разгадывать.",
+      uk: "Міністерства не зрозуміли наказу, і нічого не було зроблено: війна не лишає часу його розгадувати.",
+    },
+  },
+  resign: {
+    result: "failed",
+    note: {
+      en: "No change of government was to be had in the war's first weeks: the Rada would not vote on it, and those in office stay at their posts.",
+      ru: "Смены власти в первые недели войны не случилось: Рада не стала за неё голосовать, и все остаются на своих постах.",
+      uk: "Зміни влади в перші тижні війни не сталося: Рада не стала за неї голосувати, і всі лишаються на своїх посадах.",
+    },
+  },
+  notalks: {
+    result: "success",
+    note: [
+      {
+        en: "Kyiv sent no one to bargain: only officials went to the Belarusian border on 28 February, to hear Moscow's terms and speak of corridors for civilians.",
+        ru: "Киев никого не отправил торговаться: на белорусскую границу 28 февраля поехали лишь чиновники – выслушать условия Москвы и обсудить коридоры для мирных жителей.",
+        uk: "Київ нікого не відправив торгуватися: на білоруський кордон 28 лютого поїхали лише урядовці – вислухати умови Москви й обговорити коридори для цивільних.",
+      },
+      {
+        en: "There are no talks on Moscow's terms: the meetings on the border dealt only with corridors for civilians, and the foreign ministers' meeting in Antalya changed nothing.",
+        ru: "Переговоров на условиях Москвы нет: встречи на границе касались только коридоров для мирных жителей, а встреча министров иностранных дел в Анталье ничего не изменила.",
+        uk: "Переговорів на умовах Москви немає: зустрічі на кордоні стосувалися лише коридорів для цивільних, а зустріч міністрів закордонних справ в Анталії нічого не змінила.",
+      },
+    ],
+  },
+  relocate: {
+    result: "partial",
+    note: {
+      en: "The ministries opened reserve offices in Lviv and sent part of their staff west; the government itself went on working from Kyiv as the city held.",
+      ru: "Министерства открыли резервные офисы во Львове и отправили часть сотрудников на запад; само правительство продолжало работать из Киева, раз город держался.",
+      uk: "Міністерства відкрили резервні офіси у Львові й відправили частину працівників на захід; сам уряд і далі працював із Києва, бо місто трималося.",
+    },
+  },
+  withdraw: {
+    result: "failed",
+    note: [
+      {
+        en: "The order to pull back came too late to carry out: the brigades were already locked in battle and held where they stood, and north of Kyiv the columns stopped short of the city.",
+        ru: "Приказ отойти опоздал: бригады уже были связаны боем и остались на месте, а к северу от Киева колонны остановились перед городом.",
+        uk: "Наказ відійти запізнився: бригади вже були скуті боєм і лишилися на місці, а на північ від Києва колони зупинилися перед містом.",
+      },
+      {
+        en: "The commanders on the spot asked for the pull-back to be reconsidered – giving up the positions now would open the roads behind them – so the line stayed where it was, and it held.",
+        ru: "Командиры на месте попросили пересмотреть отход – оставить позиции сейчас значило открыть дороги за ними, – и линия осталась, где была, и выдержала.",
+        uk: "Командири на місці попросили переглянути відхід – залишити позиції зараз означало відкрити дороги за ними, – і лінія лишилася, де була, і витримала.",
+      },
+    ],
+  },
+  strike: {
+    result: "failed",
+    note: {
+      en: "Striking deep into Russia is beyond what Ukraine has this week: every gun, drone and aircraft is needed against the columns on its own soil, and the General Staff puts the order aside for later.",
+      ru: "Удар вглубь России сейчас Украине не по силам: каждое орудие, дрон и самолёт нужны против колонн на её собственной земле, и Генштаб откладывает приказ на потом.",
+      uk: "Удар углиб Росії зараз Україні не до снаги: кожна гармата, дрон і літак потрібні проти колон на її власній землі, і Генштаб відкладає наказ на потім.",
+    },
+  },
   surrender: {
     result: "failed",
     note: {
@@ -357,7 +463,7 @@ export const SCRIPTED_TURNS: ScriptedTurn[] = [
 ];
 
 /** A minister's answer in the written turns, to whatever they are asked: their portfolio's view of the first days, and an order or two drafted for approval. */
-export const MINISTER_ANSWERS: Record<AdvisorId, { answer: Localized; orders?: Localized[] }> = {
+export const MINISTER_ANSWERS: Record<StandardMinistry, { answer: Localized; orders?: Localized[] }> = {
   military: {
     answer: {
       en: "We can hold Kyiv, Mr President, if the reserves go north now and the airfield at Hostomel stays useless to them. What I need most is anti-tank weapons and air defence – and time: every day their columns stand on the roads is a day for us. I have drafted an order for you.",
@@ -424,7 +530,7 @@ export const MINISTER_ANSWERS: Record<AdvisorId, { answer: Localized; orders?: L
 };
 
 /** Each minister's view after a written turn: what their ministry saw of the week. */
-export const MINISTER_VIEWS: Record<AdvisorId, Localized> = {
+export const MINISTER_VIEWS: Record<StandardMinistry, Localized> = {
   military: {
     en: "The line held where it mattered: Kyiv is not surrounded and the north is stalled. The south worries me – the steppe is open, and we are giving ground there faster than we can bring up reserves.",
     ru: "Линия выдержала там, где это важнее всего: Киев не окружён, север встал. Меня тревожит юг – степь открыта, и там мы отходим быстрее, чем подтягиваем резервы.",

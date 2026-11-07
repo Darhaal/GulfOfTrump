@@ -6,11 +6,11 @@ import ChatScroll from "@/components/ui/ChatScroll";
 import Dialog from "@/components/ui/Dialog";
 import { ui } from "@/components/ui/classes";
 import Dictation from "@/components/voice/Dictation";
-import { ADVISOR_TITLES, ADVISORS, type AdvisorId } from "@/engine/advisors";
-import { ADVISOR_POST, officialAt, type Candidate } from "@/engine/government";
+import type { AdvisorId } from "@/engine/advisors";
+import { ADVISOR_POST, officialAt, postTitle, type Candidate } from "@/engine/government";
 import type { GameState, Official, OfficialPost } from "@/engine/types";
-import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
+import { ministryTitle, openMinistries } from "@/engine/ministries";
 
 /** Competence or loyalty, 1–5, as filled pips. */
 export function Pips({ value, label }: { value: number; label: string }) {
@@ -58,7 +58,7 @@ interface AppointmentDialogProps {
  * effect at once; the next turn shows what it brings.
  */
 export default function AppointmentDialog({ state, post, busy, disabled, onClose, onFind, onAppoint, onAsk }: AppointmentDialogProps) {
-  const { t, text } = useI18n();
+  const { t, text, locale } = useI18n();
   const [wishes, setWishes] = useState("");
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [custom, setCustom] = useState("");
@@ -68,9 +68,9 @@ export default function AppointmentDialog({ state, post, busy, disabled, onClose
   // Never the person whose post is being filled: the chief of staff, else the interior minister.
   const advisor: AdvisorId = ADVISOR_POST[chosen] !== post ? chosen : post === "chief" ? "interior" : "chief";
   const current = post ? officialAt(state, post) : undefined;
-  const title = current?.title ?? (post ? t(`post.${post}` as MessageKey) : "");
+  const title = post ? postTitle(state, post, locale) : "";
   const thread = (state.advice?.[advisor] ?? []).slice(-6);
-  const nameOf = (a: AdvisorId) => officialAt(state, ADVISOR_POST[a])?.name ?? text(ADVISOR_TITLES[a]);
+  const nameOf = (a: AdvisorId) => officialAt(state, ADVISOR_POST[a])?.name ?? text(ministryTitle(state, a));
   const finding = busy?.kind === "candidates";
   const asking = busy?.kind === "advice" && busy.advisor === advisor;
 
@@ -202,9 +202,9 @@ export default function AppointmentDialog({ state, post, busy, disabled, onClose
               {t("appoint.discuss")}
             </div>
             <select value={advisor} onChange={(e) => setAdvisor(e.target.value as AdvisorId)} className={`${ui.input} py-2`}>
-              {ADVISORS.filter((a) => ADVISOR_POST[a] !== post).map((a) => (
+              {openMinistries(state).filter((a) => ADVISOR_POST[a] !== post).map((a) => (
                 <option key={a} value={a}>
-                  {nameOf(a)} · {officialAt(state, ADVISOR_POST[a])?.title ?? text(ADVISOR_TITLES[a])}
+                  {nameOf(a)} · {postTitle(state, ADVISOR_POST[a], locale)}
                 </option>
               ))}
             </select>
@@ -212,7 +212,7 @@ export default function AppointmentDialog({ state, post, busy, disabled, onClose
               <ChatScroll watch={`${advisor}-${thread.length}-${asking}`} className="max-h-60">
                 {thread.map((m, i) => (
                   <div key={i} className={`max-w-[92%] rounded-2xl px-3 py-2 text-xs ${m.from === "player" ? "ml-auto rounded-br-md bg-ink text-on-ink" : "rounded-bl-md border border-line sheet text-ink"}`}>
-                    <div className={`mb-0.5 text-2xs font-black uppercase tracking-widest ${m.from === "player" ? "text-on-ink/60" : "text-muted"}`}>{m.from === "player" ? t("diplomacy.you") : nameOf(advisor)}</div>
+                    <div className={`mb-0.5 text-2xs font-black uppercase tracking-widest ${m.from === "player" ? "text-on-ink/60" : "text-muted"}`}>{m.from === "player" ? t("diplomacy.you") : (m.by ?? nameOf(advisor))}</div>
                     <p className="whitespace-pre-wrap font-medium leading-relaxed">{m.text}</p>
                   </div>
                 ))}

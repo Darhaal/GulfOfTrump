@@ -4,9 +4,11 @@ import { ChevronUp, Loader2, MessageCircle, Send, UserRoundPen } from "lucide-re
 import { useState } from "react";
 import ChatScroll from "@/components/ui/ChatScroll";
 import { ui } from "@/components/ui/classes";
+import Dictation from "@/components/voice/Dictation";
 import SpeakButton from "@/components/voice/SpeakButton";
-import { ADVISOR_TITLES, type AdvisorId } from "@/engine/advisors";
-import { ADVISOR_POST, officialAt } from "@/engine/government";
+import type { AdvisorId } from "@/engine/advisors";
+import { ADVISOR_POST, officialAt, postTitle } from "@/engine/government";
+import { cabinetAdvisors } from "@/engine/space";
 import type { GameState } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
@@ -43,14 +45,16 @@ interface AdvisorStripProps {
  * turn's orders, and a change they propose (the research split, the
  * budget) waits for the player to apply it.
  */
-export default function AdvisorStrip({ state, advisors, busy, askDisabled, disabled, setupBusy, onAsk, onSetup, onApply, onAddOrder }: AdvisorStripProps) {
-  const { t, text } = useI18n();
+export default function AdvisorStrip({ state, advisors: offered, busy, askDisabled, disabled, setupBusy, onAsk, onSetup, onApply, onAddOrder }: AdvisorStripProps) {
+  const { t, locale } = useI18n();
+  // The head of the space programme answers beside the science minister only while there is a programme (engine/space.ts).
+  const advisors = cabinetAdvisors(state, offered);
   const [picked, setPicked] = useState<AdvisorId>(advisors[0]);
   const [question, setQuestion] = useState("");
   const [open, setOpen] = useState(false);
   const advisor = advisors.includes(picked) ? picked : advisors[0];
   const person = officialAt(state, ADVISOR_POST[advisor]);
-  const title = person?.title ?? text(ADVISOR_TITLES[advisor]);
+  const title = postTitle(state, ADVISOR_POST[advisor], locale);
   const name = person?.name ?? title;
   const thread = state.advice?.[advisor] ?? [];
   const thinking = busy?.advisor === advisor;
@@ -120,8 +124,8 @@ export default function AdvisorStrip({ state, advisors, busy, askDisabled, disab
                 <div key={i} className={`max-w-[94%] rounded-2xl px-3 py-2 text-xs ${m.from === "player" ? "ml-auto rounded-br-md bg-ink text-on-ink" : "rounded-bl-md border border-line bg-page text-ink"}`}>
                   {m.from !== "player" && (
                     <div className="mb-0.5 flex items-center gap-2 text-2xs font-black uppercase tracking-widest text-muted">
-                      <span className="truncate">{name}</span>
-                      <SpeakButton id={`strip-${advisor}-${i}`} text={m.text} className="-my-1 ml-auto" />
+                      <span className="truncate">{m.by ?? name}</span>
+                      <SpeakButton id={`strip-${advisor}-${i}`} text={m.text} who={{ name: m.by ?? name, gender: (m.by ? state.officials?.find((o) => o.name === m.by)?.gender : person?.gender) ?? undefined }} className="-my-1 ml-auto" />
                     </div>
                   )}
                   <p className="whitespace-pre-wrap break-words font-medium leading-relaxed">{m.text}</p>
@@ -144,16 +148,21 @@ export default function AdvisorStrip({ state, advisors, busy, askDisabled, disab
               void ask();
             }}
           >
-            <input
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              onFocus={() => thread.length > 0 && setOpen(true)}
-              maxLength={2000}
-              disabled={askDisabled && !thinking}
-              placeholder={t("advisor.placeholder", { name })}
-              aria-label={t("advisor.placeholder", { name })}
-              className={`${ui.input} min-w-0 py-2 text-xs`}
-            />
+            {/* The question may be spoken too, as everywhere a minister is asked. */}
+            <div className="min-w-0 flex-1">
+              <Dictation id={`strip-${advisor}`} set={setQuestion} max={2000} disabled={askDisabled && !thinking} inline>
+                <input
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  onFocus={() => thread.length > 0 && setOpen(true)}
+                  maxLength={2000}
+                  disabled={askDisabled && !thinking}
+                  placeholder={t("advisor.placeholder", { name })}
+                  aria-label={t("advisor.placeholder", { name })}
+                  className={`${ui.input} min-w-0 py-2 text-xs`}
+                />
+              </Dictation>
+            </div>
             <button type="submit" disabled={askDisabled || !question.trim()} title={t("advisor.send")} aria-label={t("advisor.send")} className={`${ui.primary} shrink-0 px-3 py-2`}>
               {thinking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
             </button>

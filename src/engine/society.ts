@@ -3,8 +3,14 @@ import { provinceIncome, RICH_INCOME, socialNorm } from "./economy";
 import { estimateRate, type Estimate } from "./fog";
 import { countsFor } from "./occupation";
 import { peopleIn } from "./population";
+import { DOLLAR } from "./prices";
+import { populationBonus } from "./researchEffects";
+import { sportLife } from "./sport";
 import { scenarioOf } from "./scenarios";
-import type { GameState, MapRegion, ScenarioId, SocietyFigures, SocietyTrack } from "./types";
+import { ANCHORS, at, literacyNow, profileOf, type Profile, type Row } from "./societyTables";
+import type { AppliedChange, GameState, MapRegion, ScenarioId, SocietyFigures, SocietyTrack } from "./types";
+
+export { literacyAtStart, literacyNow, regionOf } from "./societyTables";
 
 /**
  * Society in numbers: how a country's people are spread by age and sex,
@@ -29,10 +35,11 @@ import type { GameState, MapRegion, ScenarioId, SocietyFigures, SocietyTrack } f
  * least $3.65 a day from 1991, $3 before), anchored to the income people had at the start; the
  * rich above three times that median (at least $40 a day).
  *
- * Nothing here is stored but what the figures of today cannot show
- * (`SocietyTrack`): the player's start for the trend arrows, and for any
- * country the people war has taken from each age and the sectors its
- * programmes have moved.
+ * What the figures of today cannot show is stored (`SocietyTrack`): the
+ * player's start for the trend arrows; for every country its age cohorts as
+ * the game made them – opened from history on the day its record opens, then
+ * aged, born and dying by the game's own conditions – and the sectors its
+ * programmes have moved. The tables themselves are engine/societyTables.ts.
  */
 
 /** Five-year age bands, 0–4 to 80+. */
@@ -42,319 +49,6 @@ export const bandStart = (i: number) => i * 5;
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const round1 = (v: number) => Math.round(v * 10) / 10;
-
-/** The years the tables are given for: the eight start dates and a projection. */
-const ANCHORS = [1914, 1939, 1950, 1964, 1991, 1999, 2014, 2022, 2040] as const;
-type Row = readonly [number, number, number, number, number, number, number, number, number];
-
-/** What a part of the world looks like on each anchor year. */
-interface Profile {
-  /** Under 15 and 65 and over, % of all people. */
-  u15: Row;
-  o65: Row;
-  /** People in towns, %. */
-  urban: Row;
-  /** Adults who can read, %. */
-  literate: Row;
-  /** Workers in farming and in industry, % of those employed; services are the rest. */
-  farm: Row;
-  industry: Row;
-  /** Income inequality, 0–1. */
-  gini: Row;
-  /** How far men fall behind women with age: their share at 85 is 0.512 minus this. */
-  excess: Row;
-}
-
-type Region = "west" | "east" | "soviet" | "nam" | "oce" | "lat" | "eas" | "sas" | "sea" | "mena" | "ssa";
-
-const PROFILES: Record<Region, Profile> = {
-  // Western Europe.
-  west: {
-    u15: [31, 24, 25, 25, 18.5, 17.5, 15.6, 15.3, 14],
-    o65: [6, 8.5, 9.5, 11.5, 14.5, 15.8, 19, 21, 26],
-    urban: [50, 58, 60, 68, 74, 75, 77, 78, 82],
-    literate: [88, 94, 96, 98, 99, 99, 99, 99, 99],
-    farm: [35, 28, 25, 14, 5, 4, 3, 2.5, 2],
-    industry: [37, 38, 38, 41, 30, 27, 23, 22, 20],
-    gini: [0.48, 0.42, 0.36, 0.33, 0.3, 0.3, 0.31, 0.31, 0.31],
-    excess: [0.08, 0.1, 0.12, 0.14, 0.14, 0.13, 0.12, 0.12, 0.11],
-  },
-  // Central and Eastern Europe and the Balkans.
-  east: {
-    u15: [35, 31, 29, 28, 23, 19, 15, 15, 14],
-    o65: [5, 6, 6, 8, 10.5, 12.5, 16, 19, 24],
-    urban: [20, 27, 32, 45, 60, 62, 61, 62, 66],
-    literate: [55, 72, 88, 95, 98, 98, 99, 99, 99],
-    farm: [70, 62, 55, 38, 22, 20, 15, 12, 9],
-    industry: [15, 18, 22, 32, 36, 32, 30, 30, 28],
-    gini: [0.42, 0.42, 0.3, 0.25, 0.27, 0.31, 0.31, 0.3, 0.3],
-    excess: [0.1, 0.12, 0.14, 0.15, 0.18, 0.19, 0.18, 0.17, 0.16],
-  },
-  // Russia and the European Soviet republics.
-  soviet: {
-    u15: [38, 37, 30, 30, 23, 19, 16.5, 18, 16],
-    o65: [4.5, 4.5, 5, 6.5, 10, 12.5, 13.5, 16, 21],
-    urban: [15, 32, 40, 52, 66, 66, 67, 68, 71],
-    literate: [35, 81, 95, 98, 99, 99, 99, 99, 99],
-    farm: [75, 54, 46, 32, 18, 14, 10, 8, 6],
-    industry: [10, 23, 27, 33, 38, 30, 27, 26, 25],
-    gini: [0.45, 0.3, 0.28, 0.26, 0.28, 0.4, 0.4, 0.36, 0.36],
-    excess: [0.12, 0.18, 0.2, 0.22, 0.24, 0.25, 0.24, 0.23, 0.2],
-  },
-  // The United States and Canada.
-  nam: {
-    u15: [32, 25, 27, 31, 21.5, 21, 19.2, 18, 16.5],
-    o65: [4.3, 6.8, 8.2, 9.2, 12.5, 12.4, 14.5, 17, 22],
-    urban: [46, 56, 64, 71, 75, 79, 81, 83, 87],
-    literate: [93, 96, 97, 98, 99, 99, 99, 99, 99],
-    farm: [31, 18, 12, 6, 3, 2.5, 1.6, 1.5, 1.3],
-    industry: [32, 32, 35, 33, 25, 23, 19, 19, 18],
-    gini: [0.48, 0.45, 0.38, 0.36, 0.38, 0.4, 0.41, 0.41, 0.42],
-    excess: [0.08, 0.1, 0.12, 0.14, 0.14, 0.13, 0.11, 0.11, 0.1],
-  },
-  // Australia and New Zealand.
-  oce: {
-    u15: [32, 26, 27, 30, 22, 21, 19, 18.5, 17],
-    o65: [4.5, 7.5, 8.2, 8.5, 11.3, 12.3, 14.7, 16.8, 21],
-    urban: [55, 64, 76, 83, 85, 86, 86, 86, 88],
-    literate: [92, 96, 98, 99, 99, 99, 99, 99, 99],
-    farm: [28, 21, 15, 10, 5.5, 5, 3, 2.5, 2],
-    industry: [30, 30, 34, 35, 24, 22, 20, 19, 18],
-    gini: [0.4, 0.38, 0.33, 0.32, 0.32, 0.33, 0.34, 0.34, 0.34],
-    excess: [0.1, 0.12, 0.13, 0.14, 0.13, 0.12, 0.1, 0.1, 0.09],
-  },
-  // Latin America and the Caribbean.
-  lat: {
-    u15: [42, 41, 40, 43, 35, 32, 26, 23, 19],
-    o65: [3, 3.3, 3.5, 3.8, 5, 5.5, 7.3, 9.3, 14],
-    urban: [22, 30, 41, 52, 71, 75, 80, 81, 85],
-    literate: [30, 45, 58, 70, 86, 89, 93, 94, 96],
-    farm: [65, 60, 54, 46, 25, 22, 15, 14, 11],
-    industry: [15, 17, 19, 20, 23, 22, 21, 20, 19],
-    gini: [0.5, 0.5, 0.52, 0.53, 0.53, 0.54, 0.48, 0.47, 0.46],
-    excess: [0.04, 0.05, 0.06, 0.07, 0.09, 0.1, 0.1, 0.1, 0.1],
-  },
-  // China and its neighbours.
-  eas: {
-    u15: [35, 36, 34, 40, 27, 25, 17, 17, 13],
-    o65: [4, 4, 4.5, 4, 6, 7, 10, 13.5, 24],
-    urban: [8, 11, 12, 18, 27, 34, 55, 64, 75],
-    literate: [15, 25, 30, 55, 78, 85, 96, 97, 99],
-    farm: [82, 80, 78, 75, 59, 50, 30, 23, 15],
-    industry: [6, 7, 8, 9, 22, 23, 30, 29, 28],
-    gini: [0.4, 0.4, 0.3, 0.28, 0.35, 0.39, 0.42, 0.38, 0.38],
-    excess: [0.06, 0.06, 0.06, 0.06, 0.06, 0.07, 0.08, 0.09, 0.1],
-  },
-  // South Asia.
-  sas: {
-    u15: [39, 38, 38, 41, 38, 35, 29, 26, 22],
-    o65: [2.5, 3, 3.5, 3.4, 4, 4.5, 5.5, 6.5, 10],
-    urban: [10, 12, 16, 18, 25, 27, 32, 35, 43],
-    literate: [7, 12, 18, 28, 45, 55, 69, 75, 85],
-    farm: [75, 73, 72, 72, 64, 60, 49, 44, 35],
-    industry: [10, 10, 11, 11, 15, 16, 23, 25, 27],
-    gini: [0.4, 0.4, 0.38, 0.37, 0.32, 0.33, 0.35, 0.35, 0.35],
-    excess: [0, 0, 0, 0, 0.02, 0.03, 0.04, 0.05, 0.06],
-  },
-  // South-East Asia and the Pacific islands.
-  sea: {
-    u15: [40, 40, 39, 43, 34, 31, 26, 24, 20],
-    o65: [3, 3.3, 4, 3.5, 4.3, 5, 6.3, 7.5, 12],
-    urban: [10, 13, 15, 22, 33, 38, 47, 51, 60],
-    literate: [15, 25, 40, 60, 85, 89, 94, 95, 97],
-    farm: [78, 76, 74, 70, 55, 50, 38, 33, 25],
-    industry: [7, 8, 9, 10, 15, 17, 21, 21, 22],
-    gini: [0.4, 0.4, 0.4, 0.42, 0.42, 0.42, 0.4, 0.39, 0.39],
-    excess: [0.04, 0.04, 0.05, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1],
-  },
-  // The Middle East and North Africa.
-  mena: {
-    u15: [40, 40, 40, 44, 40, 36, 31, 29, 25],
-    o65: [3.5, 3.5, 4, 3.5, 3.9, 4.2, 5, 5.5, 9],
-    urban: [15, 20, 27, 38, 54, 57, 63, 65, 70],
-    literate: [8, 15, 20, 35, 60, 68, 80, 83, 89],
-    farm: [75, 70, 66, 58, 32, 28, 20, 18, 14],
-    industry: [10, 11, 12, 15, 22, 23, 26, 26, 26],
-    gini: [0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.38, 0.38, 0.38],
-    excess: [0.02, 0.02, 0.03, 0.04, 0.06, 0.07, 0.08, 0.08, 0.08],
-  },
-  // Africa south of the Sahara.
-  ssa: {
-    u15: [42, 42, 42, 44, 46, 45, 43, 42, 38],
-    o65: [3, 3, 3, 3, 3, 3, 3, 3, 3.6],
-    urban: [5, 8, 11, 17, 28, 32, 39, 42, 52],
-    literate: [5, 8, 12, 20, 45, 52, 62, 66, 76],
-    farm: [88, 86, 85, 80, 68, 65, 57, 53, 45],
-    industry: [4, 5, 6, 7, 9, 9, 10, 11, 12],
-    gini: [0.45, 0.45, 0.45, 0.46, 0.48, 0.48, 0.45, 0.45, 0.44],
-    excess: [0.03, 0.03, 0.04, 0.04, 0.05, 0.05, 0.06, 0.06, 0.06],
-  },
-};
-
-/** Modern countries by part of the world; the rest are placed by where their provinces lie. */
-const REGION_OF: Record<string, Region> = {};
-const place = (region: Region, codes: string) => codes.split(" ").forEach((c) => (REGION_OF[c] = region));
-place("soviet", "RUS UKR BLR MDA EST LVA LTU GEO ARM AZE KAZ UZB TKM KGZ TJK");
-place("east", "POL CZE SVK HUN ROU BGR SRB HRV SVN BIH MNE MKD ALB KOS");
-place("west", "GBR IRL FRA DEU NLD BEL LUX CHE AUT ITA ESP PRT GRC DNK NOR SWE FIN ISL MLT CYP AND MCO SMR LIE VAT IMN JEY GGY GIB FRO ALA");
-place("nam", "USA CAN GRL BMU SPM");
-place("oce", "AUS NZL");
-place("eas", "CHN JPN KOR PRK TWN MNG HKG MAC");
-place("sas", "IND PAK BGD LKA NPL BTN AFG MDV KAS");
-place("sea", "IDN PHL VNM THA MMR MYS KHM LAO SGP BRN TLS PNG FJI SLB VUT NCL PYF WSM TON FSM KIR MHL PLW NRU TUV GUM MNP");
-place("mena", "TUR IRN IRQ SYR LBN ISR PSX JOR SAU YEM OMN ARE QAT KWT BHR EGY LBY TUN DZA MAR SAH");
-place(
-  "lat",
-  "MEX GTM BLZ HND SLV NIC CRI PAN CUB HTI DOM JAM PRI TTO BHS BRB COL VEN ECU PER BOL CHL ARG URY PRY BRA GUY SUR FLK ATG DMA GRD KNA LCA VCT ABW CUW CYM TCA VGB VIR AIA MSR BLM MAF SXM",
-);
-
-/** A province's part of the world: by its modern country, else by where it lies. */
-export function regionOf(p: Pick<MapRegion, "adm0" | "at">): Region {
-  const known = REGION_OF[p.adm0];
-  if (known) return known;
-  const [lon, lat] = p.at ?? [0, 0];
-  if (lon < -30) return lat > 24 ? "nam" : "lat";
-  if (lon > 110 && lat < -10) return "oce";
-  if (lon >= -30 && lon < 60) {
-    if (lat >= 36) return lon > 30 ? "soviet" : "west";
-    return lat >= 15 ? "mena" : "ssa";
-  }
-  if (lat >= 35) return lon < 90 ? "soviet" : "eas";
-  return lon < 92 ? "sas" : lat > 22 ? "eas" : "sea";
-}
-
-/** Where a main country differs from its part of the world. Groups first, then countries; a country's own rows win. */
-const OVERRIDES: Record<string, Partial<Profile>> = {
-  casia: {
-    u15: [40, 40, 38, 42, 38, 36, 29, 30, 26],
-    o65: [4, 4, 4.5, 4.5, 5, 5.5, 5, 7.5, 11],
-    urban: [10, 18, 28, 38, 42, 42, 46, 48, 54],
-    farm: [85, 70, 60, 45, 38, 40, 32, 27, 20],
-    industry: [5, 12, 16, 22, 22, 15, 18, 19, 20],
-    excess: [0.05, 0.1, 0.15, 0.15, 0.12, 0.12, 0.12, 0.12, 0.12],
-  },
-  iberia: {
-    u15: [34, 30, 26, 27, 20, 15, 15, 13.5, 12],
-    o65: [5.5, 6.5, 7.2, 8.5, 13.7, 16.5, 18.5, 21, 28],
-    urban: [32, 38, 45, 55, 74, 76, 79, 81, 85],
-    literate: [45, 65, 80, 88, 96, 97, 98, 98, 99],
-    farm: [65, 55, 48, 36, 11, 7, 4.5, 4, 3],
-    industry: [16, 20, 25, 33, 31, 30, 20, 20, 19],
-  },
-  southcone: {
-    u15: [38, 32, 31, 31, 30, 28, 24, 21, 17],
-    o65: [3, 4, 4.5, 6, 8.5, 9.5, 10.5, 12, 16],
-    urban: [50, 60, 64, 72, 86, 88, 91, 92, 93],
-    literate: [60, 80, 87, 91, 96, 97, 98, 99, 99],
-    farm: [40, 35, 27, 20, 12, 10, 8, 7, 6],
-    industry: [20, 23, 29, 32, 30, 26, 23, 21, 20],
-  },
-  young: {
-    u15: [42, 42, 41, 44, 43, 42, 38, 36, 30],
-    literate: [5, 8, 12, 18, 30, 38, 52, 58, 72],
-  },
-  gulf: {
-    urban: [10, 15, 25, 45, 80, 82, 84, 86, 89],
-    u15: [40, 40, 41, 44, 36, 33, 23, 21, 17],
-    o65: [3, 3, 3.5, 3, 2.5, 2.5, 2, 2.5, 6],
-  },
-  GBR: {
-    u15: [30.5, 21.5, 22.5, 23, 19, 19, 17.6, 17.7, 16],
-    o65: [5.2, 9, 10.8, 12, 15.8, 15.8, 17.5, 19, 23],
-    urban: [79, 80, 79, 78, 78, 78, 82, 84, 87],
-    literate: [95, 98, 99, 99, 99, 99, 99, 99, 99],
-    farm: [9, 6, 5, 3.5, 2, 1.5, 1.2, 1, 1],
-    industry: [46, 45, 48, 46, 30, 25, 19, 18, 17],
-  },
-  FRA: {
-    u15: [25.5, 25, 22.7, 25.5, 20, 19, 18.5, 17.5, 16],
-    o65: [8.4, 10, 11.4, 12, 14, 16, 18.5, 21.5, 26],
-    urban: [44, 52, 55, 66, 74, 76, 79, 81, 84],
-    farm: [41, 36, 31, 18, 5.5, 4.5, 3, 2.5, 2],
-    industry: [33, 33, 35, 39, 29, 25, 21, 20, 19],
-  },
-  DEU: {
-    u15: [34, 23.5, 23.5, 22, 16.3, 15.6, 13.1, 13.8, 13],
-    o65: [5, 7.8, 9.7, 12, 15, 16, 21, 22, 28],
-    urban: [60, 69, 68, 72, 73, 73, 77, 77, 79],
-    farm: [35, 26, 23, 11, 4, 3, 1.5, 1.3, 1],
-    industry: [38, 40, 43, 48, 38, 33, 28, 27, 25],
-  },
-  ITA: {
-    u15: [33, 30, 26.5, 24.5, 16, 14.4, 13.8, 12.7, 11],
-    o65: [6.5, 7.4, 8.3, 9.8, 15, 17.8, 21.7, 23.8, 31],
-    urban: [40, 47, 54, 60, 67, 67, 69, 71, 75],
-    literate: [62, 78, 87, 92, 97, 98, 99, 99, 99],
-    farm: [55, 48, 42, 25, 8, 5, 3.7, 4, 3],
-    industry: [26, 29, 32, 39, 32, 32, 27, 26, 25],
-  },
-  JPN: {
-    u15: [36, 37, 35, 26, 18, 15, 13, 11.6, 10.5],
-    o65: [5.3, 4.7, 4.9, 6.2, 12.5, 16.5, 26, 29, 35],
-    urban: [18, 38, 53, 67, 77, 78, 92, 92, 93],
-    literate: [90, 95, 98, 99, 99, 99, 99, 99, 99],
-    farm: [60, 45, 48, 26, 7, 5, 3.7, 3, 2.5],
-    industry: [17, 25, 22, 32, 34, 31, 26, 24, 22],
-    gini: [0.45, 0.5, 0.35, 0.33, 0.3, 0.32, 0.33, 0.33, 0.33],
-    excess: [0.07, 0.08, 0.1, 0.12, 0.13, 0.13, 0.12, 0.12, 0.11],
-  },
-  KOR: {
-    u15: [38, 40, 42, 43, 25, 21, 14, 11.5, 9.5],
-    o65: [3, 3, 3, 3.3, 5.3, 7, 12.5, 17.5, 32],
-    urban: [4, 11, 21, 30, 75, 80, 82, 81, 83],
-    literate: [10, 25, 70, 85, 97, 98, 99, 99, 99],
-    farm: [85, 80, 70, 60, 16, 11, 6, 5, 4],
-    industry: [5, 8, 10, 14, 36, 28, 25, 24, 22],
-  },
-  PRK: {
-    u15: [38, 40, 42, 42, 28, 26, 21, 19.5, 17],
-    o65: [3, 3, 3, 3.3, 4, 6, 9, 12, 18],
-    urban: [4, 11, 31, 45, 58, 59, 61, 63, 66],
-    literate: [10, 25, 70, 95, 99, 99, 99, 99, 99],
-    farm: [85, 80, 70, 45, 35, 36, 30, 28, 25],
-    industry: [5, 8, 10, 30, 32, 28, 30, 30, 30],
-  },
-  TWN: {
-    u15: [38, 40, 42, 45, 26, 21, 14, 12.5, 10],
-    o65: [3, 3, 2.5, 2.5, 6.5, 8.5, 12, 17, 30],
-    urban: [15, 25, 35, 50, 75, 77, 78, 79, 82],
-    literate: [10, 30, 55, 75, 93, 95, 98, 99, 99],
-    farm: [70, 65, 56, 50, 13, 8, 5, 5, 4],
-    industry: [10, 15, 17, 22, 40, 37, 36, 35, 33],
-  },
-  HKG: { urban: [100, 100, 100, 100, 100, 100, 100, 100, 100], farm: [5, 4, 3, 2, 0.5, 0.3, 0.2, 0.2, 0.2] },
-  SGP: { urban: [100, 100, 100, 100, 100, 100, 100, 100, 100], farm: [5, 4, 3, 2, 0.5, 0.3, 0.2, 0.2, 0.2] },
-  ISR: {
-    u15: [40, 35, 33, 33, 31, 29, 28, 28, 25],
-    o65: [4, 4, 4, 5.5, 9.5, 9.8, 11, 12, 15],
-    urban: [20, 30, 71, 81, 90, 91, 92, 92, 93],
-    literate: [20, 40, 90, 92, 95, 97, 98, 98, 99],
-    farm: [70, 40, 17, 12, 4, 2.5, 1, 1, 1],
-  },
-  ZAF: {
-    u15: [40, 39, 38, 41, 37, 33, 30, 28, 24],
-    o65: [3, 3.5, 4, 4, 4, 4.5, 5.5, 6, 9],
-    urban: [25, 33, 42, 47, 52, 56, 64, 68, 74],
-    literate: [20, 35, 45, 60, 80, 85, 94, 95, 97],
-    farm: [65, 55, 45, 30, 13, 12, 5, 5, 4],
-    industry: [10, 15, 22, 27, 32, 26, 23, 22, 21],
-    gini: [0.55, 0.58, 0.6, 0.6, 0.6, 0.6, 0.63, 0.63, 0.62],
-  },
-  CUB: { urban: [40, 45, 57, 60, 73, 75, 77, 77, 79], literate: [60, 72, 78, 96, 99, 99, 99, 99, 99] },
-  UKR: {
-    o65: [4.5, 5, 5.5, 7.5, 12.5, 14, 15.5, 18, 22],
-    u15: [38, 37, 29, 28, 21.5, 18, 15, 15, 14],
-    farm: [78, 58, 50, 36, 20, 22, 17, 14, 11],
-    industry: [9, 21, 25, 32, 38, 30, 24, 22, 21],
-  },
-};
-const GROUP_OF: Record<string, string> = {};
-const group = (name: string, codes: string) => codes.split(" ").forEach((c) => (GROUP_OF[c] = name));
-group("casia", "KAZ UZB TKM KGZ TJK AZE");
-group("iberia", "ESP PRT GRC");
-group("southcone", "ARG URY CHL");
-group("young", "PAK AFG YEM");
-group("gulf", "SAU ARE QAT KWT BHR OMN");
 
 /**
  * Cohorts the history before the start left smaller: births lost to a war,
@@ -395,35 +89,12 @@ const SCARS_OF = new Map<string, Scar[]>();
 for (const s of SCARS) for (const c of s.countries.split(" ")) SCARS_OF.set(c, [...(SCARS_OF.get(c) ?? []), s]);
 
 /** Prices of the start date against 2019 (the US CPI), so incomes of different dates compare. */
-const PRICES: Record<ScenarioId, number> = { "1914": 0.04, "1939": 0.053, "1950": 0.094, "1964": 0.122, "1991": 0.53, "1999": 0.65, "2014": 0.93, "2022": 1.15 };
-/** How fast the dollar loses value in play, % a year: the economy's own rate for the era (engine/economy.ts). */
-const DOLLAR: Record<ScenarioId, number> = { "1914": 1, "1939": 2, "1950": 2.5, "1964": 2, "1991": 3, "1999": 2.5, "2014": 1, "2022": 4 };
+const PRICES: Record<ScenarioId, number> = { "1914": 0.04, "1933": 0.051, "1939": 0.053, "1950": 0.094, "1957": 0.11, "1964": 0.122, "1973": 0.174, "1979": 0.284, "1991": 0.53, "1999": 0.65, "2014": 0.93, "2022": 1.15 };
 
 const YEAR_MS = 365.25 * 86_400_000;
 const yearsBetween = (from: string, to: string) => Math.max(0, (Date.parse(to) - Date.parse(from)) / YEAR_MS);
 /** The year as a fraction, for the tables. */
 const yearFraction = (date: string) => yearOf(date) + (Date.parse(date) - Date.parse(`${yearOf(date)}-01-01`)) / YEAR_MS;
-
-/** A table's value in a year: straight between the anchors, held beyond them. */
-function at(row: Row, year: number): number {
-  if (year <= ANCHORS[0]) return row[0];
-  for (let i = 1; i < ANCHORS.length; i++) {
-    if (year <= ANCHORS[i]) {
-      const t = (year - ANCHORS[i - 1]) / (ANCHORS[i] - ANCHORS[i - 1]);
-      return row[i - 1] + (row[i] - row[i - 1]) * t;
-    }
-  }
-  return row[ANCHORS.length - 1];
-}
-
-/** The profile of a modern country: its part of the world, its group's rows and its own. */
-function profileOf(p: Pick<MapRegion, "adm0" | "at">): Profile {
-  const base = PROFILES[regionOf(p)];
-  const grouped = GROUP_OF[p.adm0] ? OVERRIDES[GROUP_OF[p.adm0]] : undefined;
-  const own = OVERRIDES[p.adm0];
-  if (!grouped && !own) return base;
-  return { ...base, ...grouped, ...own };
-}
 
 // --- the age pyramid -------------------------------------------------------
 
@@ -440,9 +111,20 @@ function smooth(r: number, lambda: number): number[] {
 const under15 = (b: number[]) => b[0] + b[1] + b[2];
 const over65 = (b: number[]) => b.slice(13).reduce((s, v) => s + v, 0);
 
-const fits = new Map<string, number[]>();
+/** A smooth population: its births' growth a year, its span of life (Weibull scale, years) and its age shares. */
+interface Fit {
+  r: number;
+  lambda: number;
+  shares: number[];
+}
+const fits = new Map<string, Fit>();
 /** The smooth age shares with the given shares under 15 and 65 and over, %: births' growth and survival found by bisection. */
 export function ageShares(young: number, old: number): number[] {
+  return ageFit(young, old).shares;
+}
+
+/** The smooth population with the given shares under 15 and 65 and over, %, with the growth and span of life that make it. */
+function ageFit(young: number, old: number): Fit {
   const key = `${round1(young)}|${round1(old)}`;
   const known = fits.get(key);
   if (known) return known;
@@ -466,9 +148,10 @@ export function ageShares(young: number, old: number): number[] {
     else hi = mid;
   }
   const lambda = (lo + hi) / 2;
-  const shares = smooth(rateFor(lambda), lambda);
-  fits.set(key, shares);
-  return shares;
+  const r = rateFor(lambda);
+  const fit = { r, lambda, shares: smooth(r, lambda) };
+  fits.set(key, fit);
+  return fit;
 }
 
 /**
@@ -505,6 +188,247 @@ function scarFactor(band: number, year: number, s: Scar, male: boolean): number 
   return 1 - (hit / ages) * (1 - factor);
 }
 
+type Bands = { m: number; f: number }[];
+const emptyBands = (): Bands => Array.from({ length: AGE_BANDS }, () => ({ m: 0, f: 0 }));
+
+/**
+ * History's pyramid of a land in a year, people in each band: each part's
+ * smooth shares, the cohorts history scarred before the start, then the
+ * game's recorded gaps (killed in war, never born) for a record kept the old
+ * way. Read for any country before its own cohorts are kept, and to start
+ * them (the historical initialisation).
+ */
+function historicalBands(parts: Pick<Part, "adm0" | "at" | "people">[], year: number, startYear: number, people: number, gap?: SocietyTrack["gap"]): Bands {
+  const bands = emptyBands();
+  const missing = gap ? gap.m.reduce((s, v) => s + v, 0) + gap.f.reduce((s, v) => s + v, 0) : 0;
+  const scale = people > 0 ? (people + missing) / people : 1;
+  for (const part of parts) {
+    const profile = profileOf(part);
+    const shares = sharesAt(profile, year);
+    const excess = at(profile.excess, year);
+    const scars = (SCARS_OF.get(part.adm0) ?? []).filter((s) => s.at <= startYear);
+    const own = shares.map((share, b) => {
+      const male = maleShare(b, excess);
+      return {
+        m: share * male * scars.reduce((k, s) => k * scarFactor(b, year, s, true), 1),
+        f: share * (1 - male) * scars.reduce((k, s) => k * scarFactor(b, year, s, false), 1),
+      };
+    });
+    const total = own.reduce((s, x) => s + x.m + x.f, 0);
+    own.forEach((x, b) => {
+      bands[b].m += (x.m / total) * part.people * scale;
+      bands[b].f += (x.f / total) * part.people * scale;
+    });
+  }
+  if (gap) {
+    // The record read part way to its next band; a cohort cannot lose more than four fifths of itself, whatever was recorded.
+    const t = (gap.aged ?? 0) / 5;
+    const read = (g: number[], b: number) => (g[b] ?? 0) * (1 - t) + (b > 0 ? (g[b - 1] ?? 0) * t : 0) + (b === AGE_BANDS - 1 ? (g[b] ?? 0) * t : 0);
+    bands.forEach((x, b) => {
+      x.m = Math.max(x.m * 0.2, x.m - read(gap.m, b));
+      x.f = Math.max(x.f * 0.2, x.f - read(gap.f, b));
+    });
+  }
+  return bands;
+}
+
+/**
+ * The shares under 15 and 65 and over, %, that history gave a country's
+ * present land in a year – what an untouched game's pyramid is measured
+ * against.
+ */
+export function historicalAges(state: Pick<GameState, "regions" | "scenarioId">, map: Record<string, MapRegion>, tag: string, year: number): { young: number; old: number } | null {
+  const parts = landOf(state, map, tag).get(tag)?.parts ?? [];
+  const people = parts.reduce((s, p) => s + p.people, 0);
+  if (people <= 0) return null;
+  const bands = historicalBands(parts, year, Number(state.scenarioId), people);
+  const total = bands.reduce((s, x) => s + x.m + x.f, 0);
+  return { young: ((bands[0].m + bands[0].f + bands[1].m + bands[1].f + bands[2].m + bands[2].f) / total) * 100, old: (bands.slice(13).reduce((s, x) => s + x.m + x.f, 0) / total) * 100 };
+}
+
+// --- demography that follows the game ----------------------------------------
+
+/**
+ * The kept cohorts read as five-year bands now, shares of all people: each
+ * cohort stands `aged` years past the band it was put in at the last
+ * five-year step, so a band holds part of its own cohort and part of the one
+ * below; the youngest band holds those born since.
+ */
+function readAges(ages: Ages): Bands {
+  const t = clamp(ages.aged / 5, 0, 1);
+  const out = emptyBands();
+  for (let b = 0; b < AGE_BANDS; b++) {
+    for (const sex of ["m", "f"] as const) {
+      const g = ages[sex];
+      const own = b === AGE_BANDS - 1 ? g[b] : g[b] * (1 - t);
+      const below = b > 0 ? g[b - 1] * t : ages.born[sex === "m" ? 0 : 1];
+      out[b][sex] = (own + below) / 100;
+    }
+  }
+  const total = out.reduce((s, x) => s + x.m + x.f, 0);
+  return total > 0 ? out.map((x) => ({ m: x.m / total, f: x.f / total })) : out;
+}
+
+type Ages = NonNullable<SocietyTrack["ages"]>;
+
+/** Women of 15–49, share of all people. */
+const mothers = (bands: Bands) => bands.slice(3, 10).reduce((s, x) => s + x.f, 0);
+
+/**
+ * How readily people have children, 8–50 (a crude birth rate, per thousand,
+ * for a land with an average share of mothers): high where few read, few live
+ * in towns and incomes are low; it falls as schooling, towns and incomes
+ * rise – the transition every country went through.
+ */
+function fertilityIndex(modern: number): number {
+  return 6 + 44 * clamp(1 - modern, 0.05, 1);
+}
+
+/** How far a land has come from the traditional family, 0–0.95: schooling, towns and income. The transition does not go back: a slump cuts births, it does not restore the old family. */
+function modernity(income: number, urban: number, literate: number): number {
+  const rich = clamp(Math.log10(Math.max(1, income) / 1000) / 2, 0, 1);
+  return clamp(0.45 * (literate / 100) + 0.25 * (urban / 100) + 0.3 * rich, 0, 0.95);
+}
+
+/** Births a year to a woman of 15–49 per point of the fertility index, where a country's habits are its conditions' (mothers are about 22% of an average land). */
+const FERT_NORM = 1 / (1000 * 0.22);
+/** A country's habit of more children than its conditions call for (a baby boom) fades with this time constant, years. */
+const HABIT_YEARS = 30;
+
+/**
+ * How long people live, an index in years of life: the Preston curve – life
+ * lengthens with income per head, fast while it is low and slowly once it is
+ * high – lifted by medicine over the decades (0.15 of a year each year) and
+ * by the player's medical research ahead of its time.
+ */
+function lifeIndex(income: number, year: number, medicine = 0): number {
+  return clamp(25 + 60 * (1 - Math.exp(-Math.log(Math.max(250, income) / 250) / 4.5)) + 0.15 * (year - 1950) + medicine, 25, 110);
+}
+
+/** Children who die before five, 0–0.4, as life lengthens: most of a poor country's gain in life is theirs. */
+const childDeaths = (life: number) => clamp(0.6 * Math.exp(-(life - 25) / 15), 0.003, 0.4);
+/** The span of an adult life the life index stands for, once the children's deaths are taken out. */
+const adultSpan = (life: number) => life / (1 - childDeaths(life));
+
+/** Survival of a cohort aged `x` over `dt` years, with life span (Weibull scale) `lambda`. */
+const survives = (x: number, dt: number, lambda: number) => Math.exp((x / lambda) ** 4 - ((x + dt) / lambda) ** 4);
+
+/** The mid age of a kept cohort `aged` years past its last step: five-year bands, the oldest about 86. */
+const cohortAge = (b: number, aged: number) => (b === AGE_BANDS - 1 ? 86 : bandStart(b) + 2.5 + aged);
+
+const share4 = (v: number) => Math.round(v * 1e4) / 1e4;
+
+/** What a country's births and deaths read now: income per head (dollars of 2019), towns and schooling, %. */
+interface Vitals {
+  income: number;
+  urban: number;
+  literate: number;
+  year: number;
+  medicine: number;
+}
+
+/** Shares of the people, %, kept to four decimals, from bands that sum to one. */
+function keepAges(bands: Bands): Ages {
+  return { m: bands.map((x) => share4(x.m * 100)), f: bands.map((x) => share4(x.f * 100)), born: [0, 0], aged: 0 };
+}
+
+/**
+ * The historical initialisation: a country's cohorts as history had them on
+ * the day the record opens (the start date's profile and scars, or an old
+ * save's year with its recorded gaps), and the measures its births and
+ * deaths are read by – fitted so that, at the conditions of that day, they
+ * give the smooth population that profile is drawn from.
+ */
+function startAges(bands: Bands, v: Vitals): { ages: Ages; vital: NonNullable<SocietyTrack["vital"]> } {
+  const total = bands.reduce((s, x) => s + x.m + x.f, 0) || 1;
+  const shares = bands.map((x) => ({ m: x.m / total, f: x.f / total }));
+  const young = (shares[0].m + shares[0].f + shares[1].m + shares[1].f + shares[2].m + shares[2].f) * 100;
+  const old = shares.slice(13).reduce((s, x) => s + x.m + x.f, 0) * 100;
+  const fit = ageFit(young, old);
+  // The smooth population's births a year per person, and its share of mothers.
+  let survivors = 0;
+  for (let a = 0; a < 100; a++) survivors += Math.exp(-fit.r * (a + 0.5) - ((a + 0.5) / fit.lambda) ** 4);
+  const births = 1 / survivors;
+  const smoothMothers = fit.shares.slice(3, 10).reduce((s, x) => s + x, 0) * 0.5;
+  const life0 = lifeIndex(v.income, v.year, v.medicine);
+  const dev = modernity(v.income, v.urban, v.literate);
+  const fert = births / (fertilityIndex(dev) * Math.max(0.05, smoothMothers) * (1 - childDeaths(life0)));
+  const life = fit.lambda / adultSpan(life0);
+  // Men die younger: their span against women's, from how few of the oldest are men.
+  const top = shares[AGE_BANDS - 1];
+  const ratio = top.f > 0 ? top.m / top.f / (0.512 / 0.488) : 1;
+  const q = (86 / fit.lambda) ** 4;
+  const men = clamp(86 / (q - Math.log(clamp(ratio, 0.2, 1))) ** 0.25 / fit.lambda, 0.75, 1);
+  const ages = keepAges(shares);
+  const vital = { fert: Math.round(fert * 1e7) / 1e7, life: Math.round(life * 1e4) / 1e4, men: Math.round(men * 1e4) / 1e4, ni0: 0, dev: Math.round(dev * 1e4) / 1e4 };
+  vital.ni0 = Math.round(stepAges(ages, vital, v, 1, { war: 0, slump: 0, killed: 0 }).increase * 1e5) / 1e5;
+  return { ages, vital };
+}
+
+/**
+ * One period of the dynamic simulation, in place on the kept cohorts: the
+ * war's dead leave the young men, every cohort loses its dead (life follows
+ * income, the decades' medicine and the player's research), the mothers of
+ * 15–49 have their children (fewer where schooling, towns and incomes have
+ * risen, in a long war and in a slump), and every five years the cohorts move
+ * up a band. Returns the natural increase, share of the people a year.
+ */
+function stepAges(ages: Ages, vital: NonNullable<SocietyTrack["vital"]>, v: Vitals, dt: number, hard: { war: number; slump: number; killed: number; civil?: number }): { ages: Ages; increase: number; fert: number; dev: number; born: number; died: number } {
+  const next: Ages = { m: [...ages.m], f: [...ages.f], born: [...ages.born], aged: ages.aged };
+  // The war's dead, % of the people, the young men first (a cohort keeps at least a fifth of itself).
+  if (hard.killed > 0) for (const [b, share] of DEAD_BY_BAND) next.m[b] = Math.max(next.m[b] * 0.2, next.m[b] - hard.killed * share);
+  // Its civilian dead, % of the people (engine/civilians.ts): every cohort of both sexes, small children and the old the most.
+  if (hard.civil && hard.civil > 0) {
+    const weight = (b: number) => (b === 0 ? 1.5 : b >= 12 ? 1.6 : 1);
+    let w = 0;
+    for (let b = 0; b < AGE_BANDS; b++) w += (next.m[b] + next.f[b]) * weight(b);
+    const k = w > 0 ? hard.civil / w : 0;
+    for (let b = 0; b < AGE_BANDS; b++) {
+      next.m[b] = Math.max(next.m[b] * 0.5, next.m[b] * (1 - weight(b) * k));
+      next.f[b] = Math.max(next.f[b] * 0.5, next.f[b] * (1 - weight(b) * k));
+    }
+  }
+  const life = lifeIndex(v.income, v.year, v.medicine);
+  const lambda = vital.life * adultSpan(life);
+  let deaths = 0;
+  for (let b = 0; b < AGE_BANDS; b++) {
+    const x = cohortAge(b, next.aged);
+    const dm = next.m[b] * (1 - survives(x, dt, lambda * (vital.men ?? 1)));
+    const df = next.f[b] * (1 - survives(x, dt, lambda));
+    next.m[b] -= dm;
+    next.f[b] -= df;
+    deaths += dm + df;
+  }
+  const total0 = next.m.reduce((s, x) => s + x, 0) + next.f.reduce((s, x) => s + x, 0) + next.born[0] + next.born[1];
+  const w = mothers(readAges(next)) * (total0 / 100);
+  // Children born who live past five: fewer die as life lengthens, so a falling birth rate need not mean fewer children.
+  const dev = Math.round(Math.max(vital.dev ?? 0, modernity(v.income, v.urban, v.literate)) * 1e4) / 1e4;
+  const births = vital.fert * fertilityIndex(dev) * (1 - childDeaths(life)) * w * 100 * dt * (1 - hard.war) * (1 - hard.slump);
+  // A baby boom – more children than a country's conditions call for – fades; a habit of fewer stays (it outlasted every policy that tried to undo it).
+  const fert = vital.fert > FERT_NORM ? Math.round((vital.fert + (FERT_NORM - vital.fert) * (1 - Math.exp(-dt / HABIT_YEARS))) * 1e7) / 1e7 : vital.fert;
+  next.born = [next.born[0] + births * 0.512, next.born[1] + births * 0.488];
+  next.aged += dt;
+  // Every five years each cohort moves up a band; those born since become the youngest.
+  while (next.aged >= 5) {
+    next.aged -= 5;
+    for (const sex of ["m", "f"] as const) {
+      const g = next[sex];
+      const top = g[AGE_BANDS - 1] + g[AGE_BANDS - 2];
+      for (let b = AGE_BANDS - 2; b > 0; b--) g[b] = g[b - 1];
+      g[AGE_BANDS - 1] = top;
+      g[0] = next.born[sex === "m" ? 0 : 1];
+    }
+    next.born = [0, 0];
+  }
+  const total = next.m.reduce((s, x) => s + x, 0) + next.f.reduce((s, x) => s + x, 0) + next.born[0] + next.born[1];
+  const k = total > 0 ? 100 / total : 1;
+  const out: Ages = { m: next.m.map((x) => share4(x * k)), f: next.f.map((x) => share4(x * k)), born: [share4(next.born[0] * k), share4(next.born[1] * k)], aged: Math.round(next.aged * 1e4) / 1e4 };
+  // Births and deaths a year per thousand, as a census counts them: the children who die before five are born and die.
+  const lost = births * (childDeaths(life) / Math.max(0.6, 1 - childDeaths(life)));
+  const per = 10 / Math.max(dt, 1e-6) / (total0 > 0 ? total0 / 100 : 1);
+  return { ages: out, increase: (births - deaths) / 100 / Math.max(dt, 1e-6), fert, dev, born: (births + lost) * per, died: (deaths + lost) * per };
+}
+
 // --- incomes -----------------------------------------------------------------
 
 /** The standard normal distribution. */
@@ -528,7 +452,7 @@ function sigmaOf(gini: number): number {
 }
 /** Purchasing power: a dollar buys more where incomes are low, the more so the later the date. */
 function pppFactor(real: number, era: ScenarioId): number {
-  const exponent = era === "1914" || era === "1939" ? 0.12 : era === "1950" || era === "1964" ? 0.2 : 0.3;
+  const exponent = era === "1914" || era === "1933" || era === "1939" ? 0.12 : era === "1950" || era === "1964" || era === "1973" || era === "1979" ? 0.2 : 0.3;
   return clamp((65000 / Math.max(100, real)) ** exponent, 1, 3);
 }
 /** Household spending as a share of GDP. */
@@ -540,7 +464,7 @@ const RICH_LINE = 40;
 const RICH_TIMES = 3;
 
 /** Whether a government plans its economy as the socialist states did: their wages were flat. */
-function socialist(state: Pick<GameState, "countries">, tag: string): boolean {
+export function socialist(state: Pick<GameState, "countries">, tag: string): boolean {
   const c = state.countries[tag];
   const words = typeof c?.government === "string" ? c.government : c?.government ? Object.values(c.government).join(" ") : "";
   return /communis|socialist|soviet|people's (republic|democracy)|коммунист|комуніст|социалист|соціаліст|советск|радянськ|народн/i.test(words);
@@ -565,6 +489,8 @@ interface Land {
   held: number;
   /** A front or an occupier is on its land. */
   front: boolean;
+  /** The map's natural pace of the provinces it owns, % a year, summed by people (divide by `own`). */
+  pace: number;
 }
 
 /**
@@ -575,7 +501,7 @@ function landOf(state: Pick<GameState, "regions" | "scenarioId">, map: Record<st
   const lands = new Map<string, Land>();
   const landFor = (tag: string) => {
     let land = lands.get(tag);
-    if (!land) lands.set(tag, (land = { parts: [], own: 0, held: 0, front: false }));
+    if (!land) lands.set(tag, (land = { parts: [], own: 0, held: 0, front: false, pace: 0 }));
     return land;
   };
   const byAdm = new Map<string, Map<string, Part>>();
@@ -594,6 +520,7 @@ function landOf(state: Pick<GameState, "regions" | "scenarioId">, map: Record<st
     if (only && r.owner !== only) continue;
     const owner = landFor(r.owner);
     owner.own += n;
+    owner.pace += n * (m.gr ?? 0);
     if (r.controller !== r.owner) {
       owner.held += r.contested === r.owner ? (n * (100 - (r.held ?? 30))) / 100 : n;
       owner.front = true;
@@ -626,6 +553,10 @@ export interface Society {
   old: number;
   /** Men aged 20–34, thousands. */
   men: number;
+  /** Income inequality, the Gini coefficient, 0–100. */
+  gini: number;
+  /** Real income per head, dollars of 2019 a year. */
+  income: number;
   /** The same figures when the record began: the player's country only. */
   start?: SocietyFigures;
 }
@@ -652,44 +583,16 @@ export function societyOf(state: SocietyState, map: Record<string, MapRegion> | 
   const startYear = Number(era);
   const years = yearsBetween(startOf(state), state.date);
 
-  // The age pyramid: each part's smooth shares for this year, the cohorts history scarred before the start, then the game's own gaps.
-  const bands = Array.from({ length: AGE_BANDS }, () => ({ m: 0, f: 0 }));
-  const gap = track?.gap;
-  const missing = gap ? gap.m.reduce((s, v) => s + v, 0) + gap.f.reduce((s, v) => s + v, 0) : 0;
-  const scale = (people + missing) / people;
-  for (const part of parts) {
-    const profile = profileOf(part);
-    const shares = sharesAt(profile, year);
-    const excess = at(profile.excess, year);
-    const scars = (SCARS_OF.get(part.adm0) ?? []).filter((s) => s.at <= startYear);
-    const own = shares.map((share, b) => {
-      const male = maleShare(b, excess);
-      return {
-        m: share * male * scars.reduce((k, s) => k * scarFactor(b, year, s, true), 1),
-        f: share * (1 - male) * scars.reduce((k, s) => k * scarFactor(b, year, s, false), 1),
-      };
-    });
-    const total = own.reduce((s, x) => s + x.m + x.f, 0);
-    own.forEach((x, b) => {
-      bands[b].m += (x.m / total) * part.people * scale;
-      bands[b].f += (x.f / total) * part.people * scale;
-    });
-  }
-  if (gap) {
-    // The record read part way to its next band; a cohort cannot lose more than four fifths of itself, whatever was recorded.
-    const t = (gap.aged ?? 0) / 5;
-    const read = (g: number[], b: number) => (g[b] ?? 0) * (1 - t) + (b > 0 ? (g[b - 1] ?? 0) * t : 0) + (b === AGE_BANDS - 1 ? (g[b] ?? 0) * t : 0);
-    bands.forEach((x, b) => {
-      x.m = Math.max(x.m * 0.2, x.m - read(gap.m, b));
-      x.f = Math.max(x.f * 0.2, x.f - read(gap.f, b));
-    });
-  }
+  // The age pyramid: the cohorts as the game made them (dynamic, from the start's history on); before the record has them,
+  // each part's smooth shares for this year, the cohorts history scarred before the start, then the game's own gaps.
+  const bands = track?.ages ? readAges(track.ages).map((x) => ({ m: x.m * people, f: x.f * people })) : historicalBands(parts, year, startYear, people, track?.gap);
   const counted = bands.reduce((s, x) => s + x.m + x.f, 0);
   const young = ((bands[0].m + bands[0].f + bands[1].m + bands[1].f + bands[2].m + bands[2].f) / counted) * 100;
   const old = (bands.slice(13).reduce((s, x) => s + x.m + x.f, 0) / counted) * 100;
   const men = bands[4].m + bands[5].m + bands[6].m;
 
-  // Income now against the start, in dollars of 2019: the economy's GDP per head, deflated by the era's dollar.
+  // Income now against the start, in dollars of 2019: the economy's GDP per head, deflated by the era's dollar – the very
+  // rate the economy grows nominal GDP by (engine/prices.ts), so a country growing at nothing real reads a flat income.
   const deflator = PRICES[era] * (1 + DOLLAR[era] / 100) ** years;
   const real = (country.economy.gdp * 1e6) / people / deflator;
   const landIncome = parts.reduce((s, p) => s + p.income * p.people, 0) / people;
@@ -728,6 +631,8 @@ export function societyOf(state: SocietyState, map: Record<string, MapRegion> | 
   });
   poor = clamp(poor * 100, 1, 97);
   rich = clamp(rich * 100, 0.3, 30);
+  // The Gini of a log-normal spread is 2Φ(σ/√2) − 1, read by people from each part's.
+  const gini = parts.reduce((g, p, i) => g + (p.people / people) * (2 * phi(spreads[i] / Math.SQRT2) - 1), 0);
 
   // Town and country, work and schooling: the start's figures, moved by income since, the record's shifts and time.
   const weighted = (row: (p: Profile) => Row, when = startYear) => parts.reduce((s, p) => s + (p.people / people) * at(row(profileOf(p)), when), 0);
@@ -739,7 +644,7 @@ export function societyOf(state: SocietyState, map: Record<string, MapRegion> | 
   const services = Math.max(5, 100 - farm - industry);
   const urban = clamp(weighted((p) => p.urban) + 9 * growth + (shift.urban ?? 0), 2, 100);
   const literate0 = weighted((p) => p.literate);
-  const literate = clamp(literate0 + (100 - literate0) * (1 - Math.exp(-0.02 * years)) + (shift.literate ?? 0), 1, 99.5);
+  const literate = literacyNow(literate0, years, shift.literate ?? 0);
   const workers = farm + industry + services;
 
   return {
@@ -757,6 +662,8 @@ export function societyOf(state: SocietyState, map: Record<string, MapRegion> | 
     young: round1(young),
     old: round1(old),
     men: Math.round(men),
+    gini: round1(gini * 100),
+    income: Math.round(real),
     ...(track?.start ? { start: track.start } : {}),
   };
 }
@@ -765,6 +672,8 @@ export function societyOf(state: SocietyState, map: Record<string, MapRegion> | 
 const figuresOf = (s: Society): SocietyFigures => ({ poor: s.poor, rich: s.rich, urban: s.urban, literate: s.literate, farm: s.farm, industry: s.industry, young: s.young, men: s.men });
 
 /** Real income per head now, dollars of 2019: what a new record anchors the poverty line to. */
+export const incomeOf = (state: SocietyState, map: Record<string, MapRegion>, tag: string): number | null => realIncome(state, map, tag);
+
 function realIncome(state: SocietyState, map: Record<string, MapRegion>, tag: string, lands?: Map<string, Land>): number | null {
   const e = state.countries[tag]?.economy;
   const people = ((lands ?? landOf(state, map, tag)).get(tag)?.parts ?? []).reduce((s, p) => s + p.people, 0);
@@ -814,24 +723,160 @@ const PROGRAMME_SHIFT: Partial<Record<string, [number, number, number, number]>>
 };
 
 const emptyGap = () => ({ m: new Array<number>(AGE_BANDS).fill(0), f: new Array<number>(AGE_BANDS).fill(0) });
+
+/** The most the game's births and deaths move a country's natural growth from the map's pace, points a year. */
+const DRIFT_MAX = 3;
+/** Dates whose map carries the pace of a later period (the 1994 map: 1991 to 2022): their people grow by their own births and deaths. */
+const PACE_OF_LATER_YEARS = new Set<ScenarioId>(["1950", "1957", "1964", "1973", "1979"]);
+
+/** What a country's births and deaths read now, or null without people or an economy. */
+function society0Vitals(state: GameState, map: Record<string, MapRegion>, tag: string, lands: Map<string, Land>, year: number): Vitals | null {
+  const s = societyOf(state, map, tag, lands);
+  const income = realIncome(state, map, tag, lands);
+  if (!s || income === null) return null;
+  // The player's medical research ahead of its time lengthens life (engine/researchEffects.ts): 0.2 points of growth are five years of life.
+  // And so, a little, does the money its government gives sport, or takes from it (engine/sport.ts).
+  const medicine = (tag === state.player && state.research ? populationBonus(state) * 25 : 0) + sportLife(state, tag);
+  return { income, urban: s.urban, literate: s.literate, year, medicine };
+}
+
+/**
+ * Who flees, by age and sex: children, women and the old leave first; in a
+ * war the men of fighting age (20–59) stay – called up, or kept from leaving
+ * – and only a quarter of their share goes; in peace (a famine, a purge)
+ * whole families leave. Weights against each band's share, men and women.
+ */
+const FLEE_CHILD = 1.3;
+const FLEE_WOMEN = 1.2;
+const FLEE_OLD = 1.05;
+const FLEE_MEN_WAR = 0.25;
+const FLEE_MEN_PEACE = 0.9;
+/** The weight of a band's men or women among those who flee. */
+function fleeWeight(band: number, male: boolean, war: boolean): number {
+  if (band <= 2) return FLEE_CHILD;
+  if (band === 3) return male ? (war ? 0.8 : 1) : FLEE_WOMEN;
+  if (band <= 11) return male ? (war ? FLEE_MEN_WAR : FLEE_MEN_PEACE) : FLEE_WOMEN;
+  if (band === 12) return male ? 0.9 : 1.1;
+  return FLEE_OLD;
+}
+
+/** Refugees by age and sex, thousands, from a land with these cohorts: `n` in all. */
+export function refugeeMakeUp(ages: Pick<Ages, "m" | "f" | "born">, n: number, war: boolean): { m: number[]; f: number[]; born: [number, number] } {
+  const wm = ages.m.map((v, b) => v * fleeWeight(b, true, war));
+  const wf = ages.f.map((v, b) => v * fleeWeight(b, false, war));
+  const wb: [number, number] = [ages.born[0] * FLEE_CHILD, ages.born[1] * FLEE_CHILD];
+  const total = wm.reduce((s, v) => s + v, 0) + wf.reduce((s, v) => s + v, 0) + wb[0] + wb[1];
+  const k = total > 0 ? n / total : 0;
+  return { m: wm.map((v) => v * k), f: wf.map((v) => v * k), born: [wb[0] * k, wb[1] * k] };
+}
+
+/** A land's cohorts once refugees have left (`sign` −1) or come (+1): `before` people then, `after` now, thousands; no cohort loses more than nine tenths of itself. */
+function moveRefugees(ages: Ages, before: number, after: number, flow: { m: number[]; f: number[]; born: [number, number] }, sign: 1 | -1): Ages {
+  if (before <= 0 || after <= 0) return ages;
+  const count = (share: number, moved: number) => Math.max((share / 100) * before * 0.1, (share / 100) * before + sign * moved);
+  const m = ages.m.map((v, b) => count(v, flow.m[b]));
+  const f = ages.f.map((v, b) => count(v, flow.f[b]));
+  const born: [number, number] = [count(ages.born[0], flow.born[0]), count(ages.born[1], flow.born[1])];
+  const total = m.reduce((s, v) => s + v, 0) + f.reduce((s, v) => s + v, 0) + born[0] + born[1];
+  if (total <= 0) return ages;
+  const k = 100 / total;
+  return { m: m.map((v) => share4(v * k)), f: f.map((v) => share4(v * k)), born: [share4(born[0] * k), share4(born[1] * k)], aged: ages.aged };
+}
+
+/** The cohorts that came under each country this turn with the land: the people moved and their old country's kept cohorts, summed. */
+function arrivals(before: GameState, next: GameState, map: Record<string, MapRegion>, society: Record<string, SocietyTrack>): Map<string, { people: number; m: number[]; f: number[]; born: [number, number] }> {
+  const out = new Map<string, { people: number; m: number[]; f: number[]; born: [number, number] }>();
+  for (const [id, r] of Object.entries(next.regions)) {
+    const was = before.regions[id];
+    if (!was) continue;
+    const from = countsFor(was);
+    const to = countsFor(r);
+    if (from === to) continue;
+    const n = peopleIn(r, map[id]);
+    const ages = society[from]?.ages;
+    if (n <= 0 || !ages) continue;
+    const got = out.get(to) ?? { people: 0, m: new Array<number>(AGE_BANDS).fill(0), f: new Array<number>(AGE_BANDS).fill(0), born: [0, 0] as [number, number] };
+    got.people += n;
+    for (let b = 0; b < AGE_BANDS; b++) {
+      got.m[b] += ages.m[b] * n;
+      got.f[b] += ages.f[b] * n;
+    }
+    got.born = [got.born[0] + ages.born[0] * n, got.born[1] + ages.born[1] * n];
+    out.set(to, got);
+  }
+  return out;
+}
+
+/** A country's cohorts with the newcomers' mixed in, by people: `stayed` of its own and the arrivals. */
+function blendAges(own: Ages, stayed: number, came: { people: number; m: number[]; f: number[]; born: [number, number] }): Ages {
+  const all = stayed + came.people;
+  if (all <= 0) return own;
+  const mix = (a: number, b: number) => share4((a * stayed + b) / all);
+  return { m: own.m.map((v, b) => mix(v, came.m[b])), f: own.f.map((v, b) => mix(v, came.f[b])), born: [mix(own.born[0], came.born[0]), mix(own.born[1], came.born[1])], aged: own.aged };
+}
+
+/**
+ * Every country's cohorts opened from history as the save stands: an old
+ * save's people keep the pyramid of its year, with the gaps its wars left,
+ * and follow the game from there. A turn opens any country's that are
+ * missing the same way (save step 38 waits for it); this opens all at once.
+ */
+export function seedDemography<T extends GameState>(state: T, map: Record<string, MapRegion>): T {
+  const lands = landOf(state, map);
+  const year = yearFraction(state.date);
+  const startYear = Number(state.scenarioId);
+  const society: Record<string, SocietyTrack> = { ...(state.society ?? {}) };
+  for (const [tag, land] of lands) {
+    const c = state.countries[tag];
+    const track = society[tag];
+    if (!c?.economy || track?.ages) continue;
+    const people = land.parts.reduce((s, p) => s + p.people, 0);
+    if (people <= 0) continue;
+    const now = society0Vitals(state, map, tag, lands, year);
+    if (!now) continue;
+    const opened = startAges(historicalBands(land.parts, year, startYear, people, track?.gap), now);
+    const rest: SocietyTrack = { ...track };
+    delete rest.gap;
+    society[tag] = { ...rest, ages: opened.ages, vital: opened.vital };
+  }
+  return { ...state, society };
+}
 const small = (n: number) => Math.round(n * 100) / 100;
 
 /**
- * Society after a turn, in place on `next`: the war dead leave a gap among
- * the young men, a war past its first year cuts births, every gap ages
- * with its people; programmes, the industry and social budgets and a war
- * economy move the sectors and schooling of the countries they touch; the
- * player's poverty line follows incomes over a generation. Read from the
- * wars, economies and programmes as the turn left them; no dice.
+ * Society after a turn, in place on `next`: every country's cohorts age, are
+ * born and die by its own conditions (opened from history the first time),
+ * the war dead leave the young men, a war past its first year and a slump
+ * cut births, and the natural increase is kept for the people's growth;
+ * the turn's refugees (`applied`) leave their land's cohorts and join their
+ * hosts' by age and sex; programmes, the industry and social budgets and a
+ * war economy move the sectors and schooling of the countries they touch;
+ * the player's poverty line follows incomes over a generation. Read from the
+ * wars, economies and programmes as the turn left them; no dice. Returns the
+ * player's births and deaths over the turn, a year per thousand.
  */
-export function advanceSociety(before: GameState, next: GameState, years: number, map: Record<string, MapRegion>): void {
-  if (years <= 0) return;
+export function advanceSociety(before: GameState, next: GameState, years: number, map: Record<string, MapRegion>, applied: readonly AppliedChange[] = []): { born: number; died: number } | undefined {
+  if (years <= 0) return undefined;
+  let vitals: { born: number; died: number } | undefined;
   // A save from before society (step 31) opens the player's record from the game as it stood before this turn.
   const opened = before.society?.[before.player]?.start ? before : seedSociety(before, map);
   const society: Record<string, SocietyTrack> = { ...(next.society ?? {}), ...(opened.society?.[next.player] ? { [next.player]: opened.society[next.player] } : {}) };
   const lands = landOf(next, map);
   const killedBefore = new Map<string, number>();
+  const civilBefore = new Map<string, number>();
   for (const w of before.wars) for (const [tag, l] of Object.entries(w.losses ?? {})) killedBefore.set(`${w.id}:${tag}`, l.killed);
+  for (const w of before.wars) for (const [tag, l] of Object.entries(w.civilians ?? {})) civilBefore.set(`${w.id}:${tag}`, l.dead);
+  const incoming = arrivals(before, next, map, society);
+  const year = yearFraction(next.date);
+  const startYear = Number(next.scenarioId);
+  // The turn's refugees: who left each land, at war or not, and where they went; their make-up is read off the land's cohorts.
+  const fled = new Map<string, { n: number; war: boolean; to?: string }[]>();
+  for (const c of applied) {
+    if (c.kind !== "population" || c.refugees <= 0) continue;
+    const war = next.wars.some((w) => !w.truce && (w.attackers.includes(c.country) || w.defenders.includes(c.country)));
+    fled.set(c.country, [...(fled.get(c.country) ?? []), { n: c.refugees, war, ...(c.to && c.to !== c.country ? { to: c.to } : {}) }]);
+  }
+  const sheltered: { to: string; n: number; flow: ReturnType<typeof refugeeMakeUp> }[] = [];
 
   for (const [tag, c] of Object.entries(next.countries)) {
     const e = c.economy;
@@ -840,8 +885,59 @@ export function advanceSociety(before: GameState, next: GameState, years: number
     const programmes = (c.programmes ?? []).filter((p) => p.since <= next.date && p.until > before.date && PROGRAMME_SHIFT[p.kind]);
     const isPlayer = tag === next.player;
     const had = society[tag];
-    if (!had && !isPlayer && !wars.length && !programmes.length) continue;
+    const parts = lands.get(tag)?.parts ?? [];
+    const people = parts.reduce((s, p) => s + p.people, 0);
+    if (!had && !isPlayer && !wars.length && !programmes.length && people <= 0) continue;
     const track: SocietyTrack = { ...had, ...(had?.gap ? { gap: { ...had.gap, m: [...had.gap.m], f: [...had.gap.f] } } : {}), ...(had?.shift ? { shift: { ...had.shift } } : {}) };
+    const killed = wars.reduce((s, w) => s + Math.max(0, (w.losses?.[tag]?.killed ?? 0) - (killedBefore.get(`${w.id}:${tag}`) ?? 0)), 0);
+    // The civilians the wars took this turn, recorded once per war (engine/civilians.ts): a country's people die in wars it may not fight.
+    const civil = next.wars.reduce((s, w) => s + Math.max(0, (w.civilians?.[tag]?.dead ?? 0) - (civilBefore.get(`${w.id}:${tag}`) ?? 0)), 0);
+
+    // Demography that follows the game: a country's cohorts are kept from the day its record opens (the historical
+    // initialisation – the start date's profile and scars, or an old save's year with its gaps); after that they age,
+    // births follow its own income, towns, schooling, wars and slumps, and deaths its income, medicine and wars.
+    const now = people > 0 ? society0Vitals(next, map, tag, lands, year) : null;
+    if (now) {
+      const fresh = !track.ages || !track.vital;
+      if (fresh) {
+        // Opened as history had it when the period began, then played through it like any other.
+        const opened0 = startAges(historicalBands(parts, yearFraction(before.date), startYear, people, track.gap), { ...now, year: yearFraction(before.date) });
+        track.ages = opened0.ages;
+        track.vital = opened0.vital;
+        delete track.gap;
+        delete track.drift;
+      }
+      if (track.ages && track.vital) {
+        // People who came under the country this turn bring their cohorts with them.
+        const came = fresh ? undefined : incoming.get(tag);
+        if (came && came.people > 0) track.ages = blendAges(track.ages, Math.max(0, people - came.people), came);
+        const longest = Math.max(...wars.filter((w) => !w.truce).map((w) => yearsBetween(w.since, next.date)), 0);
+        const hard = {
+          // Births fall once a war has gone on for a year, the deeper the more of the people it has in uniform; and in a slump.
+          war: longest >= 1 ? clamp(0.1 + (6 * e.troops) / people, 0.1, 0.4) : 0,
+          slump: clamp(-0.02 * e.growth, 0, 0.15),
+          killed: (killed / people) * 100,
+          civil: (civil / people) * 100,
+        };
+        const stepped = stepAges(track.ages, track.vital, now, years, hard);
+        track.ages = stepped.ages;
+        track.vital = { ...track.vital, fert: stepped.fert, dev: stepped.dev };
+        if (isPlayer) vitals = { born: Math.round(stepped.born * 10) / 10, died: Math.round(stepped.died * 10) / 10 };
+        // Refugees leave by age and sex: the land's people already count them gone (engine/population.ts), its cohorts now do too.
+        for (const { n, war, to } of fled.get(tag) ?? []) {
+          const flow = refugeeMakeUp(track.ages, n, war);
+          track.ages = moveRefugees(track.ages, people + n, people, flow, -1);
+          if (to) sheltered.push({ to, n, flow });
+        }
+        // The map's pace is a later period's where the date's map was drawn for one (the 1994 map's, 1991–2022, for a game
+        // begun in 1950 or 1964): there the people grow by their own births and deaths, not by the 1990s' pace.
+        const land = lands.get(tag);
+        const later = PACE_OF_LATER_YEARS.has(next.scenarioId) && land && land.own > 0 ? track.vital.ni0 * 100 - land.pace / land.own : 0;
+        const drift = Math.round(clamp((stepped.increase - track.vital.ni0) * 100 + later, -DRIFT_MAX, DRIFT_MAX) * 100) / 100;
+        if (drift) track.drift = drift;
+        else delete track.drift;
+      }
+    }
 
     // The gaps age with their people: every five years the whole record moves up a band (the oldest thin out), and in between it is read part way.
     if (track.gap) {
@@ -856,8 +952,8 @@ export function advanceSociety(before: GameState, next: GameState, years: number
       track.gap = { ...track.gap, aged };
     }
 
-    if (wars.length) {
-      const killed = wars.reduce((s, w) => s + Math.max(0, (w.losses?.[tag]?.killed ?? 0) - (killedBefore.get(`${w.id}:${tag}`) ?? 0)), 0);
+    // A record kept the old way (no cohorts yet: a country with no people) keeps its gaps.
+    if (wars.length && !track.ages) {
       const society0 = societyOf(next, map, tag, lands);
       if (society0) {
         const gap = (track.gap ??= emptyGap());
@@ -910,9 +1006,28 @@ export function advanceSociety(before: GameState, next: GameState, years: number
     if (Object.keys(track).length) society[tag] = track;
     else delete society[tag];
   }
+  // And arrive where they went, as they left.
+  for (const { to, n, flow } of sheltered) {
+    const host = society[to];
+    const people = (lands.get(to)?.parts ?? []).reduce((s, p) => s + p.people, 0);
+    if (host?.ages) host.ages = moveRefugees(host.ages, Math.max(0, people - n), people, flow, 1);
+  }
   // Countries that are gone keep nothing.
   for (const tag of Object.keys(society)) if (!next.countries[tag]) delete society[tag];
   next.society = society;
+  return vitals;
+}
+
+/**
+ * Life expectancy at birth, years: the life index a country's deaths are
+ * read by – the Preston curve of its income, the decades' medicine, the
+ * player's medical research and the money for sport – which runs close to
+ * the UN's and the historical figures (India 36 and the United States 62 in
+ * 1950, Germany 77 in 2022).
+ */
+export function lifeExpectancy(state: GameState, map: Record<string, MapRegion>, tag: string): number | null {
+  const v = society0Vitals(state, map, tag, landOf(state, map, tag), yearFraction(state.date));
+  return v ? round1(lifeIndex(v.income, v.year, v.medicine)) : null;
 }
 
 /** A share with its change since the start, for the prompt: "42% (+3)". */

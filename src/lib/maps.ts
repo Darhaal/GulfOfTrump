@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { buildMapIndex, type ProvinceTopology } from "@/engine/provinces";
 import type { MapId, MapIndex, MapRegion } from "@/engine/types";
+import { mapFile } from "./mapFiles";
 
 export type RegionTopology = ProvinceTopology;
 
@@ -18,7 +19,7 @@ const cache = new Map<MapId, Promise<LoadedMap>>();
 export function loadMap(id: MapId): Promise<LoadedMap> {
   let promise = cache.get(id);
   if (!promise) {
-    promise = fetch(`/maps/${id}.json`)
+    promise = fetch(`/maps/${mapFile(id)}.json`)
       .then((r) => {
         if (!r.ok) throw new Error(`Map ${id}: HTTP ${r.status}`);
         return r.json() as Promise<RegionTopology>;

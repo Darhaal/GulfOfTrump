@@ -1,4 +1,4 @@
-import { ADVISORS, type AdvisorId } from "./advisors";
+import { ADVISORS, forNew, type AdvisorId } from "./advisors";
 import { roll } from "./dice";
 import type { GameState, Localized, Official, OfficialPost } from "./types";
 
@@ -16,6 +16,15 @@ export interface Agenda {
   en: string;
   label: Localized;
 }
+
+/** What the minister of a ministry the government created wants. */
+const NEW_AGENDA: Record<string, Agenda> = {
+  remit: { en: "a wider remit for the new ministry, taken from the older ones", label: { ru: "Больше полномочий", uk: "Більше повноважень", en: "A wider remit" } },
+  budget: { en: "money and staff for the new ministry", label: { ru: "Деньги и штат", uk: "Гроші й штат", en: "Money and staff" } },
+  results: { en: "quick, visible results that prove the ministry was worth creating", label: { ru: "Быстрые результаты", uk: "Швидкі результати", en: "Quick results" } },
+  loyal: { en: "loyalty to the leader who created the ministry", label: { ru: "Верность лидеру", uk: "Вірність лідерові", en: "Loyal to the leader" } },
+  reform: { en: "reforms in the ministry's own field", label: { ru: "Реформы в своей сфере", uk: "Реформи у своїй сфері", en: "Reforms in its field" } },
+};
 
 export const AGENDAS: Record<AdvisorId, Record<string, Agenda>> = {
   chief: {
@@ -74,6 +83,14 @@ export const AGENDAS: Record<AdvisorId, Record<string, Agenda>> = {
     prestige: { en: "being first in the world: records, prizes, a famous breakthrough", label: { ru: "Первыми в мире", uk: "Першими у світі", en: "First in the world" } },
     open: { en: "working with foreign scientists rather than in secret", label: { ru: "Открытая наука", uk: "Відкрита наука", en: "Open science" } },
   },
+  space: {
+    budget: { en: "a bigger share of the research money for the rockets", label: { ru: "Больше денег ракетам", uk: "Більше грошей ракетам", en: "More money for rockets" } },
+    moon: { en: "beating the rivals to the next first in space", label: { ru: "Обогнать соперников", uk: "Випередити суперників", en: "Beat the rivals" } },
+    missiles: { en: "missiles and spy satellites for the army before prestige", label: { ru: "Ракеты для армии", uk: "Ракети для армії", en: "Missiles for the army" } },
+    safety: { en: "no launch before the rocket is ready, whatever the politicians want", label: { ru: "Без спешки", uk: "Без поспіху", en: "No rush" } },
+    crew: { en: "people in space, not only machines", label: { ru: "Человек в космосе", uk: "Людина в космосі", en: "People in space" } },
+  },
+  ...forNew(NEW_AGENDA),
 };
 
 /** The cabinet post's ministry, if it is one. */

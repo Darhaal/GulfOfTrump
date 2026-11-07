@@ -47,7 +47,7 @@ export async function POST(request: Request) {
         locale,
         instructions: DIPLOMACY_INSTRUCTIONS(locale),
         input: [
-          { role: "user", content: buildDiplomacyPrompt(state, target, index) },
+          { role: "user", content: buildDiplomacyPrompt(state, target, index, locale) },
           {
             role: "user",
             content: `${transcript ? `EARLIER CORRESPONDENCE:\n${transcript}\n\n` : ""}NEW MESSAGE FROM ${playerName.toUpperCase()}:\n${message}`,

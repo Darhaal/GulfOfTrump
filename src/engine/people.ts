@@ -316,6 +316,12 @@ export function leaderOfficial(state: Pick<GameState, "countries" | "player" | "
 }
 
 /** A person's name in the interface language, when the data knows it. */
+/** A name as the player's language writes it, when it is a known person's (a commander the engine named); else as it stands. */
+export function knownName(name: string, locale: Locale): string {
+  const known = findKnown(name);
+  return known ? (known.name[locale] ?? known.name.en) : name;
+}
+
 export function personName(p: Pick<Person, "id" | "name">, locale: Locale): string {
   const known = knownById(p.id);
   return known ? (known.name[locale] ?? known.name.en) : p.name;

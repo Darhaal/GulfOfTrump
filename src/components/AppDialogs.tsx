@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Suspense, useSyncExternalStore } from "react";
 import { useI18n } from "@/i18n/useI18n";
+import PlanLimitDialog from "./PlanLimitDialog";
 import Dialog from "./ui/Dialog";
 
 /**
@@ -56,6 +57,8 @@ export default function AppDialogs() {
           <SettingsClient embedded onOpenAbout={() => openAppDialog("about")} />
         </Suspense>
       </Dialog>
+      {/* The ChatGPT plan's usage limit, met on any screen (lib/planUsage.ts). */}
+      <PlanLimitDialog />
     </>
   );
 }

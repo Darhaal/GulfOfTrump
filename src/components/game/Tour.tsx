@@ -4,11 +4,24 @@ import { Gamepad2, Sparkles, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useAppDialog } from "@/components/AppDialogs";
 import { ui } from "@/components/ui/classes";
+import type { AdvisorId } from "@/engine/advisors";
 import { TUTORIAL_TURNS } from "@/engine/tutorial";
-import type { ScenarioId } from "@/engine/types";
+import type { Gender, ScenarioId } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
-import { CARD, highlight, MARGIN, placeCard, type Box, type Placement } from "./tourPlace";
+import Portrait from "./Portrait";
+import { CARD, CARD_WIDE, highlight, MARGIN, placeCard, type Box, type Placement } from "./tourPlace";
+
+/** Who tells a step of the tour: a member of the government with a portrait, or the post alone while nobody holds it. */
+export interface Narrator {
+  title: string;
+  name?: string;
+  portrait?: string;
+  gender?: Gender;
+}
+
+/** The narrator of each step, by the minister it is: the chief of staff opens and closes, each minister tells their own part. */
+export type NarratorOf = (advisor: AdvisorId) => Narrator;
 
 const SEEN = "got_tour";
 
@@ -40,16 +53,16 @@ export function replayTour() {
 }
 
 /** Each step points at an element marked `data-tour`; a step whose element is hidden (on a phone) shows in the middle. */
-const STEPS = [
-  { id: "map", target: "map" },
-  { id: "orders", target: "tab-orders" },
-  { id: "length", target: "turn-length" },
-  { id: "end", target: "end-turn" },
-  { id: "cabinet", target: "tab-cabinet" },
-  { id: "politics", target: "tab-politics" },
-  { id: "diplomacy", target: "tab-foreign" },
-  { id: "ideas", target: null },
-] as const;
+const STEPS: readonly { id: string; target: string | null; by: AdvisorId }[] = [
+  { id: "map", target: "map", by: "chief" },
+  { id: "orders", target: "tab-orders", by: "chief" },
+  { id: "length", target: "turn-length", by: "chief" },
+  { id: "end", target: "end-turn", by: "chief" },
+  { id: "cabinet", target: "tab-cabinet", by: "chief" },
+  { id: "politics", target: "tab-politics", by: "interior" },
+  { id: "diplomacy", target: "tab-foreign", by: "foreign" },
+  { id: "ideas", target: null, by: "chief" },
+];
 
 /** The first visible element for a step, with the radius of its corners. */
 function find(target: string | null): (Box & { radius: number }) | null {
@@ -83,7 +96,8 @@ function Arrow({ at }: { at: Placement }) {
  * steps wait for the player to do something there). `ring`: whether the
  * element is ringed and the rest dimmed, and how much.
  */
-function Spotlight({ target, label, modal, dim = 55, ring = true, layer = "z-50", children }: { target: string | null; label: string; modal: boolean; dim?: number; ring?: boolean; layer?: string; children: ReactNode }) {
+function Spotlight({ target, label, modal, dim = 55, ring = true, layer = "z-50", narrator, children }: { target: string | null; label: string; modal: boolean; dim?: number; ring?: boolean; layer?: string; narrator?: Narrator; children: ReactNode }) {
+  const width = narrator ? CARD_WIDE : CARD;
   const [box, setBox] = useState<(Box & { radius: number }) | null>(null);
   const [card, setCard] = useState<HTMLDivElement | null>(null);
   const [view, setView] = useState({ width: 0, height: 0 });
@@ -105,7 +119,7 @@ function Spotlight({ target, label, modal, dim = 55, ring = true, layer = "z-50"
     };
   }, [target]);
 
-  const at = placeCard(box, { width: card?.offsetWidth ?? CARD, height: card?.offsetHeight ?? 200 }, view);
+  const at = placeCard(box, { width: card?.offsetWidth ?? width, height: card?.offsetHeight ?? 200 }, view);
   const lit = box && ring ? highlight(box, box.radius, view) : null;
   const shade = `color-mix(in srgb, var(--scrim) ${dim}%, transparent)`;
 
@@ -122,10 +136,24 @@ function Spotlight({ target, label, modal, dim = 55, ring = true, layer = "z-50"
       <div
         ref={setCard}
         className="pointer-events-auto absolute rounded-2xl border border-line sheet p-5 shadow-2xl shadow-shade/20 transition-[top,left,opacity] duration-200"
-        style={{ top: at.top, left: at.left, width: `min(${CARD}px, calc(100vw - ${2 * MARGIN}px))`, opacity: ready ? 1 : 0 }}
+        style={{ top: at.top, left: at.left, width: `min(${width}px, calc(100vw - ${2 * MARGIN}px))`, opacity: ready ? 1 : 0 }}
       >
         {ring && <Arrow at={at} />}
-        {children}
+        {narrator ? (
+          <div className="flex gap-4">
+            <div className="min-w-0 flex-1">{children}</div>
+            {/* The one who tells this part, in oil in the card's bottom right corner, signed. */}
+            <figure className="hidden w-28 shrink-0 flex-col items-center justify-end gap-1.5 self-stretch sm:flex">
+              <Portrait portrait={narrator.portrait} gender={narrator.gender} name={narrator.name ?? narrator.title} size="xl" className="shadow-lg shadow-shade/30" />
+              <figcaption className="text-center leading-tight">
+                {narrator.name && <span className="block text-2xs font-black text-ink">{narrator.name}</span>}
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-muted">{narrator.title}</span>
+              </figcaption>
+            </figure>
+          </div>
+        ) : (
+          children
+        )}
       </div>
     </div>
   );
@@ -143,11 +171,14 @@ export default function Tour({
   country,
   onClose,
   opposition = false,
+  narrator,
 }: {
   scenario: ScenarioId;
   country: string;
   /** The player leads the opposition: no cabinet, parliament of its own or letters to show (engine/role.ts). */
   opposition?: boolean;
+  /** Who tells each step; none for a role without a government of its own to tell it. */
+  narrator?: NarratorOf;
   onClose: () => void;
 }) {
   const { t } = useI18n();
@@ -172,7 +203,7 @@ export default function Tour({
   const title = t(`tour.${current.id}.title` as MessageKey, { country });
 
   return (
-    <Spotlight target={current.target} label={title} modal>
+    <Spotlight target={current.target} label={title} modal narrator={narrator?.(current.by)}>
       <div className="flex items-center justify-between gap-2">
         <span className={ui.label}>{t("tour.step", { n: step + 1, total: steps.length })}</span>
         <button type="button" onClick={finish} title={t("tour.skip")} aria-label={t("tour.skip")} className="-m-1.5 rounded-lg p-1.5 text-muted hover:bg-page hover:text-ink">
@@ -238,6 +269,8 @@ type GuideOffer = "order" | "question" | "letter" | "ideas" | "choose";
 
 interface GuideStepDef {
   id: GuideStep;
+  /** The minister who tells it (Narrator). */
+  by: AdvisorId;
   /** The element pointed at, by its `data-tour`: on a panel's tab until the panel is open, then on its box. */
   target: (p: GuideProgress) => string | null;
   /** Done when this holds: the guide moves on by itself. Without it, the player moves on with a button. */
@@ -264,21 +297,21 @@ const none = () => null;
  * plays the world after them.
  */
 const GUIDE: GuideStepDef[] = [
-  { id: "welcome", target: none, go: "guide.welcome.go" },
-  { id: "map", target: () => "map", dim: 35 },
-  { id: "order", target: (p) => (p.left === "orders" ? "orders-input" : "tab-orders"), until: (p) => p.draft > 0 || p.played > 0, offer: "order", dim: 25 },
-  { id: "end", target: () => "end-turn", until: (p) => p.turnBusy || p.played > 0, dim: 25 },
-  { id: "report", target: () => "report", until: (p) => p.played > 0 && !p.reportOpen && !p.turnBusy, back: (p) => !p.turnBusy && p.played === 0 && !p.reportOpen, hidden: (p) => !p.reportOpen, dim: 0 },
-  { id: "front", target: () => "map", dim: 35 },
-  { id: "cabinet", target: () => "tab-cabinet", until: (p) => p.left === "cabinet" || p.advice > 0, dim: 25 },
-  { id: "ask", target: (p) => (p.left === "cabinet" ? "cabinet-ask" : "tab-cabinet"), until: (p) => p.advice > 0, offer: "question", dim: 25 },
-  { id: "army", target: () => "tab-army", until: (p) => p.left === "army", dim: 25 },
-  { id: "economy", target: () => "tab-economy", until: (p) => p.left === "economy", dim: 25 },
-  { id: "letter", target: (p) => (p.left === "foreign" ? "letter-input" : "tab-foreign"), until: (p) => p.letters > 0, offer: "letter", dim: 25 },
-  { id: "free", target: none, offer: "ideas", go: "guide.free.go" },
-  { id: "play", target: none, until: (p) => p.played >= TUTORIAL_TURNS && !p.reportOpen && !p.turnBusy, hidden: () => true },
-  { id: "choose", target: none, until: (p) => p.ready, offer: "choose" },
-  { id: "done", target: none, go: "guide.finish" },
+  { id: "welcome", by: "chief", target: none, go: "guide.welcome.go" },
+  { id: "map", by: "chief", target: () => "map", dim: 35 },
+  { id: "order", by: "chief", target: (p) => (p.left === "orders" ? "orders-input" : "tab-orders"), until: (p) => p.draft > 0 || p.played > 0, offer: "order", dim: 25 },
+  { id: "end", by: "chief", target: () => "end-turn", until: (p) => p.turnBusy || p.played > 0, dim: 25 },
+  { id: "report", by: "chief", target: () => "report", until: (p) => p.played > 0 && !p.reportOpen && !p.turnBusy, back: (p) => !p.turnBusy && p.played === 0 && !p.reportOpen, hidden: (p) => !p.reportOpen, dim: 0 },
+  { id: "front", by: "military", target: () => "map", dim: 35 },
+  { id: "cabinet", by: "chief", target: () => "tab-cabinet", until: (p) => p.left === "cabinet" || p.advice > 0, dim: 25 },
+  { id: "ask", by: "military", target: (p) => (p.left === "cabinet" ? "cabinet-ask" : "tab-cabinet"), until: (p) => p.advice > 0, offer: "question", dim: 25 },
+  { id: "army", by: "military", target: () => "tab-army", until: (p) => p.left === "army", dim: 25 },
+  { id: "economy", by: "finance", target: () => "tab-economy", until: (p) => p.left === "economy", dim: 25 },
+  { id: "letter", by: "foreign", target: (p) => (p.left === "foreign" ? "letter-input" : "tab-foreign"), until: (p) => p.letters > 0, offer: "letter", dim: 25 },
+  { id: "free", by: "chief", target: none, offer: "ideas", go: "guide.free.go" },
+  { id: "play", by: "chief", target: none, until: (p) => p.played >= TUTORIAL_TURNS && !p.reportOpen && !p.turnBusy, hidden: () => true },
+  { id: "choose", by: "chief", target: none, until: (p) => p.ready, offer: "choose" },
+  { id: "done", by: "chief", target: none, go: "guide.finish" },
 ];
 
 /** The steps the player sees numbered: all but the free turn and the last word. */
@@ -312,7 +345,10 @@ export function Guide({
   onUse,
   onSkip,
   onFinish,
+  narrator,
 }: {
+  /** Who tells each step. */
+  narrator?: NarratorOf;
   step: GuideStep;
   progress: GuideProgress;
   /** The tutorial's briefing, read on the first card. */
@@ -352,7 +388,7 @@ export function Guide({
   );
 
   return (
-    <Spotlight target={def.target(progress)} label={title} modal={false} dim={def.dim ?? 55} ring={def.dim !== 0} layer="z-[60]">
+    <Spotlight target={def.target(progress)} label={title} modal={false} dim={def.dim ?? 55} ring={def.dim !== 0} layer="z-[60]" narrator={narrator?.(def.by)}>
       <div className="flex items-center justify-between gap-2">
         <span className={ui.label}>{counted >= 0 ? t("tour.step", { n: counted + 1, total: COUNTED.length }) : t("start.tutorial")}</span>
         {def.id !== "done" && (

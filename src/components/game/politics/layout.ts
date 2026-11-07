@@ -58,13 +58,60 @@ export function seatingOrder(parties: Party[]): Party[] {
 /** Distinct colours for parties the game master gave none, in the order they are listed. */
 const PALETTE = ["#2f6fd0", "#d2423a", "#2e9a5a", "#e0a020", "#7b4fc2", "#1aa3a3", "#e0662c", "#c2407f", "#6b7a2a", "#5a6b80"];
 
-/** Each party's colour: the one the press uses, or a distinct one from the palette. */
+/** Each party's colour: the one the press uses, or a distinct one from the palette – toned as a painter's pigment (paintTone). */
 export function partyColors(parties: Party[]): Map<string, string> {
   const used = new Set(parties.map((p) => p.color?.toLowerCase()).filter(Boolean));
   const free = PALETTE.filter((c) => !used.has(c));
   let next = 0;
-  return new Map(parties.map((p) => [p.id, p.color ?? free[next++ % free.length] ?? PALETTE[0]]));
+  return new Map(parties.map((p) => [p.id, paintTone(p.color ?? free[next++ % free.length] ?? PALETTE[0])]));
 }
+
+export const channels = (hex: string): [number, number, number] | null => {
+  const n = parseInt(hex.replace("#", "").slice(0, 6), 16);
+  return Number.isFinite(n) ? [(n >> 16) & 255, (n >> 8) & 255, n & 255] : null;
+};
+const toHex = (r: number, g: number, b: number) => `#${((1 << 24) | (Math.round(r) << 16) | (Math.round(g) << 8) | Math.round(b)).toString(16).slice(1)}`;
+
+/** A colour moved toward white (t > 0) or black (t < 0), as #rrggbb. */
+export function shade(hex: string, t: number): string {
+  const c = channels(hex);
+  if (!c) return hex;
+  const target = t > 0 ? 255 : 0;
+  const k = Math.min(1, Math.abs(t));
+  const [r, g, b] = c.map((v) => v + (target - v) * k);
+  return toHex(r, g, b);
+}
+
+/** The warm brown a painter's colours lean to under old varnish. */
+const UMBER: [number, number, number] = [122, 92, 58];
+
+/**
+ * A press colour as a pigment: a third of its saturation gone, kept from the
+ * glaring and the inky, and a little umber mixed in – so a party's acid green
+ * reads as a painted green, not a highlighter.
+ */
+export function paintTone(hex: string): string {
+  const c = channels(hex);
+  if (!c) return hex;
+  const [r, g, b] = c.map((v) => v / 255);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let l = (max + min) / 2;
+  const d = max - min;
+  let s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  let h = 0;
+  if (d) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  h = (h * 60 + 360) % 360;
+  s *= 0.68;
+  l = Math.min(0.6, Math.max(0.3, l));
+  const k = (1 - Math.abs(2 * l - 1)) * s;
+  const x = k * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - k / 2;
+  const [r1, g1, b1] = h < 60 ? [k, x, 0] : h < 120 ? [x, k, 0] : h < 180 ? [0, k, x] : h < 240 ? [0, x, k] : h < 300 ? [x, 0, k] : [k, 0, x];
+  const mix = 0.14;
+  return toHex(...([r1, g1, b1].map((v, i) => ((v + m) * 255) * (1 - mix) + UMBER[i] * mix) as [number, number, number]));
+}
+
 
 /** Dark text on a light colour, white on a dark one. */
 export function inkOn(hex: string): string {

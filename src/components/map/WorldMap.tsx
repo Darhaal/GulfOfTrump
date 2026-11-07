@@ -2,19 +2,23 @@
 
 import { geoNaturalEarth1, geoPath } from "d3-geo";
 import { feature, merge, mesh, neighbors as topoNeighbors } from "topojson-client";
-import { Anchor, Flag, Flame, Gem, Handshake, Layers, Maximize2, Megaphone, Minus, Mountain, Plus, TrainFront, Users, Wheat, X, type LucideIcon } from "lucide-react";
-import { memo, useEffect, useId, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { Anchor, Building2, Flag, Flame, Gem, Grid2x2, Handshake, Layers, Maximize2, Megaphone, Minus, Mountain, MoveUpRight, Plus, Rocket, Star, Swords, TrainFront, Type, Users, Waves, Wheat, X, type LucideIcon } from "lucide-react";
+import { memo, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import type { Feature, FeatureCollection, MultiLineString, MultiPolygon, Point, Polygon } from "geojson";
 import type { GeometryObject } from "topojson-specification";
+import { Medal } from "./medal";
+import { ui } from "@/components/ui/classes";
 import { useI18n } from "@/i18n/useI18n";
 import type { MessageKey } from "@/i18n/messages";
+import { formatDate } from "@/engine/calendar";
 import type { RegionTopology } from "@/lib/maps";
 import { peopleIn } from "@/engine/population";
 import { populationDensity, provinceName, railLevel } from "@/engine/provinces";
 import { activeResources, RESOURCE_TYPES, resourceOutput, type ResourceType } from "@/engine/resources";
-import type { AppliedChange, MapRegion, Protest, RegionState, ScenarioId, Text, Localized } from "@/engine/types";
+import type { AppliedChange, Formation, MapRegion, Protest, RegionState, ScenarioId, Text, Localized } from "@/engine/types";
+import type { SiteView } from "@/engine/space";
 import { useCities, useTowns, useTransport, useWater } from "@/lib/assets";
-import { MAP_LAYERS, MAP_MODES, useMapSettings, type MapMode } from "@/lib/mapSettings";
+import { MAP_LAYERS, MAP_MODES, QUICK_LAYERS, useMapSettings, type MapLayer, type MapMode } from "@/lib/mapSettings";
 import { eraCities, eraTowns } from "./cities";
 import { cityRadiusKm, dotRadius, labelGap, layoutPlaces, PLACE_STYLE, PlaceIndex, placeAt, placeRadius, SegmentIndex, type PlacedLabel, type PlacePoint } from "./places";
 import { DENSITY_STOPS, densityColor, fertilityColor, QUIET_LAND, RESOURCE_COLORS, resourceTint, SIDE_FILL, sideFill, softened, TERRAIN_COLORS } from "./colors";
@@ -22,7 +26,7 @@ import type { Side } from "@/engine/sides";
 import { riverName } from "./rivers";
 import { DEFAULT_HELD } from "@/engine/outcome";
 import { adjustTaken, mergePlaces } from "@/engine/towns";
-import { arrowPath, countryLabels, insideRings, pathRings, splitByTowns, splitProvince, turnMoves } from "./overlays";
+import { arrowPath, countryLabels, headquartersAt, insideRings, pathRings, splitByTowns, splitProvince, turnMoves } from "./overlays";
 
 /** The SVG is drawn in this coordinate box and scaled to fit its container. */
 const W = 1000;
@@ -48,6 +52,34 @@ const MODE_ICONS: Record<MapMode, LucideIcon> = {
   transport: TrainFront,
 };
 
+const LAYER_ICONS: Record<MapLayer, LucideIcon> = {
+  fronts: Swords,
+  changes: MoveUpRight,
+  headquarters: Star,
+  cities: Building2,
+  labels: Type,
+  ports: Anchor,
+  protests: Megaphone,
+  rivers: Waves,
+  railways: TrainFront,
+  provinces: Grid2x2,
+};
+
+/** One of the player's formations for its headquarters marker (engine/army.ts), with the provinces it still stands in. */
+export interface MapHeadquarters {
+  name: string;
+  kind: Formation["kind"];
+  divisions: number;
+  commander?: string;
+  theatre?: string;
+  provinces: string[];
+  /** The formation the player commands as a general (engine/figures.ts ownFormation). */
+  own?: boolean;
+}
+
+/** A headquarters' size on screen, in pixels: a front's is larger than an army's. */
+const HQ_SIZE = { front: 11, other: 9 } as const;
+
 interface WorldMapProps {
   topology: RegionTopology;
   regions: Record<string, RegionState>;
@@ -61,13 +93,23 @@ interface WorldMapProps {
   year: number;
   onSelect?: (country: string | null, province: string | null) => void;
   /** Wars, for the front lines between their sides. */
-  wars?: { attackers: string[]; defenders: string[]; truce?: unknown }[];
-  /** A turn's changes to show: provinces that changed hands and arrows; a new key replays the highlight. */
-  changes?: { key: string | number; applied: AppliedChange[]; turn: number; onLatest?: () => void; onShow?: () => void } | null;
+  wars?: { name?: Text; since?: string; attackers: string[]; defenders: string[]; truce?: { until?: string } }[];
+  /**
+   * A turn's changes to show: provinces that changed hands or where the front
+   * moved, and arrows; `before` is the map as it stood before the turn, where
+   * the arrows start. A new key replays the highlight.
+   */
+  changes?: { key: string | number; applied: AppliedChange[]; before?: Record<string, RegionState>; turn: number; onLatest?: () => void; onShow?: () => void } | null;
+  /** The player's armies and fronts, each with a headquarters where it stands. */
+  headquarters?: MapHeadquarters[];
   /** City names proclaimed in play, by their English map name. */
   placeNames?: Record<string, Localized>;
   /** Protests against the player's government, marked where they are strongest. */
   protests?: Protest[];
+  /** Launch sites open on the date and who holds them (engine/space.ts), a small marker each. */
+  sites?: SiteView[];
+  /** A click on a marker of a protest against the player's own government: open it (the street in domestic politics). */
+  onProtest?: (id: string) => void;
   /** Brings these provinces, or a country's home land, into view whenever the key changes. */
   focus?: { key: string | number; regions?: string[]; country?: string } | null;
   /** The diplomatic view: the country it is about and every country's side towards it (engine/sides.ts). */
@@ -103,6 +145,20 @@ const shareBand = (held: number | undefined) => Math.min(4, Math.max(1, Math.rou
 const bubbleRadius = (output: number) => 2.4 + 2.7 * Math.sqrt(output);
 
 /**
+ * Markers – arrowheads, places and their names, ports, protests, resource
+ * bubbles – keep one size on screen at every zoom. Each is drawn in pixels
+ * around its own point and scaled back by `--z` (viewBox units per pixel over
+ * the zoom), which the markers' group carries; country names by `--zl`, so
+ * they grow only as the square root of the zoom. A gesture moves the drawing
+ * before React renders, and moves the two variables with it (`showView`), so
+ * nothing swells while the wheel turns and shrinks back when it stops.
+ */
+const zoomVars = (k: number, unit: number) => ({ "--z": unit / k, "--zl": 1 / Math.sqrt(k) });
+const pin = (x: number, y: number, turn = 0): CSSProperties => ({ transform: `translate(${x}px, ${y}px)${turn ? ` rotate(${turn}deg)` : ""} scale(var(--z))` });
+/** Of an arrowhead's length, how far inside it the line ends: deep enough to stay joined to it while a gesture changes the zoom under both. */
+const HEAD_INSET = 0.6;
+
+/**
  * The province map. Modes colour the land by holder, by its holder's side
  * towards one country (the diplomatic view), terrain, fertility,
  * population density, resource output (on grey land) or grey for transport; rivers,
@@ -110,19 +166,24 @@ const bubbleRadius = (output: number) => 2.4 + 2.7 * Math.sqrt(output);
  * appear as the zoom grows. Wheel or pinch zooms around the pointer, drag
  * pans, a click picks the province and its sovereign.
  */
-export default function WorldMap({ topology, regions, countries, selected, selectedProvince, player, era, year, onSelect, wars, changes, protests, focus, diplomacy, controls, className, placeNames }: WorldMapProps) {
+export default function WorldMap({ topology, regions, countries, selected, selectedProvince, player, era, year, onSelect, wars, changes, headquarters, protests, onProtest, sites, focus, diplomacy, controls, className, placeNames }: WorldMapProps) {
   const { text, t, locale, people } = useI18n();
   const uid = useId().replace(/:/g, "");
   const svgRef = useRef<SVGSVGElement>(null);
   // ViewBox units per screen pixel: names, dots and markers are sized in
   // pixels, so they read the same on a wide map and beside open panels.
   const [unit, setUnit] = useState(1);
+  // The map's size on screen, so a card near its right or bottom edge opens the other way.
+  const [box, setBox] = useState({ w: 0, h: 0 });
   useEffect(() => {
     const svg = svgRef.current;
     if (!svg) return;
     const measure = () => {
       const { width, height } = svg.getBoundingClientRect();
-      if (width > 0 && height > 0) setUnit(1 / Math.min(width / W, height / H));
+      if (width > 0 && height > 0) {
+        setUnit(1 / Math.min(width / W, height / H));
+        setBox({ w: width, h: height });
+      }
     };
     measure();
     const observer = new ResizeObserver(measure);
@@ -130,7 +191,7 @@ export default function WorldMap({ topology, regions, countries, selected, selec
     return () => observer.disconnect();
   }, []);
   const groupRef = useRef<SVGGElement>(null);
-  const hatchRef = useRef<SVGPatternElement>(null);
+  const markersRef = useRef<SVGGElement>(null);
   // The committed view drives React; during a gesture the drawing moves
   // directly with `live` and React catches up once the gesture pauses.
   const [view, setView] = useState<View>({ k: 1, x: 0, y: 0 });
@@ -143,9 +204,20 @@ export default function WorldMap({ topology, regions, countries, selected, selec
   // The city under the pointer (or tapped), with the province beneath it; its card asks for railways and ports once.
   const [cityHover, setCityHover] = useState<{ place: PlacePoint; region: string | null; x: number; y: number } | null>(null);
   const [cityFacts, setCityFacts] = useState(false);
+  // The headquarters under the pointer: its formation's card.
+  const [hqHover, setHqHover] = useState<{ i: number; x: number; y: number } | null>(null);
+  // The protest marker under the pointer (or tapped): what the people want, how many, who leads them.
+  const [protestHover, setProtestHover] = useState<{ i: number; x: number; y: number } | null>(null);
+  const [moveHover, setMoveHover] = useState<{ i: number; x: number; y: number } | null>(null);
+  const [frontHover, setFrontHover] = useState<{ i: number; x: number; y: number } | null>(null);
   const placedRef = useRef<PlacedLabel[]>([]);
   const showRail = mode === "transport" || layers.railways;
   const showPorts = mode === "transport" || layers.ports;
+  // "Ports and resources" brings the resource bubbles to every mode; the resources mode always has them.
+  const showBubbles = mode === "resources" || layers.ports;
+  /** A layer a mode always shows: railways and ports in transport, resources in the resources mode. */
+  const forcedLayer = (layer: MapLayer) => (mode === "transport" && (layer === "railways" || layer === "ports")) || (mode === "resources" && layer === "ports");
+  const setLayer = (layer: MapLayer, on: boolean) => updateSettings({ layers: { ...layers, [layer]: on } });
   const water = useWater();
   const cities = useCities();
   const transport = useTransport(showRail || showPorts || cityFacts);
@@ -255,18 +327,18 @@ export default function WorldMap({ topology, regions, countries, selected, selec
 
   /** Resource bubbles: the province's top three, or the picked resource alone; big ones under small ones. */
   const bubbles = useMemo(() => {
-    if (mode !== "resources") return [];
+    if (!showBubbles) return [];
     const out: { key: string; type: ResourceType; output: number; x: number; y: number; slot: number; slots: number; widest: number }[] = [];
     for (const s of geometry.shapes) {
       if (!Number.isFinite(s.c[0])) continue;
       const list = activeResources(s.props, year)
-        .filter((r) => resource === "all" || r.type === resource)
+        .filter((r) => mode !== "resources" || resource === "all" || r.type === resource)
         .slice(0, 3);
       const widest = list.length ? bubbleRadius(list[0].output) : 0;
       list.forEach((r, slot) => out.push({ key: `${s.id}-${r.type}`, ...r, x: s.c[0], y: s.c[1], slot, slots: list.length, widest }));
     }
     return out.sort((a, b) => b.output - a.output);
-  }, [mode, resource, geometry, year]);
+  }, [showBubbles, mode, resource, geometry, year]);
 
   /** Who holds the most of the picked resource this year. */
   const producers = useMemo(() => {
@@ -371,8 +443,8 @@ export default function WorldMap({ topology, regions, countries, selected, selec
   const fronts = useMemo(() => {
     if (!wars?.length || !layers.fronts) return null;
     const geoms = topology.objects.regions.geometries as GeometryObject[];
-    const out: { id: string; truce: boolean; outline: string; land: string; inside: string }[] = [];
-    for (const w of wars) {
+    const out: { id: string; war: number; truce: boolean; outline: string; land: string; inside: string }[] = [];
+    for (const [war, w] of wars.entries()) {
       const a = new Set(w.attackers);
       const d = new Set(w.defenders);
       // A side's whole provinces; one with the other side's towns inside counts by its own part alone (below).
@@ -391,7 +463,7 @@ export default function WorldMap({ topology, regions, countries, selected, selec
       const ofD = inside(d, a, "held");
       const outline = merged(a, d) + ofA + inside(d, a, "free");
       if (!outline) continue;
-      out.push({ id: `${w.attackers.join("+")}-${w.defenders.join("+")}`, truce: Boolean(w.truce), outline, land: merged(d, new Set()) + ofD, inside: ofA });
+      out.push({ id: `${w.attackers.join("+")}-${w.defenders.join("+")}`, war, truce: Boolean(w.truce), outline, land: merged(d, new Set()) + ofD, inside: ofA });
     }
     return out.length ? out : null;
   }, [wars, layers.fronts, topology, regions, geometry, splits]);
@@ -400,8 +472,23 @@ export default function WorldMap({ topology, regions, countries, selected, selec
   /** The shown turn: provinces that changed hands and the pushes behind them. */
   const turn = useMemo(() => {
     if (!changes || !layers.changes) return null;
-    return turnMoves(changes.applied, regions, (id) => geometry.centres.get(id), (id) => adjacency.byId.get(id) ?? []);
+    return turnMoves(changes.applied, regions, (id) => geometry.centres.get(id), (id) => adjacency.byId.get(id) ?? [], { before: changes.before });
   }, [changes, layers.changes, regions, geometry, adjacency]);
+
+  /** The headquarters: each formation's where it stands; several in one province side by side. */
+  const hqs = useMemo(() => {
+    if (!headquarters?.length || !layers.headquarters) return [];
+    const taken = new Map<string, number>();
+    const out: (MapHeadquarters & { region: string; at: [number, number]; slot: number })[] = [];
+    for (const f of headquarters) {
+      const spot = headquartersAt(f.provinces, (id) => geometry.centres.get(id));
+      if (!spot) continue;
+      const slot = taken.get(spot.region) ?? 0;
+      taken.set(spot.region, slot + 1);
+      out.push({ ...f, ...spot, slot });
+    }
+    return out;
+  }, [headquarters, layers.headquarters, geometry]);
 
   // ---- pan & zoom -------------------------------------------------------
   const pointers = useRef(new Map<number, { x: number; y: number }>());
@@ -417,9 +504,14 @@ export default function WorldMap({ topology, regions, countries, selected, selec
 
   /** Moves the drawing to a view now; React's render follows at once or when the gesture pauses. */
   const showView = (v: View, commit: "now" | "soon") => {
+    const zoomed = v.k !== live.current.k;
     live.current = v;
     groupRef.current?.setAttribute("transform", `translate(${v.x} ${v.y}) scale(${v.k})`);
-    hatchRef.current?.setAttribute("patternTransform", `rotate(45) scale(${1 / v.k})`);
+    // Markers and stripes keep their size on screen meanwhile, as React will draw them; a pan leaves them be.
+    if (zoomed) {
+      for (const [name, value] of Object.entries(zoomVars(v.k, unit))) markersRef.current?.style.setProperty(name, String(value));
+      svgRef.current?.querySelectorAll<SVGPatternElement>("pattern[data-turn]").forEach((p) => p.setAttribute("patternTransform", `rotate(${p.dataset.turn}) scale(${1 / v.k})`));
+    }
     if (commitTimer.current) clearTimeout(commitTimer.current);
     if (commit === "now") setView(v);
     else commitTimer.current = setTimeout(() => setView(live.current), 150);
@@ -447,6 +539,10 @@ export default function WorldMap({ topology, regions, countries, selected, selec
       if (!ctm) return;
       const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
       setCityHover(null);
+      setHqHover(null);
+      setProtestHover(null);
+      setMoveHover(null);
+      setFrontHover(null);
       const factor = Math.pow(1.0018, -e.deltaY);
       const v = live.current;
       const k = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, v.k * factor));
@@ -480,6 +576,14 @@ export default function WorldMap({ topology, regions, countries, selected, selec
       const region = target?.getAttribute("data-region") ?? null;
       const at = { x: e.clientX - box.left, y: e.clientY - box.top };
       setHover(region ? { id: region, ...at } : null);
+      const hq = (e.target as Element).closest("[data-hq]")?.getAttribute("data-hq");
+      setHqHover(hq ? { i: Number(hq), ...at } : null);
+      const protest = (e.target as Element).closest("[data-protest]")?.getAttribute("data-protest");
+      setProtestHover(protest ? { i: Number(protest), ...at } : null);
+      const move = (e.target as Element).closest("[data-move]")?.getAttribute("data-move");
+      setMoveHover(move ? { i: Number(move), ...at } : null);
+      const front = (e.target as Element).closest("[data-front]")?.getAttribute("data-front");
+      setFrontHover(front ? { i: Number(front), ...at } : null);
       // A city's dot takes no pointer events: the nearest drawn place within reach is the one under the pointer.
       const point = toSvg(e.clientX, e.clientY);
       const city = placeAt(placedRef.current, point.x, point.y, live.current, unit);
@@ -504,6 +608,10 @@ export default function WorldMap({ topology, regions, countries, selected, selec
     gesture.current.moved += Math.abs(next.x - prev.x) + Math.abs(next.y - prev.y);
     if (gesture.current.moved > 3 && hover) setHover(null);
     if (gesture.current.moved > 3 && cityHover) setCityHover(null);
+    if (gesture.current.moved > 3 && hqHover) setHqHover(null);
+    if (gesture.current.moved > 3 && protestHover) setProtestHover(null);
+    if (gesture.current.moved > 3 && moveHover) setMoveHover(null);
+    if (gesture.current.moved > 3 && frontHover) setFrontHover(null);
     const v = live.current;
     showView(clampView({ k: v.k, x: v.x + dx, y: v.y + dy }), "soon");
   };
@@ -514,7 +622,9 @@ export default function WorldMap({ topology, regions, countries, selected, selec
     if (pointers.current.size < 2) gesture.current.pinch = undefined;
     if (!wasClick) showView(live.current, "now");
     if (!wasClick) return;
-    const target = document.elementFromPoint(e.clientX, e.clientY)?.closest("[data-region]");
+    // An arrow or a front answers the pointer with its card, but a click goes to what lies beneath it.
+    const beneath = document.elementsFromPoint(e.clientX, e.clientY).find((el) => !el.closest("[data-move], [data-front]"));
+    const target = beneath?.closest("[data-region]");
     const id = target?.getAttribute("data-region") ?? null;
     // A tap on a touch screen opens a city's card, as hovering does with a mouse.
     if (e.pointerType !== "mouse") {
@@ -523,6 +633,21 @@ export default function WorldMap({ topology, regions, countries, selected, selec
       const box = e.currentTarget.getBoundingClientRect();
       setCityHover(city ? { place: city, region: id, x: e.clientX - box.left, y: e.clientY - box.top } : null);
       if (city) setCityFacts(true);
+      const hq = beneath?.closest("[data-hq]")?.getAttribute("data-hq");
+      setHqHover(hq ? { i: Number(hq), x: e.clientX - box.left, y: e.clientY - box.top } : null);
+      const protest = beneath?.closest("[data-protest]")?.getAttribute("data-protest");
+      setProtestHover(protest ? { i: Number(protest), x: e.clientX - box.left, y: e.clientY - box.top } : null);
+      const move = document.elementFromPoint(e.clientX, e.clientY)?.closest("[data-move]")?.getAttribute("data-move");
+      setMoveHover(move ? { i: Number(move), x: e.clientX - box.left, y: e.clientY - box.top } : null);
+      const front = document.elementFromPoint(e.clientX, e.clientY)?.closest("[data-front]")?.getAttribute("data-front");
+      setFrontHover(front ? { i: Number(front), x: e.clientX - box.left, y: e.clientY - box.top } : null);
+    }
+    // A protest against the player's own government opens in domestic politics; one abroad picks its country as any click does.
+    const marker = beneath?.closest("[data-protest]")?.getAttribute("data-protest");
+    const protest = marker !== undefined && marker !== null ? protests?.[Number(marker)] : undefined;
+    if (protest && onProtest && (!protest.country || protest.country === player)) {
+      onProtest(protest.id);
+      return;
     }
     if (!onSelect) return;
     onSelect(id ? (regions[id]?.owner ?? null) : null, id);
@@ -557,7 +682,6 @@ export default function WorldMap({ topology, regions, countries, selected, selec
   const hovered = hover ? regions[hover.id] : null;
   const hoveredProps = hover ? geometry.byId.get(hover.id) : undefined;
   const k = view.k;
-  const labelScale = 1 / Math.sqrt(k);
   // What is on screen, in map units, with a margin: places outside are not drawn.
   const margin = 30 / k;
   const onScreen = (x: number, y: number) =>
@@ -566,13 +690,14 @@ export default function WorldMap({ topology, regions, countries, selected, selec
   const diplomatic = mode === "diplomacy";
   // The modes that colour countries as countries, and so name them.
   const named = mode === "political" || transportMode || diplomatic;
+  const showLabels = named && layers.labels;
 
   /** Names that fit: country names first, then places by importance (see places.ts). */
   const placed = useMemo((): PlacedLabel[] => {
     if (!layers.cities) return [];
     const kk = view.k;
     const obstacles: [number, number, number, number][] = [];
-    if (named) {
+    if (showLabels) {
       for (const l of labels) {
         if (l.size * kk < 34) continue;
         const size = Math.min(15, Math.max(4, l.size / 7)) * (1 / Math.sqrt(kk)) * kk;
@@ -585,7 +710,7 @@ export default function WorldMap({ topology, regions, countries, selected, selec
     const pad = 40 / kk;
     const candidates = placeIndex.query(-view.x / kk - pad, -view.y / kk - pad, (W - view.x) / kk + pad, (H - view.y) / kk + pad, kk);
     return layoutPlaces(candidates, view, W, H, obstacles, unit);
-  }, [layers.cities, view, named, labels, countries, text, placeIndex, unit]);
+  }, [layers.cities, view, showLabels, labels, countries, text, placeIndex, unit]);
   useEffect(() => {
     placedRef.current = placed;
   }, [placed]);
@@ -615,6 +740,29 @@ export default function WorldMap({ topology, regions, countries, selected, selec
     };
   }, [cityHover, regions, geometry, railIndex, portPoints]);
   const resourceName = (type: ResourceType) => t(`resource.${type}` as MessageKey);
+  const hqCard = hqHover ? hqs[hqHover.i] : undefined;
+  /** Where a hover card goes: below right of the pointer, or above and to the left near the map's far edges. */
+  const cardAt = (x: number, y: number): CSSProperties => {
+    const flipX = box.w > 0 && x > box.w - 280;
+    const flipY = box.h > 0 && y > box.h - 220;
+    // Anchored by the far side when it opens the other way, so the card keeps its width.
+    return { ...(flipX ? { right: box.w - x + 14 } : { left: x + 14 }), ...(flipY ? { bottom: box.h - y + 14 } : { top: y + 14 }) };
+  };
+  const protestCard = !hqCard && protestHover && layers.protests && mode === "political" ? protests?.[protestHover.i] : undefined;
+  const moveCard = !hqCard && !protestCard && moveHover && turn ? turn.moves[moveHover.i] : undefined;
+  const frontAt = !hqCard && !protestCard && !moveCard && frontHover ? fronts?.[frontHover.i] : undefined;
+  const frontCard = frontAt ? wars?.[frontAt.war] : undefined;
+  const sideNames = (tags: string[]) => tags.map((tag) => text(countries[tag]?.name ?? tag)).join(", ");
+  /** The arrow's provinces by name, the first four and how many more. */
+  const moveNames = (() => {
+    if (!moveCard) return "";
+    const names = moveCard.regions.flatMap((id) => {
+      const props = geometry.byId.get(id);
+      return props ? [provinceName(props, locale)] : [];
+    });
+    const shown = names.slice(0, 4).join(", ");
+    return names.length > 4 ? t("map.move.more", { list: shown, n: names.length - 4 }) : shown;
+  })();
 
   return (
     <div className={`@container relative overflow-hidden select-none touch-none ${className ?? ""}`}>
@@ -630,18 +778,22 @@ export default function WorldMap({ topology, regions, countries, selected, selec
         onPointerLeave={() => {
           setHover(null);
           setCityHover(null);
+          setHqHover(null);
+          setProtestHover(null);
+          setMoveHover(null);
+          setFrontHover(null);
         }}
         role="img"
         aria-label="World map"
       >
         <defs>
-          {/* The hatch lives in the zoomed group's space; scaling it back keeps the stripes thin at any zoom. */}
-          <pattern ref={hatchRef} id={`hatch-${uid}`} width="4" height="4" patternUnits="userSpaceOnUse" patternTransform={`rotate(45) scale(${1 / k})`}>
+          {/* The stripes live in the zoomed group's space; scaling them back (here and in showView) keeps them thin at any zoom. */}
+          <pattern id={`hatch-${uid}`} data-turn="45" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform={`rotate(45) scale(${1 / k})`}>
             <line x1="0" y1="0" x2="0" y2="4" stroke="rgba(20,20,20,0.22)" strokeWidth="0.9" />
           </pattern>
           {/* Contested provinces: stripes in the colour of the side holding part of them. */}
           {contesters.map(([tag, band]) => (
-            <pattern key={`${tag}-${band}`} id={`contest-${uid}-${tag}-${band}`} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform={`rotate(-45) scale(${1 / k})`}>
+            <pattern key={`${tag}-${band}`} id={`contest-${uid}-${tag}-${band}`} data-turn="-45" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform={`rotate(-45) scale(${1 / k})`}>
               {/* Stripes as wide as the share the other side holds: a sliver at a quarter, nearly solid near all of it. */}
               <line x1="3" y1="0" x2="3" y2="6" stroke={countries[tag]?.color ?? "rgba(20,20,20,0.5)"} strokeWidth={(Number(band) / 4) * 5.4} strokeOpacity="0.95" />
             </pattern>
@@ -752,144 +904,217 @@ export default function WorldMap({ topology, regions, countries, selected, selec
                   vectorEffect="non-scaling-stroke"
                 />
               </g>
+              {/* A wider line no one sees, clipped as the drawn half is, takes the pointer for the war's card. */}
+              <clipPath id={`front-hit-${uid}-${i}`}>
+                <path d={f.land} />
+              </clipPath>
+              <path
+                d={f.outline}
+                fill="none"
+                stroke="transparent"
+                strokeWidth={16}
+                vectorEffect="non-scaling-stroke"
+                clipPath={`url(#front-hit-${uid}-${i})`}
+                pointerEvents="stroke"
+                data-front={i}
+                className="cursor-help"
+              />
             </g>
           ))}
-          {bubbles.length > 0 && (
-            <g pointerEvents="none">
-              {bubbles.map((b) => {
-                if (!onScreen(b.x, b.y)) return null;
-                const r = (bubbleRadius(b.output) * unit) / k;
-                const gap = ((b.widest * 2 + 1.5) * unit) / k;
-                const cx = b.x + (b.slot - (b.slots - 1) / 2) * gap;
-                return (
-                  <g key={b.key}>
-                    <circle cx={cx} cy={b.y} r={r + (1.4 * unit) / k} fill="var(--map-halo)" />
-                    <circle cx={cx} cy={b.y} r={r} fill={RESOURCE_COLORS[b.type]} stroke="var(--map-line)" strokeOpacity={0.55} strokeWidth={(0.8 * unit) / k} />
-                    {resource !== "all" && k >= 3 && (
-                      <text
-                        x={cx}
-                        y={b.y}
-                        fontSize={Math.max(6 * unit, r * k * 0.9) / k}
-                        textAnchor="middle"
-                        dominantBaseline="central"
-                        className="fill-ink font-black"
-                        style={{ paintOrder: "stroke", stroke: "var(--map-halo)", strokeWidth: 2 / k }}
-                      >
-                        {b.output}
-                      </text>
-                    )}
-                  </g>
-                );
-              })}
-            </g>
-          )}
-          {showPorts && (
-            <g pointerEvents="none">
-              {portPoints.map((p, i) => {
-                const min = p.rank <= 3 ? (transportMode ? 1 : 2) : p.rank <= 5 ? 2.5 : p.rank <= 7 ? 5 : 8;
-                if (k < min || !onScreen(p.px, p.py)) return null;
-                const s = (9 * unit) / k;
-                return (
-                  <g key={i}>
-                    <circle cx={p.px} cy={p.py} r={s * 0.62} fill="var(--surface)" stroke="var(--river)" strokeWidth={0.8 / k} />
-                    <Anchor x={p.px - s * 0.38} y={p.py - s * 0.38} width={s * 0.76} height={s * 0.76} color="var(--river)" strokeWidth={2.6} />
-                    {k >= (p.rank <= 5 ? 6 : 9) && (
-                      <text
-                        x={p.px + s * 0.85}
-                        y={p.py}
-                        fontSize={(9 * unit) / k}
-                        dominantBaseline="middle"
-                        fill="var(--river)"
-                        className="font-semibold italic"
-                        style={{ paintOrder: "stroke", stroke: "var(--map-glow)", strokeWidth: (1.5 * unit) / k }}
-                      >
-                        {p.name}
-                      </text>
-                    )}
-                  </g>
-                );
-              })}
-            </g>
-          )}
-          {turn && turn.moves.length > 0 && (
-            <g key={"moves-" + changes?.key} className="map-pulse" pointerEvents="none">
-              {turn.moves.map((m) => {
-                const head = ((10 + Math.min(m.count, 6)) * unit) / k;
-                const { line, tip } = arrowPath(m.to, m.from, head);
-                const color = countries[m.by]?.color ?? "var(--ink)";
-                const width = 3 + Math.min(m.count, 6) * 0.4;
-                // The mover's colour inside a dark outline: an arrow stays readable over its own side's land.
-                return (
-                  <g key={m.key}>
-                    <path d={line} fill="none" stroke="var(--ink)" strokeOpacity={0.75} strokeWidth={width + 2.4} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-                    <path
-                      d={line}
-                      fill="none"
-                      stroke={color}
-                      strokeWidth={width}
-                      strokeLinecap="round"
-                      strokeDasharray={m.kind === "push" || m.sea ? "7 4" : undefined}
-                      vectorEffect="non-scaling-stroke"
-                    />
-                    <path d={tip} fill={color} stroke="var(--ink)" strokeOpacity={0.75} strokeWidth={1.4} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-                  </g>
-                );
-              })}
-            </g>
-          )}
-          {mode === "political" && protests && protests.length > 0 && (
-            <g pointerEvents="none">
-              {protests.flatMap((p) =>
-                p.where.map((id) => {
-                  const c = geometry.centres.get(id);
-                  if (!c || !Number.isFinite(c[0])) return null;
-                  const violent = p.stage === "riot" || p.stage === "uprising";
-                  const s = ((p.stage === "uprising" ? 30 : violent ? 26 : 22) * unit) / k;
-                  const Icon = violent ? Flame : Megaphone;
+          {/* Markers, drawn in pixels around their points (see zoomVars). */}
+          <g ref={markersRef} style={zoomVars(k, unit) as CSSProperties}>
+            {/* Over another mode's colours the bubbles wait for the provinces to be big enough to hold them. */}
+            {bubbles.length > 0 && (mode === "resources" || k >= PROVINCES_FROM) && (
+              <g pointerEvents="none">
+                {bubbles.map((b) => {
+                  if (!onScreen(b.x, b.y)) return null;
+                  const r = bubbleRadius(b.output);
+                  const cx = (b.slot - (b.slots - 1) / 2) * (b.widest * 2 + 1.5);
                   return (
-                    <g key={`${p.id}-${id}`}>
-                      <title>{p.title}</title>
-                      <circle cx={c[0]} cy={c[1]} r={s * 0.82} fill="var(--war)" fillOpacity={0.18} stroke="var(--war)" strokeOpacity={0.55} strokeWidth={(1.2 * unit) / k} />
-                      <circle cx={c[0]} cy={c[1]} r={s * 0.62} fill={violent ? "var(--war)" : "var(--surface)"} stroke={violent ? "var(--surface)" : "var(--war)"} strokeWidth={(2 * unit) / k} />
-                      <Icon x={c[0] - s * 0.36} y={c[1] - s * 0.36} width={s * 0.72} height={s * 0.72} color={violent ? "var(--map-glow)" : "var(--war)"} strokeWidth={2.4} />
+                    <g key={b.key} style={pin(b.x, b.y)}>
+                      <circle cx={cx} r={r + 1.4} fill="var(--map-halo)" />
+                      <circle cx={cx} r={r} fill={RESOURCE_COLORS[b.type]} stroke="var(--map-line)" strokeOpacity={0.55} strokeWidth={0.8} />
+                      {mode === "resources" && resource !== "all" && k >= 3 && (
+                        <text
+                          x={cx}
+                          fontSize={Math.max(6, r * 0.9)}
+                          textAnchor="middle"
+                          dominantBaseline="central"
+                          className="fill-ink font-black"
+                          style={{ paintOrder: "stroke", stroke: "var(--map-halo)", strokeWidth: 1.5 }}
+                        >
+                          {b.output}
+                        </text>
+                      )}
                     </g>
                   );
-                }),
-              )}
-            </g>
-          )}
-          {placed.length > 0 && <Places placed={placed} k={k} unit={unit} />}
-          {named && (
-            <g pointerEvents="none">
-              {labels.map((l) => {
-                // Shown once the land is big enough on screen to hold its name.
-                if (l.size * k < 34) return null;
-                const size = Math.min(15, Math.max(4, l.size / 7)) * labelScale;
-                const country = countries[l.tag];
-                return (
-                  <text
-                    key={l.tag}
-                    x={l.x}
-                    y={l.y}
-                    fontSize={size}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fill="var(--map-text)"
-                    fillOpacity={l.tag === player ? 0.85 : 0.6}
-                    className="font-semibold uppercase"
-                    style={{ paintOrder: "stroke", stroke: "var(--map-glow)", strokeWidth: size / 6, strokeLinejoin: "round", letterSpacing: size / 10 }}
-                  >
-                    {text(country?.name ?? l.tag)}
-                  </text>
-                );
-              })}
-            </g>
-          )}
+                })}
+              </g>
+            )}
+            {showPorts && (
+              <g pointerEvents="none">
+                {portPoints.map((p, i) => {
+                  const min = p.rank <= 3 ? (transportMode ? 1 : 2) : p.rank <= 5 ? 2.5 : p.rank <= 7 ? 5 : 8;
+                  if (k < min || !onScreen(p.px, p.py)) return null;
+                  const s = 9;
+                  return (
+                    <g key={i} style={pin(p.px, p.py)}>
+                      <Medal r={s * 0.62} tone="sea" icon={Anchor} sign={0.62} stroke={2.6} />
+                      {k >= (p.rank <= 5 ? 6 : 9) && (
+                        <text
+                          x={s * 0.85}
+                          fontSize={9}
+                          dominantBaseline="middle"
+                          fill="var(--river)"
+                          className="font-semibold italic"
+                          style={{ paintOrder: "stroke", stroke: "var(--map-glow)", strokeWidth: 1.5 }}
+                        >
+                          {p.name}
+                        </text>
+                      )}
+                    </g>
+                  );
+                })}
+              </g>
+            )}
+            {turn && turn.moves.length > 0 && (
+              <g key={"moves-" + changes?.key} className="map-pulse" pointerEvents="none">
+                {turn.moves.map((m, i) => {
+                  // The line runs between the provinces; the head is a marker at the point, its length in pixels.
+                  const head = 10 + Math.min(m.count, 6);
+                  const { line, angle } = arrowPath(m.to, m.from, (head * unit) / k, HEAD_INSET);
+                  const color = countries[m.by]?.color ?? "var(--ink)";
+                  const width = 3 + Math.min(m.count, 6) * 0.4;
+                  // The mover's colour inside a dark outline: an arrow stays readable over its own side's land.
+                  return (
+                    <g key={m.key} data-move={i}>
+                      <path d={line} fill="none" stroke="var(--ink)" strokeOpacity={0.75} strokeWidth={width + 2.4} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                      <path
+                        d={line}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth={width}
+                        strokeLinecap="round"
+                        strokeDasharray={m.kind === "push" || m.sea ? "7 4" : undefined}
+                        vectorEffect="non-scaling-stroke"
+                      />
+                      <path
+                        d={`M0,0L${-head},${head * 0.55}L${-head},${-head * 0.55}Z`}
+                        style={pin(m.to[0], m.to[1], angle)}
+                        fill={color}
+                        stroke="var(--ink)"
+                        strokeOpacity={0.75}
+                        strokeWidth={1.4}
+                        strokeLinejoin="round"
+                        pointerEvents="all"
+                        className="cursor-help"
+                      />
+                      {/* A wider line no one sees takes the pointer, for the arrow's card. */}
+                      <path d={line} fill="none" stroke="transparent" strokeWidth={width + 10} vectorEffect="non-scaling-stroke" pointerEvents="stroke" className="cursor-help" />
+                    </g>
+                  );
+                })}
+              </g>
+            )}
+            {/* Each marker answers the pointer with the protest's card; a click still picks the province beneath. */}
+            {mode === "political" && layers.protests && protests && protests.length > 0 && (
+              <g>
+                {protests.flatMap((p, i) =>
+                  p.where.map((id) => {
+                    const c = geometry.centres.get(id);
+                    if (!c || !Number.isFinite(c[0])) return null;
+                    const violent = p.stage === "riot" || p.stage === "uprising";
+                    const s = p.stage === "uprising" ? 30 : violent ? 26 : 22;
+                    const Icon = violent ? Flame : Megaphone;
+                    return (
+                      <g key={`${p.id}-${id}`} style={pin(c[0], c[1])} data-protest={i} data-region={id} className="cursor-help">
+                        <Medal r={s * 0.62} tone={violent ? "war" : "ivory"} icon={Icon} sign={0.58} ring />
+                      </g>
+                    );
+                  }),
+                )}
+              </g>
+            )}
+            {mode === "political" && sites && sites.length > 0 && (
+              <g>
+                {sites.map((s) => {
+                  const p = s.at ? geometry.projection(s.at) : geometry.centres.get(s.province);
+                  if (!p || !Number.isFinite(p[0]) || !onScreen(p[0], p[1])) return null;
+                  const r = 7;
+                  return (
+                    <g key={s.id} style={pin(p[0], p[1])} className="cursor-pointer" onClick={() => onSelect?.(s.holder, s.province)}>
+                      <title>{t("map.site", { name: text(s.name), holder: text(countries[s.holder]?.name ?? s.holder) })}</title>
+                      <Medal r={r} tone="accent" icon={Rocket} sign={0.62} />
+                    </g>
+                  );
+                })}
+              </g>
+            )}
+            {placed.length > 0 && <Places placed={placed} />}
+            {showLabels && (
+              <g pointerEvents="none">
+                {labels.map((l) => {
+                  // Shown once the land is big enough on screen to hold its name, which grows as the square root of the zoom.
+                  if (l.size * k < 34) return null;
+                  const size = Math.min(15, Math.max(4, l.size / 7));
+                  const country = countries[l.tag];
+                  return (
+                    <text
+                      key={l.tag}
+                      fontSize={size}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      fill="var(--map-text)"
+                      fillOpacity={l.tag === player ? 0.85 : 0.6}
+                      className="font-semibold uppercase"
+                      style={{
+                        transform: `translate(${l.x}px, ${l.y}px) scale(var(--zl))`,
+                        paintOrder: "stroke",
+                        stroke: "var(--map-glow)",
+                        strokeWidth: size / 6,
+                        strokeLinejoin: "round",
+                        letterSpacing: size / 10,
+                      }}
+                    >
+                      {text(country?.name ?? l.tag)}
+                    </text>
+                  );
+                })}
+              </g>
+            )}
+            {/* The army's headquarters, over the places and names so neither hides one; each answers the pointer with its formation's card. */}
+            {hqs.length > 0 && (
+              <g>
+                {hqs.map((h, i) => {
+                  if (!onScreen(h.at[0], h.at[1])) return null;
+                  const s = h.kind === "front" ? HQ_SIZE.front : HQ_SIZE.other;
+                  const Icon = h.kind === "front" ? Star : Flag;
+                  return (
+                    <g key={`${h.name}-${i}`} style={pin(h.at[0], h.at[1])} data-hq={i} data-region={h.region} className="cursor-pointer">
+                      <g transform={`translate(${h.slot * (HQ_SIZE.front * 2 + 2)} 0)`}>
+                        <Medal r={s} tone={h.own ? "accent" : "ivory"} icon={Icon} sign={0.58} />
+                      </g>
+                    </g>
+                  );
+                })}
+              </g>
+            )}
+          </g>
         </g>
       </svg>
 
-      {mode === "political" && (frontKinds.war || frontKinds.truce || (turn && turn.changed.size > 0)) && (
+      {mode === "political" && (frontKinds.war || frontKinds.truce || hqs.length > 0 || (turn && turn.changed.size > 0)) && (
         <div className="absolute left-3 top-3 flex max-w-[16rem] flex-col gap-1 rounded-xl border border-line sheet p-2.5 shadow-sm @lg:bottom-3 @lg:top-auto">
+          {hqs.length > 0 && (
+            <span className="inline-flex items-center gap-2 text-2xs font-bold text-ink">
+              <span className="grid h-4 w-5 place-items-center">
+                <span className="grid h-3.5 w-3.5 place-items-center rounded-full border border-ink sheet">
+                  <Flag className="h-2 w-2" />
+                </span>
+              </span>
+              {t("map.legend.hq")}
+            </span>
+          )}
           {frontKinds.war && (
             <span className="inline-flex items-center gap-2 text-2xs font-bold text-ink">
               <span className="h-0.5 w-5 rounded-full bg-war" />
@@ -1062,10 +1287,89 @@ export default function WorldMap({ topology, regions, countries, selected, selec
         </div>
       )}
 
-      {cityCard && (
+      {hqCard && hqHover && (
         <div
           className="pointer-events-none absolute z-10 max-w-64 rounded-xl border border-line sheet px-3 py-2 text-xs shadow-lg shadow-shade/10"
-          style={{ left: cityCard.x + 14, top: cityCard.y + 14 }}
+          style={cardAt(hqHover.x, hqHover.y)}
+        >
+          <div className="font-black text-ink">{hqCard.name}</div>
+          <div className="font-bold text-muted">
+            {t(`army.kind.${hqCard.kind}` as MessageKey)}
+            {hqCard.divisions > 0 && <> · {t("army.divisions", { n: hqCard.divisions.toLocaleString(locale) })}</>}
+          </div>
+          <div className={`mt-1 font-bold ${hqCard.commander ? "text-ink" : "text-muted"}`}>{hqCard.commander ? t("army.commander", { name: hqCard.commander }) : t("map.hq.noCommander")}</div>
+          {hqCard.theatre && <div className="mt-0.5 font-medium text-muted">{hqCard.theatre}</div>}
+          {hqCard.own && <span className="mt-1 inline-block rounded-md bg-accent/15 px-1.5 py-0.5 font-bold text-accent">{t("map.hq.own")}</span>}
+        </div>
+      )}
+
+      {protestCard && protestHover && (
+        <div
+          className="pointer-events-none absolute z-10 max-w-72 rounded-xl border border-line sheet px-3 py-2 text-xs shadow-lg shadow-shade/10"
+          style={cardAt(protestHover.x, protestHover.y)}
+        >
+          <div className="font-black text-ink">{protestCard.title}</div>
+          <div className="font-bold text-muted">
+            <span className={protestCard.stage === "riot" || protestCard.stage === "uprising" ? "text-war" : ""}>{t(`politics.protest.${protestCard.stage}` as MessageKey)}</span>
+            {" · "}
+            {t("politics.protest.size", { n: people(protestCard.size) })}
+            {protestCard.grew ? ` (${protestCard.grew > 0 ? "+" : "−"}${people(Math.abs(protestCard.grew))})` : ""}
+          </div>
+          {protestCard.country && protestCard.country !== player && (
+            <div className="mt-0.5 font-bold text-muted">{t("map.protest.against", { country: text(countries[protestCard.country]?.name ?? protestCard.country) })}</div>
+          )}
+          {protestCard.demands && <div className="mt-1 font-medium text-ink">{t("politics.protest.demands", { demands: protestCard.demands })}</div>}
+          {protestCard.by && <div className="mt-0.5 font-bold text-ink">{t("map.protest.by", { by: protestCard.by })}</div>}
+          <div className="mt-0.5 font-medium text-muted">
+            {[
+              protestCard.support !== undefined && t("politics.protest.support", { n: protestCard.support }),
+              protestCard.organisation !== undefined && t("politics.protest.organisation", { n: protestCard.organisation }),
+              protestCard.killed ? t("politics.protest.killed", { n: protestCard.killed }) : "",
+              protestCard.backer && t("politics.protest.backer", { country: text(countries[protestCard.backer]?.name ?? protestCard.backer) }),
+              t("map.protest.since", { date: formatDate(protestCard.since, locale) }),
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </div>
+          {onProtest && (!protestCard.country || protestCard.country === player) && <div className="mt-1 font-bold text-accent">{t("map.protest.open")}</div>}
+        </div>
+      )}
+
+      {moveCard && moveHover && (
+        <div
+          className="pointer-events-none absolute z-10 max-w-72 rounded-xl border border-line sheet px-3 py-2 text-xs shadow-lg shadow-shade/10"
+          style={cardAt(moveHover.x, moveHover.y)}
+        >
+          <div className="flex items-center gap-1.5 font-black text-ink">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: countries[moveCard.by]?.color }} />
+            {text(countries[moveCard.by]?.name ?? moveCard.by)}
+          </div>
+          <div className="font-bold text-muted">{t(`map.move.${moveCard.back ? "back" : moveCard.sea && moveCard.kind === "take" ? "landing" : moveCard.kind}` as MessageKey)}</div>
+          {moveCard.against && <div className="mt-0.5 font-bold text-muted">{t("map.move.against", { country: text(countries[moveCard.against]?.name ?? moveCard.against) })}</div>}
+          {moveNames && <div className="mt-1 font-medium text-ink">{t("map.move.provinces", { list: moveNames })}</div>}
+        </div>
+      )}
+
+      {frontCard && frontHover && (
+        <div
+          className="pointer-events-none absolute z-10 max-w-72 rounded-xl border border-line sheet px-3 py-2 text-xs shadow-lg shadow-shade/10"
+          style={cardAt(frontHover.x, frontHover.y)}
+        >
+          {frontCard.name && <div className="font-black text-ink">{text(frontCard.name)}</div>}
+          <div className={frontCard.name ? "font-bold text-ink" : "font-black text-ink"}>
+            {sideNames(frontCard.attackers)} – {sideNames(frontCard.defenders)}
+          </div>
+          {frontCard.since && <div className="mt-0.5 font-medium text-muted">{t("map.front.since", { date: formatDate(frontCard.since, locale) })}</div>}
+          {frontCard.truce && (
+            <div className="mt-1 font-bold text-muted">{frontCard.truce.until ? t("map.front.truceUntil", { date: formatDate(frontCard.truce.until, locale) }) : t("map.front.truce")}</div>
+          )}
+        </div>
+      )}
+
+      {!hqCard && !protestCard && !moveCard && !frontCard && cityCard && (
+        <div
+          className="pointer-events-none absolute z-10 max-w-64 rounded-xl border border-line sheet px-3 py-2 text-xs shadow-lg shadow-shade/10"
+          style={cardAt(cityCard.x, cityCard.y)}
         >
           <div className="font-black text-ink">{cityCard.place.name}</div>
           <div className="font-bold text-muted">
@@ -1087,10 +1391,10 @@ export default function WorldMap({ topology, regions, countries, selected, selec
         </div>
       )}
 
-      {!cityCard && hover && hovered && hoveredProps && (
+      {!hqCard && !protestCard && !moveCard && !frontCard && !cityCard && hover && hovered && hoveredProps && (
         <div
           className="pointer-events-none absolute z-10 max-w-64 rounded-xl border border-line sheet px-3 py-2 text-xs shadow-lg shadow-shade/10"
-          style={{ left: hover.x + 14, top: hover.y + 14 }}
+          style={cardAt(hover.x, hover.y)}
         >
           <div className="font-black text-ink">{provinceName(hoveredProps, locale)}</div>
           <div className="font-bold text-muted">{text(countries[hovered.owner]?.name ?? hovered.owner)}</div>
@@ -1156,38 +1460,69 @@ export default function WorldMap({ topology, regions, countries, selected, selec
           ))}
         </div>
 
-        {controls}
+        {/*
+          The dock: the turn's length over the layers over the modes, a stair from five to eight, folded to the
+          right with only the length and the mode chosen showing; a hover or a focus unfolds it (dock, globals.css).
+        */}
+        <div className="dock flex flex-col items-end">
+          {controls}
 
-        {layersOpen && (
-          <div className="w-52 rounded-xl border border-line sheet p-1.5 shadow-lg shadow-shade/10">
-            {MAP_LAYERS.map((layer) => {
-              const forced = transportMode && (layer === "railways" || layer === "ports");
+          {/* What is drawn over the land, one tap each; every layer, base map included, is also in the layers menu (narrow maps have only that). */}
+          <div className="dock-row hidden @md:block">
+          <div role="group" aria-label={t("map.layers.quick")} className="flex items-center rounded-xl border border-line sheet p-1 shadow-sm">
+            {QUICK_LAYERS.map((layer) => {
+              const Icon = LAYER_ICONS[layer];
+              const forced = forcedLayer(layer);
+              const on = forced || layers[layer];
+              const label = t(`map.layer.${layer}` as MessageKey);
               return (
-                <label
+                <button
                   key={layer}
-                  className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-xs font-bold text-ink transition-colors hover:bg-page ${forced ? "opacity-60" : ""}`}
+                  type="button"
+                  aria-pressed={on}
+                  aria-label={label}
+                  disabled={forced}
+                  onClick={() => setLayer(layer, !layers[layer])}
+                  className={`group dock-item relative grid h-7 w-7 place-items-center rounded-lg transition-all disabled:opacity-60 @md:h-8 @md:w-8 ${on ? ui.segmentOn : ui.segmentOff}`}
                 >
-                  {t(`map.layer.${layer}` as MessageKey)}
-                  <input
-                    type="checkbox"
-                    className="h-3.5 w-3.5 accent-current"
-                    checked={forced || layers[layer]}
-                    disabled={forced}
-                    onChange={(e) => updateSettings({ layers: { ...layers, [layer]: e.target.checked } })}
-                  />
-                </label>
+                  <Icon className="h-3.5 w-3.5" />
+                  {!on && <span aria-hidden className="pointer-events-none absolute h-px w-5 -rotate-45 rounded-full bg-current" />}
+                  <span className="pointer-events-none absolute bottom-full right-0 mb-1.5 hidden whitespace-nowrap rounded-lg border border-line sheet px-2 py-1 text-2xs font-bold text-ink shadow-sm group-hover:block group-focus-visible:block">
+                    {label}
+                  </span>
+                </button>
               );
             })}
           </div>
-        )}
+          </div>
 
-        <div className="flex flex-col items-end gap-1 rounded-xl border border-line sheet p-1 shadow-sm">
+          {layersOpen && (
+            <div className="mt-1.5 w-56 rounded-xl border border-line sheet p-1.5 shadow-lg shadow-shade/10">
+              {MAP_LAYERS.map((layer, i) => {
+                const forced = forcedLayer(layer);
+                const Icon = LAYER_ICONS[layer];
+                // The base map's layers after a line.
+                const base = i === QUICK_LAYERS.length;
+                return (
+                  <label
+                    key={layer}
+                    className={`flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-bold text-ink transition-colors hover:bg-page ${forced ? "opacity-60" : ""} ${base ? "mt-1 border-t border-divider pt-2" : ""}`}
+                  >
+                    <Icon className="h-3.5 w-3.5 shrink-0 text-muted" />
+                    <span className="min-w-0 flex-1">{t(`map.layer.${layer}` as MessageKey)}</span>
+                    <input type="checkbox" className="h-3.5 w-3.5 accent-current" checked={forced || layers[layer]} disabled={forced} onChange={(e) => setLayer(layer, e.target.checked)} />
+                  </label>
+                );
+              })}
+            </div>
+          )}
+
           {mode === "resources" && (
             <select
               value={resource}
               onChange={(e) => updateSettings({ resource: e.target.value as ResourceType | "all" })}
               aria-label={t("map.mode.resources")}
-              className="w-full rounded-lg border border-line sheet px-2 py-1 text-xs font-bold text-ink outline-none focus:border-ink"
+              className="mt-1.5 rounded-lg border border-line sheet px-2 py-1 text-xs font-bold text-ink outline-none focus:border-ink"
             >
               <option value="all">{t("map.resource.all")}</option>
               {RESOURCE_TYPES.map((type) => (
@@ -1197,7 +1532,7 @@ export default function WorldMap({ topology, regions, countries, selected, selec
               ))}
             </select>
           )}
-          <div className="flex items-center gap-0.5">
+          <div className="mt-1.5 flex items-center rounded-xl border border-line sheet p-1 shadow-sm">
             {MAP_MODES.map((m) => {
               const Icon = MODE_ICONS[m];
               const label = t(`map.mode.${m}` as MessageKey);
@@ -1209,20 +1544,19 @@ export default function WorldMap({ topology, regions, countries, selected, selec
                   title={label}
                   aria-label={label}
                   aria-pressed={mode === m}
-                  className={`grid h-7 w-7 place-items-center rounded-lg @md:h-8 @md:w-8 transition-all ${mode === m ? "bg-ink text-on-ink" : "text-muted hover:bg-page hover:text-ink"}`}
+                  className={`grid h-7 w-7 place-items-center rounded-lg transition-all @md:h-8 @md:w-8 ${mode === m ? "ml-0.5 bg-ink text-on-ink" : "dock-item text-muted hover:bg-page hover:text-ink"}`}
                 >
                   <Icon className="h-4 w-4" />
                 </button>
               );
             })}
-            <span className="mx-0.5 h-5 w-px bg-line" />
             <button
               type="button"
               onClick={() => setLayersOpen((open) => !open)}
               title={t("map.layers")}
               aria-label={t("map.layers")}
               aria-expanded={layersOpen}
-              className={`grid h-7 w-7 place-items-center rounded-lg @md:h-8 @md:w-8 transition-all ${layersOpen ? "bg-divider text-ink" : "text-muted hover:bg-page hover:text-ink"}`}
+              className={`ml-0.5 grid h-7 w-7 place-items-center rounded-lg border-l border-line transition-all @md:h-8 @md:w-8 ${layersOpen ? "bg-divider text-ink" : "text-muted hover:bg-page hover:text-ink"}`}
             >
               <Layers className="h-4 w-4" />
             </button>
@@ -1312,45 +1646,32 @@ const Regions = memo(function Regions({ shapes, regions, countries, mode, resour
   );
 });
 
-/** The places whose names fit, with their dots; quiet markers, the capitals a ring. */
-const Places = memo(function Places({ placed, k, unit }: { placed: PlacedLabel[]; k: number; unit: number }) {
+/** The places whose names fit, with their dots; quiet markers, the capitals a ring. Each is drawn in pixels around its point (see zoomVars). */
+const Places = memo(function Places({ placed }: { placed: PlacedLabel[] }) {
   return (
     <g pointerEvents="none">
       {placed.map(({ place: c, side }, i) => {
         const capital = c.kind === "capital";
-        const { font: fs } = PLACE_STYLE[c.kind];
-        const onScreen = dotRadius(c, k, unit);
-        const r = onScreen / k;
-        const font = (fs * unit) / k;
-        const gap = labelGap(onScreen, unit) / k;
-        // A city drawn at its true extent is a light disc, so the land under it still reads.
-        const wide = onScreen > 6 * unit;
+        const { font } = PLACE_STYLE[c.kind];
+        const r = dotRadius(c);
+        const gap = labelGap(r);
         const at =
           side === "left"
-            ? { x: c.px - gap, y: c.py, anchor: "end" as const }
+            ? { x: -gap, y: 0, anchor: "end" as const }
             : side === "above"
-              ? { x: c.px, y: c.py - gap - font * 0.45, anchor: "middle" as const }
+              ? { x: 0, y: -gap - font * 0.45, anchor: "middle" as const }
               : side === "below"
-                ? { x: c.px, y: c.py + gap + font * 0.5, anchor: "middle" as const }
-                : { x: c.px + gap, y: c.py, anchor: "start" as const };
+                ? { x: 0, y: gap + font * 0.5, anchor: "middle" as const }
+                : { x: gap, y: 0, anchor: "start" as const };
         return (
-          <g key={i}>
+          <g key={i} style={pin(c.px, c.py)}>
             {capital ? (
               <>
-                <circle cx={c.px} cy={c.py} r={r} fill={wide ? "var(--map-text)" : "none"} fillOpacity={0.14} stroke="var(--map-text)" strokeOpacity={0.6} strokeWidth={(0.9 * unit) / k} />
-                <circle cx={c.px} cy={c.py} r={wide ? (2 * unit) / k : r * 0.45} fill="var(--map-text)" fillOpacity={0.6} />
+                <circle r={r} fill="none" stroke="var(--map-text)" strokeOpacity={0.6} strokeWidth={0.9} />
+                <circle r={r * 0.45} fill="var(--map-text)" fillOpacity={0.6} />
               </>
             ) : (
-              <circle
-                cx={c.px}
-                cy={c.py}
-                r={r}
-                fill="var(--map-text)"
-                fillOpacity={wide ? 0.2 : c.kind === "city" ? 0.5 : 0.35}
-                stroke={wide ? "var(--map-text)" : undefined}
-                strokeOpacity={0.35}
-                strokeWidth={wide ? (0.8 * unit) / k : undefined}
-              />
+              <circle r={r} fill="var(--map-text)" fillOpacity={c.kind === "city" ? 0.5 : 0.35} />
             )}
             {side && (
               <text

@@ -8,12 +8,13 @@ import Dialog from "@/components/ui/Dialog";
 import { ui } from "@/components/ui/classes";
 import Dictation from "@/components/voice/Dictation";
 import SpeakButton from "@/components/voice/SpeakButton";
-import { ADVISOR_TITLES, ADVISORS, type AdvisorId } from "@/engine/advisors";
+import type { AdvisorId } from "@/engine/advisors";
 import { formatDate } from "@/engine/calendar";
 import { playerHasSpoken } from "@/engine/foreign";
 import { ADVISOR_POST, officialAt } from "@/engine/government";
 import type { GameState, Summit } from "@/engine/types";
 import { useI18n } from "@/i18n/useI18n";
+import { ministryTitle, openMinistries } from "@/engine/ministries";
 
 interface LiveSummitDialogProps {
   state: GameState;
@@ -47,7 +48,7 @@ export default function LiveSummitDialog({ state, summit, busy, disabled, onSpea
   const over = summit?.status === "held";
   const talking = busy?.kind === "summit";
   const whispering = busy?.kind === "advice" && busy.advisor === advisor;
-  const advisorName = (a: AdvisorId) => officialAt(state, ADVISOR_POST[a])?.name ?? text(ADVISOR_TITLES[a]);
+  const advisorName = (a: AdvisorId) => officialAt(state, ADVISOR_POST[a])?.name ?? text(ministryTitle(state, a));
   const thread = (state.advice?.[advisor] ?? []).slice(-8);
   const context = () =>
     summit
@@ -100,7 +101,7 @@ export default function LiveSummitDialog({ state, summit, busy, disabled, onSpea
                     <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${mine ? "rounded-tr-md bg-ink text-on-ink" : "rounded-tl-md border border-line sheet text-ink"}`}>
                       <div className={`mb-0.5 flex items-center gap-2 text-2xs font-black uppercase tracking-widest ${mine ? "text-on-ink/60" : "text-muted"}`}>
                         {mine ? t("diplomacy.you") : [l.speaker, name(l.country)].filter(Boolean).join(" · ")}
-                        {!mine && <SpeakButton id={`summit-${i}`} text={l.text} className="-my-1 ml-auto" />}
+                        {!mine && <SpeakButton id={`summit-${i}`} text={l.text} who={{ name: l.speaker || l.country }} className="-my-1 ml-auto" />}
                       </div>
                       <p className="whitespace-pre-wrap font-medium leading-relaxed">{l.text}</p>
                     </div>
@@ -170,7 +171,7 @@ export default function LiveSummitDialog({ state, summit, busy, disabled, onSpea
               {t("live.whisper")}
             </div>
             <select value={advisor} onChange={(e) => setAdvisor(e.target.value as AdvisorId)} className={`${ui.input} py-2 text-xs`}>
-              {ADVISORS.map((a) => (
+              {openMinistries(state).map((a) => (
                 <option key={a} value={a}>
                   {advisorName(a)}
                 </option>

@@ -228,6 +228,8 @@ Real history for reference: the bombing lasted 78 days; some 850,000 Kosovo Alba
       attackers: ["afghanistan"],
       defenders: ["northern-alliance"],
       since: "1996-09-27",
+      // The Taliban's emirate holds the country's name; the Northern Alliance fights on in the north-east.
+      civil: { of: "afghanistan", rebels: "northern-alliance", how: "rising", legitimacy: { government: 45, rebels: 35 } },
     },
   ],
   alliances: withTreaties(

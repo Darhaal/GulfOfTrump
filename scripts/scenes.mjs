@@ -3,15 +3,16 @@
  * from a free picture of that moment on Wikimedia Commons, and the worn
  * paper the pages lie on (public/paper/light.webp, dark.webp).
  *
- *   npm run scenes             the eight scenes and the paper
+ *   npm run scenes             the twelve scenes and the paper
  *   npm run scenes -- --paper  only the paper
+ *   npm run scenes -- 1957     only these dates' scenes (the others' credits are kept)
  *
  * A scene keeps its picture only if Commons gives it a free licence (the
  * portraits' rule, scripts/portraits/oil.mjs); public/scenes/credits.json
  * says who made each picture, its licence and what was changed, and the
  * About page lists them. The pictures are cached in scripts/.cache/scenes.
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { autocontrast, commons, fetchFile, freeLicence, OIL, paint, sharp } from "./portraits/oil.mjs";
 
@@ -32,9 +33,13 @@ const SIZE = { width: 720, height: 432, quality: 66, radius: 4 };
  */
 const SCENES = [
   { id: "1914", file: "File:Ferdinand Behr arrested in Sarajevo 1914.jpg", what: "An arrest in Sarajevo after the shots, 28 June 1914" },
+  { id: "1933", file: "File:Bundesarchiv Bild 102-02985A, Berlin, Fackelzug zur Machtergreifung Hitlers.jpg", what: "The torchlight march through Berlin on the evening of 30 January 1933" },
   { id: "1939", file: "File:Bundesarchiv Bild 183-51909-0003, Polen, Schlagbaum, deutsche Soldaten.jpg", what: "German soldiers remove the barrier on the Polish border, September 1939" },
   { id: "1950", file: "File:Refugees in Korea.jpg", what: "Refugees on a road leading south, Korea, 1950" },
+  { id: "1957", file: "File:Sputnik asm.jpg", what: "A replica of Sputnik 1, the first artificial satellite, launched 4 October 1957" },
   { id: "1964", file: "File:USS Maddox (DD-731) underway at sea, circa the early 1960s (NH 97900).jpg", what: "The destroyer USS Maddox at sea, early 1960s" },
+  { id: "1973", file: "File:Egyptians Crossing Suez Canal - Flickr - The Central Intelligence Agency.jpg", what: "Egyptian troops cross the Suez Canal, October 1973" },
+  { id: "1979", file: "File:Evstafiev-40th army HQ-Amin-palace-Kabul.jpg", what: "The Tajbeg Palace in Kabul, stormed by Soviet special forces on 27 December 1979, later the 40th Army's headquarters" },
   { id: "1991", file: "File:T-72 tank in Moscow, August 1991.jpg", what: "A tank with flowers in Moscow, 19 August 1991" },
   { id: "1999", file: "File:Defense.gov News Photo 990324-N-1556A-004.jpg", what: "A Tomahawk cruise missile leaves USS Philippine Sea, 24 March 1999", crop: [0, 0, 1, 0.8] },
   { id: "2014", file: "File:Independence Square (12642536274).jpg", what: "Independence Square in Kyiv during the Maidan, February 2014" },
@@ -67,13 +72,16 @@ function glow() {
   return m;
 }
 
-async function paintScenes() {
+async function paintScenes(only) {
   mkdirSync(CACHE, { recursive: true });
   mkdirSync(OUT, { recursive: true });
-  const info = await commons(SCENES.map((s) => s.file), 1600);
+  const scenes = only.size ? SCENES.filter((s) => only.has(s.id)) : SCENES;
+  const info = await commons(scenes.map((s) => s.file), 1600);
   const light = glow();
-  const credits = {};
-  for (const scene of SCENES) {
+  // Painting some dates keeps the other dates' credits.
+  const file = path.join(OUT, "credits.json");
+  const credits = only.size && existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : {};
+  for (const scene of scenes) {
     const meta = info.get(scene.file);
     const licence = meta ? freeLicence(meta) : null;
     if (!meta || !licence) throw new Error(`${scene.id}: ${scene.file} is missing or not under a free licence (${meta?.licence ?? "none"})`);
@@ -93,7 +101,8 @@ async function paintScenes() {
     };
     console.log(`${scene.id}: ${Math.round(out.length / 1024)} KB, ${licence}`);
   }
-  writeFileSync(path.join(OUT, "credits.json"), JSON.stringify(credits, null, 1) + "\n");
+  const ordered = Object.fromEntries(SCENES.flatMap((s) => (credits[s.id] ? [[s.id, credits[s.id]]] : [])));
+  writeFileSync(file, JSON.stringify(ordered, null, 1) + "\n");
 }
 
 // --- the paper ---
@@ -197,5 +206,6 @@ async function paintPaper() {
 }
 
 const args = process.argv.slice(2);
-if (!args.includes("--paper")) await paintScenes();
-await paintPaper();
+if (!args.includes("--paper")) await paintScenes(new Set(args.filter((a) => !a.startsWith("--"))));
+// The paper only with the whole set, or alone.
+if (!args.some((a) => !a.startsWith("--"))) await paintPaper();

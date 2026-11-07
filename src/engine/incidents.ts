@@ -2,7 +2,7 @@ import { roll } from "./dice";
 import { STEP_YEARS } from "./economy";
 import { homeFront, type HomeFront } from "./politics";
 import { lensOf, standoffOf, type Lens } from "./standoffs";
-import { bondsOf, goodwillOf, landHolders, occupiedBy, powers, remember, addTension, tieOf, warBetween } from "./relations";
+import { bondsOf, clientOf, goodwillOf, landHolders, occupiedBy, powers, remember, addTension, tieOf, warBetween } from "./relations";
 import { countryCentres, distanceKm } from "./trade";
 import type { AppliedChange, GameState, IncidentAnswer, IncidentCause, IncidentKind, MapRegion, Plan, RegimeKind, ScenarioId } from "./types";
 
@@ -21,11 +21,11 @@ import type { AppliedChange, GameState, IncidentAnswer, IncidentCause, IncidentK
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 /** Incidents a year between two states at a friction of 1, close to each other, by era. */
-const ERA_RATE: Record<ScenarioId, number> = { "1914": 0.3, "1939": 0.35, "1950": 0.3, "1964": 0.3, "1991": 0.25, "1999": 0.25, "2014": 0.25, "2022": 0.25 };
+const ERA_RATE: Record<ScenarioId, number> = { "1914": 0.3, "1933": 0.32, "1939": 0.35, "1950": 0.3, "1957": 0.3, "1964": 0.3, "1973": 0.3, "1979": 0.3, "1991": 0.25, "1999": 0.25, "2014": 0.25, "2022": 0.25 };
 /** How readily an incident turned into a march towards war in each era. */
-const ESCALATE: Record<ScenarioId, number> = { "1914": 0.5, "1939": 0.6, "1950": 0.4, "1964": 0.4, "1991": 0.4, "1999": 0.35, "2014": 0.35, "2022": 0.35 };
+const ESCALATE: Record<ScenarioId, number> = { "1914": 0.5, "1933": 0.55, "1939": 0.6, "1950": 0.4, "1957": 0.4, "1964": 0.4, "1973": 0.4, "1979": 0.4, "1991": 0.4, "1999": 0.35, "2014": 0.35, "2022": 0.35 };
 /** Live war plans at once, by era (engine/intentions.ts keeps to it too). */
-export const WAR_PLANS: Record<ScenarioId, number> = { "1914": 6, "1939": 8, "1950": 4, "1964": 4, "1991": 4, "1999": 4, "2014": 4, "2022": 4 };
+export const WAR_PLANS: Record<ScenarioId, number> = { "1914": 6, "1933": 7, "1939": 8, "1950": 4, "1957": 4, "1964": 4, "1973": 4, "1979": 4, "1991": 4, "1999": 4, "2014": 4, "2022": 4 };
 /** Pairs of states whose people live this close count as neighbours, km. */
 const NEIGHBOURS_KM = 1000;
 /** Friction below this is too little for an incident. */
@@ -104,7 +104,8 @@ export function castIncidents(state: GameState, map?: Record<string, MapRegion> 
   }
   const pairs = new Map<string, [string, string]>();
   const add = (a: string, b: string) => {
-    if (a === b || !up.has(a) || !up.has(b)) return;
+    // A patron and its client have no incidents: their quarrel is a declaration of independence (engine/intentions.ts).
+    if (a === b || !up.has(a) || !up.has(b) || clientOf(state, a, b)) return;
     const [x, y] = a < b ? [a, b] : [b, a];
     pairs.set(`${x}|${y}`, [x, y]);
   };

@@ -236,7 +236,7 @@ export function drawMap(ctx: CanvasRenderingContext2D, map: PreparedMap, d: MapD
 
   // The turn's changes: a light then a dark outline, so they show on land of any colour; then the arrows.
   if (d.changes?.length) {
-    const { changed, moves } = turnMoves(d.changes, regions, (id) => map.centres.get(id), (id) => map.adjacency.byId.get(id) ?? []);
+    const { changed, moves } = turnMoves(d.changes, regions, (id) => map.centres.get(id), (id) => map.adjacency.byId.get(id) ?? [], { limit: 30 });
     for (const [id, c] of changed) {
       const shape = map.shapes.get(id);
       if (!shape) continue;

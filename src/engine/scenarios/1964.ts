@@ -214,6 +214,8 @@ Real history for reference: a second attack on 4 August was reported, probably w
       attackers: ["pathet-lao", "north-vietnam"],
       defenders: ["laos"],
       since: "1959-05-23",
+      // North Vietnam is in it at the Pathet Lao's side, an intervener.
+      civil: { of: "laos", rebels: "pathet-lao", how: "rising", legitimacy: { government: 50, rebels: 35 } },
     },
     {
       id: "konfrontasi",

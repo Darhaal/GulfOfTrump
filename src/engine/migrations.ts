@@ -1,21 +1,29 @@
 import { seedDomestic } from "./abroad";
 import { seedMen } from "./army";
 import { seedArsenals } from "./arsenal";
+import { seedCivilWars } from "./civilWar";
 import { ensureDeputies } from "./deputies";
 import { recolor } from "./colors";
 import { chooseHost } from "./exile";
-import { boundEconomies, seedEconomies } from "./economy";
+import { boundEconomies, nationalAccounts, seedEconomies } from "./economy";
+import { STAGE_WORK, startingAtom } from "./atom";
+import { startingEnergy } from "./energy";
+import { splitArsenals } from "./forces";
 import { ensureWorldBodies, fillBlocKinds, fillTreaties } from "./foreign";
 import { seedIntentions } from "./intentions";
 import { settleFronts } from "./outcome";
 import { seedInterests } from "./interests";
 import { withPeople } from "./people";
+import { seedPartyStrength } from "./partyLife";
 import { ensurePolitics } from "./politics";
-import { migrateToProvinces } from "./provinces";
+import { migrateToProvinces, startingOwner } from "./provinces";
+import { refineSave } from "./refine";
 import { migrateResearch } from "./research";
 import { roleOf } from "./role";
 import { dropFalseDefeat } from "./unrest";
 import { seedResistance } from "./warMeans";
+import { startingSpace } from "./space";
+import { startingSport } from "./sport";
 import type { AdviceMessage, AdviceProposal } from "./advisors";
 import type { Arsenal, GameState, MapRegion, Research, Scenario } from "./types";
 
@@ -137,7 +145,120 @@ const MIGRATIONS: Migration[] = [
     what: "Society in numbers: every country's people are derived from its land and economy, so a save from before needs nothing at once; the player's record (the trend arrows' base, the poverty line's anchor) opens from the save as it was loaded when its next turn is played.",
     run: (s) => s,
   },
+  {
+    n: 33,
+    what: "The world's answer to aggression: acts of aggression, who condemned, sanctioned, armed or pledged, and the world body's resolutions are kept from the next turn on; a save from before has none, and wars begun before it are not judged again.",
+    run: (s) => s,
+  },
+  {
+    n: 35,
+    what: "The finer maps every era plays: a save of the standard map has each province shared out among its parts – owner, holder, people, occupation and resistance to every part, a front laid out again from the side holding part of it – and its chronicle, formations and protests moved to the parts. Without the map at hand it passes, and the load carries the save over once the map is there (fitToMap), so the steps after it need not wait.",
+    run: (s, context) => {
+      const map = (context as MigrationContext).map;
+      return map ? fitToMap(s, context.scenario, map.regions) : s;
+    },
+  },
+  {
+    n: 37,
+    what: "Aircraft, ships and tanks by type: each old total is split by the era's mix (the great powers' own on the start date), and the support types – transport aircraft, landing ships, infantry fighting vehicles – are added on top at the era's ratio, as a new game has them.",
+    run: (s) => splitArsenals(s),
+  },
+  {
+    n: 38,
+    what: "Demography that follows the game: every country's age cohorts are opened from history as of the save's own year, with the gaps its wars left (engine/society.ts seedDemography), and age, are born and die by the game's conditions from then on. A save from before needs nothing at once – until then its pyramid is that same history – and its cohorts open from the save as it was loaded when its next turn is played, so the step waits for no map.",
+    run: (s) => s,
+  },
+  {
+    n: 39,
+    what: "The space race: every country's rocket programme as history had it on the save's date, its feats and the world's firsts so far; launch sites follow their provinces, and the space programme takes its share of the research money from the next turn.",
+    run: (s) => (s.space ? s : { ...s, space: startingSpace(s) }),
+  },
+  {
+    n: 40,
+    what: "Parties that live and die: every banned or underground party gets the strength of its organisation from its support, for the engine to wear down; a save from before has no ended parties and no parties the engine made.",
+    run: (s) => seedPartyStrength(s),
+  },
+  // Steps 41 and 42 were held for the finer map and repressions, which needed none.
+  {
+    n: 43,
+    what: "Sport: the Olympic Games and the World Cup as history had chosen them by the save's date – the last held of each kind with its champion, the hosts of the next twelve years, history's bans in force; the player's government gives sport the era's usual share of its social budget.",
+    run: (s) => (s.sport ? s : { ...s, sport: startingSport(s) }),
+  },
+  {
+    n: 45,
+    what: "Decolonisation as a process: a save from before has no colonies; they are read from the map as the save stands when its next turn is played (engine/colonies.ts) – the calendar's in the historical mode, a dated independence already past its day coming in the first turns – so the step waits for no map.",
+    run: (s) => s,
+  },
+  {
+    n: 47,
+    what: "Energy and the atom: every country's power plants and demand for electricity as history had them on the start date, grown into the save's own date (engine/energy.ts); every atomic programme with its stages and stockpile as of the save's date, the bombs the save already counts kept, and the player's old atomic progress carried into its programme's stages (engine/atom.ts). Needs no map: the plants lean on the land once it is there.",
+    run: (s, context) => seedEnergyAndAtom(s, (context as MigrationContext).map?.byId ?? null),
+  },
+  // Steps 48 and 49 are held for the branches merged alongside this one.
+  {
+    n: 50,
+    what: "People and society: the society tab's record opens with the save as it stands when its next turn is played (engine/societyRecord.ts), the classes take their moods from that turn's conditions (engine/classes.ts), and every economy's two industries stand at the usual split and structure for its era, income and system until the government or a new system moves them (engine/industry.ts); refugees leave by age and sex from that turn on. A save from before needs nothing at once, so the step waits for no map.",
+    run: (s) => s,
+  },
+  // Step 51 is held for the rest of the war; 48 for the new dates.
+  {
+    n: 52,
+    what: "Joint actions with allies (engine/joint.ts): a save from before has none and needs nothing – its sanctions are each government's own; in the historical mode history's joint programmes and projects under way on the save's date open with their progress on its next turn, and the rest on their days.",
+    run: (s) => s,
+  },
+  {
+    n: 53,
+    what: "Civil wars under way on the date (China's of 1933 and 1950, Laos's, Cambodia's, Angola's, Afghanistan's): a save from before has them as ordinary wars; those still fought are recorded as civil wars – legitimacy, defections, recognition, volunteers, their end – and a rump smaller than the usual threshold loses only below half of what it holds on its next turn.",
+    run: (s, { scenario }) => {
+      const add = seedCivilWars(s, scenario.wars);
+      return add.length ? { ...s, civilWars: [...(s.civilWars ?? []), ...add] } : s;
+    },
+  },
 ];
+
+/** Power plants and atomic programmes for a save from before them (step 47). */
+export function seedEnergyAndAtom(state: GameState, map: Record<string, MapRegion> | null): GameState {
+  const energy = state.energy ?? startingEnergy(state, map, map ? nationalAccounts(state, map) : null);
+  if (state.atom) return { ...state, energy };
+  const atom = startingAtom(state);
+  // The player's progress from before: research's share of the way to the bomb, as the stages' work.
+  const progress = state.research?.bomb;
+  const mine = atom.programmes[state.player];
+  if (progress && mine && !state.countries[state.player]?.arsenal?.nuclear) {
+    let left = progress * TO_BOMB_WORK;
+    for (const s of ["reactor", "material", "device", "test"] as const) {
+      if (mine.done.some((d) => d.id === s)) {
+        left -= STAGE_WORK[s];
+        continue;
+      }
+      if (left <= 0) break;
+      const w = Math.min(STAGE_WORK[s], left);
+      if (w >= STAGE_WORK[s] && s !== "test") mine.done.push({ id: s, date: state.date });
+      else mine.work[s] = Math.round(w * 1000) / 1000;
+      left -= w;
+      if (w < STAGE_WORK[s]) break;
+    }
+  }
+  const research = state.research ? { ...state.research } : undefined;
+  if (research) delete research.bomb;
+  return { ...state, energy, atom, ...(research ? { research } : {}) };
+}
+
+/** The work up to a first test, years at history's pace. */
+const TO_BOMB_WORK = STAGE_WORK.reactor + STAGE_WORK.material + STAGE_WORK.device + STAGE_WORK.test;
+
+/**
+ * A save carried over to the map it is played on (engine/refine.ts): step 35,
+ * and on every load where the map's provinces are not the save's, since a
+ * save could pass step 35 unchanged while the finer maps were a prototype
+ * behind a flag.
+ */
+export function fitToMap(state: GameState, scenario: Scenario, map: readonly MapRegion[]): GameState {
+  return refineSave(state, map, (r) => {
+    const owner = startingOwner(scenario, r);
+    return { owner, controller: owner };
+  });
+}
 
 /** War plans on the crisis ladder (step 25): the old decision before preparation is the new escalation. */
 function crisisLadder(state: GameState): GameState {
@@ -183,7 +304,7 @@ export function migrateSave(state: GameState, context: MigrationContext): GameSt
   let next = state;
   for (const step of MIGRATIONS) {
     if ((next.migration ?? 0) >= step.n) continue;
-    if (step.map && !context.map) break;
+    if (!context.map && step.map) break;
     next = { ...step.run(next, context as Required<MigrationContext>), migration: step.n };
   }
   return next;

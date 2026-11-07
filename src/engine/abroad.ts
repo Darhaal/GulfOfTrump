@@ -1,12 +1,15 @@
 import { addStep } from "./calendar";
+import { colonialOf, homeEnemies } from "./colonialLand";
 import { countryCrises } from "./crises";
 import { fixed, happens } from "./dice";
 import { STEP_YEARS } from "./economy";
 import { peopleIn } from "./population";
 import { programmeShift } from "./programmes";
+import { peopleByCountry, strainOf } from "./mobilisation";
 import { provisionBooks, provisionOf } from "./provision";
 import { REGIMES } from "./scenarios/regimes";
 import { en } from "./text";
+import { distanceKm } from "./trade";
 import type { AppliedChange, Because, BecauseKind, CountryState, Domestic, Economy, GameState, MapRegion, RegimeKind, Scenario, ScenarioId } from "./types";
 
 /**
@@ -128,11 +131,30 @@ export function seedDomestic<T extends Pick<GameState, "countries" | "player" | 
   return countries ? { ...state, countries } : state;
 }
 
-/** Coups a year, %, by kind of government, before the state of the country. */
-const COUP_BASE: Record<RegimeKind, number> = { democracy: 0.4, limited: 3, party: 0.2, autocracy: 1.5, military: 6 };
+/**
+ * Coups a year, %, by kind of government, before the state of the country. A junta is no longer a magnet by its kind
+ * alone (it was 6, and four coups in ten hit a country already couped): it is as coup-prone as a managed regime, and
+ * the army's habit of moving is the "coups breed coups" term below, for any government, for some years after a coup.
+ * The coups the trap made are moved to first coups (the rest was 0.4, 3, 0.2 and 1.5): the Cold War dates keep their
+ * totals, which were already below Powell and Thyne's.
+ */
+const COUP_BASE: Record<RegimeKind, number> = { democracy: 0.55, limited: 4.2, party: 0.3, autocracy: 2.2, military: 4.2 };
 
 /** How often armies moved against governments on each date, against the 1990s. */
-const COUP_ERA: Record<ScenarioId, number> = { "1914": 0.8, "1939": 1, "1950": 1.3, "1964": 1.6, "1991": 1, "1999": 0.8, "2014": 0.8, "2022": 0.9 };
+const COUP_ERA: Record<ScenarioId, number> = { "1914": 0.8, "1933": 1.1, "1939": 1, "1950": 1.3, "1957": 1.4, "1964": 1.6, "1973": 1.6, "1979": 1.4, "1991": 1, "1999": 0.8, "2014": 0.8, "2022": 0.9 };
+
+/** Coups breed coups: the risk this many times higher for so many years after one succeeded, whatever the government since (Powell and Thyne). */
+const BREED = 1.5;
+const BREED_YEARS = 10;
+/** A successful coup's shock to the state: stability lost (it was 10, and the junta never recovered). */
+const COUP_SHOCK = 3;
+/** A junta promises a vote: within these years, seeded. */
+const JUNTA_VOTE: [number, number] = [2, 6];
+/** The plotters are the government now: years before the next attempt on it, seeded; after a failed attempt, a year. */
+const AFTER_COUP: [number, number] = [2, 3];
+
+/** The day of the last coup that succeeded against a government, if any: for a save from before it was kept, a government that came by a coup. */
+export const coupedOn = (d: Pick<Domestic, "couped" | "changed">): string | undefined => d.couped ?? (d.changed?.how === "coup" ? d.changed.date : undefined);
 
 /** What the risk of a coup reads from the rest of the state. */
 export interface CoupContext {
@@ -143,15 +165,20 @@ export interface CoupContext {
   lost: number;
   /** Income per person against the median state's (incomes); missing when unknown. */
   income?: number;
+  /** The day the risk is read on, for the years since the last coup. */
+  date?: string;
 }
 
 /**
  * The chance of a coup against a government, % a year: likelier where the
- * army already rules or elections are managed, much likelier as the state
- * comes apart, in a slump, in runaway inflation, and when land is lost.
+ * army already rules or elections are managed, for some years after a coup,
+ * much likelier as the state comes apart, in a slump, in runaway inflation,
+ * and when land is lost.
  */
-export function coupRisk(d: Pick<Domestic, "regime" | "stability" | "support">, ctx: CoupContext): number {
+export function coupRisk(d: Pick<Domestic, "regime" | "stability" | "support"> & Partial<Pick<Domestic, "couped" | "changed">>, ctx: CoupContext): number {
   let risk = COUP_BASE[d.regime] * COUP_ERA[ctx.era];
+  const couped = coupedOn(d);
+  if (couped && ctx.date && yearsBetween(couped, ctx.date) < BREED_YEARS) risk *= BREED;
   // A settled democracy is all but safe; a shaky one is not.
   risk *= d.regime === "democracy" ? Math.max(0.05, (75 - d.stability) / 15) : 1 + Math.max(0, 60 - d.stability) / 14;
   // Coups follow trouble: a steady state whose government is not unpopular and whose economy grows seldom sees the army
@@ -169,13 +196,79 @@ export function coupRisk(d: Pick<Domestic, "regime" | "stability" | "support">, 
   return round(Math.min(35, risk));
 }
 
+/** The chance a coup that is tried only half succeeds and splits the army and the country: likelier the shakier the state (Spain 1936). */
+const coupSplit = (d: Domestic) => clamp(0.04 + 0.12 * (1 - d.stability / 50), 0.04, 0.16);
+
 /** The chance a coup that is tried succeeds. */
 const coupSuccess = (d: Domestic) => clamp((d.regime === "democracy" ? 0.35 : 0.55) * (d.stability < 30 ? 1.2 : 1), 0, 0.9);
 
-/** The chance the government keeps power at an election: by its support where the vote is free, almost always where it is not. */
+/**
+ * The chance the government keeps power at an election: by its support where the vote is free, almost always where it
+ * is not. A free vote is a coin with a slope: a government in an ordinary year (support about 50) keeps power about
+ * half the time, one after a slump loses two times in three or more, one in a boom or a rally keeps it two in three
+ * (the statistics runs: incumbents in democracies lose 35–50% of national elections, as they do in reality).
+ */
 export function keepChance(d: Pick<Domestic, "regime" | "support">): number {
-  if (d.regime === "democracy") return 1 / (1 + Math.exp(-(d.support - 48) / 5));
+  if (d.regime === "democracy") return 1 / (1 + Math.exp(-(d.support - 50) / 7));
   return d.support >= 25 ? 0.95 : 0.75;
+}
+
+/** A strong enemy that holds land this near a country's heartland stands at its door, km. */
+const DOOR_KM = 700;
+/** The heartland: the provinces where a country makes most (its people times their income). */
+const HEARTLAND = 10;
+/** War on a country's own soil once an enemy holds or fights in land where this share of its people live. */
+const SOIL_SHARE = 0.01;
+
+/**
+ * Why a national election that falls due now is put off, or nothing: a war fought on the country's own soil (an enemy
+ * holds or contests land where a hundredth of its people live: Ukraine in 2024), or – with `door` – a war against a
+ * strong enemy (a quarter of its economy or half its soldiers) that holds land within ~700 km of its heartland, the ten
+ * provinces that make most (Britain and France against Germany in 1939–40, Finland in 1943). The parliament extends its
+ * own term, as Britain's did each year from 1940 to 1945; the government stays.
+ */
+export function electionPause(state: Pick<GameState, "regions" | "wars" | "date" | "countries"> & Partial<Pick<GameState, "colonies">>, tag: string, map?: Record<string, MapRegion> | null, door = true): Because | undefined {
+  // A colonial war is fought on the colony's land, not the metropole's own: it puts no vote off (France voted in 1958 in the Algerian War).
+  const colonial = colonialOf(state, map);
+  const enemies = homeEnemies(state, tag, colonial);
+  if (!enemies.size) return undefined;
+  let own = 0;
+  let front = 0;
+  const onSoil = new Map<string, number>();
+  const heart: [number, number, number][] = [];
+  for (const [id, r] of Object.entries(state.regions)) {
+    if (r.owner !== tag || colonial.land.has(id)) continue;
+    const n = map ? peopleIn(r, map[id]) : 1;
+    own += n;
+    const enemy = enemies.has(r.controller) ? r.controller : r.contested && enemies.has(r.contested) ? r.contested : undefined;
+    if (enemy) {
+      front += n;
+      onSoil.set(enemy, (onSoil.get(enemy) ?? 0) + n);
+    }
+    // The heartland by output, not people: Britain's is England, not the Raj.
+    const at = map?.[id]?.at;
+    if (at && r.controller === tag) heart.push([n * (map?.[id]?.inc ?? 1000), at[0], at[1]]);
+  }
+  const most = (m: Map<string, number>) => [...m].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0];
+  if (own > 0 && front / own >= SOIL_SHARE) return { kind: "war-home", country: most(onSoil) };
+  if (!door || !map) return undefined;
+  const me = state.countries[tag]?.economy;
+  const strong = (t: string) => {
+    const e = state.countries[t]?.economy;
+    if (!e || !me) return false;
+    return e.gdp >= 0.25 * me.gdp || e.troops >= 0.5 * me.troops;
+  };
+  const threats = [...enemies].filter(strong);
+  if (!threats.length) return undefined;
+  const core = heart.sort((a, b) => b[0] - a[0]).slice(0, HEARTLAND);
+  const near = new Map<string, number>();
+  for (const [id, r] of Object.entries(state.regions)) {
+    if (!threats.includes(r.controller) || r.owner === tag) continue;
+    const at = map[id]?.at;
+    if (!at) continue;
+    if (core.some(([, x, y]) => distanceKm([x, y], at) <= DOOR_KM)) near.set(r.controller, (near.get(r.controller) ?? 0) + 1);
+  }
+  return near.size ? { kind: "war-near", country: most(near) } : undefined;
 }
 
 /**
@@ -229,10 +322,85 @@ export function coupRiskIn(state: Pick<GameState, "countries" | "regions" | "war
   const c = state.countries[tag];
   // lostShares has every country that owns a province, and only those.
   if (!c?.domestic || c.dormant || c.exile || !lost.has(tag)) return 0;
-  return coupRisk(c.domestic, { era: state.scenarioId, economy: c.economy, atWar: warsOf(state, tag).length > 0, lost: lost.get(tag) ?? 0, income: income?.get(tag) });
+  return coupRisk(c.domestic, { era: state.scenarioId, economy: c.economy, atWar: warsOf(state, tag).length > 0, lost: lost.get(tag) ?? 0, income: income?.get(tag), date: state.date });
 }
 
-export type AbroadEvent = { kind: "election"; country: string; date: string; kept: boolean } | { kind: "coup"; country: string; succeeded: boolean };
+/**
+ * The government a coup sets up: a junta that promises a vote in two to six years (seeded), which hands power to the
+ * civilians it picked (applyAbroad); the state shaken, not broken; and the army's habit of moving kept (`couped`).
+ */
+export function newJunta(d: Domestic, game: string, tag: string, to: string, how: "coup" | "revolution" | "rising" = "coup"): Domestic {
+  return {
+    regime: "military",
+    support: 45,
+    stability: clamp(d.stability - COUP_SHOCK, 10, 100),
+    term: TERM.limited,
+    nextElection: addYears(to, JUNTA_VOTE[0] + (JUNTA_VOTE[1] - JUNTA_VOTE[0]) * fixed(`junta-vote:${game}:${tag}:${to}`)),
+    changed: { date: to, how },
+    lastCoup: to,
+    couped: to,
+    ...(d.lastElection ? { lastElection: d.lastElection } : {}),
+  };
+}
+
+/** The day before which no coup is tried against a government: a year after a failed attempt, two to three after a coup that succeeded (seeded). */
+export function coupCalm(d: Pick<Domestic, "lastCoup" | "couped" | "changed">, game: string, tag: string): string | undefined {
+  if (!d.lastCoup) return undefined;
+  if (coupedOn(d) !== d.lastCoup) return addStep(d.lastCoup, "year");
+  return addYears(d.lastCoup, AFTER_COUP[0] + (AFTER_COUP[1] - AFTER_COUP[0]) * fixed(`coup-calm:${game}:${tag}:${d.lastCoup}`));
+}
+
+/**
+ * Why the player's national election, falling due now, is put off: elections suspended by law, martial law, or war
+ * on the country's own soil (an enemy at the door alone does not: the player's parliament decides that, through the
+ * game master).
+ */
+export function playerElectionPause(state: Pick<GameState, "regions" | "wars" | "date" | "countries" | "player" | "politics"> & Partial<Pick<GameState, "colonies">>, map?: Record<string, MapRegion> | null): Because | undefined {
+  if (state.politics?.laws?.elections === "suspended") return { kind: "suspended" };
+  if (state.politics?.laws?.martial === "martial") return { kind: "martial-law" };
+  return electionPause(state, state.player, map, false);
+}
+
+/**
+ * The player's election in the coming period, for the game master: put off (why, and what the engine does), or due –
+ * to be held, or the engine holds it.
+ */
+export function playerPauseNote(state: Pick<GameState, "regions" | "wars" | "date" | "countries" | "player" | "politics" | "step"> & Partial<Pick<GameState, "colonies">>, map?: Record<string, MapRegion> | null): string | undefined {
+  const due = state.politics?.nextElection;
+  if (!due || due > addStep(state.date, state.step)) return undefined;
+  const why = playerElectionPause(state, map);
+  if (!why) return "DUE THIS PERIOD – hold it and give the results in politics.election; an election left out is held by the engine, by the parties' support";
+  const reason = why.kind === "suspended" ? "elections are suspended by law" : why.kind === "martial-law" ? "martial law is in force" : `war is fought on the country's own soil${why.country ? ` (${why.country})` : ""}`;
+  const unless = why.kind === "suspended" ? "the orders lift the suspension" : why.kind === "martial-law" ? "the orders lift martial law" : "the orders hold it all the same";
+  return `PUT OFF – ${reason}: hold no vote this period (the engine moves it a year on) unless ${unless} and call it anyway`;
+}
+
+/**
+ * The player's election that fell due this period and was not held, put off a year while elections are suspended by
+ * law, under martial law or with war on the country's soil, with a line in the news. The game master holding it
+ * anyway (an order lifted martial law and called the vote) wins: nothing is put off then. Whether it was put off.
+ */
+export function postponePlayerElection(before: GameState, next: GameState, ctx: { to: string; map?: Record<string, MapRegion> | null; held: boolean }, applied: AppliedChange[]): boolean {
+  const due = before.politics?.nextElection;
+  if (!next.politics || !due || due > ctx.to || ctx.held) return false;
+  // The game master already set a new date.
+  if (next.politics.nextElection && next.politics.nextElection > ctx.to) return false;
+  // The laws as the turn left them: a suspension or martial law the turn lifted lets the vote be held.
+  const why = playerElectionPause({ ...before, politics: next.politics }, ctx.map);
+  if (!why) return false;
+  let at = addYears(due, 1);
+  while (at <= ctx.to) at = addYears(at, 1);
+  next.politics = { ...next.politics, nextElection: at };
+  applied.push({ kind: "vote", country: before.player, kept: true, date: due, postponed: true, because: why });
+  return true;
+}
+
+/** An election falls due (`postponed`: put off in wartime, and why), or a coup is tried. */
+/** A coup that only half succeeds (`split`) splits the country into a civil war (engine/civilWar.ts). */
+export type AbroadEvent = { kind: "election"; country: string; date: string; kept: boolean; postponed?: Because } | { kind: "coup"; country: string; succeeded: boolean; split?: boolean };
+
+/** An election put off in wartime comes this soon after the peace, years (Britain voted two months after the war in Europe). */
+const AFTER_PEACE = 0.25;
 
 /**
  * The dice for the coming turn, cast from the state before it: elections
@@ -253,10 +421,16 @@ export function castAbroad(state: GameState, map?: Record<string, MapRegion> | n
     const d = c.domestic;
     // A country conquered outright holds no vote and has no army to rise; one that never had land (a Soviet republic in 1991) still votes.
     if (!d || tag === state.player || c.exile || (!c.dormant && !owners.has(tag))) continue;
-    // A calendar year passes between one attempt on a government and the next, whatever the length of a turn.
-    if (!c.dormant && !(d.lastCoup && to < addStep(d.lastCoup, "year"))) {
+    // A calendar year passes between one attempt on a government and the next, whatever the length of a turn; two or three after a coup that succeeded.
+    const calm = coupCalm(d, game, tag);
+    if (!c.dormant && !(calm && to < calm)) {
       const risk = coupRiskIn(state, tag, lost, income) / 100;
       if (happens(1 - (1 - risk) ** years, game, state.turn, `coup:${tag}`)) {
+        // Some coups take the capital or a part of the army and not the rest: the country splits (engine/civilWar.ts).
+        if (happens(coupSplit(d), game, state.turn, `coup-split:${tag}`)) {
+          out.push({ kind: "coup", country: tag, succeeded: false, split: true });
+          continue;
+        }
         const succeeded = happens(coupSuccess(d), game, state.turn, `coup-success:${tag}`);
         out.push({ kind: "coup", country: tag, succeeded });
         if (succeeded) continue;
@@ -265,7 +439,9 @@ export function castAbroad(state: GameState, map?: Record<string, MapRegion> | n
     if (d.nextElection && d.nextElection <= to) {
       // An election that fell while the country could not hold it (all its land lost) is held now.
       const date = d.nextElection < state.date ? state.date : d.nextElection;
-      out.push({ kind: "election", country: tag, date, kept: happens(keepChance(d), game, state.turn, `election:${tag}`) });
+      // Where votes count, a war on the country's soil or a strong enemy at its door puts the vote off.
+      const pause = d.regime === "democracy" || d.regime === "limited" ? electionPause(state, tag, map) : undefined;
+      out.push(pause ? { kind: "election", country: tag, date, kept: true, postponed: pause } : { kind: "election", country: tag, date, kept: happens(keepChance(d), game, state.turn, `election:${tag}`) });
     }
   }
   return out;
@@ -277,7 +453,7 @@ export function castAbroad(state: GameState, map?: Record<string, MapRegion> | n
  * a war rallies people at first and tires them after, and years in office
  * tire them of any government.
  */
-function supportTarget(c: CountryState, ctx: { lost: number; warYears: number | null; tenure: number; provision?: number }): number {
+function supportTarget(c: CountryState, ctx: { lost: number; warYears: number | null; tenure: number; provision?: number; strain?: number }): number {
   const e = c.economy;
   let t = 50;
   if (e) {
@@ -290,7 +466,13 @@ function supportTarget(c: CountryState, ctx: { lost: number; warYears: number | 
   if (ctx.provision !== undefined) t -= 0.3 * clamp(90 - ctx.provision, 0, 60);
   t -= 50 * ctx.lost;
   if (ctx.warYears !== null) t += clamp(6 - 5 * ctx.warYears, -15, 6);
-  t -= Math.min(12, 2.5 * ctx.tenure);
+  // The families of the men kept under arms (engine/mobilisation.ts): openly where people vote, under the surface under a police state. The
+  // depth and the months of the call-up only: the war's dead are war-weariness's (engine/warMeans.ts), counted once.
+  const regime = c.domestic?.regime;
+  t -= (regime === "democracy" || regime === "limited" ? 0.15 : 0.06) * (ctx.strain ?? 0);
+  // The cost of ruling: a point and a half a year in office, at most eight (it was two and a half and twelve, and
+  // incumbents lost three elections in four).
+  t -= Math.min(8, 1.5 * ctx.tenure);
   return clamp(t, 5, 90);
 }
 
@@ -353,6 +535,7 @@ export function applyAbroad(next: GameState, events: AbroadEvent[], ctx: AbroadC
   const slow = 1 - 0.5 ** (ctx.years / 2);
   const lost = lostShares(next, ctx.map);
   const books = ctx.map ? provisionBooks(next, ctx.map) : null;
+  const people = ctx.map ? peopleByCountry(next, ctx.map) : null;
   const start = next.chronicle[0]?.from ?? next.date;
   // Countries born this turn get politics from their description; any other without them waits for the date's table on load.
   const born = new Set(applied.flatMap((a) => (a.kind === "new-country" ? [a.country] : [])));
@@ -371,17 +554,27 @@ export function applyAbroad(next: GameState, events: AbroadEvent[], ctx: AbroadC
     const provision = ctx.map && books ? provisionOf(next, tag, ctx.map, books)?.overall : undefined;
     // The policies at work move where support and stability head (engine/programmes.ts).
     const shift = programmeShift(c, ctx.to);
-    d.support = fine(d.support + (clamp(supportTarget(c, { lost: share, warYears, tenure, provision }) + shift.support, 5, 90) - d.support) * pace);
+    // The strain of the men kept under arms, without the war's dead: those wear support down once, as war-weariness (engine/warMeans.ts).
+    const strain = people ? (strainOf(next, tag, people.get(tag) ?? 0, { losses: false })?.strain ?? 0) : 0;
+    d.support = fine(d.support + (clamp(supportTarget(c, { lost: share, warYears, tenure, provision, strain }) + shift.support, 5, 90) - d.support) * pace);
     d.stability = fine(d.stability + (clamp(stabilityTarget(next, tag, d, share) + shift.stability, 5, 95) - d.stability) * slow);
     // A leader the game master put in office outside an election or a coup: a new government, given a little goodwill.
     if (ctx.replaced.has(tag) && !events.some((e) => e.country === tag)) {
       d.support = fine((d.support + 55) / 2);
       d.changed = { date: ctx.to, how: "leader" };
     }
+    // An election put off in wartime is held soon after the peace.
+    if (d.deferred && !wars.length) {
+      const soon = addYears(ctx.to, AFTER_PEACE);
+      if (!d.nextElection || d.nextElection > soon) d.nextElection = soon;
+      delete d.deferred;
+    }
     c.domestic = d;
   }
 
   for (const e of events) {
+    // A coup that split the country is a civil war's beginning (engine/civilWar.ts).
+    if (e.kind === "coup" && e.split) continue;
     const c = next.countries[e.country];
     const d = c?.domestic;
     if (!c || !d) continue;
@@ -390,18 +583,19 @@ export function applyAbroad(next: GameState, events: AbroadEvent[], ctx: AbroadC
     if (e.kind === "coup") {
       applied.push({ kind: "coup", country: e.country, succeeded: e.succeeded, ...(because ? { because } : {}) });
       if (e.succeeded) {
-        c.domestic = {
-          regime: "military",
-          support: 45,
-          stability: clamp(d.stability - 10, 10, 100),
-          changed: { date: ctx.to, how: "coup" },
-          lastCoup: ctx.to,
-          ...(d.lastElection ? { lastElection: d.lastElection } : {}),
-        };
+        c.domestic = newJunta(d, next.seed ?? next.id, e.country, ctx.to);
         if (!ctx.named.has(e.country)) delete c.leader;
       } else {
         c.domestic = { ...d, stability: Math.max(5, d.stability - 6), support: Math.min(90, d.support + 4), lastCoup: ctx.to };
       }
+      continue;
+    }
+    if (e.postponed) {
+      // Put off for a year at a time, as Britain's parliament extended its term each year; held soon after the peace.
+      let nextElection = addYears(e.date, 1);
+      while (nextElection <= ctx.to) nextElection = addYears(nextElection, 1);
+      applied.push({ kind: "vote", country: e.country, kept: true, date: e.date, postponed: true, because: e.postponed });
+      c.domestic = { ...d, nextElection, deferred: d.deferred ?? e.date };
       continue;
     }
     applied.push({ kind: "vote", country: e.country, kept: e.kept, date: e.date, ...(because ? { because } : {}) });
@@ -410,9 +604,11 @@ export function applyAbroad(next: GameState, events: AbroadEvent[], ctx: AbroadC
     while (nextElection <= ctx.to) nextElection = addYears(nextElection, term);
     // A junta's vote hands power to the civilians it picked.
     const regime = d.regime === "military" ? "limited" : d.regime;
+    const rest = { ...d };
+    delete rest.deferred;
     c.domestic = e.kept
-      ? { ...d, regime, term, nextElection, lastElection: { date: e.date, kept: true }, support: Math.min(90, d.support + 4) }
-      : { ...d, regime, term, nextElection, lastElection: { date: e.date, kept: false }, support: 58, stability: Math.min(95, d.stability + 3), changed: { date: e.date, how: "election" } };
+      ? { ...rest, regime, term, nextElection, lastElection: { date: e.date, kept: true }, support: Math.min(90, d.support + 4) }
+      : { ...rest, regime, term, nextElection, lastElection: { date: e.date, kept: false }, support: 58, stability: Math.min(95, d.stability + 3), changed: { date: e.date, how: "election" } };
     if (!e.kept && !ctx.named.has(e.country)) delete c.leader;
   }
 }
@@ -434,17 +630,21 @@ export function describeAbroad(state: GameState, name: (tag: string) => string, 
       const b = d ? fallBecause(state, e.country, d, { lost: lost.get(e.country) ?? 0, to: state.date, start, vote: e.kind === "election" }) : undefined;
       return b && FALL_EN[b.kind] ? ` (${FALL_EN[b.kind]})` : "";
     };
-    const coups = events.flatMap((e) => (e.kind === "coup" ? [`${who(e)} ${e.succeeded ? "succeeds" : "fails"}${why(e)}`] : []));
-    const votes = (kept: boolean) => events.flatMap((e) => (e.kind === "election" && e.kept === kept ? [`${who(e)} ${e.date}${kept ? "" : why(e)}`] : []));
+    const coups = events.flatMap((e) => (e.kind === "coup" ? [`${who(e)} ${e.split ? "half succeeds: the army splits and the country falls into civil war (the engine sets up the rebels' government)" : e.succeeded ? "succeeds" : "fails"}${why(e)}`] : []));
+    const votes = (kept: boolean) => events.flatMap((e) => (e.kind === "election" && !e.postponed && e.kept === kept ? [`${who(e)} ${e.date}${kept ? "" : why(e)}`] : []));
+    const PAUSE_EN: Partial<Record<BecauseKind, string>> = { "war-home": "war on its soil", "war-near": "the enemy at its door", "martial-law": "martial law" };
+    const put = events.flatMap((e) => (e.kind === "election" && e.postponed ? [`${who(e)} due ${e.date} (${PAUSE_EN[e.postponed.kind] ?? "the war"}${e.postponed.country ? `: ${name(e.postponed.country)}` : ""})`] : []));
     lines.push("POLITICS ELSEWHERE THIS PERIOD (the engine's dice, already cast: each must happen in the story; name the new leader of every government that falls in leaders):");
     if (coups.length) lines.push(`- coups: ${coups.join("; ")}`);
     if (votes(false).length) lines.push(`- governments that LOSE national elections: ${votes(false).join("; ")}`);
     if (votes(true).length) lines.push(`- governments that keep power at national elections: ${votes(true).join("; ")}`);
+    if (put.length) lines.push(`- national elections PUT OFF in wartime (no vote is held; parliament extends its term, the government stays): ${put.join("; ")}`);
   }
-  // Governments that fell and still have no named leader, asked for until they get one, while they still govern somewhere.
+  // Governments that fell, or that a patron set up (engine/provisional.ts), and still have no named leader, asked for
+  // until they get one, while they still govern somewhere.
   const owners = new Set(Object.values(state.regions).map((r) => r.owner));
   const unnamed = Object.values(state.countries).filter(
-    (c) => c.tag !== state.player && !c.leader && c.domestic?.changed && c.domestic.changed.how !== "leader" && !c.exile && (c.dormant || owners.has(c.tag)),
+    (c) => c.tag !== state.player && !c.leader && (c.client || (c.domestic?.changed && c.domestic.changed.how !== "leader")) && !c.exile && (c.dormant || owners.has(c.tag)),
   );
   if (unnamed.length) lines.push(`NEW GOVERNMENTS WITHOUT A NAMED LEADER (name them in leaders): ${unnamed.map((c) => `${name(c.tag)} [${c.tag}]`).join(", ")}`);
   const income = incomes(state, map);

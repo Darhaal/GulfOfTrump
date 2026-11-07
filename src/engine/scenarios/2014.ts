@@ -1,6 +1,6 @@
 import type { Scenario } from "../types";
 import { TERMS_2014, TREATIES_2014, withTreaties } from "./treaties";
-import { COUNTRIES_TODAY, ISLANDS_TODAY } from "./islands";
+import { BORDERS_TODAY, COUNTRIES_TODAY, ISLANDS_TODAY } from "./islands";
 
 const NATO_2014 = [
   "albania", "belgium", "bulgaria", "canada", "croatia", "czechia", "denmark", "estonia", "france",
@@ -96,6 +96,7 @@ Real history for reference: on 19 January clashes start on Hrushevskoho Street; 
   modernOwners: {
     SDS: "south-sudan",
     KOS: "kosovo",
+    ...BORDERS_TODAY,
     ...COUNTRIES_TODAY,
   },
   provinceOwners: {

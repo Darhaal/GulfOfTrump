@@ -32,7 +32,7 @@ const STORIES_SHOWN = 12;
 const MONTH_LOCALE: Record<Locale, string> = { en: "en-GB", ru: "ru-RU", uk: "uk-UA" };
 
 /** A government that keeps power at an election: news, but routine, folded into one line a turn. */
-const routine = (item: NewsItem) => item.type === "change" && item.change.kind === "vote" && item.change.kept;
+const routine = (item: NewsItem) => item.type === "change" && item.change.kind === "vote" && item.change.kept && !item.change.postponed;
 
 /**
  * What happened elsewhere, turn by turn (engine/news.ts). An item opens on

@@ -18,7 +18,9 @@
 // semicolons. The build matches rows to provinces and reports any it cannot
 // place.
 
-export const RESOURCE_TYPES = ["oil", "gas", "coal", "iron", "copper", "gold", "nickel", "tin", "bauxite", "rubber", "uranium"];
+import { MINES } from "./mines.mjs";
+
+export const RESOURCE_TYPES =["oil", "gas", "coal", "iron", "copper", "gold", "nickel", "tin", "bauxite", "rubber", "uranium"];
 
 export const RESOURCES = [
   // Caucasus, Russia, Central Asia
@@ -477,6 +479,37 @@ export const RESOURCE_SIDES = {
   "ROU|Hunedoara": { "austro-hungarian-empire": { coal: 1, iron: 1 } },
   // Okha's oil is in the north, the Russian (later Soviet) half of the island.
   "RUS|Sakhalin": { russia: { oil: 1, gas: 1 }, ussr: { oil: 1, gas: 1 } },
+};
+
+/**
+ * Where the mines of a region the finer maps cut into many provinces lay:
+ * points (lon, lat) and the share of each resource's output dug around them.
+ * On a finer map the region's output goes to the provinces holding the
+ * points, so the side of a historical border a mine lay on has it (the
+ * standard maps share a cut province's output by RESOURCE_SIDES instead).
+ * Every region's mines are in scripts/mines.mjs; the four written here, where
+ * a historical border ran through the field, take their place.
+ */
+export const RESOURCE_POINTS = {
+  ...MINES,
+  "FRA|Grand Est": [
+    // The minette: Thionville and Hayange in the Moselle (German until 1918), the Briey basin in Meurthe-et-Moselle.
+    { at: [6.1, 49.35], iron: 0.52 },
+    { at: [5.92, 49.24], iron: 0.48 },
+    // The Lorraine coal field at Forbach and Saint-Avold.
+    { at: [6.8, 49.15], coal: 1 },
+  ],
+  "POL|Silesian Voivodeship": [
+    // The Upper Silesian basin's German side (until 1922), at Rybnik: the source draws the 1914 border west of Gliwice
+    // and Katowice, so a point there would fall on the Russian side. Then the Dąbrowa basin and Cieszyn.
+    { at: [18.55, 50.1], coal: 0.83 },
+    { at: [19.2, 50.33], coal: 0.13 },
+    { at: [18.62, 49.8], coal: 0.04 },
+  ],
+  // The Jiu valley's coal at Petroșani and the iron of Hunedoara.
+  "ROU|Hunedoara": [{ at: [23.37, 45.42], coal: 1 }, { at: [22.9, 45.75], iron: 1 }],
+  // Okha's oil and gas in the north of the island.
+  "RUS|Sakhalin": [{ at: [142.95, 53.55], oil: 1, gas: 1 }],
 };
 
 /** "oil 1871:1 1901:10; gas 1950:2" -> [["oil", [[1871, 1], [1901, 10]]], ["gas", [[1950, 2]]]]. */

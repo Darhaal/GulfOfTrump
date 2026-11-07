@@ -1,5 +1,6 @@
 "use client";
 
+import Dictation from "@/components/voice/Dictation";
 import { Crosshair, Eye, Shield, Swords, X, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { ui } from "@/components/ui/classes";
@@ -108,15 +109,17 @@ export default function OperationsPanel({
   const field = (key: "target" | "goal" | "means" | "timing", rows = 1) => (
     <label className="grid gap-1">
       <span className="text-2xs font-black uppercase tracking-wider text-muted">{t(`op.${key}` as MessageKey)}</span>
-      <textarea
-        rows={rows}
-        value={draft[key]}
-        maxLength={key === "target" ? 200 : key === "timing" ? 120 : 400}
-        disabled={disabled}
-        onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
-        placeholder={t(`ops.placeholder.${key}` as MessageKey)}
-        className={`${ui.input} resize-none py-2 text-xs`}
-      />
+      <Dictation id={`op-${key}`} disabled={disabled} set={(next) => setDraft((d) => ({ ...d, [key]: typeof next === "function" ? next(d[key]) : next }))}>
+        <textarea
+          rows={rows}
+          value={draft[key]}
+          maxLength={key === "target" ? 200 : key === "timing" ? 120 : 400}
+          disabled={disabled}
+          onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
+          placeholder={t(`ops.placeholder.${key}` as MessageKey)}
+          className={`${ui.input} resize-none py-2 text-xs`}
+        />
+      </Dictation>
     </label>
   );
   const minister = officialAt(state, ADVISOR_POST[ministry]);

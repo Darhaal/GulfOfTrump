@@ -1,16 +1,14 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useContext } from "react";
 import { usePreference } from "@/lib/preferences";
 import { tr } from "@/engine/text";
 import type { Locale, Text } from "@/engine/types";
 import { MESSAGES, type MessageKey } from "./messages";
+import { RouteLocaleContext } from "./routeLocale";
+import { translate } from "./translate";
 
-export function translate(locale: Locale, key: MessageKey, vars?: Record<string, string | number>): string {
-  let text: string = MESSAGES[locale][key] ?? MESSAGES.en[key];
-  if (vars) for (const [k, v] of Object.entries(vars)) text = text.replaceAll(`{${k}}`, String(v));
-  return text;
-}
+export { translate };
 
 /**
  * Billions of dollars in words of the locale, with `extra` more decimals than the short form: "$117 млрд" at 0,
@@ -36,9 +34,14 @@ export function moneyChange(locale: Locale, from: number, to: number): { from: s
   return { from: moneyText(locale, from, extra), to: moneyText(locale, to, extra), delta: `${d >= 0 ? "+" : "−"}${moneyText(locale, Math.abs(d), Math.abs(d) >= 1 ? 1 : 0).replace(/^−/, "")}` };
 }
 
-/** The interface language and helpers bound to it. */
+/**
+ * The interface language and helpers bound to it: the language of the page's
+ * address on /ru and /uk (so the server renders it), the player's own choice
+ * everywhere else (i18n/routeLocale.tsx keeps the two in step).
+ */
 export function useI18n() {
-  const [locale, setLocale] = usePreference("locale");
+  const [preferred, setLocale] = usePreference("locale");
+  const locale = useContext(RouteLocaleContext) ?? preferred;
   const t = useCallback(
     (key: MessageKey, vars?: Record<string, string | number>) => translate(locale, key, vars),
     [locale],

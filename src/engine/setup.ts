@@ -1,14 +1,21 @@
+import { chooseHost } from "./exile";
 import { regimeAtStart, seedDomestic } from "./abroad";
 import { withRulers } from "./people";
 import { seedIntentions } from "./intentions";
 import { seedArsenals } from "./arsenal";
+import { seedCivilWars } from "./civilWar";
 import { countryColor } from "./colors";
-import { seedEconomies } from "./economy";
+import { nationalAccounts, seedEconomies } from "./economy";
+import { startingAtom } from "./atom";
+import { startingEnergy } from "./energy";
 import { SAVE_MIGRATION } from "./migrations";
 import { startingOwner } from "./provinces";
+import { coarseOf, isFineMap, partsOf, shareProvince } from "./refine";
 import { startingPolitics } from "./politics";
 import { startingResearch } from "./research";
-import { startingRole } from "./role";
+import { startingSpace } from "./space";
+import { startingSport } from "./sport";
+import { type OppositionStart, startingRole } from "./role";
 import { startingFigure } from "./figures";
 import { seedSociety } from "./society";
 import { countryName } from "./names";
@@ -33,21 +40,47 @@ export function peopleScale(scenario: Scenario, mapRegions: MapRegion[]): ((adm0
   };
 }
 
-/** Every region with its owner, and every country that holds land or is seeded. */
+/**
+ * Every region with its owner, and every country that holds land or is
+ * seeded. On a finer map (engine/refine.ts) the scenario's corrections,
+ * written for the standard map's provinces, reach every part of them, and a
+ * front the scenario starts inside one is laid out over its parts; one
+ * written for a part reaches that part alone.
+ */
 export function startingWorld(scenario: Scenario, mapRegions: MapRegion[]) {
   const regions: Record<string, RegionState> = {};
   const scale = peopleScale(scenario, mapRegions);
+  const fine = isFineMap(mapRegions);
   for (const region of mapRegions) {
     const owner = startingOwner(scenario, region);
-    const contested = scenario.provinceContested?.[region.id];
+    const contested = fine ? undefined : scenario.provinceContested?.[region.id];
     const held = scenario.provinceHeld?.[region.id];
     const taken = scenario.provinceTaken?.[region.id];
     regions[region.id] = {
       owner,
-      controller: scenario.provinceControllers?.[region.id] ?? owner,
+      controller: scenario.provinceControllers?.[region.id] ?? (region.was !== undefined ? scenario.provinceControllers?.[region.was] : undefined) ?? owner,
       ...(contested ? { contested, ...(held ? { held } : {}), ...(taken?.length ? { taken } : {}) } : {}),
       ...(scale && region.pop !== undefined ? { pop: roundPeople(region.pop * scale(region.adm0)) } : {}),
     };
+  }
+  if (fine) {
+    const parts = partsOf(mapRegions);
+    const byId = new Map(mapRegions.map((r) => [r.id, r]));
+    for (const [key, contested] of Object.entries(scenario.provinceContested ?? {})) {
+      // A standard province is laid out over its parts; a part named itself is fought over alone.
+      const list = parts.get(key) ?? (byId.has(key) ? [byId.get(key)!] : undefined);
+      if (!list?.length) continue;
+      const first = regions[list[0].id];
+      const held = scenario.provinceHeld?.[key];
+      const taken = scenario.provinceTaken?.[key];
+      const coarse: RegionState = { owner: first.owner, controller: first.controller, contested, ...(held ? { held } : {}), ...(taken?.length ? { taken } : {}) };
+      const near = (side: string) => mapRegions.filter((r) => r.at && coarseOf(r) !== key && regions[r.id]?.controller === side).map((r) => r.at!);
+      for (const [id, shared] of Object.entries(shareProvince(coarse, list, near))) {
+        const own = regions[id];
+        // Each part keeps its own owner and people; the parts the front has passed are its holder's.
+        regions[id] = { ...shared, owner: own.owner, controller: shared.controller === coarse.controller ? own.controller : shared.controller, ...(own.pop !== undefined ? { pop: own.pop } : {}) };
+      }
+    }
   }
 
   const countries: Record<string, CountryState> = {};
@@ -92,7 +125,7 @@ export interface GameOptions {
    * Who the player is (engine/role.ts): the country's leader unless the player picks its opposition, with the names they gave or a paragraph on who they are,
    * or a minister of a ministry (`post`) or a general (`scope`, `front`), a person of the date by id (`personId`) or one of their own (engine/figures.ts).
    */
-  role?: { kind: RoleKind; person?: string; personId?: string; gender?: Gender; movement?: string; about?: string; post?: string; scope?: CommandScope; front?: string };
+  role?: { kind: RoleKind; person?: string; personId?: string; gender?: Gender; movement?: string; about?: string; post?: string; scope?: CommandScope; front?: string; as?: OppositionStart };
 }
 
 export function createGame(scenario: Scenario, mapRegions: MapRegion[], player: string, now = new Date(), locale: Locale = "en", options: GameOptions = {}): GameState {
@@ -102,6 +135,13 @@ export function createGame(scenario: Scenario, mapRegions: MapRegion[], player: 
   const stamp = now.toISOString();
   const byId = Object.fromEntries(mapRegions.map((r) => [r.id, r]));
   const id = newGameId();
+  const wars = scenario.wars.map((w) => ({ id: w.id, name: w.name, attackers: known(w.attackers), defenders: known(w.defenders), since: w.since }));
+  const role =
+    options.role?.kind === "minister" || options.role?.kind === "general"
+      ? startingFigure(regimeAtStart(scenario.id, player), scenario.startDate, { ...options.role, kind: options.role.kind })
+      : startingRole(regimeAtStart(scenario.id, player), scenario.startDate, options.role);
+  // The civil wars under way on the date are recorded as civil wars from the first day (engine/civilWar.ts).
+  const civilWars = seedCivilWars({ wars, countries, player, date: scenario.startDate, role }, scenario.wars);
   const game = seedEconomies({
     schema: 2,
     // A new game is in today's shape: no migration is for it.
@@ -119,16 +159,14 @@ export function createGame(scenario: Scenario, mapRegions: MapRegion[], player: 
     step: scenario.defaultStep,
     countries,
     regions,
-    wars: scenario.wars.map((w) => ({ ...w, attackers: known(w.attackers), defenders: known(w.defenders) })),
+    wars,
+    ...(civilWars.length ? { civilWars } : {}),
     alliances: scenario.alliances.map(({ allExcept, ...a }) => ({ ...a, members: allExcept ? worldBody(countries, allExcept) : known(a.members) })),
     chronicle: [],
     diplomacy: {},
     draft: [],
     fog: options.fog ?? true,
-    role:
-      options.role?.kind === "minister" || options.role?.kind === "general"
-        ? startingFigure(regimeAtStart(scenario.id, player), scenario.startDate, { ...options.role, kind: options.role.kind })
-        : startingRole(regimeAtStart(scenario.id, player), scenario.startDate, options.role),
+    role,
     politics: { ...startingPolitics(scenario.countries[player]?.stats?.stability), ...(scenario.loyalty?.[player] ? { loyalty: scenario.loyalty[player] } : {}) },
     ...(scenario.protests?.length
       ? {
@@ -154,7 +192,18 @@ export function createGame(scenario: Scenario, mapRegions: MapRegion[], player: 
   // every country's weapons and the player's research (arsenal.ts, research.ts), and the people each leader line names (people.ts).
   const seeded = seedIntentions(seedDomestic(game, scenario), scenario, { map: byId, mode: options.mode ?? "free" });
   // The player's society on the start date: the base of its trend arrows (engine/society.ts).
-  return seedSociety(withRulers(seedArsenals({ ...seeded, research: startingResearch(seeded) }, byId)), byId);
+  // And every country's rocket programme as history had it on the start date (engine/space.ts), and the Games of the coming years (engine/sport.ts).
+  // And every country's power plants and atomic programme as history had them (engine/energy.ts, engine/atom.ts).
+  const armed = seedArsenals({ ...seeded, research: startingResearch(seeded), space: startingSpace(seeded), sport: startingSport(seeded) }, byId);
+  const powered = { ...armed, energy: startingEnergy(armed, byId, nationalAccounts(armed, byId)), atom: startingAtom(armed) };
+  const started = seedSociety(withRulers(powered), byId);
+  // An émigré starts abroad, sheltered by the government that would take them in; with none, the first turn looks again (engine/role.ts).
+  const m = started.role?.movement;
+  if (m?.kind === "exile" && !m.host) {
+    const host = chooseHost(started);
+    if (host) started.role = { ...started.role!, movement: { ...m, host } };
+  }
+  return started;
 }
 
 /** The members of a world body: every country in the game but those left out (the scenario lists them, republics without a seat among them). */

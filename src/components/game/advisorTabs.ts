@@ -6,7 +6,7 @@ import { ADVISORS, type AdvisorId } from "@/engine/advisors";
  */
 const TAB_ADVISORS: Record<string, readonly string[]> = {
   army: ["military"],
-  science: ["science"],
+  science: ["science", "space"],
   foreign: ["foreign"],
   politics: ["interior"],
   economy: ["finance", "industry"],

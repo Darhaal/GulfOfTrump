@@ -11,7 +11,10 @@ import type { Economy, GameState } from "./types";
  * Both are optional fields of the economy, moved each turn by
  * `advanceDevelopment`, and both fall back slowly once the effort stops.
  * The army's share of GDP still takes the goods: factories and imports
- * offset part of what it takes, never all of it. Pure.
+ * offset part of what it takes, never all of it. What light and heavy
+ * industry feed (engine/industry.ts keeps them) is read here too: the arms
+ * money's worth, the growth the industry line's split adds and the goods the
+ * structure holds up or takes. Pure.
  */
 
 /** Goods points a doubling of the industry line past the era's usual share builds, and the most; below it, lost per halving and the most lost. */
@@ -51,6 +54,37 @@ const EXTRACT_DECAY_YEARS = 15;
 export const EXTRACTION_MAX = 1.3;
 /** The bounds of the factories a save may hold. */
 export const FACTORIES_BOUNDS = [-FACTORY_MAX_LOSS - POLICY_GOODS, FACTORY_MAX + POLICY_GOODS * MAX_BUILDERS] as const;
+
+// --- light and heavy industry (engine/industry.ts keeps the structure; what it does is read here) ---
+
+/** Points the investment split may move from the usual, either way. */
+export const MAX_TILT = 20;
+/** Points the structure may stand from the usual, either way: a system changed overnight leaves its plants as they were. */
+export const LEAN_MAX = 40;
+/** Goods points each point of heavy industry past the usual takes from the shops, or light industry past it holds up. */
+const LEAN_GOODS = 0.005;
+/** Arms a point of heavy industry past the usual adds to what the arms money buys, and the bounds. */
+const LEAN_ARMS = 0.01;
+const LEAN_ARMS_BOUNDS = [-0.2, 0.25] as const;
+/** Growth points a year a point of the industry line tilted to heavy industry adds (light takes), at the era's usual line; and the most. */
+const TILT_GROWTH = 0.03;
+const TILT_GROWTH_MAX = 0.6;
+
+/** The government's split of the industry line: points moved to heavy (+) or light (−) industry from the usual split. */
+export const tiltOf = (e: Pick<Economy, "tilt"> | undefined): number => clamp(Number.isFinite(e?.tilt) ? e!.tilt! : 0, -MAX_TILT, MAX_TILT);
+/** The industrial structure: points heavy industry stands above (+) or below (−) its usual share of output. */
+export const leanOf = (e: Pick<Economy, "lean"> | undefined): number => clamp(Number.isFinite(e?.lean) ? e!.lean! : 0, -LEAN_MAX, LEAN_MAX);
+/** What the arms money buys against the usual: heavy industry past the usual has the steel and the plants at hand. */
+export const heavyArms = (e: Pick<Economy, "lean"> | undefined): number => 1 + clamp(LEAN_ARMS * leanOf(e), LEAN_ARMS_BOUNDS[0], LEAN_ARMS_BOUNDS[1]);
+/** Goods points the structure holds up (light past the usual) or takes (heavy past it). */
+export const leanGoods = (lean: number): number => (lean ? -LEAN_GOODS * clamp(lean, -LEAN_MAX, LEAN_MAX) : 0);
+/**
+ * Growth points a year the split of the industry line adds: money tilted to
+ * heavy industry builds the machines and the steel the rest is built with,
+ * money tilted to light industry the goods people buy. `ratio`: the industry
+ * line against the era's usual share – the more money, the more the split counts.
+ */
+export const splitGrowth = (tilt: number, ratio: number): number => Math.round(clamp(TILT_GROWTH * clamp(tilt, -MAX_TILT, MAX_TILT) * clamp(ratio, 0, 1.5), -TILT_GROWTH_MAX, TILT_GROWTH_MAX) * 100) / 100;
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 const round = (v: number, digits = 4) => Math.round(v * 10 ** digits) / 10 ** digits;
@@ -151,6 +185,8 @@ export interface GoodsInputs {
   /** Reserves as a share of GDP, and the era's usual share. */
   reserves: number;
   reserveNorm: number;
+  /** Points heavy industry stands past its usual share of output (`Economy.lean`): light industry past it holds goods up, heavy takes them. */
+  lean?: number;
 }
 
 export interface GoodsLine {
@@ -208,11 +244,18 @@ export function goodsLine(g: GoodsInputs): GoodsLine {
     penalty -= g.research;
     down.push("research");
   }
+  // Heavy industry past its usual share leaves fewer plants for the shops; light industry past it holds the goods up as the factories do.
+  const structure = leanGoods(g.lean ?? 0);
+  if (structure <= -0.005) {
+    penalty -= structure;
+    down.push("heavy");
+  }
   const up: ProvisionCause[] = [];
   const room = penalty * SUPPORT_SHARE;
-  let held = Math.min(room, Math.max(0, g.factories) + Math.max(0, g.research));
+  let held = Math.min(room, Math.max(0, g.factories) + Math.max(0, g.research) + Math.max(0, structure));
   if (g.factories >= 0.005 && penalty > 0) up.push("industry");
   if (g.research >= 0.005 && penalty > 0) up.push("research");
+  if (structure >= 0.005 && penalty > 0) up.push("light");
   // Imports cover a share of what is still short, less as a blockade closes them and as the reserves near their floor.
   const afford = g.broke || g.reserveNorm <= 0 ? 0 : clamp((g.reserves - g.reserveNorm * 0.5) / g.reserveNorm, 0, 1);
   const imported = Math.min(room - held, Math.max(0, penalty - held) * IMPORT_SHARE * afford * (1 - clamp(g.cut, 0, 1)));
@@ -222,5 +265,5 @@ export function goodsLine(g: GoodsInputs): GoodsLine {
 }
 
 /** The order the causes that pull the goods down are named in: the war and the blockade before the slower ones. */
-const DOWN_ORDER: ProvisionCause[] = ["blockade", "broke", "shortage", "warEconomy", "inflation", "recession", "industry", "research"];
+const DOWN_ORDER: ProvisionCause[] = ["blockade", "broke", "shortage", "warEconomy", "heavy", "inflation", "recession", "industry", "research"];
 const ORDER = (c: ProvisionCause) => DOWN_ORDER.indexOf(c);

@@ -1,4 +1,4 @@
-import type { AdvisorId } from "./advisors";
+import type { AdvisorId, StandardMinistry } from "./advisors";
 import { OfficialsSetupSchema, startOfficials } from "./government";
 import { seedInterests } from "./interests";
 import { PoliticsSetupSchema, startPolitics } from "./politics";
@@ -9,6 +9,8 @@ import {
   LETTER_REPLIES,
   MINISTER_ANSWERS,
   MINISTER_VIEWS,
+  NO_SURRENDER,
+  nonsenseOrder,
   ORDER_WORDS,
   SCRIPTED_TURNS,
   TUTORIAL_OFFICIALS,
@@ -32,7 +34,10 @@ import { LOCALES, type GameState, type Localized, type Locale, type MapRegion } 
  * client applies it with the same functions: the engine decides what comes of
  * it. Whatever the player orders, each order gets the verdict of its kind
  * (Kyiv, the army, the allies, talks…), and the week's story, news and front
- * are the same: the war does not wait for the player's orders.
+ * are the same: the war does not wait for the player's orders. An order the
+ * story would contradict – to pull back, to give up, to refuse talks, to strike
+ * Moscow, to resign, or nonsense – gets a verdict that says why the week went
+ * as the story tells it.
  */
 
 /** How many turns are written in advance. */
@@ -69,15 +74,24 @@ export function tutorialGame(regions: MapRegion[], now = new Date(), locale: Loc
   const game = createGame(scenario, regions, scenario.player!, now, locale);
   return seedInterests({
     ...game,
+    // One seed for every tutorial: its written weeks play the same in every language and every game.
+    seed: "tutorial",
     title: TITLE[locale],
     politics: startPolitics(PoliticsSetupSchema.parse(localize(TUTORIAL_POLITICS, locale)), game.date),
     officials: startOfficials(OfficialsSetupSchema.parse(localize(TUTORIAL_OFFICIALS, locale)), game.date),
   });
 }
 
-/** What an order is about, from its words. */
+/**
+ * What an order is about, from its words: nonsense first, then the first kind
+ * whose words it has, once the words that say "never give up" are taken out
+ * (so "never give up, hold Kyiv" is about Kyiv, and "don't hold Kyiv" is a
+ * pull-back, not a defence).
+ */
 export function orderKind(order: string): OrderKind {
-  return ORDER_WORDS.find(([, words]) => words.test(order))?.[0] ?? "other";
+  if (nonsenseOrder(order)) return "nonsense";
+  const read = order.replace(NO_SURRENDER, " ");
+  return ORDER_WORDS.find(([, words]) => words.test(read))?.[0] ?? "other";
 }
 
 /** The written turn for the turn about to be played (the last one past them). */
@@ -117,13 +131,14 @@ export function scriptedStage(state: GameState, stage: TurnStage, orders: string
 
 /** A minister's written answer, to whatever was asked: the view from their portfolio, and the orders they drafted. */
 export function scriptedAdvice(advisor: AdvisorId, locale: Locale): Record<string, unknown> {
-  const { answer, orders } = MINISTER_ANSWERS[advisor];
+  // The head of a space programme answers as the science minister would, a ministry the player created as the chief of staff.
+  const { answer, orders } = MINISTER_ANSWERS[(advisor === "space" ? "science" : advisor) as StandardMinistry] ?? MINISTER_ANSWERS.chief;
   return { answer: answer[locale], ...(orders ? { orders: orders.map((o) => o[locale]) } : {}) };
 }
 
 /** A minister's written view of a written turn. */
 export function scriptedView(ministry: AdvisorId, locale: Locale): Record<string, unknown> {
-  return { report: MINISTER_VIEWS[ministry][locale], stance: "loyal" };
+  return { report: (MINISTER_VIEWS[(ministry === "space" ? "science" : ministry) as StandardMinistry] ?? MINISTER_VIEWS.chief)[locale], stance: "loyal" };
 }
 
 /** Who writes back to a letter, and how: Poland, the West, Moscow, its friends, or the rest. */

@@ -18,8 +18,8 @@ export interface BuiltinVoice {
   sha256: string;
   bytes: number;
   sampleRate: number;
-  /** The model's speakers, by id, with their names in the interface. */
-  speakers: { id: number; name: Record<"ru" | "uk" | "en", string> }[];
+  /** The model's speakers, by id, with their names in the interface and their sex, for reading a person in a voice of their own. */
+  speakers: { id: number; name: Record<"ru" | "uk" | "en", string>; sex: "male" | "female" }[];
   /** Where it came from and under what licence, for About. */
   credit: { name: string; url: string; licence: string };
 }
@@ -33,9 +33,9 @@ export const BUILTIN_VOICES: Record<BuiltinLang, BuiltinVoice> = {
     bytes: 76_735_663,
     sampleRate: 22050,
     speakers: [
-      { id: 0, name: { ru: "Лада", uk: "Лада", en: "Lada" } },
-      { id: 1, name: { ru: "Микита", uk: "Микита", en: "Mykyta" } },
-      { id: 2, name: { ru: "Тетяна", uk: "Тетяна", en: "Tetiana" } },
+      { id: 0, name: { ru: "Лада", uk: "Лада", en: "Lada" }, sex: "female" },
+      { id: 1, name: { ru: "Микита", uk: "Микита", en: "Mykyta" }, sex: "male" },
+      { id: 2, name: { ru: "Тетяна", uk: "Тетяна", en: "Tetiana" }, sex: "female" },
     ],
     credit: { name: "Piper · ukrainian_tts (medium)", url: "https://huggingface.co/rhasspy/piper-voices/tree/main/uk/uk_UA/ukrainian_tts/medium", licence: "MIT; data CC0" },
   },
@@ -47,8 +47,8 @@ export const BUILTIN_VOICES: Record<BuiltinLang, BuiltinVoice> = {
     bytes: 50_849_741,
     sampleRate: 16000,
     speakers: [
-      { id: 0, name: { ru: "женский", uk: "жіночий", en: "female" } },
-      { id: 1, name: { ru: "мужской", uk: "чоловічий", en: "male" } },
+      { id: 0, name: { ru: "женский", uk: "жіночий", en: "female" }, sex: "female" },
+      { id: 1, name: { ru: "мужской", uk: "чоловічий", en: "male" }, sex: "male" },
     ],
     credit: { name: "UtrobinTTS · tts_ru_free_hf_vits_low_multispeaker", url: "https://huggingface.co/utrobinmv/tts_ru_free_hf_vits_low_multispeaker", licence: "Apache-2.0" },
   },

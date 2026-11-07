@@ -22,7 +22,10 @@ const COUNTRY = "Ukraine";
 const errors = [];
 const browser = await chromium.launch(process.env.SMOKE_CHROMIUM ? { executablePath: process.env.SMOKE_CHROMIUM } : {});
 // Wide enough (2xl) for the left panels and the right column to show together.
-const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+// A player's browser, not a headless one: the front page treats "HeadlessChrome" as a crawler and opens no tutorial for it
+// (lib/tutorial.ts isBot), as search engines must see the page itself.
+const userAgent = (await browser.newPage().then(async (p) => { const ua = await p.evaluate(() => navigator.userAgent); await p.close(); return ua; })).replace("HeadlessChrome", "Chrome");
+const page = await browser.newPage({ viewport: { width: 1600, height: 900 }, userAgent });
 page.on("pageerror", (e) => errors.push(`page error: ${e.message}`));
 page.on("console", (m) => {
   if (m.type() === "error") errors.push(`console: ${m.text()}`);
@@ -167,7 +170,7 @@ try {
   });
 
   // Every date starts with its first featured country and plays a turn.
-  for (const date of ["1914", "1939", "1950", "1964", "1991", "1999", "2014", "2022"]) {
+  for (const date of ["1914", "1933", "1939", "1950", "1957", "1964", "1973", "1979", "1991", "1999", "2014", "2022"]) {
     await step(`a turn is played on ${date}`, async () => {
       await page.goto(`${BASE}/new/${date}`);
       await mapDrawn();

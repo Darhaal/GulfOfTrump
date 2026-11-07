@@ -1,5 +1,10 @@
 "use client";
 
+import { Camera, Loader2, X } from "lucide-react";
+import { useRef, useState } from "react";
+import { setPortraitImage } from "@/engine/partyEmblems";
+import { paintPhoto } from "./politics/paintPhoto";
+import { officialTitle } from "@/engine/government";
 import { leaderOf, leaderOfficial, personName } from "@/engine/people";
 import type { GameState } from "@/engine/types";
 import { useI18n } from "@/i18n/useI18n";
@@ -24,23 +29,58 @@ export function Bio({ text, loading }: { text?: string; loading?: boolean }) {
  * under both, the card's full width, so a long life does not stretch a
  * narrow column.
  */
-export default function LeaderCard({ state, bio, bioLoading }: { state: GameState; bio?: string; bioLoading?: boolean }) {
-  const { t, locale } = useI18n();
+export default function LeaderCard({ state, bio, bioLoading, onChange }: { state: GameState; bio?: string; bioLoading?: boolean; onChange?: (next: GameState) => void }) {
+  const { t, text, locale } = useI18n();
+  const [painting, setPainting] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
   const leader = leaderOf(state, state.player);
   if (!leader) return null;
+  const hasOwn = Boolean(state.portraitImages?.[leader.id] ?? state.portraitImages?.[`name:${leader.name}`]);
+  // Only a leader the game has no portrait of – a shadow – takes the player's own photo; a real one is never replaced.
+  const mayBring = Boolean(onChange) && !leader.portrait;
+  // The player's own photo of the leader, painted in oil as the portraits are (politics/paintPhoto.ts).
+  const bring = async (file: File | undefined) => {
+    if (!file || !onChange) return;
+    setPainting(true);
+    setFailed(false);
+    const url = await paintPhoto(file);
+    setPainting(false);
+    if (url) onChange(setPortraitImage(state, leader, url));
+    else setFailed(true);
+  };
   const official = leaderOfficial(state);
   const name = personName(leader, locale);
-  const title = official?.title ?? leader.title;
+  const title = official ? officialTitle(official, text) : leader.title;
   const traits = official?.traits ?? [];
   return (
     <div className="rounded-2xl bg-page p-3">
       <div className="flex items-start gap-4">
-        <Portrait portrait={leader.portrait} gender={leader.gender} name={name} size="hero" className="ring-1 ring-accent/40 ring-offset-2 ring-offset-page" />
+        <div className="relative shrink-0">
+          <Portrait portrait={leader.portrait} gender={leader.gender} name={name} size="hero" className="ring-1 ring-accent/40 ring-offset-2 ring-offset-page" />
+          {onChange && (mayBring || hasOwn) && (
+            <>
+              <input ref={input} type="file" accept="image/*" className="hidden" onChange={(e) => void bring(e.target.files?.[0])} />
+              <button
+                type="button"
+                disabled={painting}
+                onClick={() => (hasOwn ? onChange(setPortraitImage(state, leader, null)) : mayBring && input.current?.click())}
+                title={t(hasOwn ? "leader.photo.remove" : "leader.photo.upload")}
+                aria-label={t(hasOwn ? "leader.photo.remove" : "leader.photo.upload")}
+                className="absolute -bottom-1.5 -right-1.5 grid h-7 w-7 place-items-center rounded-full border border-line sheet text-muted shadow-sm transition-colors hover:text-ink disabled:opacity-60"
+              >
+                {painting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : hasOwn ? <X className="h-3.5 w-3.5" /> : <Camera className="h-3.5 w-3.5" />}
+              </button>
+            </>
+          )}
+        </div>
         <div className="min-w-0 pt-1">
           <div className="text-2xs font-black uppercase tracking-widest text-muted">{t("cabinet.leader")}</div>
           <div className="text-lg font-black leading-tight text-ink">{name}</div>
           {title && <div className="mt-0.5 text-xs font-medium leading-snug text-muted">{title}</div>}
           {official?.faction && <div className="mt-1.5 text-2xs font-bold text-muted">{official.faction}</div>}
+          {painting && <div className="mt-1.5 text-2xs font-bold text-muted">{t("politics.emblem.painting")}</div>}
+          {failed && <div className="mt-1.5 text-2xs font-bold text-red-600">{t("politics.emblem.failed")}</div>}
         </div>
       </div>
       {(bio || bioLoading || traits.length > 0) && (

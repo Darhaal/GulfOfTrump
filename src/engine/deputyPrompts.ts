@@ -1,9 +1,11 @@
-import { ADVISOR_PERSONAS, type AdvisorId } from "./advisors";
+import type { AdvisorId } from "./advisors";
 import { deputiesOf, deputyPersona, MAX_DEPUTIES } from "./deputies";
 import { officialAt, officialLine } from "./government";
 import { factionLineFor } from "./intrigue";
 import { buildPoliticsPrompt, IN_CHARACTER, LANGUAGE } from "./prompts";
+import { speechPersona } from "./speech";
 import type { Deputy, GameState, Locale, OfficialPost } from "./types";
+import { ministryPersona } from "./ministries";
 
 /**
  * What the model is asked about deputies: to name a ministry's deputies, and
@@ -20,9 +22,9 @@ Answer with ONE JSON object and nothing else:
 export function buildDeputiesPrompt(state: GameState, post: OfficialPost, advisor: AdvisorId): string {
   const chief = officialAt(state, post);
   return [
-    buildPoliticsPrompt(state),
+    buildPoliticsPrompt(state, [advisor]),
     "",
-    `THE MINISTRY: ${ADVISOR_PERSONAS[advisor]}`,
+    `THE MINISTRY: ${ministryPersona(state, advisor)}`,
     chief ? `ITS MINISTER: ${officialLine(chief)}` : "ITS MINISTER: the post is empty.",
     "",
     "THE GOVERNMENT:",
@@ -31,7 +33,7 @@ export function buildDeputiesPrompt(state: GameState, post: OfficialPost, adviso
 }
 
 /** A private conversation with a deputy: in character, more frank than their minister, committing to nothing. */
-export const DEPUTY_INSTRUCTIONS = (advisor: AdvisorId, locale: Locale, state: GameState, deputy: Deputy) => `${deputyPersona(state, deputy, ADVISOR_PERSONAS[advisor])} You serve the player's government in Gulf of Trump, an alternate-history grand strategy game, and answer the leader in private, in character.
+export const DEPUTY_INSTRUCTIONS = (advisor: AdvisorId, locale: Locale, state: GameState, deputy: Deputy) => `${deputyPersona(state, deputy, ministryPersona(state, advisor))}${speechPersona(state, deputy.name, locale)} You serve the player's government in Gulf of Trump, an alternate-history grand strategy game, and answer the leader in private, in character.
 - Answer from the world state and the history below, as someone on that date would know them: nothing about how real history went afterwards. Use concrete names, places and numbers.
 - You know your ministry from the inside: what really works, who does the work, where the money goes, what your chief hides or gets wrong. Say it more plainly than a minister would, as your character and your loyalties allow.
 ${IN_CHARACTER}

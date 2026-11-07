@@ -11,8 +11,16 @@ import { RESOURCE_TYPES, type ResourceType } from "@/engine/resources";
 export const MAP_MODES = ["political", "diplomacy", "terrain", "fertility", "population", "resources", "transport"] as const;
 export type MapMode = (typeof MAP_MODES)[number];
 
-export const MAP_LAYERS = ["fronts", "changes", "rivers", "railways", "ports", "cities", "provinces"] as const;
+export const MAP_LAYERS = ["fronts", "changes", "headquarters", "cities", "labels", "ports", "protests", "rivers", "railways", "provinces"] as const;
 export type MapLayer = (typeof MAP_LAYERS)[number];
+
+/**
+ * What the game draws over the land, toggled from the map's corner by the
+ * zoom buttons: the fronts, the turn's movements, the army's headquarters,
+ * towns, country names, ports and resources, protests. The rest (rivers,
+ * railways, province borders) are the base map, in the layers menu alone.
+ */
+export const QUICK_LAYERS = ["fronts", "changes", "headquarters", "cities", "labels", "ports", "protests"] as const satisfies readonly MapLayer[];
 
 export interface MapSettings {
   mode: MapMode;
@@ -25,7 +33,7 @@ const KEY = "got_map";
 export const DEFAULT_MAP_SETTINGS: MapSettings = {
   mode: "political",
   resource: "all",
-  layers: { fronts: true, changes: true, rivers: true, railways: false, ports: false, cities: true, provinces: true },
+  layers: { fronts: true, changes: true, headquarters: true, cities: true, labels: true, ports: false, protests: true, rivers: true, railways: false, provinces: true },
 };
 
 let memory: MapSettings | null = null;

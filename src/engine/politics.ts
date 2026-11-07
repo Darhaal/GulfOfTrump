@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { roll } from "./dice";
 import { slug } from "./text";
-import type { AppliedChange, BecauseKind, GameState, Loyalty, Parliament, Party, PartyStance, Plot, Politics } from "./types";
+import type { AppliedChange, BecauseKind, GameState, GoneParty, Loyalty, Parliament, Party, PartyEnd, PartyStance, Plot, Politics, RegimeKind } from "./types";
 import { PILLARS } from "./types";
 import { applyLaws, describeLaws, lawsShape, startLaws } from "./laws";
 
@@ -13,7 +14,9 @@ import { applyLaws, describeLaws, lawsShape, startLaws } from "./laws";
  * outcome, limited here: support adds up to 100, ideas drift at most a few
  * points a turn, unrest and plot strength stay within 0–100. Parliament
  * seats change at elections (by the model's figures, or shared out by the
- * D'Hondt method above the threshold), by defections and by bans.
+ * D'Hondt method above the threshold), by defections and by bans. Parties
+ * also rise, split, merge, wear down and end by the engine (engine/partyLife.ts);
+ * those that end go into a short record (`gone`).
  */
 
 export const PARTY_STATUSES = ["ruling", "coalition", "opposition", "underground", "banned"] as const;
@@ -32,6 +35,9 @@ const seats = z.number().finite().min(0).optional().catch(undefined);
 const color = z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).optional().catch(undefined);
 const short = z.string().trim().min(1).max(8).optional().catch(undefined);
 
+/** A foreign government that funds or arms a party, by tag or name; checked against the state when the turn applies (engine/partyLife.ts). */
+const backer = z.string().trim().min(1).max(80).optional().catch(undefined);
+
 const party = z.object({
   name: shortText.min(1),
   short,
@@ -42,10 +48,13 @@ const party = z.object({
   stance: stance.default({ economy: 0, freedom: 0, nation: 0 }),
   seats,
   color,
+  backer,
 });
 
+/** The national parliament; null when none sits – dissolved, or none under the regime. */
 const parliament = z
   .object({ name: shortText.min(1), seats: z.number().int().min(1).max(5000), threshold: z.number().finite().min(0).max(20).optional().catch(undefined) })
+  .nullable()
   .optional()
   .catch(undefined);
 
@@ -105,11 +114,18 @@ export const politicsField = z
           seats,
           color,
           short,
+          // null: nobody funds it any more.
+          backer: z.string().trim().min(1).max(80).nullable().optional().catch(undefined),
         }),
       )
       .max(12)
       .default([]),
     removed: z.array(shortText.min(1)).max(6).default([]),
+    // The game master's names for the parties the engine made (engine/partyLife.ts), by their id.
+    named: z
+      .array(z.object({ party: shortText.min(1), name: shortText.min(1).max(80), short, leader: shortText.optional(), ideology: shortText.optional(), color }))
+      .max(4)
+      .optional(),
     election: z
       .object({ results: z.array(z.object({ party: shortText.min(1), share: z.number().finite(), seats })).min(1).max(12), note: shortText.default("") })
       .optional(),
@@ -132,13 +148,13 @@ const clampStance = (s: Partial<PartyStance>, from?: PartyStance): PartyStance =
 };
 
 /** Shares rescaled to add up to 100, one decimal. */
-function normalise(parties: Party[]): Party[] {
+export function normalise(parties: Party[]): Party[] {
   const total = parties.reduce((s, p) => s + Math.max(0, p.support), 0);
   if (total <= 0) return parties;
   return parties.map((p) => ({ ...p, support: round((Math.max(0, p.support) / total) * 100) }));
 }
 
-const uniqueId = (name: string, taken: Set<string>) => {
+export const uniqueId = (name: string, taken: Set<string>) => {
   const base = slug(name) || "party";
   let id = base;
   for (let i = 2; taken.has(id); i += 1) id = `${base}-${i}`;
@@ -188,7 +204,7 @@ export function allocateSeats(shares: { id: string; share: number }[], total: nu
 }
 
 /** Seats as whole numbers that never add up to more than the parliament has. */
-function fitSeats(parties: Party[], total: number | undefined): Party[] {
+export function fitSeats(parties: Party[], total: number | undefined): Party[] {
   const list = parties.map((p) => (p.seats === undefined ? p : { ...p, seats: Math.max(0, Math.round(p.seats)) }));
   if (!total) return list;
   const sum = list.reduce((s, p) => s + (p.seats ?? 0), 0);
@@ -217,12 +233,14 @@ export function startPolitics(raw: z.infer<typeof PoliticsSetupSchema>, date: st
       ...(p.seats !== undefined ? { seats: p.seats } : {}),
       ...(p.color ? { color: p.color } : {}),
       ...(p.short ? { short: p.short } : {}),
+      ...(p.backer ? { backer: p.backer } : {}),
+      ...(p.status === "underground" || p.status === "banned" ? { strength: defaultStrength(clamp(p.support, 0, 100)) } : {}),
     })),
   );
   const start = defaultLoyalty(raw.unrest);
   return {
     regime: raw.regime,
-    ...(raw.parliament ? { parliament: raw.parliament } : {}),
+    ...(raw.parliament ? { parliament: raw.parliament } : raw.parliament === null ? { parliamentGone: { date } } : {}),
     unrest: clamp(Math.round(raw.unrest), 0, 100),
     loyalty: Object.fromEntries(PILLARS.map((k) => [k, clamp(Math.round(raw.loyalty?.[k] ?? start[k]), 0, 100)])) as Loyalty,
     ...(startLaws(raw.laws) ? { laws: startLaws(raw.laws) } : {}),
@@ -232,10 +250,32 @@ export function startPolitics(raw: z.infer<typeof PoliticsSetupSchema>, date: st
   };
 }
 
-const findParty = (parties: Party[], key: string) => {
+export const findParty = <P extends Pick<Party, "id" | "name">>(parties: P[], key: string): P | undefined => {
   const needle = key.trim().toLowerCase();
   return parties.find((p) => p.id === needle || p.name.trim().toLowerCase() === needle);
 };
+
+/** How many ended parties the record keeps: the latest. */
+export const MAX_GONE = 12;
+
+/** An outlawed party's organisation when nobody has said (engine/partyLife.ts): the more people sympathise, the more cells it keeps. */
+export const defaultStrength = (support: number): number => Math.round(clamp(10 + support * 3, 8, 70));
+
+/** A party as the record keeps it once it has ended. */
+export function goneParty(p: Party, how: PartyEnd, ctx: { turn: number; to: string }, into?: string): GoneParty {
+  return {
+    id: p.id,
+    name: p.name,
+    ...(p.short ? { short: p.short } : {}),
+    ...(p.color ? { color: p.color } : {}),
+    status: p.status,
+    how,
+    ...(into ? { into } : {}),
+    date: ctx.to,
+    turn: ctx.turn,
+    ...(p.unnamed && p.origin ? { unnamed: true, origin: p.origin } : {}),
+  };
+}
 
 /**
  * One turn of politics: parties move (ideas within MAX_DRIFT), new ones
@@ -246,8 +286,22 @@ const findParty = (parties: Party[], key: string) => {
 export function applyPolitics(current: Politics, change: PoliticsChange | undefined, ctx: { turn: number; to: string }, applied: AppliedChange[]): Politics {
   const before = new Map(current.parties.map((p) => [p.id, p]));
   let parties: Party[] = current.parties.map((p) => ({ ...p, was: p.stance, trend: 0 }));
-  const taken = new Set(parties.map((p) => p.id));
+  // An ended party's id stays its own, so the record never points at a newcomer.
+  const taken = new Set([...parties.map((p) => p.id), ...(current.gone ?? []).map((g) => g.id)]);
+  const gone: GoneParty[] = [...(current.gone ?? [])];
   if (change) {
+    // The game master names the parties the engine made (engine/partyLife.ts) before it moves them, so it may use the new name below.
+    for (const n of change.named ?? []) {
+      const p = findParty(parties, n.party);
+      if (!p?.unnamed || parties.some((o) => o !== p && o.name.trim().toLowerCase() === n.name.trim().toLowerCase())) continue;
+      p.name = n.name;
+      if (n.short) p.short = n.short;
+      if (n.leader) p.leader = n.leader;
+      if (n.ideology) p.ideology = n.ideology;
+      if (n.color) p.color = n.color;
+      delete p.unnamed;
+      applied.push({ kind: "party", party: p.name, change: "named", ...(p.origin ? { camp: p.origin.camp } : {}), ...(p.origin?.from ? { from: p.origin.from } : {}) });
+    }
     for (const u of change.parties) {
       const existing = findParty(parties, u.party);
       if (existing) {
@@ -262,6 +316,8 @@ export function applyPolitics(current: Politics, change: PoliticsChange | undefi
         if (u.seats !== undefined) existing.seats = u.seats;
         if (u.color) existing.color = u.color;
         if (u.short) existing.short = u.short;
+        if (u.backer === null) delete existing.backer;
+        else if (u.backer) existing.backer = u.backer;
       } else {
         const created: Party = {
           id: uniqueId(u.party, taken),
@@ -274,16 +330,18 @@ export function applyPolitics(current: Politics, change: PoliticsChange | undefi
           ...(u.seats !== undefined ? { seats: u.seats } : {}),
           ...(u.color ? { color: u.color } : {}),
           ...(u.short ? { short: u.short } : {}),
+          ...(u.backer ? { backer: u.backer } : {}),
         };
         parties.push(created);
         applied.push({ kind: "party", party: created.name, change: "new" });
       }
     }
     for (const r of change.removed) {
-      const gone = findParty(parties, r);
-      if (!gone) continue;
-      parties = parties.filter((p) => p.id !== gone.id);
-      applied.push({ kind: "party", party: gone.name, change: "dissolved" });
+      const ended = findParty(parties, r);
+      if (!ended) continue;
+      parties = parties.filter((p) => p.id !== ended.id);
+      gone.push(goneParty(ended, "dissolved", ctx));
+      applied.push({ kind: "party", party: ended.name, change: "dissolved" });
     }
     if (change.election) {
       for (const result of change.election.results) {
@@ -309,7 +367,19 @@ export function applyPolitics(current: Politics, change: PoliticsChange | undefi
       applied.push({ kind: "election", winner: findParty(parties, winner.party)?.name ?? winner.party, share: round(winner.share) });
     }
   }
-  const house: Parliament | undefined = change?.parliament ?? current.parliament;
+  // A parliament dissolved (a coup, a decree, a constitution without one) leaves the government's politics; a new one convened brings it back.
+  const house: Parliament | undefined = change?.parliament === null ? undefined : (change?.parliament ?? current.parliament);
+  let houseGone = current.parliamentGone;
+  if (change?.parliament === null && current.parliament) {
+    houseGone = { date: ctx.to, name: current.parliament.name };
+    applied.push({ kind: "parliament", change: "dissolved", name: current.parliament.name });
+    for (const p of parties) if (p.seats !== undefined) p.seats = 0;
+  } else if (change?.parliament === null && !houseGone) {
+    houseGone = { date: ctx.to };
+  } else if (house && !current.parliament) {
+    houseGone = undefined;
+    if (current.parliamentGone) applied.push({ kind: "parliament", change: "convened", name: house.name });
+  }
   parties = fitSeats(normalise(parties), house?.seats).map((p) => ({ ...p, trend: round(p.support - (before.get(p.id)?.support ?? 0)) }));
 
   // Plots: updated by title, new ones added, settled ones leave the list.
@@ -342,7 +412,7 @@ export function applyPolitics(current: Politics, change: PoliticsChange | undefi
   ) as Loyalty;
   return {
     regime: change?.regime || current.regime,
-    ...(house ? { parliament: house } : {}),
+    ...(house ? { parliament: house } : houseGone ? { parliamentGone: houseGone } : {}),
     unrest: clamp(Math.round(change?.unrest ?? current.unrest), 0, 100),
     loyalty,
     loyaltyWas: was,
@@ -356,6 +426,7 @@ export function applyPolitics(current: Politics, change: PoliticsChange | undefi
           : {}),
     parties,
     plots,
+    ...(gone.length ? { gone: gone.slice(-MAX_GONE) } : {}),
     ...(election
       ? {
           lastElection: {
@@ -370,10 +441,80 @@ export function applyPolitics(current: Politics, change: PoliticsChange | undefi
       : current.lastElection
         ? { lastElection: current.lastElection }
         : {}),
-    // Sittings and talks held between turns stay on record (engine/parliament.ts, engine/talks.ts).
-    ...(current.sessions ? { sessions: current.sessions } : {}),
+    // Sittings and talks held between turns stay on record (engine/parliament.ts, engine/talks.ts), and the families' quiet (engine/mobilisation.ts);
+    // a sitting left open when the house is dissolved ends with it.
+    ...(current.sessions ? { sessions: house ? current.sessions : current.sessions.map((s) => (s.status === "open" ? { ...s, status: "failed" as const } : s)) } : {}),
     ...(current.talks ? { talks: current.talks } : {}),
+    ...(current.familiesQuiet ? { familiesQuiet: current.familiesQuiet } : {}),
   };
+}
+
+/** Years between the player's national elections where nothing says otherwise. */
+const PLAYER_TERM: Partial<Record<RegimeKind, number>> = { democracy: 4, limited: 5 };
+/** How far a vote the engine holds swings a party from its support: at most this share either way, by the dice. */
+const VOTE_SWING = 0.15;
+/** A managed vote: the ruling party's share at the least. */
+const MANAGED_SHARE = 55;
+
+/**
+ * The player's national election that fell due this period, held by the
+ * engine because the answer left it out (nothing put it off: engine/abroad.ts
+ * postponePlayerElection). The parties stand by their support, swung a
+ * little by the dice; a banned or underground party stands nowhere; where
+ * votes are managed the ruling party wins at least MANAGED_SHARE. Seats are
+ * shared out by D'Hondt above the threshold. A government whose parties keep
+ * a majority, or whose party still leads, stays; else the largest party
+ * forms the government and the old one goes into opposition – a fall the
+ * leader's own (engine/role.ts checkElectionDefeat). The next vote falls a
+ * term on. With no parties described yet, the date is kept and asked for
+ * again. Whether the vote was held. In place.
+ */
+export function holdPlayerElection(before: Pick<GameState, "politics" | "player">, next: Pick<GameState, "politics">, ctx: { turn: number; to: string; seed: string; regime: RegimeKind }, applied: AppliedChange[]): boolean {
+  const due = before.politics?.nextElection;
+  const politics = next.politics;
+  if (!politics || !due || due > ctx.to) return false;
+  // The game master set a new date.
+  if (politics.nextElection && politics.nextElection > ctx.to) return false;
+  const standing = politics.parties.filter((p) => p.status !== "banned" && p.status !== "underground");
+  if (!standing.length) {
+    next.politics = { ...politics, nextElection: due };
+    return false;
+  }
+  const swing = (p: Party) => 1 + (roll(ctx.seed, ctx.turn, `player-vote:${p.id}`) - 0.5) * 2 * VOTE_SWING;
+  const raw = new Map(standing.map((p) => [p.id, Math.max(0, p.support) * swing(p)] as const));
+  const total = [...raw.values()].reduce((s, v) => s + v, 0) || 1;
+  const shares = new Map([...raw].map(([id, v]) => [id, (v / total) * 100] as const));
+  const ruling = politics.parties.find((p) => p.status === "ruling");
+  if (ctx.regime === "limited" && ruling && shares.has(ruling.id) && shares.get(ruling.id)! < MANAGED_SHARE) {
+    const rest = 100 - shares.get(ruling.id)!;
+    for (const [id, v] of shares) shares.set(id, id === ruling.id ? MANAGED_SHARE : rest > 0 ? (v / rest) * (100 - MANAGED_SHARE) : 0);
+  }
+  const house = politics.parliament;
+  const won = house ? allocateSeats([...shares].map(([id, share]) => ({ id, share })), house.seats, house.threshold ?? 5) : null;
+  const bloc = (p: Party) => p.status === "ruling" || p.status === "coalition";
+  const blocShare = politics.parties.filter(bloc).reduce((s, p) => s + (shares.get(p.id) ?? 0), 0);
+  const blocSeats = won ? politics.parties.filter(bloc).reduce((s, p) => s + (won.get(p.id) ?? 0), 0) : 0;
+  const majority = house ? blocSeats >= Math.floor(house.seats / 2) + 1 : blocShare > 50;
+  const largest = [...shares].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0];
+  const lead = politics.parties.find((p) => p.id === largest)!;
+  const kept = majority || bloc(lead);
+  let parties = politics.parties.map((p) => ({ ...p, support: shares.has(p.id) ? round(shares.get(p.id)!) : p.support, ...(won ? { seats: won.get(p.id) ?? 0 } : {}) }));
+  if (!kept || !ruling) {
+    parties = parties.map((p) => (p.id === lead.id ? { ...p, status: "ruling" as const } : bloc(p) ? { ...p, status: "opposition" as const } : p));
+    for (const p of parties) if (p.status !== politics.parties.find((o) => o.id === p.id)?.status) applied.push({ kind: "party", party: p.name, change: p.status });
+  }
+  const results = [...shares].sort((a, b) => b[1] - a[1]).map(([id, share]) => {
+    const p = parties.find((x) => x.id === id)!;
+    return { party: p.name, share: round(share), ...(p.seats !== undefined ? { seats: p.seats } : {}) };
+  });
+  const last = before.politics?.lastElection?.date;
+  const term = last && last < due ? clamp(Math.round((Date.parse(due) - Date.parse(last)) / (365.25 * 86400000)), 2, 7) : (PLAYER_TERM[ctx.regime] ?? 4);
+  let at = due;
+  while (at <= ctx.to) at = new Date(Date.parse(`${at}T00:00:00Z`) + Math.round(term * 365.25) * 86400000).toISOString().slice(0, 10);
+  next.politics = { ...politics, parties: normalise(parties), nextElection: at, lastElection: { date: due, results } };
+  applied.push({ kind: "election", winner: lead.name, share: round(shares.get(lead.id)!) });
+  applied.push({ kind: "vote", country: before.player, kept, date: due });
+  return true;
 }
 
 /**
@@ -430,19 +571,27 @@ export function homeFront(state: Pick<GameState, "countries" | "date">, tag: str
 }
 
 /** The player's politics as the model reads it every turn. */
-export function describePolitics(politics: Politics): string[] {
+export function describePolitics(politics: Politics, pause?: string): string[] {
   const house = politics.parliament;
   const held = governmentSeats(politics);
   const majority = house ? Math.floor(house.seats / 2) + 1 : 0;
+  const suspended = politics.laws?.elections === "suspended";
+  const vote = suspended
+    ? `national elections suspended by law${politics.nextElection ? ` (the vote due ${politics.nextElection} waits until the law is lifted)` : ""}`
+    : politics.nextElection
+      ? `next national election ${politics.nextElection}${pause ? ` – ${pause}` : ""}`
+      : "no election scheduled";
   const lines = [
     "",
-    `PLAYER'S DOMESTIC POLITICS: ${politics.regime || "the regime of the date"}; unrest ${politics.unrest}/100; ${politics.nextElection ? `next national election ${politics.nextElection}` : "no election scheduled"}`,
+    `PLAYER'S DOMESTIC POLITICS: ${politics.regime || "the regime of the date"}; unrest ${politics.unrest}/100; ${vote}`,
     `Loyalty of the pillars of power (0–100): army ${loyaltyOf(politics).army}, police ${loyaltyOf(politics).police}, security services ${loyaltyOf(politics).security}, elites ${loyaltyOf(politics).elites}${politics.loyaltyWas ? ` (a turn ago: ${PILLARS.map((k) => politics.loyaltyWas![k]).join(", ")})` : ""}`,
     describeLaws(politics.laws),
     house
       ? `Parliament: ${house.name}, ${house.seats} seats${house.threshold !== undefined ? `, threshold ${house.threshold}%` : ""}; the government (ruling party and coalition) holds ${held} — a majority needs ${majority}${held >= majority ? "" : ": THE GOVERNMENT HAS NO MAJORITY and must bargain for every law"}`
+      : politics.parliamentGone
+        ? `Parliament: none sits${politics.parliamentGone.name ? ` – ${politics.parliamentGone.name} was dissolved on ${politics.parliamentGone.date}` : ""}; laws come by decree. Give politics.parliament only if one is elected or convened again.`
       : politics.parties.length
-        ? "Parliament: not described yet — give politics.parliament (name, seats, threshold) and each party's seats this turn (or seats 0 where a regime's parliament does not really sit)."
+        ? "Parliament: not described yet — give politics.parliament (name, seats, threshold) and each party's seats this turn, or \"parliament\": null if none sits under this regime."
         : "",
     politics.parties.length
       ? "Parties (name | short | leader | ideology | support % | seats | status | economy left-right, authoritarian-liberal, open-nationalist on -10..10 | support change last turn):"
@@ -454,7 +603,10 @@ export function describePolitics(politics: Politics): string[] {
   ].filter((l, i) => i === 0 || l !== "");
   if (politics.plots.length) {
     lines.push("Plots against the government (title | by | kind | strength 0-100 | known to the government):");
-    for (const p of politics.plots) lines.push(`- ${p.title} | ${p.by} | ${p.kind} | ${p.strength} | ${p.known ? "known" : "secret"}`);
+    for (const p of politics.plots) lines.push(`- ${p.title} | ${p.by} | ${p.kind} | ${p.strength} | ${p.known ? "known" : "secret"}${p.cabinet ? ` | ${CABINET_PLOT}` : ""}`);
   }
   return lines;
 }
+
+/** How a plot inside the cabinet reads for the game master: the engine's, striking only when its dice say so. */
+export const CABINET_PLOT = "inside the cabinet: the engine's – it strikes only when the CABINET lines say STRIKES NOW; never report an overthrow for it otherwise";

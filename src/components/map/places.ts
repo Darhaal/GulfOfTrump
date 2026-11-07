@@ -10,9 +10,9 @@ export interface PlacePoint {
   minZoom: number;
   /** Higher wins a spot when labels would collide. */
   priority: number;
-  /** Dot radius on screen, pixels, by the place's size (see placeRadius); the closest zooms grow it to the city's real extent. */
+  /** Dot radius on screen, pixels, by the place's size (see placeRadius); the same at every zoom. */
   r: number;
-  /** The city's built-up radius in map units (see cityRadiusKm): its true size once the zoom shows it. */
+  /** The city's built-up radius in map units (see cityRadiusKm): how near a railway or port must pass to serve it. */
   extent?: number;
   /** English name on the map files: the key the game state uses for towns. */
   key?: string;
@@ -37,14 +37,12 @@ const URBAN_DENSITY = 4500;
 export const cityRadiusKm = (pop: number) => Math.sqrt((Math.max(pop, 1) * 1000) / URBAN_DENSITY / Math.PI);
 
 /**
- * A dot's radius on screen in viewBox units at zoom k: the size step, a
- * little smaller on the widest views so the world map stays quiet, and from
- * the zoom where the city's true extent is larger, that extent. It only
- * grows as the zoom does.
+ * A dot's radius on screen in viewBox units: its size step, the same at
+ * every zoom. A dot that swelled as the map came closer – to a city's true
+ * built-up extent at the closest zooms – read as a blot, not a mark.
  */
-export function dotRadius(place: Pick<PlacePoint, "r" | "extent">, k: number, unit = 1): number {
-  const quiet = Math.min(1, 0.65 + (0.35 * Math.max(0, k - 1)) / 3);
-  return Math.max(place.r * quiet * unit, (place.extent ?? 0) * k);
+export function dotRadius(place: Pick<PlacePoint, "r">, unit = 1): number {
+  return place.r * unit;
 }
 
 /** How far a name sits from its dot's centre, in viewBox units: just past the dot's edge. */
@@ -158,7 +156,7 @@ export function layoutPlaces(
     if (out.length >= MAX_PLACED) break;
     const sx = place.px * view.k + view.x;
     const sy = place.py * view.k + view.y;
-    const r = dotRadius(place, view.k, unit);
+    const r = dotRadius(place, unit);
     if (sx < -20 - r || sx > width + 20 + r || sy < -20 - r || sy > height + 20 + r) continue;
     const font = PLACE_STYLE[place.kind].font * unit;
     const dotOnly = () => {
@@ -205,7 +203,7 @@ export function placeAt(placed: PlacedLabel[], x: number, y: number, view: { k: 
   let bestDistance = Infinity;
   for (const { place } of placed) {
     const distance = Math.hypot(place.px * view.k + view.x - x, place.py * view.k + view.y - y);
-    const reach = Math.max(dotRadius(place, view.k, unit), 7 * unit);
+    const reach = Math.max(dotRadius(place, unit), 7 * unit);
     if (distance <= reach && distance < bestDistance) {
       best = place;
       bestDistance = distance;

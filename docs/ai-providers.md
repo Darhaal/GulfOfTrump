@@ -36,8 +36,35 @@ case the program describes. Consequences:
 - **Do not host one copy for other people** on your plan — that is neither what
   OpenAI's terms cover nor what the server allows (it answers loopback only).
 - **Limits are your plan's.** When they run out the API returns
-  `subscription_sharing_usage_limit_exceeded`; the game says so. Usage and
+  `subscription_sharing_usage_limit_exceeded`; the game opens its own
+  dialog with the time until the reset, when ChatGPT gives one. Usage and
   per-app caps: ChatGPT → Settings → Usage.
+
+### What the game knows of the plan's usage
+
+OpenAI's Sign in with ChatGPT documentation names no usage headers, no reset
+fields and no usage endpoint, and says not to infer a reset time from the
+limit code alone (an app-specific cap can apply). On 29 October 2026 the
+answers that spend nothing – `GET /v1/models`, and `POST /v1/responses`
+refused for an unknown model or a sampling parameter – carried no usage
+headers (only `cf-ray`, `x-oai-request-id` and the like). A successful
+answer was not checked, since that spends the plan.
+
+[`src/server/chatgpt/limits.ts`](../src/server/chatgpt/limits.ts) is ready
+for what OpenAI's Codex CLI reads from ChatGPT's backends
+(`codex-rs/codex-api/src/rate_limits.rs`, `api_bridge.rs`):
+
+- headers `x-codex-{primary,secondary}-used-percent`, `-window-minutes` and
+  `-reset-at` (Unix seconds; older builds `-reset-after-seconds`), for the
+  family `x-codex-active-limit` names;
+- a `codex.rate_limits` stream event with `rate_limits.primary/secondary`;
+- on the limit error, `resets_at` or `resets_in_seconds` in the error body,
+  else `Retry-After`, else a reported window at 100%.
+
+[`usage.ts`](../src/server/chatgpt/usage.ts) keeps the latest numbers in
+memory and in `~/.gulf-of-trump/plan-usage.json` (numbers only, forgotten on
+sign-in and sign-out), and `GET /api/ai/usage` serves them to Settings. With
+no numbers, Settings says ChatGPT sent none.
 
 ### How the client works
 

@@ -1,15 +1,19 @@
 "use client";
 
 import { Anchor, Building2, Flame, Gem, Mountain, Ruler, Sprout, TrainFront, Users, Waves } from "lucide-react";
+import { useMemo } from "react";
+import { feature } from "topojson-client";
 import { ui } from "@/components/ui/classes";
 import { RESOURCE_COLORS, TERRAIN_COLORS } from "@/components/map/colors";
+import { cityNamed, largestCityIn } from "@/components/map/cities";
 import { riverName } from "@/components/map/rivers";
+import { useCities } from "@/lib/assets";
 import { formatDate } from "@/engine/calendar";
 import { activeResources } from "@/engine/resources";
 import { provinceResistance } from "@/engine/warMeans";
 import { peopleIn } from "@/engine/population";
-import { populationDensity, provinceName, railLevel } from "@/engine/provinces";
-import type { CountryState, MapRegion, RegionState } from "@/engine/types";
+import { populationDensity, provinceName, railLevel, type ProvinceTopology } from "@/engine/provinces";
+import type { CountryState, Localized, MapRegion, RegionState, ScenarioId } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
 
@@ -20,6 +24,9 @@ export default function ProvinceDetails({
   countries,
   year,
   start,
+  topology,
+  era,
+  placeNames,
 }: {
   province: MapRegion;
   region: RegionState;
@@ -27,8 +34,23 @@ export default function ProvinceDetails({
   year: number;
   /** Its people when the game began; the map's own count when the start date is the map's. */
   start?: number;
+  /** The map, for the province's outline: its largest city is the biggest of the era's cities inside it. */
+  topology?: ProvinceTopology;
+  era?: ScenarioId;
+  /** Cities renamed in play. */
+  placeNames?: Record<string, Localized>;
 }) {
   const { t, text, locale, people } = useI18n();
+  const cities = useCities();
+  // The biggest city on the date, named as it was then; the map file's own (Natural Earth's, in English) where none stands inside.
+  const city = useMemo(() => {
+    if (!cities || !era) return province.city;
+    const geometry = topology?.objects.regions.geometries.find((g) => (g.properties as MapRegion | undefined)?.id === province.id);
+    const outline = topology && geometry ? feature(topology as never, geometry as never) : undefined;
+    const biggest = outline ? largestCityIn(cities, outline as never, era, locale, placeNames) : undefined;
+    if (biggest) return biggest.name;
+    return province.city && province.at ? cityNamed(cities, province.city, province.at, era, locale, placeNames) : province.city;
+  }, [cities, era, topology, province, locale, placeNames]);
   const before = start ?? province.pop;
   const resources = activeResources(province, year);
   const owner = countries[region.owner];
@@ -121,7 +143,7 @@ export default function ProvinceDetails({
         {fact(<Ruler className="h-3.5 w-3.5" />, t("province.area"), t("province.areaValue", { n: province.area.toLocaleString(locale) }))}
         {fact(<TrainFront className="h-3.5 w-3.5" />, t("province.rail"), t(`rail.${railLevel(province)}` as MessageKey))}
         {fact(<Anchor className="h-3.5 w-3.5" />, province.coastal ? t("province.coastal") : t("province.inland"), province.coastal ? "✓" : "–")}
-        {province.city && fact(<Building2 className="h-3.5 w-3.5" />, t("province.city"), province.city)}
+        {city && fact(<Building2 className="h-3.5 w-3.5" />, t("province.city"), city)}
         {resources.length > 0 && (
           <div className="rounded-xl bg-page px-3 py-2 text-xs">
             <div className="mb-1.5 flex items-center gap-1.5 font-bold text-muted">

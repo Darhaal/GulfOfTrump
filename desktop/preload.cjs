@@ -1,5 +1,5 @@
 // The little the game's page may ask of the desktop app's window: full screen,
-// quitting, the system's sound and speech settings and the updates (src/lib/desktop.ts, src/lib/updates.ts). Nothing
+// quitting, the system's sound and speech settings, the Store's review page and the updates (src/lib/desktop.ts, src/lib/updates.ts). Nothing
 // else crosses over, and main.cjs answers only the game's own page.
 const { contextBridge, ipcRenderer } = require("electron");
 
@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld("gulfDesktop", {
   openSoundSettings: () => ipcRenderer.invoke("system:sound-settings"),
   // A voice for the game's language is added in Windows' speech settings.
   openSpeechSettings: () => ipcRenderer.invoke("system:speech-settings"),
+  // The game's reviews in the Microsoft Store, for the Store copy (src/components/game/ReviewPrompt.tsx).
+  openStoreReview: () => ipcRenderer.invoke("store:review"),
   updates: {
     get: () => ipcRenderer.invoke("updates:get"),
     check: () => ipcRenderer.invoke("updates:check"),

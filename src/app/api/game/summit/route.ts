@@ -41,7 +41,7 @@ export async function POST(request: Request) {
       return { outcome: result.outcome, agreements: result.agreements };
     }
     const reply = await completeJson(
-      { model, demo, locale, instructions: SUMMIT_TALK_INSTRUCTIONS(locale), input: [{ role: "user", content: buildSummitPrompt(state, summit, line) }], signal, onDelta },
+      { model, demo, locale, instructions: SUMMIT_TALK_INSTRUCTIONS(locale), input: [{ role: "user", content: buildSummitPrompt(state, summit, line, locale) }], signal, onDelta },
       SummitTalkSchema,
     );
     return { lines: reply.lines.filter((l) => l.country !== state.player && state.countries[l.country]) };

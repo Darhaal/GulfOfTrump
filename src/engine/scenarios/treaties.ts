@@ -1,4 +1,4 @@
-import type { AllianceSeed, Localized } from "../types";
+import type { AllianceSeed, Localized, TreatyArea } from "../types";
 
 /**
  * The treaties and organisations of each start date beyond the great
@@ -10,9 +10,127 @@ import type { AllianceSeed, Localized } from "../types";
 
 const L = (en: string, ru: string, uk: string): Localized => ({ en, ru, uk });
 
-/** The scenario's blocs with their terms, then the treaties of the day it lacks. */
+/** The scenario's blocs with their terms, then the treaties of the day it lacks; each with the area it covers, whether it takes members and whether it binds anyone. */
 export function withTreaties(blocs: AllianceSeed[], terms: Record<string, Localized>, extra: AllianceSeed[]): AllianceSeed[] {
-  return [...blocs.map((b) => (terms[b.id] && !b.terms ? { ...b, terms: terms[b.id] } : b)), ...extra.filter((e) => !blocs.some((b) => b.id === e.id))];
+  return [...blocs.map((b) => (terms[b.id] && !b.terms ? { ...b, terms: terms[b.id] } : b)), ...extra.filter((e) => !blocs.some((b) => b.id === e.id))].map(annotated);
+}
+
+/**
+ * The parts of the world a treaty's guarantee covers, as boxes of longitude
+ * and latitude [west, south, east, north]: an attack on a member there binds
+ * the others (engine/intentions.ts). NATO's Article 6 is Europe, North America
+ * and the islands of the North Atlantic north of the Tropic of Cancer, Turkey
+ * included; the Rio Pact the Americas, the Falklands within; ANZUS and
+ * America's treaties with Japan, Korea, the Republic of China and the
+ * Philippines the Pacific; SEATO South-East Asia, Pakistan and the
+ * South-West Pacific below 21°30′ N; the Baghdad Pact and CENTO the Middle
+ * East; the Warsaw Pact, the Brussels Treaty and the old European alliances
+ * Europe to the Urals; the Anglo-Japanese alliance East Asia and India.
+ */
+export const AREAS: Record<TreatyArea, [number, number, number, number][]> = {
+  "north-atlantic": [[-180, 23.4, 45, 90]],
+  americas: [[-180, -60, -25, 90]],
+  pacific: [
+    [95, -50, 180, 66],
+    [-180, -50, -115, 66],
+  ],
+  "southeast-asia": [
+    [60, -50, 180, 21.5],
+    [60, 21.5, 78, 37.5],
+  ],
+  "middle-east": [[25, 22, 78, 43]],
+  europe: [[-25, 34, 60, 72]],
+  "east-asia": [[60, -10, 180, 60]],
+};
+
+/** The area each treaty of the dates covers, by its id; a military alliance not listed binds for its members' home land only. */
+export const TREATY_AREA: Record<string, TreatyArea> = {
+  nato: "north-atlantic",
+  "rio-pact": "americas",
+  anzus: "pacific",
+  "us-japan": "pacific",
+  "us-korea": "pacific",
+  "us-roc": "pacific",
+  "us-philippines": "pacific",
+  seato: "southeast-asia",
+  "baghdad-pact": "middle-east",
+  cento: "middle-east",
+  "warsaw-pact": "europe",
+  "soviet-bloc": "europe",
+  "brussels-treaty": "europe",
+  weu: "europe",
+  "triple-alliance": "europe",
+  entente: "europe",
+  "franco-russian": "europe",
+  "dual-alliance": "europe",
+  "romania-secret": "europe",
+  "little-entente": "europe",
+  "anglo-japanese": "east-asia",
+};
+
+/**
+ * Whether a treaty takes new members, where its size would say otherwise:
+ * the great open alliances and organisations take them; ANZUS, a closed
+ * treaty of three, does not. A bloc of three or more not listed is open, a
+ * bilateral treaty never.
+ */
+export const OPEN_BLOCS: Record<string, boolean> = {
+  nato: true,
+  "warsaw-pact": true,
+  seato: true,
+  "baghdad-pact": true,
+  cento: true,
+  "rio-pact": true,
+  "arab-league": true,
+  "league-of-nations": true,
+  un: true,
+  csto: true,
+  cst: true,
+  "anti-comintern": true,
+  anzus: false,
+  "triple-alliance": false,
+  "little-entente": false,
+  "romania-secret": false,
+};
+
+/**
+ * Treaties that bind no one to anyone: arms control, conventions, guarantees
+ * of a settlement and the settlements themselves. Their terms reach the game
+ * master, but they settle no trust between their members, ease no threat and
+ * make no war between them a broken pact (engine/relations.ts).
+ */
+export const NON_BINDING = new Set([
+  "salt",
+  "new-start",
+  "inf",
+  "start-1",
+  "cfe",
+  "test-ban",
+  "berlin",
+  "paris-accords",
+  "geneva-1954",
+  "geneva-laos",
+  "montreux",
+  "budapest-memorandum",
+  "dayton",
+  "two-plus-four",
+  "austrian-state-treaty",
+  "lancaster-house",
+  "occupation",
+  "japan-occupation",
+  "tripartite-declaration",
+  "cyprus-guarantee",
+  "bucharest-1913",
+  "basic-treaty",
+  "kharkiv-pact",
+]);
+
+/** A seed with its area, openness and binding read from the tables, where it says nothing itself. */
+function annotated(b: AllianceSeed): AllianceSeed {
+  const area = b.area ?? TREATY_AREA[b.id];
+  const open = b.open ?? OPEN_BLOCS[b.id];
+  const binds = b.binds ?? (NON_BINDING.has(b.id) ? false : undefined);
+  return area === b.area && open === b.open && binds === b.binds ? b : { ...b, ...(area ? { area } : {}), ...(open !== undefined ? { open } : {}), ...(binds === false ? { binds } : {}) };
 }
 
 // ---- shared membership lists
@@ -1056,6 +1174,182 @@ export const TREATIES_1939: AllianceSeed[] = [
   ),
 ];
 
+// ---- 30 January 1933
+
+export const TERMS_1933: Record<string, Localized> = {
+  "league-of-nations": L(
+    "Collective security by the Covenant: members submit their disputes to arbitration or the Council and may answer an aggressor with sanctions. Manchuria is its test: the Assembly is about to judge the Lytton Report, and Japan threatens to leave; the United States and the Soviet Union stay outside.",
+    "Коллективная безопасность по Уставу: члены передают споры на арбитраж или в Совет и могут ответить агрессору санкциями. Маньчжурия – её испытание: Ассамблея вот-вот вынесет решение по докладу Литтона, а Япония грозит выйти; США и Советский Союз остаются вне Лиги.",
+    "Колективна безпека за Статутом: члени передають суперечки на арбітраж або до Ради й можуть відповісти агресорові санкціями. Маньчжурія – її випробування: Асамблея от-от ухвалить рішення щодо доповіді Літтона, а Японія погрожує вийти; США і Радянський Союз лишаються поза Лігою.",
+  ),
+  commonwealth: L(
+    "The Statute of Westminster (1931) made the dominions equal to Britain under one crown; each decides its own foreign policy. The Irish Free State under de Valera is in an economic war with London over the land annuities.",
+    "Вестминстерский статут (1931) уравнял доминионы с Британией под одной короной; каждый сам решает свою внешнюю политику. Ирландское Свободное государство при де Валере ведёт с Лондоном экономическую войну из-за земельных выплат.",
+    "Вестмінстерський статут (1931) зрівняв домініони з Британією під однією короною; кожен сам вирішує свою зовнішню політику. Ірландська Вільна держава за де Валери веде з Лондоном економічну війну через земельні виплати.",
+  ),
+};
+
+export const TREATIES_1933: AllianceSeed[] = [
+  {
+    id: "locarno",
+    kind: "pact",
+    name: L("Locarno Treaties", "Локарнские договоры", "Локарнські договори"),
+    members: ["germany", "france", "belgium", "uk", "italy"],
+    since: "1925-12-01",
+    terms: L(
+      "Germany, France and Belgium accept their common borders and the demilitarised Rhineland; Britain and Italy guarantee them against whichever side breaks them. Germany's eastern borders are left open.",
+      "Германия, Франция и Бельгия признают общие границы и демилитаризованную Рейнскую область; Британия и Италия гарантируют их против той стороны, что их нарушит. Восточные границы Германии оставлены открытыми.",
+      "Німеччина, Франція та Бельгія визнають спільні кордони й демілітаризовану Рейнську область; Британія та Італія гарантують їх проти тієї сторони, що їх порушить. Східні кордони Німеччини залишено відкритими.",
+    ),
+  },
+  {
+    id: "franco-polish",
+    name: L("Franco-Polish Alliance", "Франко-польский союз", "Франко-польський союз"),
+    members: ["france", "poland"],
+    since: "1921-02-19",
+    terms: L(
+      "Mutual aid if either is attacked without provocation, with a secret military convention; Piłsudski doubts that France would march.",
+      "Взаимная помощь, если одна из сторон подвергнется неспровоцированному нападению, с секретной военной конвенцией; Пилсудский сомневается, что Франция выступит.",
+      "Взаємна допомога, якщо одна зі сторін зазнає неспровокованого нападу, із таємною військовою конвенцією; Пілсудський сумнівається, що Франція виступить.",
+    ),
+  },
+  {
+    id: "franco-czechoslovak",
+    name: L("Franco-Czechoslovak Alliance", "Франко-чехословацкий союз", "Франко-чехословацький союз"),
+    members: ["france", "czechoslovakia"],
+    since: "1924-01-25",
+    terms: L(
+      "France and Czechoslovakia consult on any threat to the peace settlement and, since Locarno, aid each other against an unprovoked German attack.",
+      "Франция и Чехословакия совещаются при любой угрозе мирному урегулированию и, после Локарно, помогают друг другу против неспровоцированного германского нападения.",
+      "Франція та Чехословаччина радяться за будь-якої загрози мирному врегулюванню і, після Локарно, допомагають одна одній проти неспровокованого німецького нападу.",
+    ),
+  },
+  {
+    id: "little-entente",
+    name: L("Little Entente", "Малая Антанта", "Мала Антанта"),
+    members: ["czechoslovakia", "romania", "yugoslavia"],
+    since: "1921-06-07",
+    terms: L(
+      "Czechoslovakia, Romania and Yugoslavia defend each other against Hungary's claims and a Habsburg restoration; a permanent council is about to be set up.",
+      "Чехословакия, Румыния и Югославия защищают друг друга от притязаний Венгрии и реставрации Габсбургов; вот-вот будет учреждён постоянный совет.",
+      "Чехословаччина, Румунія та Югославія захищають одна одну від претензій Угорщини й реставрації Габсбургів; от-от буде засновано постійну раду.",
+    ),
+  },
+  {
+    id: "polish-romanian",
+    name: L("Polish–Romanian Alliance", "Польско-румынский союз", "Польсько-румунський союз"),
+    members: ["poland", "romania"],
+    since: "1921-03-03",
+    terms: L(
+      "Mutual defence against an attack from the east.",
+      "Взаимная оборона от нападения с востока.",
+      "Взаємна оборона від нападу зі сходу.",
+    ),
+  },
+  {
+    id: "treaty-of-berlin",
+    kind: "pact",
+    name: L("German–Soviet Treaty of Berlin", "Берлинский договор (Германия и СССР)", "Берлінський договір (Німеччина та СРСР)"),
+    members: ["germany", "ussr"],
+    since: "1926-04-24",
+    terms: L(
+      "Rapallo's friendship confirmed: neutrality if either is attacked by a third power, and no part in a boycott of the other. The Reichswehr's secret schools for tanks and gas in Russia are winding down.",
+      "Подтверждение рапалльской дружбы: нейтралитет, если на одну из сторон нападёт третья держава, и неучастие в бойкоте другой. Тайные танковая и химическая школы рейхсвера в России сворачиваются.",
+      "Підтвердження рапалльської дружби: нейтралітет, якщо на одну зі сторін нападе третя держава, і неучасть у бойкоті іншої. Таємні танкова та хімічна школи рейхсверу в Росії згортаються.",
+    ),
+  },
+  {
+    id: "soviet-polish",
+    kind: "pact",
+    name: L("Soviet–Polish Non-Aggression Pact", "Советско-польский договор о ненападении", "Радянсько-польський договір про ненапад"),
+    members: ["ussr", "poland"],
+    since: "1932-07-25",
+    terms: L("Three years of non-aggression and neutrality if either is attacked.", "Три года ненападения и нейтралитет, если на одну из сторон нападут.", "Три роки ненападу й нейтралітет, якщо на одну зі сторін нападуть."),
+  },
+  {
+    id: "franco-soviet-nonaggression",
+    kind: "pact",
+    name: L("Franco-Soviet Non-Aggression Pact", "Франко-советский договор о ненападении", "Франко-радянський договір про ненапад"),
+    members: ["france", "ussr"],
+    since: "1932-11-29",
+    terms: L(
+      "Non-aggression and neutrality; Paris begins to look to Moscow against a rearming Germany.",
+      "Ненападение и нейтралитет; Париж начинает смотреть на Москву как на противовес вооружающейся Германии.",
+      "Ненапад і нейтралітет; Париж починає дивитися на Москву як на противагу Німеччині, що озброюється.",
+    ),
+  },
+  {
+    id: "soviet-baltic",
+    kind: "pact",
+    name: L("Soviet non-aggression pacts with Finland and the Baltic states", "Советские договоры о ненападении с Финляндией и Прибалтикой", "Радянські договори про ненапад із Фінляндією та Прибалтикою"),
+    members: ["ussr", "finland", "estonia", "latvia", "lithuania"],
+    since: "1932-01-21",
+    terms: L(
+      "Each neighbour promises not to attack the Soviet Union and to stay out of any coalition against it, and Moscow the same.",
+      "Каждый сосед обещает не нападать на Советский Союз и не входить в коалиции против него, а Москва – то же самое.",
+      "Кожен сусід обіцяє не нападати на Радянський Союз і не входити до коаліцій проти нього, а Москва – те саме.",
+    ),
+  },
+  {
+    id: "japan-manchukuo",
+    name: L("Japan–Manchukuo Protocol", "Японо-маньчжурский протокол", "Японсько-маньчжурський протокол"),
+    members: ["japan", "manchukuo"],
+    since: "1932-09-15",
+    terms: L(
+      "Japan recognises Manchukuo; its army is stationed there to defend it, and Japanese officials run its ministries and railways.",
+      "Япония признаёт Маньчжоу-го; её армия размещена там для его обороны, а японские чиновники управляют его министерствами и железными дорогами.",
+      "Японія визнає Маньчжоу-го; її армія розміщена там для його оборони, а японські урядовці керують його міністерствами й залізницями.",
+    ),
+  },
+  {
+    id: "tirana",
+    name: L("Second Treaty of Tirana", "Второй Тиранский договор", "Другий Тиранський договір"),
+    members: ["italy", "albania"],
+    since: "1927-11-22",
+    terms: L(
+      "A defensive alliance for twenty years: Italy trains Albania's army and lends its money, and Zog pays in independence.",
+      "Оборонительный союз на двадцать лет: Италия обучает албанскую армию и даёт деньги, а Зогу платит независимостью.",
+      "Оборонний союз на двадцять років: Італія навчає албанську армію й дає гроші, а Зогу платить незалежністю.",
+    ),
+  },
+  {
+    id: "italo-hungarian",
+    kind: "pact",
+    name: L("Italo-Hungarian Treaty of Friendship", "Итало-венгерский договор о дружбе", "Італо-угорський договір про дружбу"),
+    members: ["italy", "hungary"],
+    since: "1927-04-05",
+    terms: L(
+      "Friendship and consultation: Rome backs Budapest's case against Trianon, and Italian arms reach Hungary in secret.",
+      "Дружба и консультации: Рим поддерживает притязания Будапешта против Трианона, а итальянское оружие тайно идёт в Венгрию.",
+      "Дружба й консультації: Рим підтримує претензії Будапешта проти Тріанону, а італійська зброя таємно йде до Угорщини.",
+    ),
+  },
+  {
+    id: "anglo-iraqi",
+    name: L("Anglo-Iraqi Treaty", "Англо-иракский договор", "Англо-іракський договір"),
+    members: ["uk", "iraq"],
+    since: "1930-06-30",
+    terms: L(
+      "Independence with an alliance: Britain keeps its air bases at Habbaniya and Shaibah, and in war Iraq gives it every facility.",
+      "Независимость в обмен на союз: Британия сохраняет авиабазы в Хаббании и Шуайбе, а в войну Ирак предоставляет ей все возможности.",
+      "Незалежність в обмін на союз: Британія зберігає авіабази в Хаббанії та Шуайбі, а у війну Ірак надає їй усі можливості.",
+    ),
+  },
+  {
+    id: "ottawa",
+    kind: "trade",
+    name: L("Ottawa Agreements (imperial preference)", "Оттавские соглашения (имперские преференции)", "Оттавські угоди (імперські преференції)"),
+    members: ["uk", "canada", "australia", "new-zealand", "south-africa"],
+    since: "1932-08-20",
+    terms: L(
+      "Lower duties within the Empire and higher ones against the rest of the world: a sterling bloc behind a tariff wall.",
+      "Пониженные пошлины внутри империи и повышенные для остального мира: стерлинговый блок за таможенной стеной.",
+      "Знижені мита всередині імперії й підвищені для решти світу: стерлінговий блок за митною стіною.",
+    ),
+  },
+  angloPortuguese(NONE),
+];
+
 // ---- 28 June 1914
 
 export const TERMS_1914: Record<string, Localized> = {
@@ -1399,6 +1693,229 @@ export const TREATIES_1950: AllianceSeed[] = [
 
 // ---- 2 August 1964
 
+// ---- 4 October 1957
+
+export const TERMS_1957: Record<string, Localized> = {
+  un: L(
+    "The Charter of 1945; the Republic of China on Taiwan holds China's seat and veto. The first UN force (UNEF) stands between Egypt and Israel since the Suez war; the Assembly condemned the Soviet invasion of Hungary, to no effect.",
+    "Устав 1945 года; место и вето Китая у Китайской Республики на Тайване. Первые войска ООН (ЧВС ООН) стоят между Египтом и Израилем после Суэцкой войны; Генассамблея осудила советское вторжение в Венгрию – без последствий.",
+    "Статут 1945 року; місце й вето Китаю в Китайської Республіки на Тайвані. Перші війська ООН (НЗС ООН) стоять між Єгиптом та Ізраїлем після Суецької війни; Генасамблея засудила радянське вторгнення в Угорщину – без наслідків.",
+  ),
+  nato: L(
+    "Article 5: an attack on one member in Europe or North America is an attack on all. West Germany joined in 1955 and is building the Bundeswehr; the strategy is massive nuclear retaliation, and American nuclear weapons are being placed in Europe.",
+    "Статья 5: нападение на одного члена в Европе или Северной Америке – нападение на всех. ФРГ вступила в 1955 году и создаёт бундесвер; стратегия – массированный ядерный удар, американское ядерное оружие размещают в Европе.",
+    "Стаття 5: напад на одного члена в Європі чи Північній Америці – напад на всіх. ФРН вступила 1955 року й створює бундесвер; стратегія – масований ядерний удар, американську ядерну зброю розміщують у Європі.",
+  ),
+  "warsaw-pact": L(
+    "Mutual defence under a Soviet unified command since 1955, the answer to West Germany's entry into NATO. Hungary's attempt to leave it in November 1956 was crushed by Soviet tanks; Soviet troops stay in East Germany, Poland, Hungary and Romania.",
+    "Взаимная оборона под единым советским командованием с 1955 года – ответ на вступление ФРГ в НАТО. Попытку Венгрии выйти из него в ноябре 1956 года подавили советские танки; советские войска стоят в ГДР, Польше, Венгрии и Румынии.",
+    "Взаємна оборона під єдиним радянським командуванням з 1955 року – відповідь на вступ ФРН до НАТО. Спробу Угорщини вийти з нього в листопаді 1956 року придушили радянські танки; радянські війська стоять у НДР, Польщі, Угорщині та Румунії.",
+  ),
+};
+
+export const TREATIES_1957: AllianceSeed[] = [
+  {
+    id: "seato",
+    name: L("SEATO", "СЕАТО", "СЕАТО"),
+    members: ["usa", "uk", "france", "australia", "new-zealand", "pakistan", "philippines", "thailand"],
+    since: "1955-02-19",
+    terms: L(
+      "The Manila Pact: each member acts against aggression in Southeast Asia 'in accordance with its constitutional processes'. A protocol extends its protection to South Vietnam, Laos and Cambodia.",
+      "Манильский пакт: каждый член действует против агрессии в Юго-Восточной Азии «в соответствии со своими конституционными процедурами». Протокол распространяет защиту на Южный Вьетнам, Лаос и Камбоджу.",
+      "Манільський пакт: кожен член діє проти агресії в Південно-Східній Азії «відповідно до своїх конституційних процедур». Протокол поширює захист на Південний В'єтнам, Лаос і Камбоджу.",
+    ),
+  },
+  {
+    id: "baghdad-pact",
+    name: L("Baghdad Pact", "Багдадский пакт", "Багдадський пакт"),
+    members: ["uk", "turkey", "iran", "pakistan", "iraq"],
+    since: "1955-02-24",
+    terms: L(
+      "Mutual co-operation for defence along the Soviet Union's southern flank; the US sits on its military committee without joining. Nasser calls it a British plot, and Iraq is the only Arab member.",
+      "Сотрудничество в обороне вдоль южного фланга СССР; США участвуют в его военном комитете, не вступая. Насер называет его британским заговором, Ирак – единственный арабский член.",
+      "Співпраця в обороні вздовж південного флангу СРСР; США беруть участь у його військовому комітеті, не вступаючи. Насер називає його британською змовою, Ірак – єдиний арабський член.",
+    ),
+  },
+  {
+    id: "anzus",
+    name: L("ANZUS", "АНЗЮС", "АНЗЮС"),
+    members: ["usa", "australia", "new-zealand"],
+    since: "1952-04-29",
+    terms: L(
+      "Australia, New Zealand and the US act together against a common danger in the Pacific.",
+      "Австралия, Новая Зеландия и США действуют вместе против общей опасности на Тихом океане.",
+      "Австралія, Нова Зеландія та США діють разом проти спільної небезпеки на Тихому океані.",
+    ),
+  },
+  {
+    id: "us-japan",
+    name: L("US–Japan Security Treaty", "Американо-японский договор о безопасности", "Американо-японський договір про безпеку"),
+    members: ["usa", "japan"],
+    since: "1952-04-28",
+    terms: L(
+      "The treaty of 1951: American forces stay in Japan and may put down unrest there, but the US is not bound to defend it; Prime Minister Kishi wants it revised. About 77,000 American troops remain, and Okinawa is under American rule.",
+      "Договор 1951 года: американские войска остаются в Японии и могут подавлять в ней беспорядки, но США не обязаны её защищать; премьер Киси добивается пересмотра. Остаются около 77 000 американских военных, Окинава под управлением США.",
+      "Договір 1951 року: американські війська лишаються в Японії й можуть придушувати в ній заворушення, але США не зобов'язані її захищати; прем'єр Кісі домагається перегляду. Лишаються близько 77 000 американських військових, Окінава під управлінням США.",
+    ),
+  },
+  usKorea("70,000"),
+  {
+    id: "us-roc",
+    name: L("US–Republic of China Mutual Defense Treaty", "Американо-тайваньский договор о взаимной обороне", "Американо-тайванський договір про взаємну оборону"),
+    members: ["usa", "taiwan"],
+    since: "1954-12-02",
+    terms: L(
+      "The US defends Taiwan and the Pescadores; the Seventh Fleet patrols the strait. Kinmen and Matsu, shelled from the mainland, are covered only by the Formosa Resolution of 1955.",
+      "США защищают Тайвань и Пэнхуледао; Седьмой флот патрулирует пролив. Цзиньмэнь и Мацзу, которые обстреливают с материка, прикрыты лишь Формозской резолюцией 1955 года.",
+      "США захищають Тайвань і Пенху; Сьомий флот патрулює протоку. Цзіньмень і Мацзу, які обстрілюють з материка, прикриті лише Формозькою резолюцією 1955 року.",
+    ),
+  },
+  {
+    id: "us-philippines",
+    name: L("US–Philippines Mutual Defense Treaty", "Договор о взаимной обороне США и Филиппин", "Договір про взаємну оборону США та Філіппін"),
+    members: ["usa", "philippines"],
+    since: "1951-08-30",
+    terms: L(
+      "Mutual defence in the Pacific; the US keeps Clark Air Base and the naval base at Subic Bay.",
+      "Взаимная оборона на Тихом океане; США сохраняют авиабазу Кларк и военно-морскую базу в Субик-Бей.",
+      "Взаємна оборона на Тихому океані; США зберігають авіабазу Кларк і військово-морську базу в Субік-Бей.",
+    ),
+  },
+  {
+    id: "sino-soviet",
+    name: L("Sino-Soviet Treaty of Friendship", "Советско-китайский договор о дружбе", "Радянсько-китайський договір про дружбу"),
+    members: ["ussr", "china"],
+    since: "1950-02-14",
+    terms: L(
+      "Mutual defence against Japan or any state allied with it. Soviet engineers build China's industry; on 15 October Moscow is to promise Beijing a sample atomic bomb. Mao resents Khrushchev's attack on Stalin.",
+      "Взаимная оборона против Японии или любого её союзника. Советские инженеры строят промышленность Китая; 15 октября Москва должна пообещать Пекину образец атомной бомбы. Мао недоволен разоблачением Сталина Хрущёвым.",
+      "Взаємна оборона проти Японії чи будь-якого її союзника. Радянські інженери будують промисловість Китаю; 15 жовтня Москва має пообіцяти Пекіну зразок атомної бомби. Мао невдоволений викриттям Сталіна Хрущовим.",
+    ),
+  },
+  {
+    id: "geneva-1954",
+    kind: "pact",
+    name: L("Geneva Accords on Indochina", "Женевские соглашения по Индокитаю", "Женевські угоди щодо Індокитаю"),
+    members: ["north-vietnam", "france", "uk", "ussr", "china", "laos", "cambodia"],
+    since: "1954-07-21",
+    terms: L(
+      "Vietnam divided at the 17th parallel pending elections in 1956, which Saigon refused to hold; no new foreign troops or bases in Indochina. A commission of India, Poland and Canada watches.",
+      "Вьетнам разделён по 17-й параллели до выборов 1956 года, которые Сайгон отказался проводить; никаких новых иностранных войск и баз в Индокитае. Наблюдает комиссия Индии, Польши и Канады.",
+      "В'єтнам поділено по 17-й паралелі до виборів 1956 року, які Сайгон відмовився проводити; жодних нових іноземних військ і баз в Індокитаї. Наглядає комісія Індії, Польщі та Канади.",
+    ),
+  },
+  {
+    id: "berlin",
+    kind: "pact",
+    name: L("Four-power status of Berlin", "Четырёхсторонний статус Берлина", "Чотиристоронній статус Берліна"),
+    members: ["usa", "ussr", "uk", "france"],
+    since: "1945-06-05",
+    terms: L(
+      "The four powers keep their rights over Berlin; the sector border is still open, and East Germans leave for the West through it by the hundred thousand a year. West Berlin is an enclave the map draws with the GDR.",
+      "Четыре державы сохраняют права в Берлине; граница секторов ещё открыта, и через неё на Запад уходят сотни тысяч восточных немцев в год. Западный Берлин – анклав, который карта рисует вместе с ГДР.",
+      "Чотири держави зберігають права в Берліні; межа секторів ще відкрита, і через неї на Захід ідуть сотні тисяч східних німців на рік. Західний Берлін – анклав, який мапа малює разом з НДР.",
+    ),
+  },
+  {
+    id: "austrian-state-treaty",
+    kind: "pact",
+    name: L("Austrian State Treaty", "Государственный договор о восстановлении Австрии", "Державний договір про відновлення Австрії"),
+    members: ["austria", "usa", "ussr", "uk", "france"],
+    since: "1955-05-15",
+    terms: L(
+      "Austria free and whole again, the occupation ended; it declared itself permanently neutral and may not unite with Germany.",
+      "Австрия снова свободна и едина, оккупация окончена; она объявила себя постоянно нейтральной и не может объединиться с Германией.",
+      "Австрія знову вільна й єдина, окупацію закінчено; вона оголосила себе постійно нейтральною й не може об'єднатися з Німеччиною.",
+    ),
+  },
+  {
+    id: "balkan-pact",
+    kind: "pact",
+    name: L("Balkan Pact", "Балканский пакт", "Балканський пакт"),
+    members: ["yugoslavia", "greece", "turkey"],
+    since: "1954-08-09",
+    terms: L(
+      "Tito's alliance with two NATO members against an attack from the Soviet bloc; it has gone quiet since Belgrade made up with Moscow and Greece and Turkey fell out over Cyprus.",
+      "Союз Тито с двумя членами НАТО против нападения советского блока; он затих, с тех пор как Белград помирился с Москвой, а Греция и Турция поссорились из-за Кипра.",
+      "Союз Тіто з двома членами НАТО проти нападу радянського блоку; він затих, відтоді як Белград помирився з Москвою, а Греція й Туреччина посварилися через Кіпр.",
+    ),
+  },
+  {
+    id: "ecsc",
+    kind: "trade",
+    name: L("European Coal and Steel Community", "Европейское объединение угля и стали", "Європейське об'єднання вугілля та сталі"),
+    members: ["france", "west-germany", "italy", "netherlands", "belgium", "luxembourg"],
+    since: "1952-07-23",
+    terms: L(
+      "A common market in coal and steel under a High Authority. The Six signed the Treaties of Rome in March 1957: the Common Market and Euratom begin on 1 January 1958.",
+      "Общий рынок угля и стали под Высшим органом. В марте 1957 года шестёрка подписала Римские договоры: Общий рынок и Евратом начнут работу 1 января 1958 года.",
+      "Спільний ринок вугілля та сталі під Вищим органом. У березні 1957 року шістка підписала Римські договори: Спільний ринок і Євратом почнуть роботу 1 січня 1958 року.",
+    ),
+  },
+  {
+    id: "comecon",
+    kind: "trade",
+    name: L("Comecon", "СЭВ", "РЕВ"),
+    members: ["ussr", "poland", "czechoslovakia", "hungary", "romania", "bulgaria", "east-germany", "albania"],
+    since: "1949-01-25",
+    terms: L(
+      "The Soviet bloc's economic council; since 1956 Moscow has softened its terms, after the risings in Poznań and Budapest.",
+      "Экономический совет советского блока; после восстаний в Познани и Будапеште в 1956 году Москва смягчила условия.",
+      "Економічна рада радянського блоку; після повстань у Познані й Будапешті 1956 року Москва пом'якшила умови.",
+    ),
+  },
+  {
+    id: "rio-pact",
+    name: L("Rio Pact", "Пакт Рио", "Пакт Ріо"),
+    members: RIO_1950,
+    since: "1947-09-02",
+    terms: L(
+      "An attack on one American state is an attack on all; the US led the OAS against communism in Guatemala in 1954.",
+      "Нападение на одно американское государство – нападение на всех; в 1954 году США повели ОАГ против коммунизма в Гватемале.",
+      "Напад на одну американську державу – напад на всіх; 1954 року США повели ОАД проти комунізму в Гватемалі.",
+    ),
+  },
+  arabLeague(
+    ["egypt", "iraq", "jordan", "lebanon", "saudi-arabia", "syria", "yemen", "libya", "sudan"],
+    L(
+      "Divided: Nasser's Egypt and Syria against the Baghdad Pact's Iraq; King Hussein dismissed his pro-Nasser government in April and called on American help under the Eisenhower Doctrine.",
+      "Расколота: Египет Насера и Сирия против Ирака из Багдадского пакта; король Хусейн в апреле отправил в отставку пронасеровское правительство и призвал помощь США по доктрине Эйзенхауэра.",
+      "Розколота: Єгипет Насера й Сирія проти Іраку з Багдадського пакту; король Хусейн у квітні відправив у відставку пронасерівський уряд і покликав допомогу США за доктриною Ейзенгауера.",
+    ),
+  ),
+  {
+    id: "commonwealth",
+    kind: "organization",
+    name: L("Commonwealth of Nations", "Содружество наций", "Співдружність націй"),
+    members: ["uk", "canada", "australia", "new-zealand", "south-africa", "india", "pakistan", "ceylon", "ghana", "malaysia"],
+    since: "1931-12-11",
+    terms: L(
+      "Britain and its former dominions and colonies; Ghana and Malaya joined this year on independence. Suez split it: India, Pakistan and Canada condemned the British landing.",
+      "Британия и её бывшие доминионы и колонии; Гана и Малайя вступили в этом году с независимостью. Суэц расколол его: Индия, Пакистан и Канада осудили британскую высадку.",
+      "Британія та її колишні домініони й колонії; Гана й Малая вступили цього року з незалежністю. Суец розколов його: Індія, Пакистан і Канада засудили британську висадку.",
+    ),
+  },
+  coe(
+    ["austria", "belgium", "denmark", "france", "west-germany", "greece", "iceland", "ireland", "italy", "luxembourg", "netherlands", "norway", "sweden", "turkey", "uk"],
+    L(
+      "The European Convention on Human Rights and its commission in Strasbourg; Western Europe's democracies only.",
+      "Европейская конвенция о защите прав человека и её комиссия в Страсбурге; только демократии Западной Европы.",
+      "Європейська конвенція з прав людини та її комісія в Страсбурзі; лише демократії Західної Європи.",
+    ),
+  ),
+  {
+    ...montreuxModern,
+    members: ["turkey", "uk", "france", "ussr", "bulgaria", "romania", "greece", "yugoslavia", "japan", "australia"],
+  },
+  angloPortuguese(
+    L(
+      " India presses Portugal over Goa, and Lisbon asks London what the alliance is worth.",
+      " Индия давит на Португалию из-за Гоа, а Лиссабон спрашивает Лондон, чего стоит союз.",
+      " Індія тисне на Португалію через Гоа, а Лісабон питає Лондон, чого вартий союз.",
+    ),
+  ),
+];
+
 export const TERMS_1964: Record<string, Localized> = {
   un: L(
     "The Charter of 1945; the Republic of China on Taiwan still holds China's seat and veto. UN troops keep the peace in Cyprus and on the Israeli–Egyptian line and are leaving the Congo.",
@@ -1489,6 +2006,7 @@ export const TREATIES_1964: AllianceSeed[] = [
   },
   {
     id: "sino-soviet",
+    kind: "pact",
     name: L("Sino-Soviet Treaty of Friendship", "Советско-китайский договор о дружбе", "Радянсько-китайський договір про дружбу"),
     members: ["ussr", "china"],
     since: "1950-02-14",
@@ -1698,6 +2216,619 @@ export const TREATIES_1964: AllianceSeed[] = [
       " Колоніальні війни Португалії випробовують його на міцність: утримувати Анголу, Гвінею та Мозамбік Британія не допоможе.",
     ),
   ),
+];
+
+// ---- 6 October 1973
+
+export const TERMS_1973: Record<string, Localized> = {
+  un: L(
+    "The Charter of 1945; Beijing has held China's seat and veto since 1971, and both Germanys joined on 18 September. Resolution 242 (1967) asks Israel to withdraw from territories it occupied in exchange for peace; UN observers watch the canal and the Golan.",
+    "Устав 1945 года; с 1971 года место и вето Китая у Пекина, а 18 сентября в ООН вступили обе Германии. Резолюция 242 (1967) требует от Израиля уйти с оккупированных территорий в обмен на мир; наблюдатели ООН следят за каналом и Голанами.",
+    "Статут 1945 року; з 1971 року місце й вето Китаю в Пекіна, а 18 вересня до ООН вступили обидві Німеччини. Резолюція 242 (1967) вимагає від Ізраїлю піти з окупованих територій в обмін на мир; спостерігачі ООН стежать за каналом і Голанами.",
+  ),
+  nato: L(
+    "Article 5: an attack on one member in Europe or North America is an attack on all; flexible response since 1967. France left the integrated command in 1966; Greece is a junta, and Turkey and Greece quarrel over Cyprus.",
+    "Статья 5: нападение на одного члена в Европе или Северной Америке – нападение на всех; с 1967 года – «гибкое реагирование». Франция вышла из военной организации в 1966 году; в Греции хунта, а Турция и Греция ссорятся из-за Кипра.",
+    "Стаття 5: напад на одного члена в Європі чи Північній Америці – напад на всіх; з 1967 року – «гнучке реагування». Франція вийшла з військової організації 1966 року; у Греції хунта, а Туреччина й Греція сваряться через Кіпр.",
+  ),
+  "warsaw-pact": L(
+    "Mutual defence under a Soviet unified command; the pact crushed the Prague Spring in 1968 (the Brezhnev doctrine). Albania left in 1968, Romania goes its own way.",
+    "Взаимная оборона под единым советским командованием; в 1968 году пакт раздавил Пражскую весну (доктрина Брежнева). Албания вышла в 1968 году, Румыния идёт своим путём.",
+    "Взаємна оборона під єдиним радянським командуванням; 1968 року пакт розчавив Празьку весну (доктрина Брежнєва). Албанія вийшла 1968 року, Румунія йде своїм шляхом.",
+  ),
+};
+
+export const TREATIES_1973: AllianceSeed[] = [
+  {
+    id: "seato",
+    name: L("SEATO", "СЕАТО", "СЕАТО"),
+    members: ["usa", "uk", "france", "australia", "new-zealand", "pakistan", "philippines", "thailand"],
+    since: "1955-02-19",
+    // Dissolved on 30 June 1977; Pakistan left in 1973–1974.
+    until: "1977-06-30",
+    terms: L(
+      "A dying alliance: the Americans have left Indochina, France has stopped paying, and Pakistan is about to leave it.",
+      "Умирающий союз: американцы ушли из Индокитая, Франция перестала платить взносы, а Пакистан вот-вот из него выйдет.",
+      "Союз, що вмирає: американці пішли з Індокитаю, Франція перестала платити внески, а Пакистан от-от із нього вийде.",
+    ),
+  },
+  {
+    id: "cento",
+    name: L("CENTO", "СЕНТО", "СЕНТО"),
+    members: ["uk", "turkey", "iran", "pakistan"],
+    since: "1959-08-21",
+    // Iran and Pakistan left after Iran's revolution, and it was wound up in September 1979.
+    until: "1979-09-28",
+    terms: L(
+      "Defence co-operation on the Soviet Union's southern flank; it did nothing for Pakistan in 1971. The US is an associate.",
+      "Оборонное сотрудничество на южном фланге СССР; Пакистану в 1971 году оно ничем не помогло. США – ассоциированный участник.",
+      "Оборонна співпраця на південному фланзі СРСР; Пакистанові 1971 року вона нічим не допомогла. США – асоційований учасник.",
+    ),
+  },
+  {
+    id: "anzus",
+    name: L("ANZUS", "АНЗЮС", "АНЗЮС"),
+    members: ["usa", "australia", "new-zealand"],
+    since: "1952-04-29",
+    terms: L(
+      "Australia, New Zealand and the US act together against a common danger in the Pacific; Whitlam's and Kirk's Labour governments have brought their troops home from Vietnam.",
+      "Австралия, Новая Зеландия и США действуют вместе против общей опасности на Тихом океане; лейбористские правительства Уитлэма и Кёрка вернули войска из Вьетнама.",
+      "Австралія, Нова Зеландія та США діють разом проти спільної небезпеки на Тихому океані; лейбористські уряди Вітлема й Кірка повернули війська з В'єтнаму.",
+    ),
+  },
+  usJapan("56,000"),
+  usKorea("40,000"),
+  {
+    id: "us-roc",
+    name: L("US–Republic of China Mutual Defense Treaty", "Американо-тайваньский договор о взаимной обороне", "Американо-тайванський договір про взаємну оборону"),
+    members: ["usa", "taiwan"],
+    since: "1954-12-02",
+    // Ended by the American notice of 1 January 1979, a year on.
+    until: "1980-01-01",
+    terms: L(
+      "The US defends Taiwan, though since the Shanghai Communiqué of 1972 it accepts that there is one China and is drawing its troops down.",
+      "США защищают Тайвань, хотя после Шанхайского коммюнике 1972 года признают, что Китай один, и сокращают там войска.",
+      "США захищають Тайвань, хоча після Шанхайського комюніке 1972 року визнають, що Китай один, і скорочують там війська.",
+    ),
+  },
+  chinaDprk,
+  {
+    id: "sino-soviet",
+    kind: "pact",
+    name: L("Sino-Soviet Treaty of Friendship", "Советско-китайский договор о дружбе", "Радянсько-китайський договір про дружбу"),
+    members: ["ussr", "china"],
+    since: "1950-02-14",
+    // Its thirty years ran out, and China did not renew it.
+    until: "1980-04-11",
+    terms: L(
+      "A dead letter since the border war on the Ussuri in 1969: a million Soviet troops face China, and Beijing has opened to Washington.",
+      "Мёртвая буква после пограничной войны на Уссури в 1969 году: миллион советских солдат стоит против Китая, а Пекин открылся Вашингтону.",
+      "Мертва буква після прикордонної війни на Уссурі 1969 року: мільйон радянських солдатів стоїть проти Китаю, а Пекін відкрився Вашингтону.",
+    ),
+  },
+  {
+    id: "soviet-egyptian",
+    kind: "pact",
+    name: L("Soviet–Egyptian Treaty of Friendship", "Советско-египетский договор о дружбе", "Радянсько-єгипетський договір про дружбу"),
+    members: ["ussr", "egypt"],
+    since: "1971-05-27",
+    // Sadat tore it up in March 1976.
+    until: "1976-03-15",
+    terms: L(
+      "Fifteen years of friendship and Soviet arms; Sadat sent the Soviet advisers home in July 1972, but the missiles and the tanks stayed.",
+      "Пятнадцать лет дружбы и советского оружия; в июле 1972 года Садат отправил советских советников домой, но ракеты и танки остались.",
+      "П'ятнадцять років дружби й радянської зброї; у липні 1972 року Садат відправив радянських радників додому, але ракети й танки залишилися.",
+    ),
+  },
+  {
+    id: "soviet-iraqi",
+    kind: "pact",
+    name: L("Soviet–Iraqi Treaty of Friendship", "Советско-иракский договор о дружбе", "Радянсько-іракський договір про дружбу"),
+    members: ["ussr", "iraq"],
+    since: "1972-04-09",
+    terms: L(
+      "Friendship, consultation and Soviet arms for Ba'athist Iraq, which nationalised its oil two months later.",
+      "Дружба, консультации и советское оружие для баасистского Ирака, через два месяца национализировавшего свою нефть.",
+      "Дружба, консультації й радянська зброя для баасистського Іраку, що за два місяці націоналізував свою нафту.",
+    ),
+  },
+  {
+    id: "indo-soviet",
+    kind: "pact",
+    name: L("Indo-Soviet Treaty of Friendship", "Советско-индийский договор о дружбе", "Радянсько-індійський договір про дружбу"),
+    members: ["ussr", "india"],
+    since: "1971-08-09",
+    terms: L(
+      "Consultation and no help to the other's enemy; signed before the war that made Bangladesh, against the US–Chinese tilt to Pakistan.",
+      "Консультации и никакой помощи врагу другой стороны; подписан перед войной, создавшей Бангладеш, против американо-китайского крена к Пакистану.",
+      "Консультації й жодної допомоги ворогові іншої сторони; підписаний перед війною, що створила Бангладеш, проти американо-китайського нахилу до Пакистану.",
+    ),
+  },
+  {
+    id: "salt",
+    kind: "pact",
+    name: L("SALT I and the ABM Treaty", "ОСВ-1 и Договор по ПРО", "ОСО-1 і Договір про ПРО"),
+    members: ["usa", "ussr"],
+    since: "1972-05-26",
+    terms: L(
+      "A five-year freeze on strategic missile launchers and two missile-defence sites each: the arms race capped, not stopped.",
+      "Замораживание числа стратегических пусковых установок на пять лет и по два района противоракетной обороны: гонка вооружений ограничена, но не остановлена.",
+      "Заморожування кількості стратегічних пускових установок на п'ять років і по два райони протиракетної оборони: перегони озброєнь обмежено, але не зупинено.",
+    ),
+  },
+  {
+    id: "basic-treaty",
+    kind: "pact",
+    name: L("Basic Treaty (the two Germanys)", "Основной договор (два германских государства)", "Основний договір (дві німецькі держави)"),
+    members: ["west-germany", "east-germany"],
+    since: "1972-12-21",
+    terms: L(
+      "Brandt's Ostpolitik: the two German states recognise each other's borders and exchange permanent missions, short of full recognition.",
+      "Восточная политика Брандта: два германских государства признают границы друг друга и обмениваются постоянными представительствами, не доходя до полного признания.",
+      "Східна політика Брандта: дві німецькі держави визнають кордони одна одної й обмінюються постійними представництвами, не доходячи до повного визнання.",
+    ),
+  },
+  {
+    id: "paris-accords",
+    kind: "pact",
+    name: L("Paris Peace Accords", "Парижские мирные соглашения", "Паризькі мирні угоди"),
+    members: ["usa", "north-vietnam", "south-vietnam", "viet-cong"],
+    since: "1973-01-27",
+    terms: L(
+      "A ceasefire in place, the Americans out within sixty days, prisoners exchanged, a political settlement left to the Vietnamese; Hanoi's troops stay in the South, and both sides break the ceasefire.",
+      "Прекращение огня на занятых позициях, вывод американцев за шестьдесят дней, обмен пленными, политическое урегулирование оставлено вьетнамцам; войска Ханоя остаются на Юге, и обе стороны нарушают перемирие.",
+      "Припинення вогню на зайнятих позиціях, виведення американців за шістдесят днів, обмін полоненими, політичне врегулювання залишено в'єтнамцям; війська Ханоя лишаються на Півдні, і обидві сторони порушують перемир'я.",
+    ),
+  },
+  {
+    id: "berlin",
+    kind: "pact",
+    name: L("Four-Power Agreement on Berlin", "Четырёхстороннее соглашение по Западному Берлину", "Чотиристороння угода щодо Західного Берліна"),
+    members: ["usa", "ussr", "uk", "france"],
+    since: "1971-09-03",
+    terms: L(
+      "The four powers guarantee free transit to West Berlin and its ties to the Federal Republic; the Wall stands.",
+      "Четыре державы гарантируют свободный транзит в Западный Берлин и его связи с ФРГ; Стена стоит.",
+      "Чотири держави гарантують вільний транзит до Західного Берліна та його зв'язки з ФРН; Стіна стоїть.",
+    ),
+  },
+  {
+    id: "eec",
+    kind: "trade",
+    name: L("European Economic Community", "Европейское экономическое сообщество", "Європейська економічна спільнота"),
+    members: ["france", "west-germany", "italy", "netherlands", "belgium", "luxembourg", "uk", "ireland", "denmark"],
+    since: "1958-01-01",
+    terms: L(
+      "A customs union of nine since January 1973, with a common farm policy; it buys most of its oil from the Arabs and has no common energy policy.",
+      "Таможенный союз девяти стран с января 1973 года с общей аграрной политикой; большую часть нефти он покупает у арабов, а общей энергетической политики у него нет.",
+      "Митний союз дев'яти країн із січня 1973 року зі спільною аграрною політикою; більшість нафти він купує в арабів, а спільної енергетичної політики не має.",
+    ),
+  },
+  {
+    id: "comecon",
+    kind: "trade",
+    name: L("Comecon", "СЭВ", "РЕВ"),
+    members: ["ussr", "poland", "czechoslovakia", "hungary", "romania", "bulgaria", "east-germany", "mongolia", "cuba"],
+    since: "1949-01-25",
+    terms: L(
+      "The Soviet bloc's division of labour; Soviet oil reaches its members below the world price.",
+      "Разделение труда в советском блоке; советская нефть идёт его членам дешевле мировой цены.",
+      "Поділ праці в радянському блоці; радянська нафта йде його членам дешевше за світову ціну.",
+    ),
+  },
+  {
+    id: "alcora",
+    kind: "pact",
+    name: L("Alcora Exercise", "Учения «Алкора»", "Навчання «Алкора»"),
+    members: ["south-africa", "portugal", "rhodesia"],
+    since: "1970-10-14",
+    terms: L(
+      "A secret alliance of the white south: South Africa, Portugal and Rhodesia plan together against the liberation movements in Angola, Mozambique and Rhodesia.",
+      "Тайный союз белого юга: ЮАР, Португалия и Родезия вместе планируют борьбу с освободительными движениями в Анголе, Мозамбике и Родезии.",
+      "Таємний союз білого півдня: ПАР, Португалія та Родезія разом планують боротьбу з визвольними рухами в Анголі, Мозамбіку й Родезії.",
+    ),
+  },
+  arabLeague(
+    ["egypt", "iraq", "jordan", "lebanon", "saudi-arabia", "syria", "north-yemen", "south-yemen", "libya", "sudan", "morocco", "tunisia", "kuwait", "algeria", "united-arab-emirates", "qatar", "bahrain", "oman", "mauritania"],
+    L(
+      "The Khartoum resolution of 1967: no peace with Israel, no recognition, no negotiation. Saudi money now backs Egypt and Syria.",
+      "Хартумская резолюция 1967 года: никакого мира с Израилем, никакого признания, никаких переговоров. Теперь Египет и Сирию поддерживают саудовские деньги.",
+      "Хартумська резолюція 1967 року: жодного миру з Ізраїлем, жодного визнання, жодних переговорів. Тепер Єгипет і Сирію підтримують саудівські гроші.",
+    ),
+  ),
+  opec(
+    ["iran", "iraq", "kuwait", "saudi-arabia", "venezuela", "indonesia", "libya", "qatar", "united-arab-emirates", "algeria", "nigeria", "ecuador"],
+    L(
+      "The producers have won control of prices and a growing share of the oil companies; in two days they meet the companies in Vienna to demand that the posted price be doubled.",
+      "Производители добились контроля над ценами и растущей доли в нефтяных компаниях; через два дня в Вене они потребуют у компаний удвоить справочную цену.",
+      "Виробники домоглися контролю над цінами й дедалі більшої частки в нафтових компаніях; за два дні у Відні вони вимагатимуть від компаній подвоїти довідкову ціну.",
+    ),
+  ),
+  {
+    id: "oau",
+    kind: "organization",
+    name: L("Organisation of African Unity", "Организация африканского единства", "Організація африканської єдності"),
+    members: [
+      "algeria", "benin", "botswana", "burkina-faso", "burundi", "cameroon", "central-african-republic", "chad", "congo", "dr-congo", "egypt",
+      "equatorial-guinea", "ethiopia", "gabon", "gambia", "ghana", "guinea", "ivory-coast", "kenya", "lesotho", "liberia", "libya", "madagascar",
+      "malawi", "mali", "mauritania", "morocco", "niger", "nigeria", "rwanda", "senegal", "sierra-leone", "somalia", "sudan", "swaziland",
+      "tanzania", "togo", "tunisia", "uganda", "zambia",
+    ],
+    since: "1963-05-25",
+    terms: L(
+      "The colonial borders are untouchable; its Liberation Committee in Dar es Salaam arms the movements fighting Portugal, Rhodesia and South Africa.",
+      "Колониальные границы неприкосновенны; её Комитет освобождения в Дар-эс-Саламе вооружает движения, воюющие с Португалией, Родезией и ЮАР.",
+      "Колоніальні кордони недоторканні; її Комітет визволення в Дар-ес-Саламі озброює рухи, що воюють із Португалією, Родезією та ПАР.",
+    ),
+  },
+  asean(
+    ["indonesia", "malaysia", "philippines", "singapore", "thailand"],
+    L(
+      "Five anti-communist states of South-East Asia; the Kuala Lumpur declaration of 1971 calls for a zone of peace, freedom and neutrality.",
+      "Пять антикоммунистических государств Юго-Восточной Азии; Куала-Лумпурская декларация 1971 года призывает к зоне мира, свободы и нейтралитета.",
+      "П'ять антикомуністичних держав Південно-Східної Азії; Куала-Лумпурська декларація 1971 року закликає до зони миру, свободи й нейтралітету.",
+    ),
+  ),
+  {
+    id: "non-aligned",
+    kind: "organization",
+    name: L("Non-Aligned Movement", "Движение неприсоединения", "Рух неприєднання"),
+    members: [
+      "yugoslavia", "india", "egypt", "indonesia", "algeria", "cuba", "sri-lanka", "afghanistan", "iraq", "syria", "libya", "tanzania", "zambia",
+      "ethiopia", "somalia", "sudan", "morocco", "tunisia", "saudi-arabia", "kuwait", "burma", "nepal", "cyprus", "malaysia", "singapore",
+      "bangladesh", "ghana", "nigeria", "uganda", "dr-congo",
+    ],
+    since: "1961-09-01",
+    terms: L(
+      "Its fourth summit, in Algiers in September, leaned toward the Arabs and called for a new international economic order; no obligations.",
+      "Его четвёртый саммит в Алжире в сентябре встал на сторону арабов и призвал к новому международному экономическому порядку; обязательств нет.",
+      "Його четвертий саміт в Алжирі у вересні став на бік арабів і закликав до нового міжнародного економічного порядку; зобов'язань немає.",
+    ),
+  },
+  {
+    id: "commonwealth",
+    kind: "organization",
+    name: L("Commonwealth of Nations", "Содружество наций", "Співдружність націй"),
+    members: [
+      "uk", "canada", "australia", "new-zealand", "india", "bangladesh", "sri-lanka", "malaysia", "singapore", "nigeria", "ghana", "kenya",
+      "tanzania", "uganda", "zambia", "malawi", "sierra-leone", "cyprus", "jamaica", "trinidad-and-tobago", "bahamas", "botswana", "lesotho",
+      "swaziland", "gambia", "guyana", "fiji",
+    ],
+    since: "1931-12-11",
+    terms: L(
+      "Britain and its former colonies; Pakistan left in January 1972 when the others recognised Bangladesh.",
+      "Британия и её бывшие колонии; Пакистан вышел в январе 1972 года, когда остальные признали Бангладеш.",
+      "Британія та її колишні колонії; Пакистан вийшов у січні 1972 року, коли решта визнала Бангладеш.",
+    ),
+  },
+  {
+    id: "rio-pact",
+    name: L("Rio Pact", "Пакт Рио", "Пакт Ріо"),
+    members: RIO_1950.filter((m) => m !== "cuba"),
+    since: "1947-09-02",
+    terms: L(
+      "An attack on one American state is an attack on all; Cuba remains outside.",
+      "Нападение на одно американское государство – нападение на всех; Куба остаётся вне пакта.",
+      "Напад на одну американську державу – напад на всіх; Куба лишається поза пактом.",
+    ),
+  },
+  {
+    id: "cyprus-guarantee",
+    kind: "pact",
+    name: L("Treaty of Guarantee (Cyprus)", "Договор о гарантиях (Кипр)", "Договір про гарантії (Кіпр)"),
+    members: ["cyprus", "uk", "greece", "turkey"],
+    since: "1960-08-16",
+    terms: L(
+      "Britain, Greece and Turkey guarantee Cyprus's independence and may act to restore it; the Athens junta plots against Makarios through EOKA-B.",
+      "Британия, Греция и Турция гарантируют независимость Кипра и могут действовать для её восстановления; афинская хунта плетёт заговор против Макариоса через ЭОКА-Б.",
+      "Британія, Греція й Туреччина гарантують незалежність Кіпру й можуть діяти для її відновлення; афінська хунта плете змову проти Макаріоса через ЕОКА-Б.",
+    ),
+  },
+  {
+    ...montreuxModern,
+    members: ["turkey", "uk", "france", "ussr", "bulgaria", "romania", "greece", "yugoslavia", "japan", "australia"],
+  },
+  angloPortuguese(
+    L(
+      " Britain will not help Portugal hold its African colonies, and Heath's government is embarrassed by reports of massacres in Mozambique.",
+      " Британия не поможет Португалии удержать африканские колонии, а правительство Хита смущено сообщениями о бойнях в Мозамбике.",
+      " Британія не допоможе Португалії втримати африканські колонії, а уряд Гіта збентежений повідомленнями про різанину в Мозамбіку.",
+    ),
+  ),
+];
+
+// ---- 25 December 1979
+
+export const TERMS_1979: Record<string, Localized> = {
+  un: L(
+    "The Charter of 1945; the General Assembly will condemn the Soviet intervention in Afghanistan by 104 votes in January, while the Soviet veto blocks the Security Council. The Assembly gave Cambodia's seat to the Khmer Rouge's Democratic Kampuchea, not the Vietnamese-installed government.",
+    "Устав 1945 года; в январе Генеральная Ассамблея 104 голосами осудит советское вмешательство в Афганистан, а советское вето блокирует Совет Безопасности. Место Камбоджи Ассамблея оставила за Демократической Кампучией красных кхмеров, а не за правительством, поставленным Вьетнамом.",
+    "Статут 1945 року; у січні Генеральна Асамблея 104 голосами засудить радянське втручання в Афганістан, а радянське вето блокує Раду Безпеки. Місце Камбоджі Асамблея залишила за Демократичною Кампучією червоних кхмерів, а не за урядом, поставленим В'єтнамом.",
+  ),
+  nato: L(
+    "Article 5: an attack on one member is an attack on all. On 12 December NATO decided on the 'double track': 572 Pershing II and cruise missiles in Western Europe from 1983 unless the Soviets withdraw their SS-20s.",
+    "Статья 5: нападение на одного члена – нападение на всех. 12 декабря НАТО приняло «двойное решение»: 572 «Першинга-2» и крылатые ракеты в Западной Европе с 1983 года, если Советы не уберут свои СС-20.",
+    "Стаття 5: напад на одного члена – напад на всіх. 12 грудня НАТО ухвалило «подвійне рішення»: 572 «Першинги-2» і крилаті ракети в Західній Європі з 1983 року, якщо Совєти не приберуть свої СС-20.",
+  ),
+  "warsaw-pact": L(
+    "Mutual defence under a Soviet unified command; the SS-20s aimed at Western Europe are its newest weapon. Romania refused to raise its arms spending.",
+    "Взаимная оборона под единым советским командованием; ракеты СС-20, нацеленные на Западную Европу, – его новейшее оружие. Румыния отказалась повышать военные расходы.",
+    "Взаємна оборона під єдиним радянським командуванням; ракети СС-20, націлені на Західну Європу, – його найновіша зброя. Румунія відмовилася підвищувати військові видатки.",
+  ),
+};
+
+export const TREATIES_1979: AllianceSeed[] = [
+  {
+    id: "anzus",
+    name: L("ANZUS", "АНЗЮС", "АНЗЮС"),
+    members: ["usa", "australia", "new-zealand"],
+    since: "1952-04-29",
+    terms: L(
+      "Australia, New Zealand and the US act together against a common danger in the Pacific.",
+      "Австралия, Новая Зеландия и США действуют вместе против общей опасности на Тихом океане.",
+      "Австралія, Нова Зеландія та США діють разом проти спільної небезпеки на Тихому океані.",
+    ),
+  },
+  usJapan("46,000"),
+  usKorea("39,000"),
+  {
+    id: "us-roc",
+    name: L("US–Republic of China Mutual Defense Treaty", "Американо-тайваньский договор о взаимной обороне", "Американо-тайванський договір про взаємну оборону"),
+    members: ["usa", "taiwan"],
+    since: "1954-12-02",
+    until: "1980-01-01",
+    terms: L(
+      "Ending on 1 January 1980: Washington recognised Beijing a year ago; the Taiwan Relations Act keeps arms sales and an unofficial tie.",
+      "Истекает 1 января 1980 года: Вашингтон признал Пекин год назад; Закон об отношениях с Тайванем сохраняет поставки оружия и неофициальную связь.",
+      "Спливає 1 січня 1980 року: Вашингтон визнав Пекін рік тому; Закон про відносини з Тайванем зберігає постачання зброї та неофіційний зв'язок.",
+    ),
+  },
+  {
+    id: "us-philippines",
+    name: L("US–Philippines Mutual Defense Treaty", "Договор о взаимной обороне США и Филиппин", "Договір про взаємну оборону США та Філіппін"),
+    members: ["usa", "philippines"],
+    since: "1951-08-30",
+    terms: L(
+      "Mutual defence in the Pacific; a new agreement this year kept Clark and Subic Bay for the US.",
+      "Взаимная оборона на Тихом океане; новое соглашение этого года сохранило за США Кларк и Субик-Бей.",
+      "Взаємна оборона на Тихому океані; нова угода цього року зберегла за США Кларк і Субік-Бей.",
+    ),
+  },
+  chinaDprk,
+  {
+    id: "sino-soviet",
+    kind: "pact",
+    name: L("Sino-Soviet Treaty of Friendship", "Советско-китайский договор о дружбе", "Радянсько-китайський договір про дружбу"),
+    members: ["ussr", "china"],
+    since: "1950-02-14",
+    until: "1980-04-11",
+    terms: L(
+      "China gave notice in April 1979 that it will lapse in April 1980; Beijing calls Moscow the greatest threat to peace.",
+      "В апреле 1979 года Китай уведомил, что не продлит договор после апреля 1980 года; Пекин называет Москву главной угрозой миру.",
+      "У квітні 1979 року Китай повідомив, що не продовжить договір після квітня 1980 року; Пекін називає Москву головною загрозою миру.",
+    ),
+  },
+  {
+    id: "soviet-afghan",
+    kind: "pact",
+    name: L("Soviet–Afghan Treaty of Friendship", "Советско-афганский договор о дружбе", "Радянсько-афганський договір про дружбу"),
+    members: ["ussr", "afghanistan"],
+    since: "1978-12-05",
+    terms: L(
+      "Friendship, good-neighbourliness and co-operation; its fourth article lets the two take measures to ensure each other's security – Moscow's legal ground for sending its army.",
+      "Дружба, добрососедство и сотрудничество; его четвёртая статья позволяет сторонам принимать меры для обеспечения безопасности друг друга – правовое основание Москвы для ввода войск.",
+      "Дружба, добросусідство й співпраця; його четверта стаття дозволяє сторонам вживати заходів для забезпечення безпеки одна одної – правова підстава Москви для введення військ.",
+    ),
+  },
+  {
+    id: "soviet-vietnamese",
+    kind: "pact",
+    name: L("Soviet–Vietnamese Treaty of Friendship", "Советско-вьетнамский договор о дружбе", "Радянсько-в'єтнамський договір про дружбу"),
+    members: ["ussr", "vietnam"],
+    since: "1978-11-03",
+    terms: L(
+      "Consultation and 'effective measures' if either is threatened; signed before Vietnam invaded Cambodia, it held China's punitive war in February to a month.",
+      "Консультации и «эффективные меры» при угрозе одной из сторон; подписан перед вторжением Вьетнама в Камбоджу и удержал карательную войну Китая в феврале в пределах месяца.",
+      "Консультації та «ефективні заходи» в разі загрози одній зі сторін; підписаний перед вторгненням В'єтнаму до Камбоджі й утримав каральну війну Китаю в лютому в межах місяця.",
+    ),
+  },
+  {
+    id: "soviet-ethiopian",
+    kind: "pact",
+    name: L("Soviet–Ethiopian Treaty of Friendship", "Советско-эфиопский договор о дружбе", "Радянсько-ефіопський договір про дружбу"),
+    members: ["ussr", "ethiopia"],
+    since: "1978-11-20",
+    terms: L(
+      "Soviet arms and Cuban troops won the Ogaden war for Mengistu in 1978; the treaty binds them to his revolution.",
+      "Советское оружие и кубинские войска выиграли для Менгисту огаденскую войну в 1978 году; договор привязывает их к его революции.",
+      "Радянська зброя та кубинські війська виграли для Менгісту огаденську війну 1978 року; договір прив'язує їх до його революції.",
+    ),
+  },
+  {
+    id: "indo-soviet",
+    kind: "pact",
+    name: L("Indo-Soviet Treaty of Friendship", "Советско-индийский договор о дружбе", "Радянсько-індійський договір про дружбу"),
+    members: ["ussr", "india"],
+    since: "1971-08-09",
+    terms: L("Consultation and no help to the other's enemy.", "Консультации и никакой помощи врагу другой стороны.", "Консультації й жодної допомоги ворогові іншої сторони."),
+  },
+  {
+    id: "soviet-iraqi",
+    kind: "pact",
+    name: L("Soviet–Iraqi Treaty of Friendship", "Советско-иракский договор о дружбе", "Радянсько-іракський договір про дружбу"),
+    members: ["ussr", "iraq"],
+    since: "1972-04-09",
+    terms: L(
+      "Friendship and Soviet arms; Saddam Hussein has cooled toward Moscow and buys French aircraft.",
+      "Дружба и советское оружие; Саддам Хусейн охладел к Москве и покупает французские самолёты.",
+      "Дружба й радянська зброя; Саддам Хусейн охолов до Москви й купує французькі літаки.",
+    ),
+  },
+  {
+    id: "egypt-israel",
+    kind: "pact",
+    name: L("Egypt–Israel Peace Treaty", "Египетско-израильский мирный договор", "Єгипетсько-ізраїльський мирний договір"),
+    members: ["egypt", "israel"],
+    since: "1979-03-26",
+    terms: L(
+      "Peace and recognition after Camp David: Israel leaves the Sinai in stages by April 1982, Egypt lets Israeli ships through the canal. The Arab League has expelled Egypt for it.",
+      "Мир и признание после Кэмп-Дэвида: Израиль поэтапно уходит с Синая к апрелю 1982 года, Египет пропускает израильские суда через канал. За это Лига арабских государств исключила Египет.",
+      "Мир і визнання після Кемп-Девіда: Ізраїль поетапно йде із Синаю до квітня 1982 року, Єгипет пропускає ізраїльські судна через канал. За це Ліга арабських держав виключила Єгипет.",
+    ),
+  },
+  {
+    id: "salt",
+    kind: "pact",
+    name: L("SALT II", "ОСВ-2", "ОСО-2"),
+    members: ["usa", "ussr"],
+    since: "1979-06-18",
+    terms: L(
+      "Signed by Carter and Brezhnev in Vienna: 2,400 strategic launchers each, falling to 2,250. The Senate has not ratified it, and Afghanistan will bury it.",
+      "Подписан Картером и Брежневым в Вене: по 2400 стратегических носителей с сокращением до 2250. Сенат его не ратифицировал, и Афганистан его похоронит.",
+      "Підписаний Картером і Брежнєвим у Відні: по 2400 стратегічних носіїв зі скороченням до 2250. Сенат його не ратифікував, і Афганістан його поховає.",
+    ),
+  },
+  {
+    id: "helsinki",
+    kind: "organization",
+    name: L("Helsinki Final Act (CSCE)", "Хельсинкский заключительный акт (СБСЕ)", "Гельсінський заключний акт (НБСЄ)"),
+    members: [
+      "usa", "canada", "ussr", "uk", "france", "west-germany", "east-germany", "italy", "spain", "portugal", "greece", "turkey", "poland",
+      "czechoslovakia", "hungary", "romania", "bulgaria", "yugoslavia", "austria", "switzerland", "sweden", "finland", "norway", "denmark",
+      "netherlands", "belgium", "luxembourg", "ireland", "iceland", "cyprus", "malta",
+    ],
+    since: "1975-08-01",
+    terms: L(
+      "Europe's borders are inviolable and human rights a common concern; dissidents from Moscow to Prague hold their governments to it.",
+      "Границы Европы нерушимы, а права человека – общее дело; диссиденты от Москвы до Праги ловят свои правительства на слове.",
+      "Кордони Європи непорушні, а права людини – спільна справа; дисиденти від Москви до Праги ловлять свої уряди на слові.",
+    ),
+  },
+  {
+    id: "eec",
+    kind: "trade",
+    name: L("European Economic Community", "Европейское экономическое сообщество", "Європейська економічна спільнота"),
+    members: ["france", "west-germany", "italy", "netherlands", "belgium", "luxembourg", "uk", "ireland", "denmark"],
+    since: "1958-01-01",
+    terms: L(
+      "Nine members, the European Monetary System since March 1979, the first direct elections to the European Parliament in June; Greece joins in 1981.",
+      "Девять членов, Европейская валютная система с марта 1979 года, первые прямые выборы в Европарламент в июне; Греция вступит в 1981 году.",
+      "Дев'ять членів, Європейська валютна система з березня 1979 року, перші прямі вибори до Європарламенту в червні; Греція вступить 1981 року.",
+    ),
+  },
+  {
+    id: "comecon",
+    kind: "trade",
+    name: L("Comecon", "СЭВ", "РЕВ"),
+    members: ["ussr", "poland", "czechoslovakia", "hungary", "romania", "bulgaria", "east-germany", "mongolia", "cuba", "vietnam"],
+    since: "1949-01-25",
+    terms: L(
+      "The Soviet bloc's division of labour; Poland is deep in Western debt, and Soviet oil is no longer cheap.",
+      "Разделение труда в советском блоке; Польша глубоко в долгах перед Западом, а советская нефть больше не дешёвая.",
+      "Поділ праці в радянському блоці; Польща глибоко в боргах перед Заходом, а радянська нафта вже не дешева.",
+    ),
+  },
+  {
+    id: "lancaster-house",
+    kind: "pact",
+    name: L("Lancaster House Agreement", "Ланкастер-хаусское соглашение", "Ланкастер-гаузька угода"),
+    members: ["uk", "rhodesia", "zanu"],
+    since: "1979-12-21",
+    terms: L(
+      "Signed four days ago: a ceasefire from 28 December, the guerrillas gathered in assembly points under a Commonwealth force, elections in February under the British governor, then independence as Zimbabwe.",
+      "Подписано четыре дня назад: прекращение огня с 28 декабря, партизаны собираются в пунктах сбора под охраной сил Содружества, выборы в феврале под властью британского губернатора, затем независимость под именем Зимбабве.",
+      "Підписано чотири дні тому: припинення вогню з 28 грудня, партизани збираються в пунктах збору під охороною сил Співдружності, вибори в лютому під владою британського губернатора, потім незалежність під назвою Зімбабве.",
+    ),
+  },
+  arabLeague(
+    ["iraq", "jordan", "lebanon", "saudi-arabia", "syria", "north-yemen", "south-yemen", "libya", "sudan", "morocco", "tunisia", "kuwait", "algeria", "united-arab-emirates", "qatar", "bahrain", "oman", "mauritania", "somalia", "djibouti"],
+    L(
+      "Without Egypt, suspended and moved from Cairo to Tunis after its peace with Israel; Iraq and Syria lead the 'Steadfastness Front'.",
+      "Без Египта, исключённого после мира с Израилем; штаб-квартира перенесена из Каира в Тунис, Ирак и Сирия возглавляют «Фронт стойкости».",
+      "Без Єгипту, виключеного після миру з Ізраїлем; штаб-квартиру перенесено з Каїра до Тунісу, Ірак і Сирія очолюють «Фронт стійкості».",
+    ),
+  ),
+  opec(
+    ["iran", "iraq", "kuwait", "saudi-arabia", "venezuela", "indonesia", "libya", "qatar", "united-arab-emirates", "algeria", "nigeria", "ecuador", "gabon"],
+    L(
+      "Iran's revolution has cut its output by half and sent the price past thirty dollars; the Caracas meeting this month failed to agree on a single price.",
+      "Иранская революция вдвое урезала его добычу и подняла цену выше тридцати долларов; встреча в Каракасе в этом месяце не договорилась о единой цене.",
+      "Іранська революція вдвічі урізала його видобуток і підняла ціну понад тридцять доларів; зустріч у Каракасі цього місяця не домовилася про єдину ціну.",
+    ),
+  ),
+  {
+    id: "oau",
+    kind: "organization",
+    name: L("Organisation of African Unity", "Организация африканского единства", "Організація африканської єдності"),
+    members: [
+      "algeria", "angola", "benin", "botswana", "burkina-faso", "burundi", "cameroon", "central-african-republic", "chad", "congo", "dr-congo",
+      "egypt", "equatorial-guinea", "ethiopia", "gabon", "gambia", "ghana", "guinea", "guinea-bissau", "ivory-coast", "kenya", "lesotho",
+      "liberia", "libya", "madagascar", "malawi", "mali", "mauritania", "morocco", "mozambique", "niger", "nigeria", "rwanda", "senegal",
+      "sierra-leone", "somalia", "sudan", "swaziland", "tanzania", "togo", "tunisia", "uganda", "zambia",
+    ],
+    since: "1963-05-25",
+    terms: L(
+      "Divided over the Western Sahara, where most members back Polisario's republic against Morocco, and over Tanzania's overthrow of Idi Amin.",
+      "Расколота из-за Западной Сахары, где большинство поддерживает республику Полисарио против Марокко, и из-за свержения Иди Амина Танзанией.",
+      "Розколота через Західну Сахару, де більшість підтримує республіку Полісаріо проти Марокко, і через повалення Іді Аміна Танзанією.",
+    ),
+  },
+  asean(
+    ["indonesia", "malaysia", "philippines", "singapore", "thailand"],
+    L(
+      "Five states standing together against Vietnam's occupation of Cambodia; Thailand takes in the refugees and the Khmer Rouge's remnants.",
+      "Пять государств вместе против вьетнамской оккупации Камбоджи; Таиланд принимает беженцев и остатки красных кхмеров.",
+      "П'ять держав разом проти в'єтнамської окупації Камбоджі; Таїланд приймає біженців і рештки червоних кхмерів.",
+    ),
+  ),
+  {
+    id: "non-aligned",
+    kind: "organization",
+    name: L("Non-Aligned Movement", "Движение неприсоединения", "Рух неприєднання"),
+    members: [
+      "yugoslavia", "india", "egypt", "indonesia", "algeria", "cuba", "sri-lanka", "afghanistan", "iraq", "syria", "libya", "tanzania", "zambia",
+      "ethiopia", "somalia", "sudan", "morocco", "tunisia", "saudi-arabia", "kuwait", "burma", "nepal", "cyprus", "malaysia", "singapore",
+      "bangladesh", "nigeria", "iran", "pakistan", "nicaragua", "vietnam", "laos", "angola", "mozambique",
+    ],
+    since: "1961-09-01",
+    terms: L(
+      "Castro chaired its Havana summit in September and leans it toward Moscow; Burma walked out, and Afghanistan will split it.",
+      "Кастро председательствовал на его саммите в Гаване в сентябре и тянет его к Москве; Бирма вышла, а Афганистан его расколет.",
+      "Кастро головував на його саміті в Гавані у вересні й тягне його до Москви; Бірма вийшла, а Афганістан його розколе.",
+    ),
+  },
+  {
+    id: "commonwealth",
+    kind: "organization",
+    name: L("Commonwealth of Nations", "Содружество наций", "Співдружність націй"),
+    members: [
+      "uk", "canada", "australia", "new-zealand", "india", "bangladesh", "sri-lanka", "malaysia", "singapore", "nigeria", "ghana", "kenya",
+      "tanzania", "uganda", "zambia", "malawi", "sierra-leone", "cyprus", "jamaica", "trinidad-and-tobago", "bahamas", "botswana", "lesotho",
+      "swaziland", "gambia", "guyana", "fiji", "papua-new-guinea",
+    ],
+    since: "1931-12-11",
+    terms: L(
+      "Its Lusaka meeting in August set Thatcher on the road to Lancaster House; a Commonwealth force will watch Rhodesia's ceasefire.",
+      "Его встреча в Лусаке в августе вывела Тэтчер на путь к Ланкастер-хаусу; силы Содружества будут следить за перемирием в Родезии.",
+      "Його зустріч у Лусаці в серпні вивела Тетчер на шлях до Ланкастер-гаузу; сили Співдружності стежитимуть за перемир'ям у Родезії.",
+    ),
+  },
+  {
+    id: "rio-pact",
+    name: L("Rio Pact", "Пакт Рио", "Пакт Ріо"),
+    members: RIO_1950.filter((m) => m !== "cuba"),
+    since: "1947-09-02",
+    terms: L(
+      "An attack on one American state is an attack on all; the Sandinistas' Nicaragua stays in it for now.",
+      "Нападение на одно американское государство – нападение на всех; сандинистская Никарагуа пока остаётся в пакте.",
+      "Напад на одну американську державу – напад на всіх; сандиністська Нікарагуа поки лишається в пакті.",
+    ),
+  },
+  {
+    ...montreuxModern,
+    members: ["turkey", "uk", "france", "ussr", "bulgaria", "romania", "greece", "yugoslavia", "japan", "australia"],
+  },
+  angloPortuguese(NONE),
 ];
 
 // ---- 24 March 1999

@@ -1,0 +1,5358 @@
+{
+ "ae-emirate-of-abu-dhabi": [
+  "ae-emirate-of-abu-dhabi",
+  "ae-emirate-of-abu-dhabi-zayed-city"
+ ],
+ "af-herat": [
+  "af-herat",
+  "af-herat-herat-south-east",
+  "af-herat-shindand"
+ ],
+ "ao-benguela": [
+  "ao-benguela",
+  "ao-benguela-cubal"
+ ],
+ "ao-bie": [
+  "ao-bie",
+  "ao-bie-calucinga"
+ ],
+ "ao-cuando-cubango": [
+  "ao-cuando-cubango",
+  "ao-cuando-cubango-menongue",
+  "ao-cuando-cubango-luiana",
+  "ao-cuando-cubango-cuito-cuanavale",
+  "ao-cuando-cubango-cuando-cubango-west"
+ ],
+ "ao-cuanza-sul": [
+  "ao-cuanza-sul",
+  "ao-cuanza-sul-quibala"
+ ],
+ "ao-huambo": [
+  "ao-huambo",
+  "ao-huambo-alto-hama"
+ ],
+ "ao-huila": [
+  "ao-huila",
+  "ao-huila-huila-east"
+ ],
+ "ao-lunda-norte": [
+  "ao-lunda-norte",
+  "ao-lunda-norte-lucapa"
+ ],
+ "ao-malanje": [
+  "ao-malanje",
+  "ao-malanje-luquembo"
+ ],
+ "ao-moxico": [
+  "ao-moxico",
+  "ao-moxico-moxico-north-east",
+  "ao-moxico-lumbala-ngimbo",
+  "ao-moxico-luau"
+ ],
+ "ao-namibe": [
+  "ao-namibe",
+  "ao-namibe-tombwa"
+ ],
+ "ar-buenos-aires": [
+  "ar-buenos-aires",
+  "ar-buenos-aires-bahia-blanca",
+  "ar-buenos-aires-la-plata",
+  "ar-buenos-aires-san-nicolas-de-los-arroyos",
+  "ar-buenos-aires-zarate",
+  "ar-buenos-aires-olavarria",
+  "ar-buenos-aires-tandil",
+  "ar-buenos-aires-viedma",
+  "ar-buenos-aires-9-de-julio",
+  "ar-buenos-aires-coronel-suarez",
+  "ar-buenos-aires-tres-arroyos"
+ ],
+ "ar-chaco": [
+  "ar-chaco",
+  "ar-chaco-presidencia-roque-saenz-pena",
+  "ar-chaco-gran-chaco"
+ ],
+ "ar-chubut": [
+  "ar-chubut",
+  "ar-chubut-trelew",
+  "ar-chubut-esquel",
+  "ar-chubut-sarmiento"
+ ],
+ "ar-cordoba": [
+  "ar-cordoba",
+  "ar-cordoba-rio-cuarto",
+  "ar-cordoba-villa-maria",
+  "ar-cordoba-san-francisco",
+  "ar-cordoba-pampas-cordoba",
+  "ar-cordoba-pampas-cordoba-north",
+  "ar-cordoba-pampas-cordoba-south"
+ ],
+ "ar-corrientes": [
+  "ar-corrientes",
+  "ar-corrientes-goya"
+ ],
+ "ar-entre-rios": [
+  "ar-entre-rios",
+  "ar-entre-rios-concordia"
+ ],
+ "ar-formosa": [
+  "ar-formosa",
+  "ar-formosa-las-lomitas"
+ ],
+ "ar-la-pampa": [
+  "ar-la-pampa",
+  "ar-la-pampa-veinticinco-de-mayo",
+  "ar-la-pampa-rio-colorado"
+ ],
+ "ar-mendoza": [
+  "ar-mendoza",
+  "ar-mendoza-san-rafael",
+  "ar-mendoza-malargue",
+  "ar-mendoza-la-paz"
+ ],
+ "ar-rio-negro": [
+  "ar-rio-negro",
+  "ar-rio-negro-choele-choel",
+  "ar-rio-negro-general-roca"
+ ],
+ "ar-salta": [
+  "ar-salta",
+  "ar-salta-san-ramon-de-la-nueva-oran",
+  "ar-salta-tartagal",
+  "ar-salta-joaquin-v-gonzalez"
+ ],
+ "ar-san-juan": [
+  "ar-san-juan",
+  "ar-san-juan-rodeo"
+ ],
+ "ar-san-luis": [
+  "ar-san-luis",
+  "ar-san-luis-pampas-san-luis"
+ ],
+ "ar-santa-cruz": [
+  "ar-santa-cruz",
+  "ar-santa-cruz-el-calafate",
+  "ar-santa-cruz-perito-moreno"
+ ],
+ "ar-santa-fe": [
+  "ar-santa-fe",
+  "ar-santa-fe-santa-fe-santa-fe",
+  "ar-santa-fe-reconquista",
+  "ar-santa-fe-rafaela",
+  "ar-santa-fe-venado-tuerto",
+  "ar-santa-fe-vera"
+ ],
+ "ar-santiago-del-estero": [
+  "ar-santiago-del-estero",
+  "ar-santiago-del-estero-anatuya",
+  "ar-santiago-del-estero-monte-quemado",
+  "ar-santiago-del-estero-pampas"
+ ],
+ "at-lower-austria": [
+  "at-lower-austria",
+  "at-lower-austria-sankt-polten"
+ ],
+ "au-new-south-wales": [
+  "au-new-south-wales",
+  "au-new-south-wales-newcastle",
+  "au-new-south-wales-wagga-wagga",
+  "au-new-south-wales-port-macquarie",
+  "au-new-south-wales-coffs-harbour",
+  "au-new-south-wales-orange",
+  "au-new-south-wales-griffith",
+  "au-new-south-wales-tamworth",
+  "au-new-south-wales-dubbo",
+  "au-new-south-wales-wollongong",
+  "au-new-south-wales-lismore",
+  "au-new-south-wales-broken-hill",
+  "au-new-south-wales-murray-darling-basin",
+  "au-new-south-wales-murray-darling-basin-new-south-wales",
+  "au-new-south-wales-murray-darling-basin-new-south-wales-west",
+  "au-new-south-wales-young",
+  "au-new-south-wales-moree",
+  "au-new-south-wales-cooma",
+  "au-new-south-wales-mudgee",
+  "au-new-south-wales-bourke",
+  "au-new-south-wales-strzelecki-desert",
+  "au-new-south-wales-wilcannia"
+ ],
+ "au-northern-territory": [
+  "au-northern-territory",
+  "au-northern-territory-alice-springs",
+  "au-northern-territory-northern-territory-south-east",
+  "au-northern-territory-tennant-creek",
+  "au-northern-territory-yulara",
+  "au-northern-territory-newcastle-waters"
+ ],
+ "au-queensland": [
+  "au-queensland",
+  "au-queensland-townsville",
+  "au-queensland-cairns",
+  "au-queensland-mackay",
+  "au-queensland-rockhampton",
+  "au-queensland-bundaberg",
+  "au-queensland-camooweal",
+  "au-queensland-bowen",
+  "au-queensland-toowoomba",
+  "au-queensland-emerald",
+  "au-queensland-great-dividing-range",
+  "au-queensland-goondiwindi",
+  "au-queensland-charleville",
+  "au-queensland-longreach",
+  "au-queensland-weipa",
+  "au-queensland-quilpie",
+  "au-queensland-winton",
+  "au-queensland-georgetown",
+  "au-queensland-windorah",
+  "au-queensland-hughenden",
+  "au-queensland-birdsville",
+  "au-queensland-roma",
+  "au-queensland-mount-isa",
+  "au-queensland-great-artesian-basin-queensland"
+ ],
+ "au-south-australia": [
+  "au-south-australia",
+  "au-south-australia-mount-gambier",
+  "au-south-australia-port-augusta",
+  "au-south-australia-whyalla",
+  "au-south-australia-port-pirie",
+  "au-south-australia-berri",
+  "au-south-australia-ceduna",
+  "au-south-australia-great-artesian-basin",
+  "au-south-australia-south-australia-north",
+  "au-south-australia-great-victoria-desert",
+  "au-south-australia-great-artesian-basin-south-australia",
+  "au-south-australia-western-plateau-south-australia",
+  "au-south-australia-nullabor-plain-south-australia"
+ ],
+ "au-victoria": [
+  "au-victoria",
+  "au-victoria-bendigo",
+  "au-victoria-shepparton",
+  "au-victoria-warrnambool",
+  "au-victoria-mildura",
+  "au-victoria-cranbourne",
+  "au-victoria-horsham",
+  "au-victoria-swan-hill",
+  "au-victoria-bairnsdale"
+ ],
+ "au-western-australia": [
+  "au-western-australia",
+  "au-western-australia-kalgoorlie",
+  "au-western-australia-geraldton",
+  "au-western-australia-albany",
+  "au-western-australia-tom-price",
+  "au-western-australia-meekatharra",
+  "au-western-australia-nullabor-plain",
+  "au-western-australia-kununurra",
+  "au-western-australia-derby",
+  "au-western-australia-merredin",
+  "au-western-australia-great-sandy-desert",
+  "au-western-australia-karratha",
+  "au-western-australia-western-plateau",
+  "au-western-australia-laverton",
+  "au-western-australia-kaltukatjara"
+ ],
+ "az-aran-economic-region": [
+  "az-aran-economic-region",
+  "az-aran-economic-region-yevlakh"
+ ],
+ "bd-barisal": [
+  "bd-barisal",
+  "bd-barisal-patuakhali"
+ ],
+ "bd-chattogram": [
+  "bd-chattogram",
+  "bd-chattogram-cumilla",
+  "bd-chattogram-cox-s-bazar",
+  "bd-chattogram-khagrachhari",
+  "bd-chattogram-maijdi",
+  "bd-chattogram-bandarban",
+  "bd-chattogram-brahmanbaria"
+ ],
+ "bd-dhaka": [
+  "bd-dhaka",
+  "bd-dhaka-mymensingh",
+  "bd-dhaka-tangail",
+  "bd-dhaka-jamalpur",
+  "bd-dhaka-tungipara",
+  "bd-dhaka-nagar-naluakot",
+  "bd-dhaka-faridpur"
+ ],
+ "bd-khulna": [
+  "bd-khulna",
+  "bd-khulna-jashore",
+  "bd-khulna-sundarbans",
+  "bd-khulna-kushtia",
+  "bd-khulna-sarankhola"
+ ],
+ "bd-rajshahi": [
+  "bd-rajshahi",
+  "bd-rajshahi-pabna",
+  "bd-rajshahi-shibganj",
+  "bd-rajshahi-mohammadpur"
+ ],
+ "bd-rangpur": [
+  "bd-rangpur",
+  "bd-rangpur-thakurgaon",
+  "bd-rangpur-lalmonirhat"
+ ],
+ "bd-sylhet": [
+  "bd-sylhet",
+  "bd-sylhet-habiganj"
+ ],
+ "bi": [
+  "bi-rutana",
+  "bi-muyinga",
+  "bi-ruyigi",
+  "bi"
+ ],
+ "bj-borgou": [
+  "bj-borgou",
+  "bj-borgou-nikki"
+ ],
+ "bo-beni": [
+  "bo-beni",
+  "bo-beni-riberalta",
+  "bo-beni-trinidad",
+  "bo-beni-san-borja",
+  "bo-beni-magdalena"
+ ],
+ "bo-cochabamba": [
+  "bo-cochabamba",
+  "bo-cochabamba-aiquile"
+ ],
+ "bo-la-paz": [
+  "bo-la-paz",
+  "bo-la-paz-puerto-heath",
+  "bo-la-paz-quime",
+  "bo-la-paz-rurrenabaque"
+ ],
+ "bo-potosi": [
+  "bo-potosi",
+  "bo-potosi-villazon"
+ ],
+ "bo-santa-cruz": [
+  "bo-santa-cruz",
+  "bo-santa-cruz-piso-firme",
+  "bo-santa-cruz-puerto-suarez",
+  "bo-santa-cruz-camiri",
+  "bo-santa-cruz-san-matias",
+  "bo-santa-cruz-robore",
+  "bo-santa-cruz-ascension",
+  "bo-santa-cruz-mato-grosso-plateau",
+  "bo-santa-cruz-san-ignacio-de-velasco"
+ ],
+ "br-acre": [
+  "br-acre",
+  "br-acre-cruzeiro-do-sul",
+  "br-acre-cobija",
+  "br-acre-selva"
+ ],
+ "br-alagoas": [
+  "br-alagoas",
+  "br-alagoas-arapiraca"
+ ],
+ "br-amapa": [
+  "br-amapa",
+  "br-amapa-vila-velha",
+  "br-amapa-laranjal-do-jari",
+  "br-amapa-amapa-amapa",
+  "br-amapa-guiana-highlands-amapa"
+ ],
+ "br-amazonas": [
+  "br-amazonas",
+  "br-amazonas-natal",
+  "br-amazonas-parintins",
+  "br-amazonas-crato",
+  "br-amazonas-itacoatiara",
+  "br-amazonas-coari",
+  "br-amazonas-tefe",
+  "br-amazonas-eirunepe",
+  "br-amazonas-sao-gabriel-da-cachoeira",
+  "br-amazonas-manicore",
+  "br-amazonas-fonte-boa",
+  "br-amazonas-barcelos",
+  "br-amazonas-tonantins",
+  "br-amazonas-boca-do-acre",
+  "br-amazonas-ipixuna",
+  "br-amazonas-carauari",
+  "br-amazonas-presidente-figueiredo",
+  "br-amazonas-amazon-basin-amazonas",
+  "br-amazonas-amazon-basin-amazonas-north-west",
+  "br-amazonas-benjamin-constant",
+  "br-amazonas-borba",
+  "br-amazonas-mato-grosso-plateau-amazonas",
+  "br-amazonas-amazon-basin-amazonas-west",
+  "br-amazonas-labrea"
+ ],
+ "br-bahia": [
+  "br-bahia",
+  "br-bahia-feira-de-santana",
+  "br-bahia-vitoria-da-conquista",
+  "br-bahia-itabuna",
+  "br-bahia-jequie",
+  "br-bahia-paulo-afonso",
+  "br-bahia-bom-jesus-da-lapa",
+  "br-bahia-senhor-do-bonfim",
+  "br-bahia-remanso",
+  "br-bahia-guanambi",
+  "br-bahia-irece",
+  "br-bahia-canavieiras",
+  "br-bahia-itamaraju",
+  "br-bahia-brazilian-highlands-bahia",
+  "br-bahia-itaberaba",
+  "br-bahia-barreiras",
+  "br-bahia-nova-vicosa",
+  "br-bahia-brazilian-highlands-bahia-west",
+  "br-bahia-tucano",
+  "br-bahia-grande-sertao-veredas-national-park",
+  "br-bahia-brazilian-highlands-bahia-west-2",
+  "br-bahia-grande-sertao-veredas-national-park-bahia",
+  "br-bahia-xique-xique"
+ ],
+ "br-ceara": [
+  "br-ceara",
+  "br-ceara-juazeiro-do-norte",
+  "br-ceara-sobral",
+  "br-ceara-iguatu",
+  "br-ceara-taua",
+  "br-ceara-russas",
+  "br-ceara-crateus",
+  "br-ceara-caninde"
+ ],
+ "br-espirito-santo": [
+  "br-espirito-santo",
+  "br-espirito-santo-cachoeiro-de-itapemirim",
+  "br-espirito-santo-linhares"
+ ],
+ "br-goias": [
+  "br-goias",
+  "br-goias-itumbiara",
+  "br-goias-rio-verde",
+  "br-goias-formosa",
+  "br-goias-catalao",
+  "br-goias-goianesia",
+  "br-goias-cristalina",
+  "br-goias-ipora",
+  "br-goias-jatai",
+  "br-goias-serra-do-espinho",
+  "br-goias-serra-dourada"
+ ],
+ "br-maranhao": [
+  "br-maranhao",
+  "br-maranhao-imperatriz",
+  "br-maranhao-codo",
+  "br-maranhao-santa-ines",
+  "br-maranhao-corda",
+  "br-maranhao-grajau",
+  "br-maranhao-sao-jose-de-ribamar",
+  "br-maranhao-chapadinha",
+  "br-maranhao-brazilian-highlands",
+  "br-maranhao-pinheiro"
+ ],
+ "br-mato-grosso": [
+  "br-mato-grosso",
+  "br-mato-grosso-rondonopolis",
+  "br-mato-grosso-caceres",
+  "br-mato-grosso-alta-floresta",
+  "br-mato-grosso-garcas",
+  "br-mato-grosso-colider",
+  "br-mato-grosso-aripuana",
+  "br-mato-grosso-vila-bela-da-santissima-trindade",
+  "br-mato-grosso-bugres",
+  "br-mato-grosso-sinop",
+  "br-mato-grosso-juina",
+  "br-mato-grosso-confresa",
+  "br-mato-grosso-querencia",
+  "br-mato-grosso-mato-grosso-plateau-mato-grosso",
+  "br-mato-grosso-mato-grosso-plateau-mato-grosso-north-east",
+  "br-mato-grosso-mato-grosso-plateau-mato-grosso-north-west",
+  "br-mato-grosso-paranatinga",
+  "br-mato-grosso-lucas-do-rio-verde",
+  "br-mato-grosso-alto-araguaia",
+  "br-mato-grosso-sapezal",
+  "br-mato-grosso-mato-grosso-plateau-mato-grosso-north-west-2",
+  "br-mato-grosso-agua-boa",
+  "br-mato-grosso-juara"
+ ],
+ "br-mato-grosso-do-sul": [
+  "br-mato-grosso-do-sul",
+  "br-mato-grosso-do-sul-dourados",
+  "br-mato-grosso-do-sul-tres-lagoas",
+  "br-mato-grosso-do-sul-corumba",
+  "br-mato-grosso-do-sul-aquidauana",
+  "br-mato-grosso-do-sul-jardim",
+  "br-mato-grosso-do-sul-paranaiba",
+  "br-mato-grosso-do-sul-coxim",
+  "br-mato-grosso-do-sul-pantanal",
+  "br-mato-grosso-do-sul-chapadao-do-sul",
+  "br-mato-grosso-do-sul-nova-andradina"
+ ],
+ "br-minas-gerais": [
+  "br-minas-gerais",
+  "br-minas-gerais-juiz-de-fora",
+  "br-minas-gerais-uberlandia",
+  "br-minas-gerais-montes-claros",
+  "br-minas-gerais-ipatinga",
+  "br-minas-gerais-uberaba",
+  "br-minas-gerais-divinopolis",
+  "br-minas-gerais-governador-valadares",
+  "br-minas-gerais-pocos-de-caldas",
+  "br-minas-gerais-aracuai",
+  "br-minas-gerais-passos",
+  "br-minas-gerais-uba",
+  "br-minas-gerais-lavras",
+  "br-minas-gerais-araxa",
+  "br-minas-gerais-pirapora",
+  "br-minas-gerais-ituiutaba",
+  "br-minas-gerais-paracatu",
+  "br-minas-gerais-ponte-nova",
+  "br-minas-gerais-curvelo",
+  "br-minas-gerais-janauba",
+  "br-minas-gerais-januaria",
+  "br-minas-gerais-teofilo-otoni",
+  "br-minas-gerais-almenara",
+  "br-minas-gerais-diamantina"
+ ],
+ "br-para": [
+  "br-para",
+  "br-para-santarem",
+  "br-para-maraba",
+  "br-para-itaituba",
+  "br-para-braganca",
+  "br-para-breves",
+  "br-para-altamira",
+  "br-para-oriximina",
+  "br-para-jacareacanga",
+  "br-para-conceicao-do-araguaia",
+  "br-para-paragominas",
+  "br-para-xinguara",
+  "br-para-mato-grosso-plateau",
+  "br-para-tucurui",
+  "br-para-uruara",
+  "br-para-mato-grosso-plateau-para",
+  "br-para-guiana-highlands-para",
+  "br-para-guiana-highlands-para-west",
+  "br-para-mato-grosso-plateau-para-south-west",
+  "br-para-guiana-highlands-para-west-2",
+  "br-para-serra-do-cachimbo",
+  "br-para-mato-grosso-plateau-para-south-west-2",
+  "br-para-mato-grosso-plateau-para-south-west-3",
+  "br-para-guiana-highlands-para-west-3"
+ ],
+ "br-paraiba": [
+  "br-paraiba",
+  "br-paraiba-campina-grande",
+  "br-paraiba-patos"
+ ],
+ "br-parana": [
+  "br-parana",
+  "br-parana-londrina",
+  "br-parana-foz-do-iguacu",
+  "br-parana-ponta-grossa",
+  "br-parana-cascavel",
+  "br-parana-paranagua",
+  "br-parana-guarapuava",
+  "br-parana-maringa",
+  "br-parana-serra-geral",
+  "br-parana-telemaco-borba"
+ ],
+ "br-pernambuco": [
+  "br-pernambuco",
+  "br-pernambuco-caruaru",
+  "br-pernambuco-petrolina",
+  "br-pernambuco-garanhuns",
+  "br-pernambuco-borborema-plateau",
+  "br-pernambuco-carpina",
+  "br-pernambuco-barreiros",
+  "br-pernambuco-salgueiro"
+ ],
+ "br-piaui": [
+  "br-piaui",
+  "br-piaui-parnaiba",
+  "br-piaui-picos",
+  "br-piaui-floriano",
+  "br-piaui-piripiri",
+  "br-piaui-brazilian-highlands-piaui",
+  "br-piaui-brazilian-highlands-piaui-south-west"
+ ],
+ "br-rio-de-janeiro": [
+  "br-rio-de-janeiro",
+  "br-rio-de-janeiro-campos-dos-goytacazes",
+  "br-rio-de-janeiro-petropolis",
+  "br-rio-de-janeiro-volta-redonda",
+  "br-rio-de-janeiro-nova-friburgo",
+  "br-rio-de-janeiro-macae",
+  "br-rio-de-janeiro-cabo-frio",
+  "br-rio-de-janeiro-miracema"
+ ],
+ "br-rio-grande-do-norte": [
+  "br-rio-grande-do-norte",
+  "br-rio-grande-do-norte-mossoro",
+  "br-rio-grande-do-norte-caico"
+ ],
+ "br-rio-grande-do-sul": [
+  "br-rio-grande-do-sul",
+  "br-rio-grande-do-sul-caxias-do-sul",
+  "br-rio-grande-do-sul-pelotas",
+  "br-rio-grande-do-sul-santa-maria",
+  "br-rio-grande-do-sul-passo-fundo",
+  "br-rio-grande-do-sul-santa-cruz-do-sul",
+  "br-rio-grande-do-sul-bage",
+  "br-rio-grande-do-sul-santana-do-livramento",
+  "br-rio-grande-do-sul-uruguaiana",
+  "br-rio-grande-do-sul-santo-angelo",
+  "br-rio-grande-do-sul-vacaria",
+  "br-rio-grande-do-sul-sao-borja",
+  "br-rio-grande-do-sul-camaqua",
+  "br-rio-grande-do-sul-sao-gabriel",
+  "br-rio-grande-do-sul-canela",
+  "br-rio-grande-do-sul-jaguarao"
+ ],
+ "br-rondonia": [
+  "br-rondonia",
+  "br-rondonia-ji-parana",
+  "br-rondonia-vilhena",
+  "br-rondonia-ariquemes",
+  "br-rondonia-mato-grosso-plateau-rondonia",
+  "br-rondonia-rolim-de-moura",
+  "br-rondonia-guajara-mirim"
+ ],
+ "br-roraima": [
+  "br-roraima",
+  "br-roraima-caracarai",
+  "br-roraima-guiana-highlands",
+  "br-roraima-amazon-basin",
+  "br-roraima-rorainopolis"
+ ],
+ "br-santa-catarina": [
+  "br-santa-catarina",
+  "br-santa-catarina-criciuma",
+  "br-santa-catarina-chapeco",
+  "br-santa-catarina-lages",
+  "br-santa-catarina-blumenau"
+ ],
+ "br-sao-paulo": [
+  "br-sao-paulo",
+  "br-sao-paulo-campinas",
+  "br-sao-paulo-sao-jose-dos-campos",
+  "br-sao-paulo-sorocaba",
+  "br-sao-paulo-ribeirao-preto",
+  "br-sao-paulo-sao-jose-do-rio-preto",
+  "br-sao-paulo-piracicaba",
+  "br-sao-paulo-bauru",
+  "br-sao-paulo-franca",
+  "br-sao-paulo-presidente-prudente",
+  "br-sao-paulo-marilia",
+  "br-sao-paulo-aracatuba",
+  "br-sao-paulo-sao-carlos",
+  "br-sao-paulo-registro",
+  "br-sao-paulo-guaratingueta",
+  "br-sao-paulo-catanduva",
+  "br-sao-paulo-ourinhos",
+  "br-sao-paulo-barretos",
+  "br-sao-paulo-botucatu",
+  "br-sao-paulo-itanhaem",
+  "br-sao-paulo-assis",
+  "br-sao-paulo-sao-joao-da-boa-vista",
+  "br-sao-paulo-fernandopolis",
+  "br-sao-paulo-itapeva"
+ ],
+ "br-tocantins": [
+  "br-tocantins",
+  "br-tocantins-araguaina",
+  "br-tocantins-gurupi",
+  "br-tocantins-tocantinopolis",
+  "br-tocantins-dianopolis",
+  "br-tocantins-brazilian-highlands-tocantins",
+  "br-tocantins-mato-grosso-plateau-tocantins"
+ ],
+ "bw-central": [
+  "bw-central",
+  "bw-central-mopipi"
+ ],
+ "bw-north-west": [
+  "bw-north-west",
+  "bw-north-west-kasane"
+ ],
+ "by-brest": [
+  "by-brest",
+  "by-brest-baranavichy"
+ ],
+ "by-gomel": [
+  "by-gomel",
+  "by-gomel-mazyr",
+  "by-gomel-zytkavicy"
+ ],
+ "by-grodno": [
+  "by-grodno",
+  "by-grodno-lida"
+ ],
+ "by-mahiliou": [
+  "by-mahiliou",
+  "by-mahiliou-babruysk"
+ ],
+ "by-minsk": [
+  "by-minsk-minsk-south",
+  "by-minsk"
+ ],
+ "by-vitebsk": [
+  "by-vitebsk",
+  "by-vitebsk-polotsk"
+ ],
+ "ca-alberta": [
+  "ca-alberta",
+  "ca-alberta-edmonton",
+  "ca-alberta-red-deer",
+  "ca-alberta-lethbridge",
+  "ca-alberta-medicine-hat",
+  "ca-alberta-grande-prairie",
+  "ca-alberta-fort-mcmurray",
+  "ca-alberta-hinton",
+  "ca-alberta-alberta-north",
+  "ca-alberta-fort-chipewyan",
+  "ca-alberta-lac-la-biche",
+  "ca-alberta-jasper",
+  "ca-alberta-caribou-mountains",
+  "ca-alberta-meander-river",
+  "ca-alberta-great-plains"
+ ],
+ "ca-british-columbia": [
+  "ca-british-columbia",
+  "ca-british-columbia-kelowna",
+  "ca-british-columbia-prince-george",
+  "ca-british-columbia-campbell-river",
+  "ca-british-columbia-fort-st-john",
+  "ca-british-columbia-cranbrook",
+  "ca-british-columbia-prince-rupert",
+  "ca-british-columbia-quesnel",
+  "ca-british-columbia-revelstoke",
+  "ca-british-columbia-fort-nelson",
+  "ca-british-columbia-smithers",
+  "ca-british-columbia-kamloops",
+  "ca-british-columbia-fraser-plateau",
+  "ca-british-columbia-dease-lake",
+  "ca-british-columbia-british-columbia-north-west",
+  "ca-british-columbia-british-columbia-north-west-british-columbia",
+  "ca-british-columbia-rocky-mountains"
+ ],
+ "ca-manitoba": [
+  "ca-manitoba",
+  "ca-manitoba-brandon",
+  "ca-manitoba-thompson",
+  "ca-manitoba-flin-flon",
+  "ca-manitoba-berens-river",
+  "ca-manitoba-canadian-shield-manitoba",
+  "ca-manitoba-gillam",
+  "ca-manitoba-brochet",
+  "ca-manitoba-oxford-house"
+ ],
+ "ca-new-brunswick": [
+  "ca-new-brunswick",
+  "ca-new-brunswick-saint-john"
+ ],
+ "ca-newfoundland-and-labrador": [
+  "ca-newfoundland-and-labrador",
+  "ca-newfoundland-and-labrador-happy-valley-goose-bay",
+  "ca-newfoundland-and-labrador-labrador-city",
+  "ca-newfoundland-and-labrador-corner-brook",
+  "ca-newfoundland-and-labrador-port-burwell"
+ ],
+ "ca-northwest-territories": [
+  "ca-northwest-territories",
+  "ca-northwest-territories-inuvik"
+ ],
+ "ca-nova-scotia": [
+  "ca-nova-scotia",
+  "ca-nova-scotia-sydney"
+ ],
+ "ca-ontario": [
+  "ca-ontario",
+  "ca-ontario-ottawa",
+  "ca-ontario-kitchener",
+  "ca-ontario-kingston",
+  "ca-ontario-thunder-bay",
+  "ca-ontario-greater-sudbury",
+  "ca-ontario-kapuskasing",
+  "ca-ontario-barrie",
+  "ca-ontario-red-lake",
+  "ca-ontario-hearst",
+  "ca-ontario-sioux-lookout",
+  "ca-ontario-kenora",
+  "ca-ontario-timmins",
+  "ca-ontario-greenstone",
+  "ca-ontario-canadian-shield-ontario",
+  "ca-ontario-atikokan",
+  "ca-ontario-marathon",
+  "ca-ontario-ontario-north",
+  "ca-ontario-deer-lake",
+  "ca-ontario-attawapiskat",
+  "ca-ontario-northeastern-manitoulin-and-the-islands",
+  "ca-ontario-big-beaver-house",
+  "ca-ontario-fort-severn",
+  "ca-ontario-neskantaga-first-nation"
+ ],
+ "ca-quebec": [
+  "ca-quebec",
+  "ca-quebec-quebec-city",
+  "ca-quebec-chicoutimi",
+  "ca-quebec-rimouski",
+  "ca-quebec-sept-iles",
+  "ca-quebec-rouyn-noranda",
+  "ca-quebec-pembroke",
+  "ca-quebec-saint-augustin",
+  "ca-quebec-gaspe",
+  "ca-quebec-mistissini",
+  "ca-quebec-inukjuak",
+  "ca-quebec-kuujjuaq",
+  "ca-quebec-kuujjuarapik",
+  "ca-quebec-matagami",
+  "ca-quebec-natashquan",
+  "ca-quebec-laurentides",
+  "ca-quebec-kangirsuk",
+  "ca-quebec-schefferville",
+  "ca-quebec-eastmain",
+  "ca-quebec-canadian-shield-quebec",
+  "ca-quebec-salluit",
+  "ca-quebec-canadian-shield-quebec-north",
+  "ca-quebec-canadian-shield-quebec-north-2",
+  "ca-quebec-canadian-shield-quebec-north-3"
+ ],
+ "ca-saskatchewan": [
+  "ca-saskatchewan",
+  "ca-saskatchewan-regina",
+  "ca-saskatchewan-swift-current",
+  "ca-saskatchewan-yorkton",
+  "ca-saskatchewan-meadow-lake",
+  "ca-saskatchewan-north-battleford",
+  "ca-saskatchewan-la-ronge",
+  "ca-saskatchewan-hudson-bay",
+  "ca-saskatchewan-stony-rapids",
+  "ca-saskatchewan-uranium-city",
+  "ca-saskatchewan-canadian-shield"
+ ],
+ "ca-yukon": [
+  "ca-yukon",
+  "ca-yukon-dawson-city"
+ ],
+ "cd-bandundu": [
+  "cd-bandundu",
+  "cd-bandundu-bandundu-bandundu",
+  "cd-bandundu-kahemba",
+  "cd-bandundu-inongo",
+  "cd-bandundu-kasongo-lunda",
+  "cd-bandundu-bolobo",
+  "cd-bandundu-mangai",
+  "cd-bandundu-kenge",
+  "cd-bandundu-congo-basin-bandundu"
+ ],
+ "cd-equateur": [
+  "cd-equateur",
+  "cd-equateur-gemena",
+  "cd-equateur-bumba",
+  "cd-equateur-binga",
+  "cd-equateur-congo-basin",
+  "cd-equateur-basankusu",
+  "cd-equateur-businga",
+  "cd-equateur-congo-basin-equateur",
+  "cd-equateur-zongo",
+  "cd-equateur-boende",
+  "cd-equateur-bosobolo",
+  "cd-equateur-ikela",
+  "cd-equateur-congo-basin-equateur-south-west"
+ ],
+ "cd-kasai-occidental": [
+  "cd-kasai-occidental",
+  "cd-kasai-occidental-tshikapa",
+  "cd-kasai-occidental-mweka",
+  "cd-kasai-occidental-ilebo",
+  "cd-kasai-occidental-congo-basin-kasai-occidental",
+  "cd-kasai-occidental-dibaya"
+ ],
+ "cd-kasai-oriental": [
+  "cd-kasai-oriental",
+  "cd-kasai-oriental-mwene-ditu",
+  "cd-kasai-oriental-lodja",
+  "cd-kasai-oriental-kabinda",
+  "cd-kasai-oriental-lusambo",
+  "cd-kasai-oriental-lubao",
+  "cd-kasai-oriental-congo-basin-kasai-oriental"
+ ],
+ "cd-katanga": [
+  "cd-katanga",
+  "cd-katanga-likasi",
+  "cd-katanga-kolwezi",
+  "cd-katanga-kalemie",
+  "cd-katanga-kamina",
+  "cd-katanga-manono",
+  "cd-katanga-kongolo",
+  "cd-katanga-kaniama",
+  "cd-katanga-nyunzu",
+  "cd-katanga-kasaji",
+  "cd-katanga-moba",
+  "cd-katanga-dilolo",
+  "cd-katanga-bukama",
+  "cd-katanga-luanza",
+  "cd-katanga-mokambo",
+  "cd-katanga-congo-basin-katanga",
+  "cd-katanga-katanga-plateau",
+  "cd-katanga-katanga-plateau-katanga",
+  "cd-katanga-katanga-plateau-katanga-north-west",
+  "cd-katanga-mulongo"
+ ],
+ "cd-kinshasa": [
+  "cd-kinshasa",
+  "cd-kinshasa-congo-basin-kinshasa"
+ ],
+ "cd-kongo-central": [
+  "cd-kongo-central",
+  "cd-kongo-central-boma",
+  "cd-kongo-central-nkamba"
+ ],
+ "cd-maniema": [
+  "cd-maniema",
+  "cd-maniema-kasongo",
+  "cd-maniema-lubutu",
+  "cd-maniema-congo-basin-maniema"
+ ],
+ "cd-north-kivu": [
+  "cd-north-kivu",
+  "cd-north-kivu-goma"
+ ],
+ "cd-orientale": [
+  "cd-orientale",
+  "cd-orientale-isiro",
+  "cd-orientale-congo-basin-orientale",
+  "cd-orientale-buta",
+  "cd-orientale-bunia",
+  "cd-orientale-bangassou",
+  "cd-orientale-congo-basin-orientale-north",
+  "cd-orientale-watsa",
+  "cd-orientale-basoko",
+  "cd-orientale-bafwasende",
+  "cd-orientale-congo-basin-orientale-north-2",
+  "cd-orientale-congo-basin-orientale-south",
+  "cd-orientale-congo-basin-orientale-south-west",
+  "cd-orientale-bakwa",
+  "cd-orientale-babamba"
+ ],
+ "cd-south-kivu": [
+  "cd-south-kivu",
+  "cd-south-kivu-uvira"
+ ],
+ "ch": [
+  "ch",
+  "ch-geneva",
+  "ch-basel",
+  "ch-lugano",
+  "ch-sion"
+ ],
+ "ci-lagunes": [
+  "ci-lagunes",
+  "ci-lagunes-lagunes-north-west"
+ ],
+ "ci-savanes": [
+  "ci-savanes",
+  "ci-savanes-savanes-east"
+ ],
+ "ci-vallee-du-bandama": [
+  "ci-vallee-du-bandama",
+  "ci-vallee-du-bandama-fronan"
+ ],
+ "ci-zanzan": [
+  "ci-zanzan",
+  "ci-zanzan-doropo"
+ ],
+ "cl-antofagasta": [
+  "cl-antofagasta",
+  "cl-antofagasta-calama"
+ ],
+ "cl-araucania": [
+  "cl-araucania",
+  "cl-araucania-angol"
+ ],
+ "cl-atacama": [
+  "cl-atacama",
+  "cl-atacama-trehuaco"
+ ],
+ "cl-aysen": [
+  "cl-aysen",
+  "cl-aysen-cochrane"
+ ],
+ "cl-biobio": [
+  "cl-biobio",
+  "cl-biobio-los-angeles"
+ ],
+ "cl-coquimbo": [
+  "cl-coquimbo",
+  "cl-coquimbo-illapel"
+ ],
+ "cl-los-lagos": [
+  "cl-los-lagos",
+  "cl-los-lagos-osorno",
+  "cl-los-lagos-castro"
+ ],
+ "cl-magellan-and-the-chilean-antarctic": [
+  "cl-magellan-and-the-chilean-antarctic",
+  "cl-magellan-and-the-chilean-antarctic-puerto-williams",
+  "cl-magellan-and-the-chilean-antarctic-puerto-natales",
+  "cl-magellan-and-the-chilean-antarctic-andes"
+ ],
+ "cl-maule": [
+  "cl-maule",
+  "cl-maule-linares"
+ ],
+ "cm-adamawa": [
+  "cm-adamawa-tibati",
+  "cm-adamawa"
+ ],
+ "cm-centre": [
+  "cm-centre",
+  "cm-centre-bafia",
+  "cm-centre-eseka",
+  "cm-centre-centre-north-east"
+ ],
+ "cm-east": [
+  "cm-east",
+  "cm-east-moloundou",
+  "cm-east-abong-mbang",
+  "cm-east-belabo"
+ ],
+ "cm-far-north": [
+  "cm-far-north",
+  "cm-far-north-blangwa"
+ ],
+ "cm-littoral": [
+  "cm-littoral",
+  "cm-littoral-nkongsamba"
+ ],
+ "cm-north": [
+  "cm-north-mbe",
+  "cm-north",
+  "cm-north-mbang-mountains"
+ ],
+ "cm-south": [
+  "cm-south-congo-basin",
+  "cm-south"
+ ],
+ "cn-anhui": [
+  "cn-anhui",
+  "cn-anhui-hefei",
+  "cn-anhui-lu-an",
+  "cn-anhui-huainan",
+  "cn-anhui-xuancheng",
+  "cn-anhui-ma-anshan",
+  "cn-anhui-bengbu",
+  "cn-anhui-anqing",
+  "cn-anhui-tongling",
+  "cn-anhui-huoqiu-chengguanzhen",
+  "cn-anhui-fuyang",
+  "cn-anhui-huangshan",
+  "cn-anhui-north-china-plain-anhui",
+  "cn-anhui-tangzhai",
+  "cn-anhui-dabie-mountains",
+  "cn-anhui-anhui-south",
+  "cn-anhui-north-china-plain-anhui-east",
+  "cn-anhui-dabie-mountains-anhui",
+  "cn-anhui-chuzhou",
+  "cn-anhui-anhui-south-east",
+  "cn-anhui-bozhou",
+  "cn-anhui-anhui-south-anhui",
+  "cn-anhui-taozhou",
+  "cn-anhui-anhui-south-anhui-south"
+ ],
+ "cn-beijing": [
+  "cn-beijing",
+  "cn-beijing-zhuozhou",
+  "cn-beijing-beijing-north"
+ ],
+ "cn-chongqing": [
+  "cn-chongqing",
+  "cn-chongqing-wanzhou",
+  "cn-chongqing-fengjie",
+  "cn-chongqing-zhonghe",
+  "cn-chongqing-hanjia",
+  "cn-chongqing-wenquan",
+  "cn-chongqing-changyuan",
+  "cn-chongqing-gunan",
+  "cn-chongqing-guixi",
+  "cn-chongqing-hechuan",
+  "cn-chongqing-qianjiang",
+  "cn-chongqing-fuling",
+  "cn-chongqing-jijiang",
+  "cn-chongqing-nanbin",
+  "cn-chongqing-zhongduo"
+ ],
+ "cn-fujian": [
+  "cn-fujian",
+  "cn-fujian-fuzhou",
+  "cn-fujian-putian",
+  "cn-fujian-longyan",
+  "cn-fujian-quanzhou",
+  "cn-fujian-nanping",
+  "cn-fujian-changting",
+  "cn-fujian-fu-an",
+  "cn-fujian-jiaocheng",
+  "cn-fujian-wuyi-mountains",
+  "cn-fujian-sanming",
+  "cn-fujian-pucheng",
+  "cn-fujian-fujian-north-west",
+  "cn-fujian-fujian-south-west",
+  "cn-fujian-wuyi-mountains-fujian",
+  "cn-fujian-jian-ou",
+  "cn-fujian-fujian-north",
+  "cn-fujian-shaowu",
+  "cn-fujian-fuding",
+  "cn-fujian-fujian-west"
+ ],
+ "cn-gansu": [
+  "cn-gansu",
+  "cn-gansu-wuwei",
+  "cn-gansu-longxi",
+  "cn-gansu-linxia-city",
+  "cn-gansu-jinchang",
+  "cn-gansu-dunhuang",
+  "cn-gansu-jiayuguan-city",
+  "cn-gansu-pingliang",
+  "cn-gansu-zhangye",
+  "cn-gansu-tianshui",
+  "cn-gansu-min-county",
+  "cn-gansu-anxi",
+  "cn-gansu-gobi-desert-gansu",
+  "cn-gansu-nima",
+  "cn-gansu-longnan",
+  "cn-gansu-qilian-mountains",
+  "cn-gansu-qingyang",
+  "cn-gansu-gobi-desert-gansu-north-west",
+  "cn-gansu-gobi-desert-gansu-north",
+  "cn-gansu-gansu-north-west",
+  "cn-gansu-baiyin",
+  "cn-gansu-gobi-desert-gansu-north-west-2",
+  "cn-gansu-loess-plateau",
+  "cn-gansu-gobi-desert-gansu-north-west-3"
+ ],
+ "cn-guangdong": [
+  "cn-guangdong",
+  "cn-guangdong-guangzhou",
+  "cn-guangdong-shantou",
+  "cn-guangdong-maoming",
+  "cn-guangdong-zhuhai",
+  "cn-guangdong-shenzhen",
+  "cn-guangdong-qingyuan",
+  "cn-guangdong-zhanjiang",
+  "cn-guangdong-yangjiang",
+  "cn-guangdong-shaoguan",
+  "cn-guangdong-changsha",
+  "cn-guangdong-zhaoqing",
+  "cn-guangdong-huizhou",
+  "cn-guangdong-heyuan",
+  "cn-guangdong-meizhou",
+  "cn-guangdong-lianzhou",
+  "cn-guangdong-xiongzhou",
+  "cn-guangdong-shanwei",
+  "cn-guangdong-huaicheng",
+  "cn-guangdong-ducheng",
+  "cn-guangdong-xucheng",
+  "cn-guangdong-guangdong-north-east",
+  "cn-guangdong-guangdong-north",
+  "cn-guangdong-xingning"
+ ],
+ "cn-guangxi": [
+  "cn-guangxi",
+  "cn-guangxi-liuzhou",
+  "cn-guangxi-nanning",
+  "cn-guangxi-guilin",
+  "cn-guangxi-wuzhou",
+  "cn-guangxi-yulin",
+  "cn-guangxi-qinzhou",
+  "cn-guangxi-baicheng-guangxi",
+  "cn-guangxi-laibin",
+  "cn-guangxi-pingxiang",
+  "cn-guangxi-yunnan-guizhou-plateau-guangxi",
+  "cn-guangxi-hezhou",
+  "cn-guangxi-nanling-mountains",
+  "cn-guangxi-guangxi-west",
+  "cn-guangxi-guangxi-south-west",
+  "cn-guangxi-guangxi-north-east",
+  "cn-guangxi-hepu",
+  "cn-guangxi-pingnan",
+  "cn-guangxi-yunnan-guizhou-plateau-guangxi-west",
+  "cn-guangxi-guigang",
+  "cn-guangxi-guangxi-south",
+  "cn-guangxi-guangxi-north-east-guangxi",
+  "cn-guangxi-guangxi-south-west-guangxi",
+  "cn-guangxi-fangchenggang"
+ ],
+ "cn-guizhou": [
+  "cn-guizhou",
+  "cn-guizhou-liupanshui",
+  "cn-guizhou-zunyi",
+  "cn-guizhou-anshun",
+  "cn-guizhou-xingyi",
+  "cn-guizhou-tongren",
+  "cn-guizhou-liping",
+  "cn-guizhou-dalou-mountains-guizhou",
+  "cn-guizhou-dalou-mountains-guizhou-north",
+  "cn-guizhou-yunnan-guizhou-plateau-guizhou",
+  "cn-guizhou-kaili",
+  "cn-guizhou-yunnan-guizhou-plateau-guizhou-west",
+  "cn-guizhou-dalou-mountains-guizhou-north-west",
+  "cn-guizhou-guizhou-east",
+  "cn-guizhou-anlong",
+  "cn-guizhou-loushanguan",
+  "cn-guizhou-dalou-mountains-guizhou-north-east",
+  "cn-guizhou-duyun",
+  "cn-guizhou-yunnan-guizhou-plateau-guizhou-south-west",
+  "cn-guizhou-guizhou-north-east",
+  "cn-guizhou-yunnan-guizhou-plateau-guizhou-south-west-2",
+  "cn-guizhou-weining",
+  "cn-guizhou-guizhou-north-east-guizhou",
+  "cn-guizhou-bijie"
+ ],
+ "cn-hainan": [
+  "cn-hainan",
+  "cn-hainan-sanya",
+  "cn-hainan-dacheng",
+  "cn-hainan-wanning",
+  "cn-hainan-basuo",
+  "cn-hainan-nada"
+ ],
+ "cn-hebei": [
+  "cn-hebei",
+  "cn-hebei-tangshan",
+  "cn-hebei-handan",
+  "cn-hebei-baoding",
+  "cn-hebei-qinhuangdao",
+  "cn-hebei-xingtai",
+  "cn-hebei-langfang",
+  "cn-hebei-zhangjiakou",
+  "cn-hebei-cangzhou",
+  "cn-hebei-hengshui",
+  "cn-hebei-dezhou-hebei",
+  "cn-hebei-chengde",
+  "cn-hebei-dingzhou",
+  "cn-hebei-hebei-north-east",
+  "cn-hebei-hebei-north",
+  "cn-hebei-hebei-north-hebei",
+  "cn-hebei-hebei-north-hebei-north",
+  "cn-hebei-hebei-north-east-hebei",
+  "cn-hebei-taihang-mountains",
+  "cn-hebei-hebei-north-east-hebei-north-east",
+  "cn-hebei-hebei-north-hebei-north-2",
+  "cn-hebei-taihang-mountains-hebei",
+  "cn-hebei-songlingcun",
+  "cn-hebei-nangong"
+ ],
+ "cn-heilongjiang": [
+  "cn-heilongjiang",
+  "cn-heilongjiang-qiqihar",
+  "cn-heilongjiang-mudanjiang",
+  "cn-heilongjiang-hegang",
+  "cn-heilongjiang-shuangyashan",
+  "cn-heilongjiang-jixi",
+  "cn-heilongjiang-suihua",
+  "cn-heilongjiang-daqing",
+  "cn-heilongjiang-bei-an",
+  "cn-heilongjiang-yichun",
+  "cn-heilongjiang-tieli",
+  "cn-heilongjiang-hailun",
+  "cn-heilongjiang-shangzhi",
+  "cn-heilongjiang-nenjiang",
+  "cn-heilongjiang-fujin",
+  "cn-heilongjiang-tailai",
+  "cn-heilongjiang-mishan",
+  "cn-heilongjiang-keshan",
+  "cn-heilongjiang-heihe",
+  "cn-heilongjiang-greater-khingan-heilongjiang",
+  "cn-heilongjiang-heilongjiang-north",
+  "cn-heilongjiang-greater-khingan-heilongjiang-north",
+  "cn-heilongjiang-heilongjiang-north-east",
+  "cn-heilongjiang-xinqing"
+ ],
+ "cn-henan": [
+  "cn-henan",
+  "cn-henan-luoyang",
+  "cn-henan-xinyang",
+  "cn-henan-kaifeng",
+  "cn-henan-pingdingshan",
+  "cn-henan-anyang",
+  "cn-henan-xinxiang",
+  "cn-henan-puyang-henan",
+  "cn-henan-jiaozuo",
+  "cn-henan-xuchang",
+  "cn-henan-luohe",
+  "cn-henan-zhoukou",
+  "cn-henan-nanyang",
+  "cn-henan-shangqiu",
+  "cn-henan-dengzhou",
+  "cn-henan-qinling-henan",
+  "cn-henan-henan-south-east",
+  "cn-henan-qinling-henan-south-west",
+  "cn-henan-runan",
+  "cn-henan-north-china-plain-henan",
+  "cn-henan-sanmenxia",
+  "cn-henan-huangchuan",
+  "cn-henan-yunyang",
+  "cn-henan-henan-south"
+ ],
+ "cn-hubei": [
+  "cn-hubei",
+  "cn-hubei-huangshi",
+  "cn-hubei-shiyan",
+  "cn-hubei-jingzhou",
+  "cn-hubei-yichang",
+  "cn-hubei-xiangyang",
+  "cn-hubei-jingmen-city",
+  "cn-hubei-xiantao-city",
+  "cn-hubei-anlu",
+  "cn-hubei-zhicheng",
+  "cn-hubei-guangshui",
+  "cn-hubei-puqi",
+  "cn-hubei-macheng",
+  "cn-hubei-shishou",
+  "cn-hubei-danjiangkou",
+  "cn-hubei-lichuan",
+  "cn-hubei-songbai",
+  "cn-hubei-hubei-west",
+  "cn-hubei-qinling-hubei",
+  "cn-hubei-enshi",
+  "cn-hubei-suizhou",
+  "cn-hubei-three-gorges",
+  "cn-hubei-huangmei",
+  "cn-hubei-hubei-west-hubei"
+ ],
+ "cn-hunan": [
+  "cn-hunan",
+  "cn-hunan-yueyang",
+  "cn-hunan-hengyang",
+  "cn-hunan-changde",
+  "cn-hunan-yongzhou",
+  "cn-hunan-yiyang",
+  "cn-hunan-chenzhou",
+  "cn-hunan-zhijiang-town",
+  "cn-hunan-jinshi",
+  "cn-hunan-shaoyang",
+  "cn-hunan-hunan-north-west",
+  "cn-hunan-nanling-mountains-hunan",
+  "cn-hunan-gantang",
+  "cn-hunan-zhangjiajie",
+  "cn-hunan-hunan-south",
+  "cn-hunan-guankou",
+  "cn-hunan-wulingyuan",
+  "cn-hunan-lengshuijiang",
+  "cn-hunan-fenghuang",
+  "cn-hunan-hunan-south-west",
+  "cn-hunan-xishan",
+  "cn-hunan-shaoyang-hunan",
+  "cn-hunan-zixing",
+  "cn-hunan-nanling-mountains-hunan-south"
+ ],
+ "cn-inner-mongolia": [
+  "cn-inner-mongolia",
+  "cn-inner-mongolia-baotou",
+  "cn-inner-mongolia-chifeng",
+  "cn-inner-mongolia-tongliao",
+  "cn-inner-mongolia-wuhai",
+  "cn-inner-mongolia-hailar",
+  "cn-inner-mongolia-ulan-hot",
+  "cn-inner-mongolia-zalantun",
+  "cn-inner-mongolia-xilinhot",
+  "cn-inner-mongolia-jining",
+  "cn-inner-mongolia-alxa-left-banner",
+  "cn-inner-mongolia-manchouli",
+  "cn-inner-mongolia-baarin-left-banner",
+  "cn-inner-mongolia-genhe",
+  "cn-inner-mongolia-orongen-zizhiqi",
+  "cn-inner-mongolia-hanggin-rear-banner",
+  "cn-inner-mongolia-arxan",
+  "cn-inner-mongolia-bayan-obo",
+  "cn-inner-mongolia-gobi-desert",
+  "cn-inner-mongolia-erenhot",
+  "cn-inner-mongolia-gobi-desert-inner-mongolia",
+  "cn-inner-mongolia-gobi-desert-inner-mongolia-west",
+  "cn-inner-mongolia-gobi-desert-inner-mongolia-west-2",
+  "cn-inner-mongolia-greater-khingan"
+ ],
+ "cn-jiangsu": [
+  "cn-jiangsu",
+  "cn-jiangsu-shuyang",
+  "cn-jiangsu-suzhou",
+  "cn-jiangsu-xuzhou",
+  "cn-jiangsu-wuxi",
+  "cn-jiangsu-xinyi",
+  "cn-jiangsu-changzhou",
+  "cn-jiangsu-yancheng",
+  "cn-jiangsu-lianyungang",
+  "cn-jiangsu-nantong",
+  "cn-jiangsu-zhenjiang",
+  "cn-jiangsu-taizhou",
+  "cn-jiangsu-huai-an",
+  "cn-jiangsu-guiren",
+  "cn-jiangsu-hede",
+  "cn-jiangsu-licheng",
+  "cn-jiangsu-dongtai",
+  "cn-jiangsu-peicheng",
+  "cn-jiangsu-huilong",
+  "cn-jiangsu-north-china-plain",
+  "cn-jiangsu-suqian",
+  "cn-jiangsu-xinghua",
+  "cn-jiangsu-gaogou",
+  "cn-jiangsu-yixing"
+ ],
+ "cn-jiangxi": [
+  "cn-jiangxi",
+  "cn-jiangxi-yichun-jiangxi",
+  "cn-jiangxi-ganzhou",
+  "cn-jiangxi-shangrao",
+  "cn-jiangxi-jiujiang",
+  "cn-jiangxi-ji-an",
+  "cn-jiangxi-pingxiang-jiangxi",
+  "cn-jiangxi-jingdezhen",
+  "cn-jiangxi-linchuan",
+  "cn-jiangxi-xinyu",
+  "cn-jiangxi-fengcheng",
+  "cn-jiangxi-xujiang",
+  "cn-jiangxi-jiangxi-west",
+  "cn-jiangxi-jiangxi-south",
+  "cn-jiangxi-jiangxi-south-jiangxi",
+  "cn-jiangxi-jiangxi-south-west",
+  "cn-jiangxi-jianchang",
+  "cn-jiangxi-jiangxi-south-west-jiangxi",
+  "cn-jiangxi-jiangxi-east",
+  "cn-jiangxi-jiangxi-south-jiangxi-south",
+  "cn-jiangxi-aoxi",
+  "cn-jiangxi-jiangxi-west-jiangxi",
+  "cn-jiangxi-yingtan",
+  "cn-jiangxi-jiangxi-south-jiangxi-south-2"
+ ],
+ "cn-jilin": [
+  "cn-jilin",
+  "cn-jilin-jilin-city",
+  "cn-jilin-songyuan",
+  "cn-jilin-liaoyuan",
+  "cn-jilin-baishan",
+  "cn-jilin-yanji",
+  "cn-jilin-baicheng",
+  "cn-jilin-dunhua",
+  "cn-jilin-nong-an",
+  "cn-jilin-helong",
+  "cn-jilin-panshi",
+  "cn-jilin-shulan",
+  "cn-jilin-liuhe",
+  "cn-jilin-jiaohe",
+  "cn-jilin-changling-county",
+  "cn-jilin-tonghua",
+  "cn-jilin-jilin-east",
+  "cn-jilin-jilin-south-east",
+  "cn-jilin-manchurian-plain"
+ ],
+ "cn-liaoning": [
+  "cn-liaoning",
+  "cn-liaoning-dalian",
+  "cn-liaoning-anshan",
+  "cn-liaoning-benxi",
+  "cn-liaoning-lingyuan",
+  "cn-liaoning-fuxin",
+  "cn-liaoning-dandong",
+  "cn-liaoning-jinzhou",
+  "cn-liaoning-yingkou",
+  "cn-liaoning-siping",
+  "cn-liaoning-chaoyang",
+  "cn-liaoning-tieling",
+  "cn-liaoning-lianshan",
+  "cn-liaoning-wafangdian",
+  "cn-liaoning-zhuanghe",
+  "cn-liaoning-huanren",
+  "cn-liaoning-liaoning-south-west",
+  "cn-liaoning-xinmin",
+  "cn-liaoning-xifeng",
+  "cn-liaoning-liaoning-west",
+  "cn-liaoning-xiuyan",
+  "cn-liaoning-liaoning-east"
+ ],
+ "cn-ningxia": [
+  "cn-ningxia",
+  "cn-ningxia-shizuishan",
+  "cn-ningxia-guyuan",
+  "cn-ningxia-zhongwei",
+  "cn-ningxia-ningxia-south-east",
+  "cn-ningxia-loess-plateau-ningxia"
+ ],
+ "cn-qinghai": [
+  "cn-qinghai",
+  "cn-qinghai-golmud",
+  "cn-qinghai-gyegu",
+  "cn-qinghai-dulan",
+  "cn-qinghai-tibetan-plateau-qinghai",
+  "cn-qinghai-huatugou",
+  "cn-qinghai-tibetan-plateau-qinghai-south-west",
+  "cn-qinghai-qilian-mountains-qinghai",
+  "cn-qinghai-tibetan-plateau-qinghai-south-west-2",
+  "cn-qinghai-tibetan-plateau-qinghai-west",
+  "cn-qinghai-kunlun-mountains",
+  "cn-qinghai-qilian",
+  "cn-qinghai-tongren-qinghai",
+  "cn-qinghai-tibetan-plateau-qinghai-west-2",
+  "cn-qinghai-tibetan-plateau-qinghai-west-3",
+  "cn-qinghai-qaidam-basin",
+  "cn-qinghai-tibetan-plateau-qinghai-west-4",
+  "cn-qinghai-tibetan-plateau-qinghai-west-5",
+  "cn-qinghai-tibetan-plateau-qinghai-south-west-3"
+ ],
+ "cn-shaanxi": [
+  "cn-shaanxi",
+  "cn-shaanxi-ankang",
+  "cn-shaanxi-baoji",
+  "cn-shaanxi-tongchuan",
+  "cn-shaanxi-weinan",
+  "cn-shaanxi-hanzhong",
+  "cn-shaanxi-dali-shaanxi",
+  "cn-shaanxi-yulin-shaanxi",
+  "cn-shaanxi-hancheng",
+  "cn-shaanxi-loess-plateau-shaanxi",
+  "cn-shaanxi-qinling",
+  "cn-shaanxi-ordos-desert",
+  "cn-shaanxi-loess-plateau-shaanxi-north",
+  "cn-shaanxi-lueyang-chengguanzhen",
+  "cn-shaanxi-wayaobu",
+  "cn-shaanxi-loess-plateau-shaanxi-north-2",
+  "cn-shaanxi-pingli",
+  "cn-shaanxi-loess-plateau-shaanxi-north-west",
+  "cn-shaanxi-xixiang",
+  "cn-shaanxi-qinling-shaanxi",
+  "cn-shaanxi-qinling-shaanxi-south",
+  "cn-shaanxi-ordos-desert-shaanxi",
+  "cn-shaanxi-loess-plateau-shaanxi-north-3",
+  "cn-shaanxi-yan-an"
+ ],
+ "cn-shandong": [
+  "cn-shandong",
+  "cn-shandong-tai-an",
+  "cn-shandong-yantai",
+  "cn-shandong-zhucheng",
+  "cn-shandong-zibo",
+  "cn-shandong-jining-shandong",
+  "cn-shandong-weifang",
+  "cn-shandong-linyi",
+  "cn-shandong-heze",
+  "cn-shandong-rizhao",
+  "cn-shandong-liaocheng",
+  "cn-shandong-zaozhuang",
+  "cn-shandong-laiyang",
+  "cn-shandong-laiwu",
+  "cn-shandong-binzhou",
+  "cn-shandong-linqing",
+  "cn-shandong-yishui-county",
+  "cn-shandong-pingdu",
+  "cn-shandong-pingyi",
+  "cn-shandong-shan-county",
+  "cn-shandong-tianfu",
+  "cn-shandong-dezhou",
+  "cn-shandong-dongying",
+  "cn-shandong-north-china-plain-shandong"
+ ],
+ "cn-shanxi": [
+  "cn-shanxi",
+  "cn-shanxi-datong",
+  "cn-shanxi-yangquan",
+  "cn-shanxi-changzhi",
+  "cn-shanxi-jincheng",
+  "cn-shanxi-shuozhou",
+  "cn-shanxi-linfen",
+  "cn-shanxi-xinzhou",
+  "cn-shanxi-houma",
+  "cn-shanxi-jiexiu",
+  "cn-shanxi-luliang",
+  "cn-shanxi-taihang-mountains-shanxi",
+  "cn-shanxi-shanxi-south-west",
+  "cn-shanxi-yuncheng",
+  "cn-shanxi-yangjiaying",
+  "cn-shanxi-taihang-mountains-shanxi-south-east",
+  "cn-shanxi-taihang-mountains-shanxi-north-east",
+  "cn-shanxi-luliang-mountains",
+  "cn-shanxi-luliang-mountains-shanxi",
+  "cn-shanxi-changzhi-shanxi",
+  "cn-shanxi-luliang-mountains-shanxi-south"
+ ],
+ "cn-sichuan": [
+  "cn-sichuan",
+  "cn-sichuan-nanchong",
+  "cn-sichuan-luzhou",
+  "cn-sichuan-zigong",
+  "cn-sichuan-panzhihua",
+  "cn-sichuan-ya-an",
+  "cn-sichuan-mianyang",
+  "cn-sichuan-guangyuan",
+  "cn-sichuan-xichang",
+  "cn-sichuan-langzhong",
+  "cn-sichuan-danba",
+  "cn-sichuan-fulin",
+  "cn-sichuan-tibetan-plateau-sichuan",
+  "cn-sichuan-tibetan-plateau-sichuan-north-west",
+  "cn-sichuan-daocheng",
+  "cn-sichuan-tibetan-plateau-sichuan-west",
+  "cn-sichuan-dazhou",
+  "cn-sichuan-tibetan-plateau-sichuan-north-west-2",
+  "cn-sichuan-barkam",
+  "cn-sichuan-tibetan-plateau-sichuan-west-2",
+  "cn-sichuan-sichuan-south-west",
+  "cn-sichuan-tibetan-plateau-sichuan-north",
+  "cn-sichuan-yibin",
+  "cn-sichuan-gengqing"
+ ],
+ "cn-tianjin": [
+  "cn-tianjin",
+  "cn-tianjin-north-china-plain-tianjin"
+ ],
+ "cn-tibet": [
+  "cn-tibet",
+  "cn-tibet-changdu",
+  "cn-tibet-xigaze",
+  "cn-tibet-nagchu-town",
+  "cn-tibet-gar",
+  "cn-tibet-nyingchi",
+  "cn-tibet-tibetan-plateau-tibet",
+  "cn-tibet-tibetan-plateau-tibet-west",
+  "cn-tibet-tibetan-plateau-tibet-north-west",
+  "cn-tibet-tibetan-plateau-tibet-north-west-2",
+  "cn-tibet-tibetan-plateau-tibet-north-west-3",
+  "cn-tibet-tibetan-plateau-tibet-east",
+  "cn-tibet-tibetan-plateau-tibet-north-west-4",
+  "cn-tibet-tibetan-plateau-tibet-west-2",
+  "cn-tibet-tibetan-plateau-tibet-north-west-5",
+  "cn-tibet-tibetan-plateau-tibet-north-east",
+  "cn-tibet-tibetan-plateau-tibet-north-west-6",
+  "cn-tibet-tibetan-plateau-tibet-north-west-7",
+  "cn-tibet-tibetan-plateau-tibet-west-3"
+ ],
+ "cn-xinjiang": [
+  "cn-xinjiang",
+  "cn-xinjiang-yining-city",
+  "cn-xinjiang-kashgar-city",
+  "cn-xinjiang-aksu",
+  "cn-xinjiang-yarkant-county",
+  "cn-xinjiang-korla",
+  "cn-xinjiang-altay-city",
+  "cn-xinjiang-yizhou",
+  "cn-xinjiang-hotan",
+  "cn-xinjiang-shihezi",
+  "cn-xinjiang-turpan",
+  "cn-xinjiang-kuqa-county",
+  "cn-xinjiang-karamay",
+  "cn-xinjiang-koktokay",
+  "cn-xinjiang-taklamakan",
+  "cn-xinjiang-mangnai-zhen",
+  "cn-xinjiang-xinjiang-south-east",
+  "cn-xinjiang-oytograk",
+  "cn-xinjiang-tibetan-plateau",
+  "cn-xinjiang-kaqun",
+  "cn-xinjiang-taklamakan-xinjiang",
+  "cn-xinjiang-xinjiang-east",
+  "cn-xinjiang-tarim-basin",
+  "cn-xinjiang-qiemo-town"
+ ],
+ "cn-yunnan": [
+  "cn-yunnan",
+  "cn-yunnan-baoshan",
+  "cn-yunnan-zhanyi",
+  "cn-yunnan-mengzi-city",
+  "cn-yunnan-chuxiong-city",
+  "cn-yunnan-simao",
+  "cn-yunnan-dali",
+  "cn-yunnan-zhaotong",
+  "cn-yunnan-yuxi",
+  "cn-yunnan-wenshan-city",
+  "cn-yunnan-lijiang",
+  "cn-yunnan-huize",
+  "cn-yunnan-tibetan-plateau-yunnan",
+  "cn-yunnan-menghuan",
+  "cn-yunnan-yunnan-guizhou-plateau",
+  "cn-yunnan-mengla",
+  "cn-yunnan-menglang",
+  "cn-yunnan-jinding",
+  "cn-yunnan-dalou-mountains",
+  "cn-yunnan-lincang",
+  "cn-yunnan-shangri-la",
+  "cn-yunnan-xindian",
+  "cn-yunnan-yunjinghong",
+  "cn-yunnan-tengyue"
+ ],
+ "cn-zhejiang": [
+  "cn-zhejiang",
+  "cn-zhejiang-wenzhou",
+  "cn-zhejiang-ningbo",
+  "cn-zhejiang-jiaojiang",
+  "cn-zhejiang-jiaxing",
+  "cn-zhejiang-shaoxing",
+  "cn-zhejiang-huzhou",
+  "cn-zhejiang-xianju",
+  "cn-zhejiang-jinhua",
+  "cn-zhejiang-lishui",
+  "cn-zhejiang-quzhou",
+  "cn-zhejiang-zhejiang-south",
+  "cn-zhejiang-zhejiang-west",
+  "cn-zhejiang-kunyang",
+  "cn-zhejiang-zhejiang-south-west",
+  "cn-zhejiang-zhejiang-south-west-zhejiang",
+  "cn-zhejiang-yiwu",
+  "cn-zhejiang-puyang",
+  "cn-zhejiang-ninghai",
+  "cn-zhejiang-zhaobaoshan",
+  "cn-zhejiang-zhejiang-west-zhejiang",
+  "cn-zhejiang-zhejiang-south-west-zhejiang-south-west",
+  "cn-zhejiang-zhejiang-south-zhejiang"
+ ],
+ "co-amazonas": [
+  "co-amazonas",
+  "co-amazonas-selva-amazonas",
+  "co-amazonas-selva-amazonas-north-west"
+ ],
+ "co-antioquia": [
+  "co-antioquia",
+  "co-antioquia-yarumal",
+  "co-antioquia-puerto-berrio",
+  "co-antioquia-sonson",
+  "co-antioquia-cordillera-occidental"
+ ],
+ "co-bolivar": [
+  "co-bolivar-el-banco",
+  "co-bolivar"
+ ],
+ "co-caqueta": [
+  "co-caqueta",
+  "co-caqueta-selva-caqueta"
+ ],
+ "co-casanare": [
+  "co-casanare",
+  "co-casanare-llanos"
+ ],
+ "co-guainia": [
+  "co-guainia",
+  "co-guainia-guainia-west"
+ ],
+ "co-guaviare": [
+  "co-guaviare",
+  "co-guaviare-guaviare-east"
+ ],
+ "co-meta": [
+  "co-meta",
+  "co-meta-llanos-meta",
+  "co-meta-cordillera-oriental",
+  "co-meta-llanos-meta-east"
+ ],
+ "co-narino": [
+  "co-narino",
+  "co-narino-tumaco-narino"
+ ],
+ "co-santander": [
+  "co-santander",
+  "co-santander-barrancabermeja"
+ ],
+ "co-valle-del-cauca": [
+  "co-valle-del-cauca",
+  "co-valle-del-cauca-tulua"
+ ],
+ "co-vaupes": [
+  "co-vaupes",
+  "co-vaupes-selva"
+ ],
+ "co-vichada": [
+  "co-vichada",
+  "co-vichada-vichada-south-west",
+  "co-vichada-cumaribo",
+  "co-vichada-vichada-south"
+ ],
+ "de-baden-wurttemberg": [
+  "de-baden-wurttemberg",
+  "de-baden-wurttemberg-mannheim",
+  "de-baden-wurttemberg-karlsruhe",
+  "de-baden-wurttemberg-freiburg-im-breisgau",
+  "de-baden-wurttemberg-baden-wurttemberg-south"
+ ],
+ "de-bavaria": [
+  "de-bavaria",
+  "de-bavaria-hof",
+  "de-bavaria-augsburg",
+  "de-bavaria-wurzburg",
+  "de-bavaria-regensburg",
+  "de-bavaria-nuremberg",
+  "de-bavaria-alps",
+  "de-bavaria-rosenheim",
+  "de-bavaria-passau"
+ ],
+ "de-brandenburg": [
+  "de-brandenburg",
+  "de-brandenburg-cottbus",
+  "de-brandenburg-eberswalde"
+ ],
+ "de-hesse": [
+  "de-hesse",
+  "de-hesse-kassel",
+  "de-hesse-gie-en"
+ ],
+ "de-lower-saxony": [
+  "de-lower-saxony",
+  "de-lower-saxony-north-european-plain",
+  "de-lower-saxony-osnabruck",
+  "de-lower-saxony-oldenburg",
+  "de-lower-saxony-brunswick",
+  "de-lower-saxony-bremerhaven"
+ ],
+ "de-mecklenburg-western-pomerania": [
+  "de-mecklenburg-western-pomerania",
+  "de-mecklenburg-western-pomerania-schwerin",
+  "de-mecklenburg-western-pomerania-neubrandenburg"
+ ],
+ "de-north-rhine-westphalia": [
+  "de-north-rhine-westphalia",
+  "de-north-rhine-westphalia-dortmund",
+  "de-north-rhine-westphalia-dusseldorf",
+  "de-north-rhine-westphalia-bielefeld",
+  "de-north-rhine-westphalia-munster",
+  "de-north-rhine-westphalia-north-rhine-westphalia-north-east",
+  "de-north-rhine-westphalia-north-rhine-westphalia-west"
+ ],
+ "de-rhineland-palatinate": [
+  "de-rhineland-palatinate",
+  "de-rhineland-palatinate-koblenz"
+ ],
+ "de-saxony": [
+  "de-saxony",
+  "de-saxony-dresden",
+  "de-saxony-chemnitz"
+ ],
+ "de-saxony-anhalt": [
+  "de-saxony-anhalt",
+  "de-saxony-anhalt-halle-saale"
+ ],
+ "de-schleswig-holstein": [
+  "de-schleswig-holstein",
+  "de-schleswig-holstein-lubeck"
+ ],
+ "de-thuringia": [
+  "de-thuringia",
+  "de-thuringia-gera"
+ ],
+ "do": [
+  "do",
+  "do-san-pedro-de-macoris",
+  "do-san-cristobal",
+  "do-san-francisco-de-macoris",
+  "do-la-romana",
+  "do-santa-cruz-de-barahona"
+ ],
+ "dz-adrar": [
+  "dz-adrar",
+  "dz-adrar-sahara"
+ ],
+ "dz-bechar": [
+  "dz-bechar",
+  "dz-bechar-sahara-bechar"
+ ],
+ "dz-biskra": [
+  "dz-biskra",
+  "dz-biskra-ouled-djellal"
+ ],
+ "dz-djelfa": [
+  "dz-djelfa",
+  "dz-djelfa-sahara-djelfa"
+ ],
+ "dz-el-bayadh": [
+  "dz-el-bayadh",
+  "dz-el-bayadh-sahara-el-bayadh"
+ ],
+ "dz-naama": [
+  "dz-naama",
+  "dz-naama-mecheria"
+ ],
+ "dz-ouargla": [
+  "dz-ouargla",
+  "dz-ouargla-grand-erg-oriental"
+ ],
+ "dz-tamanghasset": [
+  "dz-tamanghasset",
+  "dz-tamanghasset-tamanrasset",
+  "dz-tamanghasset-in-salah",
+  "dz-tamanghasset-ahag",
+  "dz-tamanghasset-sahara-tamanghasset"
+ ],
+ "dz-tiaret": [
+  "dz-tiaret",
+  "dz-tiaret-frenda"
+ ],
+ "ec-guayas": [
+  "ec-guayas",
+  "ec-guayas-andes"
+ ],
+ "ec-pastaza": [
+  "ec-pastaza",
+  "ec-pastaza-selva"
+ ],
+ "eg-giza": [
+  "eg-giza",
+  "eg-giza-al-bawiti"
+ ],
+ "eg-matrouh": [
+  "eg-matrouh",
+  "eg-matrouh-siwa-oasis"
+ ],
+ "eg-new-valley": [
+  "eg-new-valley",
+  "eg-new-valley-farafra",
+  "eg-new-valley-gilf-kebir"
+ ],
+ "eg-red-sea": [
+  "eg-red-sea",
+  "eg-red-sea-berenice-troglodytica"
+ ],
+ "er-debub": [
+  "er-debub",
+  "er-debub-af-abet"
+ ],
+ "er-gash-barka": [
+  "er-gash-barka",
+  "er-gash-barka-teseney"
+ ],
+ "es-zaragoza": [
+  "es-zaragoza",
+  "es-zaragoza-ejea-de-los-caballeros"
+ ],
+ "et-afar": [
+  "et-afar",
+  "et-afar-asaita"
+ ],
+ "et-amhara": [
+  "et-amhara",
+  "et-amhara-gondar",
+  "et-amhara-dessie",
+  "et-amhara-debre-marqos",
+  "et-amhara-debre-berhan",
+  "et-amhara-ethiopian-highlands",
+  "et-amhara-sek-ot-a",
+  "et-amhara-aykel",
+  "et-amhara-finote-selam"
+ ],
+ "et-benishangul-gumuz": [
+  "et-benishangul-gumuz",
+  "et-benishangul-gumuz-mambuk"
+ ],
+ "et-gambela": [
+  "et-gambela",
+  "et-gambela-gambela-south-east",
+  "et-gambela-gambela"
+ ],
+ "et-oromia": [
+  "et-oromia",
+  "et-oromia-adama",
+  "et-oromia-jimma",
+  "et-oromia-shashamane",
+  "et-oromia-asella",
+  "et-oromia-nekemte",
+  "et-oromia-waliso",
+  "et-oromia-goba",
+  "et-oromia-dembi-dollo",
+  "et-oromia-moyale",
+  "et-oromia-gimbi",
+  "et-oromia-negele-boran",
+  "et-oromia-gore",
+  "et-oromia-alemaya",
+  "et-oromia-great-rift-valley-oromia",
+  "et-oromia-oromia-south-east",
+  "et-oromia-bedesa",
+  "et-oromia-hagere-maryam",
+  "et-oromia-mena",
+  "et-oromia-fiche",
+  "et-oromia-oromia-south-east-oromia",
+  "et-oromia-yabelo",
+  "et-oromia-shambu",
+  "et-oromia-nejo"
+ ],
+ "et-somali": [
+  "et-somali",
+  "et-somali-jijiga",
+  "et-somali-dolo",
+  "et-somali-somali-north-east",
+  "et-somali-somali-south-west",
+  "et-somali-somali-north-east-somali",
+  "et-somali-ara-ali",
+  "et-somali-lasoano",
+  "et-somali-great-rift-valley",
+  "et-somali-somali-north-west",
+  "et-somali-somali-west",
+  "et-somali-arabi",
+  "et-somali-qorof",
+  "et-somali-somali-south-east",
+  "et-somali-great-rift-valley-somali",
+  "et-somali-degeh-bur",
+  "et-somali-somali-west-somali",
+  "et-somali-warder",
+  "et-somali-somali-south-west-somali",
+  "et-somali-somali-north"
+ ],
+ "et-southern-nations": [
+  "et-southern-nations-sodo",
+  "et-southern-nations-hosaena",
+  "et-southern-nations-felege-neway",
+  "et-southern-nations",
+  "et-southern-nations-arba-minch",
+  "et-southern-nations-tepi",
+  "et-southern-nations-bako"
+ ],
+ "et-tigray": [
+  "et-tigray",
+  "et-tigray-mek-ele",
+  "et-tigray-ethiopian-highlands-tigray"
+ ],
+ "fr-french-guiana": [
+  "fr-french-guiana",
+  "fr-french-guiana-saint-laurent-du-maroni",
+  "fr-french-guiana-saint-georges",
+  "fr-french-guiana-guiana-highlands"
+ ],
+ "gb-east": [
+  "gb-east",
+  "gb-east-norwich",
+  "gb-east-southend-on-sea"
+ ],
+ "gb-east-midlands": [
+  "gb-east-midlands",
+  "gb-east-midlands-east-midlands-north-east"
+ ],
+ "gb-eastern": [
+  "gb-eastern",
+  "gb-eastern-dundee"
+ ],
+ "gb-highlands-and-islands": [
+  "gb-highlands-and-islands",
+  "gb-highlands-and-islands-fort-william"
+ ],
+ "gb-north-west": [
+  "gb-north-west",
+  "gb-north-west-chester",
+  "gb-north-west-carlisle"
+ ],
+ "gb-northern-ireland": [
+  "gb-northern-ireland",
+  "gb-northern-ireland-londonderry-derry"
+ ],
+ "gb-south-east": [
+  "gb-south-east",
+  "gb-south-east-oxford",
+  "gb-south-east-brighton"
+ ],
+ "gb-south-west": [
+  "gb-south-west",
+  "gb-south-west-bournemouth",
+  "gb-south-west-exeter"
+ ],
+ "gb-south-western": [
+  "gb-south-western",
+  "gb-south-western-dumfries"
+ ],
+ "gb-west-midlands": [
+  "gb-west-midlands",
+  "gb-west-midlands-stoke-on-trent",
+  "gb-west-midlands-west-midlands-west"
+ ],
+ "gb-yorkshire-and-the-humber": [
+  "gb-yorkshire-and-the-humber",
+  "gb-yorkshire-and-the-humber-yorkshire-and-the-humber-north",
+  "gb-yorkshire-and-the-humber-kingston-upon-hull"
+ ],
+ "gh-ashanti": [
+  "gh-ashanti",
+  "gh-ashanti-obuasi",
+  "gh-ashanti-ejura"
+ ],
+ "gh-brong-ahafo": [
+  "gh-brong-ahafo",
+  "gh-brong-ahafo-brong-ahafo-east"
+ ],
+ "gh-northern": [
+  "gh-northern",
+  "gh-northern-yendi",
+  "gh-northern-damongo",
+  "gh-northern-salaga",
+  "gh-northern-nalerigu"
+ ],
+ "gr-centre-macedonia": [
+  "gr-centre-macedonia",
+  "gr-centre-macedonia-katerini"
+ ],
+ "gt-peten": [
+  "gt-peten-peten-north-west",
+  "gt-peten"
+ ],
+ "hu-great-southern-plain": [
+  "hu-great-southern-plain",
+  "hu-great-southern-plain-kecskemet"
+ ],
+ "hu-northern-great-plain": [
+  "hu-northern-great-plain",
+  "hu-northern-great-plain-szolnok"
+ ],
+ "id-aceh": [
+  "id-aceh",
+  "id-aceh-langsa",
+  "id-aceh-lhokseumawe",
+  "id-aceh-aceh-south",
+  "id-aceh-subulussalam"
+ ],
+ "id-bengkulu": [
+  "id-bengkulu",
+  "id-bengkulu-barisan-mountains"
+ ],
+ "id-central-java": [
+  "id-central-java",
+  "id-central-java-cilacap",
+  "id-central-java-surakarta",
+  "id-central-java-pekalongan",
+  "id-central-java-tegal",
+  "id-central-java-magelang",
+  "id-central-java-pati"
+ ],
+ "id-central-kalimantan": [
+  "id-central-kalimantan",
+  "id-central-kalimantan-sampit",
+  "id-central-kalimantan-kualakapuas",
+  "id-central-kalimantan-central-kalimantan-north",
+  "id-central-kalimantan-pangkalanbuun",
+  "id-central-kalimantan-central-kalimantan-east",
+  "id-central-kalimantan-central-kalimantan-north-west",
+  "id-central-kalimantan-central-kalimantan-north-central-kalimantan",
+  "id-central-kalimantan-central-kalimantan-south-west",
+  "id-central-kalimantan-muara-teweh",
+  "id-central-kalimantan-central-kalimantan-west"
+ ],
+ "id-central-sulawesi": [
+  "id-central-sulawesi",
+  "id-central-sulawesi-luwuk",
+  "id-central-sulawesi-poso-kota",
+  "id-central-sulawesi-toli-toli",
+  "id-central-sulawesi-bungku"
+ ],
+ "id-east-java": [
+  "id-east-java",
+  "id-east-java-jember",
+  "id-east-java-kediri",
+  "id-east-java-pasuruan",
+  "id-east-java-madiun",
+  "id-east-java-mojokerto",
+  "id-east-java-banyuwangi",
+  "id-east-java-sumenep",
+  "id-east-java-tuban"
+ ],
+ "id-east-kalimantan": [
+  "id-east-kalimantan",
+  "id-east-kalimantan-samarinda",
+  "id-east-kalimantan-east-kalimantan-north",
+  "id-east-kalimantan-east-kalimantan-north-west",
+  "id-east-kalimantan-east-kalimantan-north-east-kalimantan",
+  "id-east-kalimantan-east-kalimantan-north-east-kalimantan-north",
+  "id-east-kalimantan-malinau",
+  "id-east-kalimantan-east-kalimantan-north-west-east-kalimantan",
+  "id-east-kalimantan-east-kalimantan-north-east",
+  "id-east-kalimantan-east-kalimantan-north-east-kalimantan-north-2",
+  "id-east-kalimantan-tanjung-selor",
+  "id-east-kalimantan-east-kalimantan-south-west",
+  "id-east-kalimantan-east-kalimantan-north-east-kalimantan-north-3",
+  "id-east-kalimantan-east-kalimantan-north-west-east-kalimantan-north-west",
+  "id-east-kalimantan-east-kalimantan-north-east-kalimantan-north-4"
+ ],
+ "id-east-nusa-tenggara": [
+  "id-east-nusa-tenggara",
+  "id-east-nusa-tenggara-maumere",
+  "id-east-nusa-tenggara-ruteng",
+  "id-east-nusa-tenggara-kota-waingapu"
+ ],
+ "id-jambi": [
+  "id-jambi",
+  "id-jambi-sungai-penuh",
+  "id-jambi-muara-bungo",
+  "id-jambi-jambi-south-west"
+ ],
+ "id-lampung": [
+  "id-lampung",
+  "id-lampung-kotabumi",
+  "id-lampung-lampung-west",
+  "id-lampung-lampung-north"
+ ],
+ "id-maluku": [
+  "id-maluku",
+  "id-maluku-maluku-east",
+  "id-maluku-masohi"
+ ],
+ "id-north-maluku": [
+  "id-north-maluku",
+  "id-north-maluku-sofifi"
+ ],
+ "id-north-sulawesi": [
+  "id-north-sulawesi",
+  "id-north-sulawesi-north-sulawesi-north-east"
+ ],
+ "id-north-sumatra": [
+  "id-north-sumatra",
+  "id-north-sumatra-pematangsiantar",
+  "id-north-sumatra-padang-sidempuan",
+  "id-north-sumatra-sibolga",
+  "id-north-sumatra-gunungsitoli",
+  "id-north-sumatra-tanjungbalai",
+  "id-north-sumatra-north-sumatra-south",
+  "id-north-sumatra-kabanjahe",
+  "id-north-sumatra-north-sumatra-south-east"
+ ],
+ "id-papua": [
+  "id-papua",
+  "id-papua-biak",
+  "id-papua-merauke",
+  "id-papua-timika",
+  "id-papua-nabire",
+  "id-papua-papua-south",
+  "id-papua-papua-south-papua",
+  "id-papua-papua-west",
+  "id-papua-papua-south-west",
+  "id-papua-wamena",
+  "id-papua-papua-south-papua-south",
+  "id-papua-papua-west-papua",
+  "id-papua-maoke-mountains",
+  "id-papua-mulia",
+  "id-papua-papua-south-papua-south-2",
+  "id-papua-papua-west-papua-west",
+  "id-papua-agats",
+  "id-papua-papua-west-papua-west-2",
+  "id-papua-papua-west-papua-west-3"
+ ],
+ "id-riau": [
+  "id-riau",
+  "id-riau-riau-east",
+  "id-riau-riau-north",
+  "id-riau-riau-south-east",
+  "id-riau-riau-east-riau",
+  "id-riau-dumai",
+  "id-riau-riau-north-west"
+ ],
+ "id-south-kalimantan": [
+  "id-south-kalimantan",
+  "id-south-kalimantan-south-kalimantan-north-east",
+  "id-south-kalimantan-south-kalimantan-east",
+  "id-south-kalimantan-amuntai"
+ ],
+ "id-south-sulawesi": [
+  "id-south-sulawesi",
+  "id-south-sulawesi-pinrang",
+  "id-south-sulawesi-watampone",
+  "id-south-sulawesi-south-sulawesi-north",
+  "id-south-sulawesi-south-sulawesi-north-east"
+ ],
+ "id-south-sumatra": [
+  "id-south-sumatra",
+  "id-south-sumatra-prabumulih",
+  "id-south-sumatra-lahat",
+  "id-south-sumatra-lubuklinggau",
+  "id-south-sumatra-south-sumatra-south-east",
+  "id-south-sumatra-south-sumatra-north-west",
+  "id-south-sumatra-baturaja",
+  "id-south-sumatra-south-sumatra-east"
+ ],
+ "id-southeast-sulawesi": [
+  "id-southeast-sulawesi",
+  "id-southeast-sulawesi-baubau",
+  "id-southeast-sulawesi-southeast-sulawesi-north-west"
+ ],
+ "id-west-java": [
+  "id-west-java",
+  "id-west-java-bekasi",
+  "id-west-java-bogor",
+  "id-west-java-sukabumi",
+  "id-west-java-tasikmalaya",
+  "id-west-java-cirebon",
+  "id-west-java-indramayu",
+  "id-west-java-karawang"
+ ],
+ "id-west-kalimantan": [
+  "id-west-kalimantan",
+  "id-west-kalimantan-singkawang",
+  "id-west-kalimantan-west-kalimantan-east",
+  "id-west-kalimantan-manismata",
+  "id-west-kalimantan-sintang",
+  "id-west-kalimantan-west-kalimantan-east-west-kalimantan",
+  "id-west-kalimantan-west-kalimantan-south-east",
+  "id-west-kalimantan-west-kalimantan-east-west-kalimantan-east",
+  "id-west-kalimantan-west-kalimantan-east-west-kalimantan-east-2",
+  "id-west-kalimantan-kota-sambas",
+  "id-west-kalimantan-west-kalimantan-south-east-west-kalimantan"
+ ],
+ "id-west-nusa-tenggara": [
+  "id-west-nusa-tenggara",
+  "id-west-nusa-tenggara-raba"
+ ],
+ "id-west-papua": [
+  "id-west-papua",
+  "id-west-papua-manokwari",
+  "id-west-papua-west-papua-south-east",
+  "id-west-papua-fakfak",
+  "id-west-papua-west-papua-south-west",
+  "id-west-papua-bintuni",
+  "id-west-papua-teminabuan"
+ ],
+ "id-west-sumatra": [
+  "id-west-sumatra",
+  "id-west-sumatra-sawahlunto",
+  "id-west-sumatra-west-sumatra-south",
+  "id-west-sumatra-west-sumatra-south-west"
+ ],
+ "in-andhra-pradesh": [
+  "in-andhra-pradesh",
+  "in-andhra-pradesh-vijayawada",
+  "in-andhra-pradesh-nellore",
+  "in-andhra-pradesh-rajamahendravaram",
+  "in-andhra-pradesh-kakinada",
+  "in-andhra-pradesh-kurnool",
+  "in-andhra-pradesh-tirupathi",
+  "in-andhra-pradesh-machilipatnam",
+  "in-andhra-pradesh-proddatur",
+  "in-andhra-pradesh-ongole",
+  "in-andhra-pradesh-nandyal",
+  "in-andhra-pradesh-hindupur",
+  "in-andhra-pradesh-guntur",
+  "in-andhra-pradesh-vizianagaram",
+  "in-andhra-pradesh-paralakhemundi",
+  "in-andhra-pradesh-chittoor",
+  "in-andhra-pradesh-anantapur",
+  "in-andhra-pradesh-piduguralla",
+  "in-andhra-pradesh-tuni",
+  "in-andhra-pradesh-srikakulam",
+  "in-andhra-pradesh-madanapalle",
+  "in-andhra-pradesh-adoni",
+  "in-andhra-pradesh-srikalahasti",
+  "in-andhra-pradesh-badvel"
+ ],
+ "in-arunachal-pradesh": [
+  "in-arunachal-pradesh",
+  "in-arunachal-pradesh-tezu",
+  "in-arunachal-pradesh-pasighat"
+ ],
+ "in-assam": [
+  "in-assam-haflong",
+  "in-assam-dibrugarh",
+  "in-assam-jorhat",
+  "in-assam-tezpur",
+  "in-assam-guwahati",
+  "in-assam-dhubri",
+  "in-assam-dimapur",
+  "in-assam-bongaigaon",
+  "in-assam-dum-duma",
+  "in-assam-hojai",
+  "in-assam-goalpara",
+  "in-assam",
+  "in-assam-tinsukia",
+  "in-assam-nagaon"
+ ],
+ "in-bihar": [
+  "in-bihar",
+  "in-bihar-gaya",
+  "in-bihar-bhagalpur",
+  "in-bihar-muzaffarpur",
+  "in-bihar-purnia",
+  "in-bihar-aurangabad",
+  "in-bihar-bagaha",
+  "in-bihar-siwan",
+  "in-bihar-darbhanga",
+  "in-bihar-buxar",
+  "in-bihar-jamui",
+  "in-bihar-bahadurganj",
+  "in-bihar-bettiah",
+  "in-bihar-begusarai",
+  "in-bihar-arrah",
+  "in-bihar-sitamarhi",
+  "in-bihar-sasaram",
+  "in-bihar-bihar-sharif",
+  "in-bihar-saharsa",
+  "in-bihar-forbesganj",
+  "in-bihar-chapra",
+  "in-bihar-banka",
+  "in-bihar-katihar"
+ ],
+ "in-chhattisgarh": [
+  "in-chhattisgarh",
+  "in-chhattisgarh-bilaspur",
+  "in-chhattisgarh-bacheli",
+  "in-chhattisgarh-chota-nagpur-plateau-chhattisgarh",
+  "in-chhattisgarh-kondagaon",
+  "in-chhattisgarh-jashpur-nagar",
+  "in-chhattisgarh-chirmiri",
+  "in-chhattisgarh-bijapur",
+  "in-chhattisgarh-mahasamund",
+  "in-chhattisgarh-korba",
+  "in-chhattisgarh-dalli-rajhara",
+  "in-chhattisgarh-dhamtari",
+  "in-chhattisgarh-kawardha",
+  "in-chhattisgarh-jagdalpur",
+  "in-chhattisgarh-raigarh",
+  "in-chhattisgarh-ambikapur"
+ ],
+ "in-gujarat": [
+  "in-gujarat",
+  "in-gujarat-surat",
+  "in-gujarat-vadodara",
+  "in-gujarat-rajkot",
+  "in-gujarat-bhavnagar",
+  "in-gujarat-bhojpur",
+  "in-gujarat-porbandar",
+  "in-gujarat-daman",
+  "in-gujarat-tharad",
+  "in-gujarat-gujarat-west",
+  "in-gujarat-veraval",
+  "in-gujarat-himatnagar",
+  "in-gujarat-godhra",
+  "in-gujarat-dabhoi",
+  "in-gujarat-dhrangadhra",
+  "in-gujarat-rapar",
+  "in-gujarat-mahesana",
+  "in-gujarat-modasa",
+  "in-gujarat-gujarat-west-gujarat",
+  "in-gujarat-jamnagar",
+  "in-gujarat-surendranagar",
+  "in-gujarat-amreli",
+  "in-gujarat-vyara",
+  "in-gujarat-mandvi"
+ ],
+ "in-haryana": [
+  "in-haryana",
+  "in-haryana-rohtak",
+  "in-haryana-hisar",
+  "in-haryana-karnal",
+  "in-haryana-panipat",
+  "in-haryana-bhiwani",
+  "in-haryana-sirsa",
+  "in-haryana-ambala",
+  "in-haryana-haryana-west"
+ ],
+ "in-himachal-pradesh": [
+  "in-himachal-pradesh",
+  "in-himachal-pradesh-shimla",
+  "in-himachal-pradesh-kulu",
+  "in-himachal-pradesh-himalayas-himachal-pradesh",
+  "in-himachal-pradesh-chamba"
+ ],
+ "in-jammu-and-kashmir": [
+  "in-jammu-and-kashmir",
+  "in-jammu-and-kashmir-jammu",
+  "in-jammu-and-kashmir-baramulla",
+  "in-jammu-and-kashmir-dooru-verinag",
+  "in-jammu-and-kashmir-rajaori",
+  "in-jammu-and-kashmir-kathua"
+ ],
+ "in-jharkhand": [
+  "in-jharkhand",
+  "in-jharkhand-jamshedpur",
+  "in-jharkhand-dhanbad",
+  "in-jharkhand-medininagar",
+  "in-jharkhand-sahibganj",
+  "in-jharkhand-gumla",
+  "in-jharkhand-hazaribagh",
+  "in-jharkhand-chakradharpur",
+  "in-jharkhand-dumka",
+  "in-jharkhand-jhumri-telaiya",
+  "in-jharkhand-lohardaga",
+  "in-jharkhand-deoghar",
+  "in-jharkhand-khunti",
+  "in-jharkhand-ghatsila"
+ ],
+ "in-karnataka": [
+  "in-karnataka",
+  "in-karnataka-mysore",
+  "in-karnataka-hubli",
+  "in-karnataka-belgaum",
+  "in-karnataka-gulbarga",
+  "in-karnataka-davangere",
+  "in-karnataka-mangalore",
+  "in-karnataka-bellary",
+  "in-karnataka-shivamogga",
+  "in-karnataka-tumkur",
+  "in-karnataka-vijayapura",
+  "in-karnataka-raichur",
+  "in-karnataka-bidar",
+  "in-karnataka-hospet",
+  "in-karnataka-kolar",
+  "in-karnataka-karwar",
+  "in-karnataka-madikeri",
+  "in-karnataka-hassan",
+  "in-karnataka-mandya",
+  "in-karnataka-chitradurga",
+  "in-karnataka-ilkal",
+  "in-karnataka-gokak",
+  "in-karnataka-bhadravati",
+  "in-karnataka-bagalkot"
+ ],
+ "in-kerala": [
+  "in-kerala",
+  "in-kerala-kozhikode",
+  "in-kerala-kollam",
+  "in-kerala-alappuzha",
+  "in-kerala-kanhangad",
+  "in-kerala-palakkad",
+  "in-kerala-munnar",
+  "in-kerala-tellicherry",
+  "in-kerala-thrissur"
+ ],
+ "in-madhya-pradesh": [
+  "in-madhya-pradesh",
+  "in-madhya-pradesh-bhopal",
+  "in-madhya-pradesh-jabalpur",
+  "in-madhya-pradesh-gwalior",
+  "in-madhya-pradesh-sagar",
+  "in-madhya-pradesh-ratlam",
+  "in-madhya-pradesh-burhanpur",
+  "in-madhya-pradesh-singrauli",
+  "in-madhya-pradesh-betul",
+  "in-madhya-pradesh-chhatarpur",
+  "in-madhya-pradesh-shahdol",
+  "in-madhya-pradesh-balaghat",
+  "in-madhya-pradesh-guna",
+  "in-madhya-pradesh-dhar",
+  "in-madhya-pradesh-mandsaur",
+  "in-madhya-pradesh-satna",
+  "in-madhya-pradesh-tikamgarh",
+  "in-madhya-pradesh-punasa",
+  "in-madhya-pradesh-shajapur",
+  "in-madhya-pradesh-narsimhapur",
+  "in-madhya-pradesh-shivpuri",
+  "in-madhya-pradesh-murwara",
+  "in-madhya-pradesh-chhindwara",
+  "in-madhya-pradesh-mandla"
+ ],
+ "in-maharashtra": [
+  "in-maharashtra",
+  "in-maharashtra-pune",
+  "in-maharashtra-nagpur",
+  "in-maharashtra-nashik",
+  "in-maharashtra-aurangabad-maharashtra",
+  "in-maharashtra-solapur",
+  "in-maharashtra-amravati",
+  "in-maharashtra-sangli",
+  "in-maharashtra-nanded",
+  "in-maharashtra-malegaon",
+  "in-maharashtra-akola",
+  "in-maharashtra-ahmednagar",
+  "in-maharashtra-latur",
+  "in-maharashtra-chandrapur",
+  "in-maharashtra-bhusawal",
+  "in-maharashtra-garhchiroli",
+  "in-maharashtra-gondia",
+  "in-maharashtra-nandurbar",
+  "in-maharashtra-gadhinglaj",
+  "in-maharashtra-satara",
+  "in-maharashtra-baramati",
+  "in-maharashtra-yavatmal",
+  "in-maharashtra-deccan-plateau",
+  "in-maharashtra-achalpur"
+ ],
+ "in-manipur": [
+  "in-manipur",
+  "in-manipur-churachandpur"
+ ],
+ "in-meghalaya": [
+  "in-meghalaya",
+  "in-meghalaya-tura"
+ ],
+ "in-nagaland": [
+  "in-nagaland",
+  "in-nagaland-tuensang"
+ ],
+ "in-odisha": [
+  "in-odisha",
+  "in-odisha-rourkela",
+  "in-odisha-berhampur",
+  "in-odisha-puri",
+  "in-odisha-sambalpur",
+  "in-odisha-malakanagiri",
+  "in-odisha-umarkot",
+  "in-odisha-balasore",
+  "in-odisha-rayagada",
+  "in-odisha-bhawanipatna",
+  "in-odisha-keonjhargarh",
+  "in-odisha-kantabanji",
+  "in-odisha-bhadrak",
+  "in-odisha-baud",
+  "in-odisha-rairangpur",
+  "in-odisha-jeypore",
+  "in-odisha-nowrangapur",
+  "in-odisha-gunupur",
+  "in-odisha-jharsuguda",
+  "in-odisha-angul",
+  "in-odisha-phulbani",
+  "in-odisha-balangir"
+ ],
+ "in-punjab": [
+  "in-punjab",
+  "in-punjab-amritsar",
+  "in-punjab-jalandhar",
+  "in-punjab-patiala",
+  "in-punjab-hoshiarpur",
+  "in-punjab-abohar",
+  "in-punjab-bathinda",
+  "in-punjab-pathankot",
+  "in-punjab-moga",
+  "in-punjab-khanna"
+ ],
+ "in-rajasthan": [
+  "in-rajasthan",
+  "in-rajasthan-jodhpur",
+  "in-rajasthan-kota",
+  "in-rajasthan-ajmer",
+  "in-rajasthan-udaipur",
+  "in-rajasthan-bikaner",
+  "in-rajasthan-bhilwara",
+  "in-rajasthan-alwar",
+  "in-rajasthan-sikar",
+  "in-rajasthan-bharatpur",
+  "in-rajasthan-tonk",
+  "in-rajasthan-jaisalmer",
+  "in-rajasthan-barmer",
+  "in-rajasthan-sri-ganganagar",
+  "in-rajasthan-phalodi",
+  "in-rajasthan-banswara",
+  "in-rajasthan-baran",
+  "in-rajasthan-thar-desert",
+  "in-rajasthan-churu",
+  "in-rajasthan-balotra",
+  "in-rajasthan-chittorgarh",
+  "in-rajasthan-anupgarh",
+  "in-rajasthan-thar-desert-rajasthan",
+  "in-rajasthan-jhalawar"
+ ],
+ "in-tamil-nadu": [
+  "in-tamil-nadu",
+  "in-tamil-nadu-coimbatore",
+  "in-tamil-nadu-madurai",
+  "in-tamil-nadu-salem",
+  "in-tamil-nadu-trichy",
+  "in-tamil-nadu-tirupur",
+  "in-tamil-nadu-thoothukudi",
+  "in-tamil-nadu-tirunelveli",
+  "in-tamil-nadu-rajapalayam",
+  "in-tamil-nadu-pondicherry",
+  "in-tamil-nadu-thanjavur",
+  "in-tamil-nadu-nagercoil",
+  "in-tamil-nadu-dindigul",
+  "in-tamil-nadu-vellore",
+  "in-tamil-nadu-kanchipuram",
+  "in-tamil-nadu-tiruvannaamalai",
+  "in-tamil-nadu-valparai",
+  "in-tamil-nadu-karur",
+  "in-tamil-nadu-hosur",
+  "in-tamil-nadu-karaikkudi",
+  "in-tamil-nadu-ooty",
+  "in-tamil-nadu-nagapattinam",
+  "in-tamil-nadu-kumbakonam",
+  "in-tamil-nadu-kallakurichi"
+ ],
+ "in-telangana": [
+  "in-telangana",
+  "in-telangana-warangal",
+  "in-telangana-nizamabad",
+  "in-telangana-karimnagar",
+  "in-telangana-khammam",
+  "in-telangana-gadwal",
+  "in-telangana-kottagudem",
+  "in-telangana-devarkonda",
+  "in-telangana-mancherial",
+  "in-telangana-adilabad",
+  "in-telangana-deccan-plateau-telangana",
+  "in-telangana-tandur",
+  "in-telangana-mahbubnagar",
+  "in-telangana-nalgonda",
+  "in-telangana-sangareddi",
+  "in-telangana-jagtial",
+  "in-telangana-ramgundam"
+ ],
+ "in-tripura": [
+  "in-tripura",
+  "in-tripura-dharmanagar"
+ ],
+ "in-uttar-pradesh": [
+  "in-uttar-pradesh",
+  "in-uttar-pradesh-lucknow",
+  "in-uttar-pradesh-agra",
+  "in-uttar-pradesh-meerut",
+  "in-uttar-pradesh-varanasi",
+  "in-uttar-pradesh-allahabad",
+  "in-uttar-pradesh-aligarh",
+  "in-uttar-pradesh-bareilly",
+  "in-uttar-pradesh-muradabad",
+  "in-uttar-pradesh-gorakhpur",
+  "in-uttar-pradesh-saharanpur",
+  "in-uttar-pradesh-jhansi",
+  "in-uttar-pradesh-shahjahanpur",
+  "in-uttar-pradesh-etawah",
+  "in-uttar-pradesh-ghaziabad",
+  "in-uttar-pradesh-bahraich",
+  "in-uttar-pradesh-fatehpur",
+  "in-uttar-pradesh-sitapur",
+  "in-uttar-pradesh-faizabad",
+  "in-uttar-pradesh-chota-nagpur-plateau",
+  "in-uttar-pradesh-indo-gangetic-plain",
+  "in-uttar-pradesh-uttar-pradesh-south-west",
+  "in-uttar-pradesh-uttar-pradesh-south-west-uttar-pradesh",
+  "in-uttar-pradesh-indo-gangetic-plain-uttar-pradesh"
+ ],
+ "in-uttarakhand": [
+  "in-uttarakhand",
+  "in-uttarakhand-himalayas",
+  "in-uttarakhand-rudrapur",
+  "in-uttarakhand-himalayas-uttarakhand",
+  "in-uttarakhand-ramnagar",
+  "in-uttarakhand-uttarkashi"
+ ],
+ "in-west-bengal": [
+  "in-west-bengal",
+  "in-west-bengal-asansol",
+  "in-west-bengal-siliguri",
+  "in-west-bengal-bardhaman",
+  "in-west-bengal-haldia",
+  "in-west-bengal-medinipur",
+  "in-west-bengal-krishnanagar",
+  "in-west-bengal-alipurduar",
+  "in-west-bengal-malda",
+  "in-west-bengal-puruliya",
+  "in-west-bengal-siuri",
+  "in-west-bengal-west-bengal-south",
+  "in-west-bengal-kishanganj",
+  "in-west-bengal-jhargram",
+  "in-west-bengal-balurghat",
+  "in-west-bengal-baharampur",
+  "in-west-bengal-contai",
+  "in-west-bengal-basirhat-city",
+  "in-west-bengal-bishnupur",
+  "in-west-bengal-raiganj",
+  "in-west-bengal-bankura"
+ ],
+ "iq-al-anbar": [
+  "iq-al-anbar",
+  "iq-al-anbar-ar-rutba"
+ ],
+ "iq-nineveh": [
+  "iq-nineveh",
+  "iq-nineveh-nineveh-south-west"
+ ],
+ "ir-ardabil": [
+  "ir-ardabil",
+  "ir-ardabil-parsabad"
+ ],
+ "ir-east-azerbaijan": [
+  "ir-east-azerbaijan",
+  "ir-east-azerbaijan-maragheh",
+  "ir-east-azerbaijan-ahar",
+  "ir-east-azerbaijan-mianeh"
+ ],
+ "ir-fars": [
+  "ir-fars",
+  "ir-fars-fasa",
+  "ir-fars-abadeh",
+  "ir-fars-darab",
+  "ir-fars-jahrom"
+ ],
+ "ir-golestan": [
+  "ir-golestan",
+  "ir-golestan-gonbad-e-kavus"
+ ],
+ "ir-ilam": [
+  "ir-ilam",
+  "ir-ilam-dehloran"
+ ],
+ "ir-isfahan": [
+  "ir-isfahan",
+  "ir-isfahan-kashan",
+  "ir-isfahan-isfahan-east",
+  "ir-isfahan-shahreza"
+ ],
+ "ir-kerman": [
+  "ir-kerman",
+  "ir-kerman-sirjan",
+  "ir-kerman-bam"
+ ],
+ "ir-kermanshah": [
+  "ir-kermanshah",
+  "ir-kermanshah-qasr-e-shirin"
+ ],
+ "ir-khuzestan": [
+  "ir-khuzestan",
+  "ir-khuzestan-dezful",
+  "ir-khuzestan-abadan",
+  "ir-khuzestan-masjed-soleyman",
+  "ir-khuzestan-behbahan"
+ ],
+ "ir-kurdistan": [
+  "ir-kurdistan",
+  "ir-kurdistan-bijar"
+ ],
+ "ir-lorestan": [
+  "ir-lorestan",
+  "ir-lorestan-zagros-mountains"
+ ],
+ "ir-markazi": [
+  "ir-markazi",
+  "ir-markazi-saveh"
+ ],
+ "ir-north-khorasan": [
+  "ir-north-khorasan",
+  "ir-north-khorasan-ashkhaneh"
+ ],
+ "ir-razavi-khorasan": [
+  "ir-razavi-khorasan",
+  "ir-razavi-khorasan-nishapur",
+  "ir-razavi-khorasan-sabzevar",
+  "ir-razavi-khorasan-quchan",
+  "ir-razavi-khorasan-kashmar",
+  "ir-razavi-khorasan-torbat-e-jam",
+  "ir-razavi-khorasan-ferdows",
+  "ir-razavi-khorasan-bardaskan",
+  "ir-razavi-khorasan-taybad"
+ ],
+ "ir-semnan": [
+  "ir-semnan",
+  "ir-semnan-semnan-semnan"
+ ],
+ "ir-sistan-and-baluchestan": [
+  "ir-sistan-and-baluchestan",
+  "ir-sistan-and-baluchestan-zabol",
+  "ir-sistan-and-baluchestan-chabahar"
+ ],
+ "ir-tehran": [
+  "ir-tehran",
+  "ir-tehran-varamin",
+  "ir-tehran-damavand"
+ ],
+ "ir-west-azerbaijan": [
+  "ir-west-azerbaijan",
+  "ir-west-azerbaijan-khoy",
+  "ir-west-azerbaijan-mahabad",
+  "ir-west-azerbaijan-bukan"
+ ],
+ "ir-yazd": [
+  "ir-yazd",
+  "ir-yazd-tabas"
+ ],
+ "ir-zanjan": [
+  "ir-zanjan",
+  "ir-zanjan-abhar"
+ ],
+ "jm": [
+  "jm",
+  "jm-montego-bay"
+ ],
+ "jp-fukushima-prefecture": [
+  "jp-fukushima-prefecture",
+  "jp-fukushima-prefecture-koriyama"
+ ],
+ "jp-hiroshima-prefecture": [
+  "jp-hiroshima-prefecture",
+  "jp-hiroshima-prefecture-fukuyama"
+ ],
+ "jp-hokkaido": [
+  "jp-hokkaido",
+  "jp-hokkaido-asahikawa",
+  "jp-hokkaido-hakodate",
+  "jp-hokkaido-obihiro",
+  "jp-hokkaido-muroran",
+  "jp-hokkaido-kitami",
+  "jp-hokkaido-makubetsu",
+  "jp-hokkaido-nakashibetsu",
+  "jp-hokkaido-nayoro"
+ ],
+ "jp-iwate-prefecture": [
+  "jp-iwate-prefecture",
+  "jp-iwate-prefecture-ichinoseki"
+ ],
+ "jp-nagano-prefecture": [
+  "jp-nagano-prefecture",
+  "jp-nagano-prefecture-nagano-prefecture-south"
+ ],
+ "ke-coast": [
+  "ke-coast",
+  "ke-coast-malindi",
+  "ke-coast-voi",
+  "ke-coast-witu",
+  "ke-coast-coast-north",
+  "ke-coast-coast-north-coast",
+  "ke-coast-hola"
+ ],
+ "ke-eastern": [
+  "ke-eastern",
+  "ke-eastern-machakos",
+  "ke-eastern-marsabit"
+ ],
+ "ke-north-eastern": [
+  "ke-north-eastern",
+  "ke-north-eastern-wajir",
+  "ke-north-eastern-el-wak",
+  "ke-north-eastern-masalani"
+ ],
+ "ke-nyanza": [
+  "ke-nyanza",
+  "ke-nyanza-kisii"
+ ],
+ "ke-rift-valley": [
+  "ke-rift-valley",
+  "ke-rift-valley-eldoret",
+  "ke-rift-valley-kericho",
+  "ke-rift-valley-maralal",
+  "ke-rift-valley-chalbi-desert",
+  "ke-rift-valley-lodwar",
+  "ke-rift-valley-namanga",
+  "ke-rift-valley-konza",
+  "ke-rift-valley-rift-valley-north",
+  "ke-rift-valley-serengeti",
+  "ke-rift-valley-rift-valley-north-rift-valley"
+ ],
+ "kg-jalal-abad": [
+  "kg-jalal-abad",
+  "kg-jalal-abad-tashkomur"
+ ],
+ "kp-chagang": [
+  "kp-chagang",
+  "kp-chagang-chosan"
+ ],
+ "kp-kangwon": [
+  "kp-kangwon",
+  "kp-kangwon-kangwon-south"
+ ],
+ "kp-south-hamgyong": [
+  "kp-south-hamgyong",
+  "kp-south-hamgyong-changam-ch-on"
+ ],
+ "kp-south-pyongan": [
+  "kp-south-pyongan",
+  "kp-south-pyongan-sunchon"
+ ],
+ "kr-gangwon": [
+  "kr-gangwon",
+  "kr-gangwon-chuncheon"
+ ],
+ "kr-gyeonggi": [
+  "kr-gyeonggi",
+  "kr-gyeonggi-goyang"
+ ],
+ "kr-north-gyeongsang": [
+  "kr-north-gyeongsang",
+  "kr-north-gyeongsang-andong"
+ ],
+ "kz-akmola": [
+  "kz-akmola",
+  "kz-akmola-zhaltyr",
+  "kz-akmola-ereymentau",
+  "kz-akmola-atbasar"
+ ],
+ "kz-aktobe": [
+  "kz-aktobe",
+  "kz-aktobe-kazakh-steppe-aktobe",
+  "kz-aktobe-shalkar",
+  "kz-aktobe-bayganin",
+  "kz-aktobe-kazakh-steppe-aktobe-east",
+  "kz-aktobe-aktobe-south"
+ ],
+ "kz-almaty": [
+  "kz-almaty",
+  "kz-almaty-sarkand",
+  "kz-almaty-kapchagay",
+  "kz-almaty-zharkent",
+  "kz-almaty-almaty-west"
+ ],
+ "kz-atyrau": [
+  "kz-atyrau",
+  "kz-atyrau-kulsary",
+  "kz-atyrau-caspian-depression-atyrau"
+ ],
+ "kz-east-kazakhstan": [
+  "kz-east-kazakhstan",
+  "kz-east-kazakhstan-oskemen",
+  "kz-east-kazakhstan-altai",
+  "kz-east-kazakhstan-kazakh-steppe",
+  "kz-east-kazakhstan-ayagoz",
+  "kz-east-kazakhstan-zaysan"
+ ],
+ "kz-jambyl": [
+  "kz-jambyl",
+  "kz-jambyl-shu"
+ ],
+ "kz-karaganda": [
+  "kz-karaganda",
+  "kz-karaganda-jezkazgan",
+  "kz-karaganda-balkhash",
+  "kz-karaganda-karazhal",
+  "kz-karaganda-karkaraly",
+  "kz-karaganda-aqadyr",
+  "kz-karaganda-saryshaghan",
+  "kz-karaganda-karaganda-south-west",
+  "kz-karaganda-kazakh-steppe-karaganda",
+  "kz-karaganda-karaganda-south-west-karaganda"
+ ],
+ "kz-kostanay": [
+  "kz-kostanay",
+  "kz-kostanay-zhitikara",
+  "kz-kostanay-arkalyk",
+  "kz-kostanay-torgaj",
+  "kz-kostanay-komsomolets"
+ ],
+ "kz-kyzylorda": [
+  "kz-kyzylorda",
+  "kz-kyzylorda-aral"
+ ],
+ "kz-north-kazakhstan": [
+  "kz-north-kazakhstan",
+  "kz-north-kazakhstan-kishkenekol",
+  "kz-north-kazakhstan-kazakh-steppe-north-kazakhstan"
+ ],
+ "kz-pavlodar": [
+  "kz-pavlodar",
+  "kz-pavlodar-ekibastuz",
+  "kz-pavlodar-ertis",
+  "kz-pavlodar-kazakh-steppe-pavlodar"
+ ],
+ "kz-turkistan": [
+  "kz-turkistan",
+  "kz-turkistan-turkistan-turkistan"
+ ],
+ "kz-west-kazakhstan": [
+  "kz-west-kazakhstan",
+  "kz-west-kazakhstan-aksay",
+  "kz-west-kazakhstan-zhanybek",
+  "kz-west-kazakhstan-west-kazakhstan-south",
+  "kz-west-kazakhstan-caspian-depression"
+ ],
+ "ma-doukkala-abda": [
+  "ma-doukkala-abda",
+  "ma-doukkala-abda-sidi-bennour"
+ ],
+ "ma-fes-meknas-boulmane": [
+  "ma-fes-meknas-boulmane",
+  "ma-fes-meknas-boulmane-missour"
+ ],
+ "ma-guelmim-es-semara": [
+  "ma-guelmim-es-semara",
+  "ma-guelmim-es-semara-tan-tan"
+ ],
+ "ma-marrakesh-tensift-el-haouz": [
+  "ma-marrakesh-tensift-el-haouz",
+  "ma-marrakesh-tensift-el-haouz-essaouira",
+  "ma-marrakesh-tensift-el-haouz-el-kelaa-des-srarhna"
+ ],
+ "ma-meknes-tafilalet": [
+  "ma-meknes-tafilalet",
+  "ma-meknes-tafilalet-errachidia",
+  "ma-meknes-tafilalet-arfoud"
+ ],
+ "ma-oriental": [
+  "ma-oriental",
+  "ma-oriental-high-atlas",
+  "ma-oriental-bouarfa"
+ ],
+ "ma-rabat-sale-zemmour-zaer": [
+  "ma-rabat-sale-zemmour-zaer",
+  "ma-rabat-sale-zemmour-zaer-khemisset"
+ ],
+ "ma-suss-massa-draa": [
+  "ma-suss-massa-draa",
+  "ma-suss-massa-draa-tinghir",
+  "ma-suss-massa-draa-ouarzazate"
+ ],
+ "md": [
+  "md",
+  "md-balti",
+  "md-tiraspol",
+  "md-cahul"
+ ],
+ "mg-antananarivo": [
+  "mg-antananarivo",
+  "mg-antananarivo-ankazobe"
+ ],
+ "mg-atsimo-andrefana": [
+  "mg-atsimo-andrefana",
+  "mg-atsimo-andrefana-ankazoabo",
+  "mg-atsimo-andrefana-ampanihy"
+ ],
+ "mg-menabe": [
+  "mg-menabe",
+  "mg-menabe-manja"
+ ],
+ "mg-sofia": [
+  "mg-sofia",
+  "mg-sofia-antsohihy"
+ ],
+ "ml-kayes": [
+  "ml-kayes",
+  "ml-kayes-bafoulabe",
+  "ml-kayes-nioro-du-sahel",
+  "ml-kayes-kita"
+ ],
+ "ml-koulikoro": [
+  "ml-koulikoro-banamba",
+  "ml-koulikoro-nara",
+  "ml-koulikoro"
+ ],
+ "ml-mopti": [
+  "ml-mopti",
+  "ml-mopti-sahel",
+  "ml-mopti-douentza"
+ ],
+ "ml-segou": [
+  "ml-segou",
+  "ml-segou-san"
+ ],
+ "ml-tombouctou": [
+  "ml-tombouctou",
+  "ml-tombouctou-taoudenni"
+ ],
+ "ml-wassoulou": [
+  "ml-wassoulou",
+  "ml-wassoulou-koutiala",
+  "ml-wassoulou-bougouni"
+ ],
+ "mm-ayeyarwady": [
+  "mm-ayeyarwady",
+  "mm-ayeyarwady-hinthada",
+  "mm-ayeyarwady-pyapon",
+  "mm-ayeyarwady-wakema"
+ ],
+ "mm-bago": [
+  "mm-bago",
+  "mm-bago-pyay",
+  "mm-bago-taungoo",
+  "mm-bago-letpandan"
+ ],
+ "mm-kachin-state": [
+  "mm-kachin-state",
+  "mm-kachin-state-kachin-state-north",
+  "mm-kachin-state-kachin-state-north-east",
+  "mm-kachin-state-danai",
+  "mm-kachin-state-lakang"
+ ],
+ "mm-kayin-state": [
+  "mm-kayin-state",
+  "mm-kayin-state-kayin-state-north-west"
+ ],
+ "mm-magway": [
+  "mm-magway",
+  "mm-magway-yenangyaung",
+  "mm-magway-myede"
+ ],
+ "mm-mandalay": [
+  "mm-mandalay",
+  "mm-mandalay-naypyidaw",
+  "mm-mandalay-myingyan",
+  "mm-mandalay-mogok"
+ ],
+ "mm-rakhine-state": [
+  "mm-rakhine-state",
+  "mm-rakhine-state-thandwe"
+ ],
+ "mm-sagaing": [
+  "mm-sagaing-kalemyo",
+  "mm-sagaing",
+  "mm-sagaing-mawlaik",
+  "mm-sagaing-naga-hills",
+  "mm-sagaing-tatkon",
+  "mm-sagaing-kyauktan"
+ ],
+ "mm-shan-state": [
+  "mm-shan-state",
+  "mm-shan-state-namtu",
+  "mm-shan-state-keng-tung",
+  "mm-shan-state-shan-plateau",
+  "mm-shan-state-tangyan",
+  "mm-shan-state-mu-se",
+  "mm-shan-state-shan-plateau-shan-state",
+  "mm-shan-state-pekon"
+ ],
+ "mm-tanintharyi": [
+  "mm-tanintharyi",
+  "mm-tanintharyi-dawei",
+  "mm-tanintharyi-tanintharyi-south"
+ ],
+ "mm-yangon": [
+  "mm-yangon",
+  "mm-yangon-irrawaddy-delta"
+ ],
+ "mn-khovsgol": [
+  "mn-khovsgol",
+  "mn-khovsgol-khovsgol-north"
+ ],
+ "mx-baja-california": [
+  "mx-baja-california",
+  "mx-baja-california-mexicali",
+  "mx-baja-california-ensenada",
+  "mx-baja-california-san-felipe",
+  "mx-baja-california-baja-california-south-east",
+  "mx-baja-california-punta-prieta"
+ ],
+ "mx-baja-california-sur": [
+  "mx-baja-california-sur",
+  "mx-baja-california-sur-cabo-san-lucas",
+  "mx-baja-california-sur-ciudad-constitucion",
+  "mx-baja-california-sur-guerrero-negro",
+  "mx-baja-california-sur-santa-rosalia"
+ ],
+ "mx-campeche": [
+  "mx-campeche",
+  "mx-campeche-campeche-south-east",
+  "mx-campeche-campeche-south-west",
+  "mx-campeche-escarcega"
+ ],
+ "mx-chiapas": [
+  "mx-chiapas",
+  "mx-chiapas-tapachula",
+  "mx-chiapas-pijijiapan"
+ ],
+ "mx-chihuahua": [
+  "mx-chihuahua",
+  "mx-chihuahua-chihuahua-city",
+  "mx-chihuahua-hidalgo-del-parral",
+  "mx-chihuahua-nuevo-casas-grandes",
+  "mx-chihuahua-delicias",
+  "mx-chihuahua-ojinaga"
+ ],
+ "mx-coahuila": [
+  "mx-coahuila",
+  "mx-coahuila-torreon",
+  "mx-coahuila-monclova",
+  "mx-coahuila-piedras-negras"
+ ],
+ "mx-durango": [
+  "mx-durango",
+  "mx-durango-gomez-palacio",
+  "mx-durango-santiago-papasquiaro"
+ ],
+ "mx-guanajuato": [
+  "mx-guanajuato",
+  "mx-guanajuato-irapuato",
+  "mx-guanajuato-guanajuato-guanajuato"
+ ],
+ "mx-guerrero": [
+  "mx-guerrero",
+  "mx-guerrero-iguala",
+  "mx-guerrero-ciudad-altamirano"
+ ],
+ "mx-jalisco": [
+  "mx-jalisco",
+  "mx-jalisco-puerto-vallarta",
+  "mx-jalisco-ciudad-guzman",
+  "mx-jalisco-lagos-de-moreno",
+  "mx-jalisco-autlan-de-navarro",
+  "mx-jalisco-sierra-madre-occidental"
+ ],
+ "mx-michoacan": [
+  "mx-michoacan",
+  "mx-michoacan-uruapan",
+  "mx-michoacan-lazaro-cardenas"
+ ],
+ "mx-nuevo-leon": [
+  "mx-nuevo-leon",
+  "mx-nuevo-leon-linares",
+  "mx-nuevo-leon-sabinas-hidalgo",
+  "mx-nuevo-leon-sierra-madre-oriental",
+  "mx-nuevo-leon-nuevo-leon-east"
+ ],
+ "mx-oaxaca": [
+  "mx-oaxaca",
+  "mx-oaxaca-juchitan-de-zaragoza",
+  "mx-oaxaca-huajuapan-de-leon"
+ ],
+ "mx-puebla": [
+  "mx-puebla",
+  "mx-puebla-tehuacan",
+  "mx-puebla-teziutlan"
+ ],
+ "mx-quintana-roo": [
+  "mx-quintana-roo",
+  "mx-quintana-roo-chetumal",
+  "mx-quintana-roo-felipe-carrillo-puerto"
+ ],
+ "mx-san-luis-potosi": [
+  "mx-san-luis-potosi",
+  "mx-san-luis-potosi-ciudad-valles",
+  "mx-san-luis-potosi-matehuala",
+  "mx-san-luis-potosi-rioverde"
+ ],
+ "mx-sinaloa": [
+  "mx-sinaloa",
+  "mx-sinaloa-los-mochis",
+  "mx-sinaloa-guasave-city",
+  "mx-sinaloa-escuinapa-de-hidalgo"
+ ],
+ "mx-sonora": [
+  "mx-sonora",
+  "mx-sonora-ciudad-obregon",
+  "mx-sonora-agua-prieta",
+  "mx-sonora-heroica-caborca"
+ ],
+ "mx-state-of-mexico": [
+  "mx-state-of-mexico",
+  "mx-state-of-mexico-toluca"
+ ],
+ "mx-tabasco": [
+  "mx-tabasco",
+  "mx-tabasco-tenosique"
+ ],
+ "mx-tamaulipas": [
+  "mx-tamaulipas",
+  "mx-tamaulipas-matamoros",
+  "mx-tamaulipas-ciudad-victoria",
+  "mx-tamaulipas-laredo",
+  "mx-tamaulipas-ciudad-madero",
+  "mx-tamaulipas-ciudad-mante"
+ ],
+ "mx-veracruz": [
+  "mx-veracruz",
+  "mx-veracruz-xalapa",
+  "mx-veracruz-ciudad-madero-tamaulipas",
+  "mx-veracruz-coatzacoalcos",
+  "mx-veracruz-poza-rica",
+  "mx-veracruz-cordoba"
+ ],
+ "mx-yucatan": [
+  "mx-yucatan",
+  "mx-yucatan-tizimin",
+  "mx-yucatan-ticul"
+ ],
+ "mx-zacatecas": [
+  "mx-zacatecas",
+  "mx-zacatecas-juan-aldama",
+  "mx-zacatecas-villanueva"
+ ],
+ "my-johor": [
+  "my-johor",
+  "my-johor-kluang"
+ ],
+ "my-pahang": [
+  "my-pahang",
+  "my-pahang-raub"
+ ],
+ "my-perak": [
+  "my-perak",
+  "my-perak-teluk-intan"
+ ],
+ "my-sabah": [
+  "my-sabah",
+  "my-sabah-tawau",
+  "my-sabah-lahad-datu",
+  "my-sabah-bandar-nabawan",
+  "my-sabah-kudat"
+ ],
+ "my-sarawak": [
+  "my-sarawak",
+  "my-sarawak-miri",
+  "my-sarawak-sibu",
+  "my-sarawak-bintulu",
+  "my-sarawak-sarawak-east",
+  "my-sarawak-sarawak-east-sarawak",
+  "my-sarawak-limbang"
+ ],
+ "mz-cabo-delgado": [
+  "mz-cabo-delgado",
+  "mz-cabo-delgado-mocimboa-da-praia",
+  "mz-cabo-delgado-montepuez"
+ ],
+ "mz-gaza": [
+  "mz-gaza",
+  "mz-gaza-massangena",
+  "mz-gaza-gaza-north-west"
+ ],
+ "mz-inhambane": [
+  "mz-inhambane",
+  "mz-inhambane-zavala",
+  "mz-inhambane-vilankulo"
+ ],
+ "mz-manica": [
+  "mz-manica",
+  "mz-manica-espungabera"
+ ],
+ "mz-maputo": [
+  "mz-maputo",
+  "mz-maputo-maputo-north",
+  "mz-maputo-ressano-garcia"
+ ],
+ "mz-nampula": [
+  "mz-nampula",
+  "mz-nampula-nacala",
+  "mz-nampula-angoche",
+  "mz-nampula-ligonha"
+ ],
+ "mz-niassa": [
+  "mz-niassa",
+  "mz-niassa-cuamba",
+  "mz-niassa-marrupa",
+  "mz-niassa-niassa-north"
+ ],
+ "mz-sofala": [
+  "mz-sofala",
+  "mz-sofala-chiramba",
+  "mz-sofala-sofala-north-east"
+ ],
+ "mz-tete": [
+  "mz-tete",
+  "mz-tete-luangwa",
+  "mz-tete-tete-south-east"
+ ],
+ "mz-zambezia": [
+  "mz-zambezia",
+  "mz-zambezia-mocuba",
+  "mz-zambezia-mocuba-zambezia",
+  "mz-zambezia-gurue"
+ ],
+ "na-karas": [
+  "na-karas",
+  "na-karas-luderitz"
+ ],
+ "ne-agadez": [
+  "ne-agadez",
+  "ne-agadez-djado",
+  "ne-agadez-tenere-agadez"
+ ],
+ "ne-dosso": [
+  "ne-dosso-dosso-north-east",
+  "ne-dosso"
+ ],
+ "ne-maradi": [
+  "ne-maradi",
+  "ne-maradi-dakoro"
+ ],
+ "ne-tahoua": [
+  "ne-tahoua",
+  "ne-tahoua-sahel"
+ ],
+ "ne-tillaberi": [
+  "ne-tillaberi",
+  "ne-tillaberi-filingue",
+  "ne-tillaberi-youri-kourtere",
+  "ne-tillaberi-baleyara"
+ ],
+ "ne-zinder": [
+  "ne-zinder",
+  "ne-zinder-goure",
+  "ne-zinder-tenere",
+  "ne-zinder-tanout"
+ ],
+ "ng-adamawa-state": [
+  "ng-adamawa-state",
+  "ng-adamawa-state-yola",
+  "ng-adamawa-state-adamawa-plateau"
+ ],
+ "ng-bauchi-state": [
+  "ng-bauchi-state",
+  "ng-bauchi-state-azare",
+  "ng-bauchi-state-bauchi-state-east",
+  "ng-bauchi-state-bauchi-state-north-west"
+ ],
+ "ng-benue-state": [
+  "ng-benue-state",
+  "ng-benue-state-otukpo",
+  "ng-benue-state-gboko"
+ ],
+ "ng-borno-state": [
+  "ng-borno-state",
+  "ng-borno-state-biu",
+  "ng-borno-state-monguno",
+  "ng-borno-state-bama"
+ ],
+ "ng-cross-river-state": [
+  "ng-cross-river-state",
+  "ng-cross-river-state-ikom"
+ ],
+ "ng-delta-state": [
+  "ng-delta-state",
+  "ng-delta-state-enugu-nigeria"
+ ],
+ "ng-edo-state": [
+  "ng-edo-state",
+  "ng-edo-state-uromi"
+ ],
+ "ng-gombe-state": [
+  "ng-gombe-state",
+  "ng-gombe-state-gombe-state-north"
+ ],
+ "ng-jigawa-state": [
+  "ng-jigawa-state",
+  "ng-jigawa-state-gumel",
+  "ng-jigawa-state-hadejia"
+ ],
+ "ng-kaduna-state": [
+  "ng-kaduna-state",
+  "ng-kaduna-state-zaria",
+  "ng-kaduna-state-lere",
+  "ng-kaduna-state-sofo-birnin-gwari"
+ ],
+ "ng-kano-state": [
+  "ng-kano-state",
+  "ng-kano-state-kano-state-south",
+  "ng-kano-state-gwarzo",
+  "ng-kano-state-wudil"
+ ],
+ "ng-katsina-state": [
+  "ng-katsina-state",
+  "ng-katsina-state-funtua",
+  "ng-katsina-state-daura"
+ ],
+ "ng-kebbi-state": [
+  "ng-kebbi-state",
+  "ng-kebbi-state-koko",
+  "ng-kebbi-state-zuru"
+ ],
+ "ng-kogi-state": [
+  "ng-kogi-state",
+  "ng-kogi-state-kogi-state-north-west"
+ ],
+ "ng-kwara-state": [
+  "ng-kwara-state",
+  "ng-kwara-state-okuta"
+ ],
+ "ng-nasarawa-state": [
+  "ng-nasarawa-state",
+  "ng-nasarawa-state-lafia"
+ ],
+ "ng-niger-state": [
+  "ng-niger-state",
+  "ng-niger-state-bida",
+  "ng-niger-state-kontagora",
+  "ng-niger-state-babana",
+  "ng-niger-state-mokwa"
+ ],
+ "ng-ogun-state": [
+  "ng-ogun-state",
+  "ng-ogun-state-ijebu-ode"
+ ],
+ "ng-ondo-state": [
+  "ng-ondo-state",
+  "ng-ondo-state-akure"
+ ],
+ "ng-oyo-state": [
+  "ng-oyo-state",
+  "ng-oyo-state-ogbomosho",
+  "ng-oyo-state-iseyin"
+ ],
+ "ng-plateau-state": [
+  "ng-plateau-state",
+  "ng-plateau-state-pankshin"
+ ],
+ "ng-rivers-state": [
+  "ng-rivers-state",
+  "ng-rivers-state-elele"
+ ],
+ "ng-sokoto-state": [
+  "ng-sokoto-state",
+  "ng-sokoto-state-sokoto-state-south",
+  "ng-sokoto-state-sokoto-state-east"
+ ],
+ "ng-taraba-state": [
+  "ng-taraba-state",
+  "ng-taraba-state-wukari",
+  "ng-taraba-state-gembu"
+ ],
+ "ng-yobe-state": [
+  "ng-yobe-state",
+  "ng-yobe-state-potiskum",
+  "ng-yobe-state-nguru"
+ ],
+ "ng-zamfara-state": [
+  "ng-zamfara-state",
+  "ng-zamfara-state-gummi",
+  "ng-zamfara-state-zamfara-state-south"
+ ],
+ "np-bagmati-zone": [
+  "np-bagmati-zone",
+  "np-bagmati-zone-himalayas"
+ ],
+ "pe-arequipa": [
+  "pe-arequipa",
+  "pe-arequipa-mollendo",
+  "pe-arequipa-cordillera-occidental"
+ ],
+ "pe-cusco-departament": [
+  "pe-cusco-departament",
+  "pe-cusco-departament-sicuani"
+ ],
+ "pe-junin": [
+  "pe-junin",
+  "pe-junin-la-oroya"
+ ],
+ "pe-loreto": [
+  "pe-loreto",
+  "pe-loreto-requena",
+  "pe-loreto-contamana",
+  "pe-loreto-caballococha",
+  "pe-loreto-new-rocafuerte",
+  "pe-loreto-andoas",
+  "pe-loreto-puca-urco",
+  "pe-loreto-selva-loreto",
+  "pe-loreto-selva-loreto-north-west",
+  "pe-loreto-yurimaguas",
+  "pe-loreto-selva-loreto-west",
+  "pe-loreto-selva-loreto-south",
+  "pe-loreto-selva-loreto-west-2"
+ ],
+ "pe-madre-de-dios": [
+  "pe-madre-de-dios",
+  "pe-madre-de-dios-selva"
+ ],
+ "pe-puno": [
+  "pe-puno-ayaviri",
+  "pe-puno"
+ ],
+ "pe-ucayali": [
+  "pe-ucayali",
+  "pe-ucayali-selva-ucayali",
+  "pe-ucayali-atalaya",
+  "pe-ucayali-selva-ucayali-south-east"
+ ],
+ "pg-western": [
+  "pg-western",
+  "pg-western-western-south-east",
+  "pg-western-western-south"
+ ],
+ "ph-bicol-region-v": [
+  "ph-bicol-region-v",
+  "ph-bicol-region-v-naga"
+ ],
+ "ph-cagayan-valley-region-ii": [
+  "ph-cagayan-valley-region-ii-ilagan",
+  "ph-cagayan-valley-region-ii-santiago",
+  "ph-cagayan-valley-region-ii"
+ ],
+ "ph-calabarzon-region-iv-a": [
+  "ph-calabarzon-region-iv-a",
+  "ph-calabarzon-region-iv-a-calabarzon-region-iv-a-east"
+ ],
+ "ph-central-luzon-region-iii": [
+  "ph-central-luzon-region-iii",
+  "ph-central-luzon-region-iii-cabanatuan",
+  "ph-central-luzon-region-iii-central-luzon-region-iii-north-east"
+ ],
+ "ph-central-visayas-region-vii": [
+  "ph-central-visayas-region-vii",
+  "ph-central-visayas-region-vii-bayawan"
+ ],
+ "ph-cordillera-administrative-region-car": [
+  "ph-cordillera-administrative-region-car",
+  "ph-cordillera-administrative-region-car-tabuk"
+ ],
+ "ph-davao-region-xi": [
+  "ph-davao-region-xi",
+  "ph-davao-region-xi-davao-region-xi-south"
+ ],
+ "ph-eastern-visayas-region-viii": [
+  "ph-eastern-visayas-region-viii",
+  "ph-eastern-visayas-region-viii-calbayog"
+ ],
+ "ph-ilocos-region-i": [
+  "ph-ilocos-region-i",
+  "ph-ilocos-region-i-laoag"
+ ],
+ "ph-mimaropa-region-iv-b": [
+  "ph-mimaropa-region-iv-b",
+  "ph-mimaropa-region-iv-b-san-jose"
+ ],
+ "ph-northern-mindanao-region-x": [
+  "ph-northern-mindanao-region-x",
+  "ph-northern-mindanao-region-x-iligan"
+ ],
+ "ph-soccsksargen-region-xii": [
+  "ph-soccsksargen-region-xii",
+  "ph-soccsksargen-region-xii-budta"
+ ],
+ "ph-western-visayas-region-vi": [
+  "ph-western-visayas-region-vi",
+  "ph-western-visayas-region-vi-western-visayas-region-vi-north-west"
+ ],
+ "ph-zamboanga-peninsula-region-ix": [
+  "ph-zamboanga-peninsula-region-ix",
+  "ph-zamboanga-peninsula-region-ix-siocon"
+ ],
+ "pk-balochistan": [
+  "pk-balochistan",
+  "pk-balochistan-turbat",
+  "pk-balochistan-zhob",
+  "pk-balochistan-kharan",
+  "pk-balochistan-khuzdar"
+ ],
+ "pk-gilgit-baltistan": [
+  "pk-gilgit-baltistan",
+  "pk-gilgit-baltistan-skardu"
+ ],
+ "pk-khyber-pakhtunkhwa": [
+  "pk-khyber-pakhtunkhwa",
+  "pk-khyber-pakhtunkhwa-peshawar",
+  "pk-khyber-pakhtunkhwa-abbottabad",
+  "pk-khyber-pakhtunkhwa-bannu",
+  "pk-khyber-pakhtunkhwa-mardan",
+  "pk-khyber-pakhtunkhwa-dera-ismail-khan",
+  "pk-khyber-pakhtunkhwa-hindu-kush",
+  "pk-khyber-pakhtunkhwa-chitral",
+  "pk-khyber-pakhtunkhwa-hindu-kush-khyber-pakhtunkhwa"
+ ],
+ "pk-punjab": [
+  "pk-punjab",
+  "pk-punjab-faisalabad",
+  "pk-punjab-rawalpindi",
+  "pk-punjab-multan",
+  "pk-punjab-gujranwala",
+  "pk-punjab-bahawalpur",
+  "pk-punjab-sargodha",
+  "pk-punjab-sialkot",
+  "pk-punjab-rahim-yar-khan",
+  "pk-punjab-jhang",
+  "pk-punjab-dera-ghazi-khan",
+  "pk-punjab-sahiwal",
+  "pk-punjab-kundian",
+  "pk-punjab-thar-desert",
+  "pk-punjab-bahawalnagar",
+  "pk-punjab-layyah",
+  "pk-punjab-dajal",
+  "pk-punjab-talagang",
+  "pk-punjab-jhelum",
+  "pk-punjab-okara",
+  "pk-punjab-thar-desert-punjab",
+  "pk-punjab-burewala",
+  "pk-punjab-ahmadpur-east",
+  "pk-punjab-fort-abbas"
+ ],
+ "pk-sindh": [
+  "pk-sindh",
+  "pk-sindh-hyderabad",
+  "pk-sindh-sukkur",
+  "pk-sindh-larkana",
+  "pk-sindh-nawabshah",
+  "pk-sindh-mirpur-khas",
+  "pk-sindh-sindh-east",
+  "pk-sindh-sindh-south-east",
+  "pk-sindh-thar-desert-sindh",
+  "pk-sindh-tando-bago",
+  "pk-sindh-khanpur-mahar",
+  "pk-sindh-dadu",
+  "pk-sindh-thar-desert-sindh-east",
+  "pk-sindh-sindh-north-east",
+  "pk-sindh-thar-desert-sindh-north-east",
+  "pk-sindh-thatta",
+  "pk-sindh-ghotki",
+  "pk-sindh-shahdad-kot",
+  "pk-sindh-jacobabad",
+  "pk-sindh-kunri",
+  "pk-sindh-gharo",
+  "pk-sindh-umarkot"
+ ],
+ "pl-greater-poland-voivodeship": [
+  "pl-greater-poland-voivodeship",
+  "pl-greater-poland-voivodeship-ostrow-wielkopolski",
+  "pl-greater-poland-voivodeship-kalisz"
+ ],
+ "pl-kuyavian-pomeranian-voivodeship": [
+  "pl-kuyavian-pomeranian-voivodeship",
+  "pl-kuyavian-pomeranian-voivodeship-inowroc-aw"
+ ],
+ "pl-lesser-poland-voivodeship": [
+  "pl-lesser-poland-voivodeship",
+  "pl-lesser-poland-voivodeship-tarnow"
+ ],
+ "pl-lower-silesian-voivodeship": [
+  "pl-lower-silesian-voivodeship",
+  "pl-lower-silesian-voivodeship-legnica"
+ ],
+ "pl-lublin-voivodeship": [
+  "pl-lublin-voivodeship",
+  "pl-lublin-voivodeship-zamosc"
+ ],
+ "pl-masovian-voivodeship": [
+  "pl-masovian-voivodeship",
+  "pl-masovian-voivodeship-radom",
+  "pl-masovian-voivodeship-siedlce",
+  "pl-masovian-voivodeship-ostro-eka",
+  "pl-masovian-voivodeship-p-ock"
+ ],
+ "pl-odz-voivodeship": [
+  "pl-odz-voivodeship",
+  "pl-odz-voivodeship-be-chatow"
+ ],
+ "pl-podlaskie-voivodeship": [
+  "pl-podlaskie-voivodeship",
+  "pl-podlaskie-voivodeship-suwa-ki"
+ ],
+ "pl-pomeranian-voivodeship": [
+  "pl-pomeranian-voivodeship",
+  "pl-pomeranian-voivodeship-north-european-plain"
+ ],
+ "pl-silesian-voivodeship": [
+  "pl-silesian-voivodeship",
+  "pl-silesian-voivodeship-tatra-mountains"
+ ],
+ "pl-warmian-masurian-voivodeship": [
+  "pl-warmian-masurian-voivodeship-e-k",
+  "pl-warmian-masurian-voivodeship"
+ ],
+ "pl-west-pomeranian-voivodeship": [
+  "pl-west-pomeranian-voivodeship",
+  "pl-west-pomeranian-voivodeship-koszalin",
+  "pl-west-pomeranian-voivodeship-wa-cz"
+ ],
+ "py-alto-paraguay": [
+  "py-alto-paraguay",
+  "py-alto-paraguay-mayor-pablo-lagerenza"
+ ],
+ "py-boqueron": [
+  "py-boqueron",
+  "py-boqueron-general-eugenio-alejandrino-garay"
+ ],
+ "py-presidente-hayes": [
+  "py-presidente-hayes",
+  "py-presidente-hayes-pozo-colorado"
+ ],
+ "ru-altai-republic-2": [
+  "ru-altai-republic-2",
+  "ru-altai-republic-2-biysk",
+  "ru-altai-republic-2-rubtsovsk",
+  "ru-altai-republic-2-kamen-na-obi",
+  "ru-altai-republic-2-slavgorod",
+  "ru-altai-republic-2-aleysk"
+ ],
+ "ru-amur": [
+  "ru-amur",
+  "ru-amur-tynda",
+  "ru-amur-zeya",
+  "ru-amur-amur-north-east",
+  "ru-amur-progress"
+ ],
+ "ru-arkhangelsk": [
+  "ru-arkhangelsk",
+  "ru-arkhangelsk-kotlas",
+  "ru-arkhangelsk-velsk",
+  "ru-arkhangelsk-mezen",
+  "ru-arkhangelsk-arkhangelsk-north",
+  "ru-arkhangelsk-arkhangelsk-north-east"
+ ],
+ "ru-astrakhan": [
+  "ru-astrakhan",
+  "ru-astrakhan-akhtubinsk"
+ ],
+ "ru-bashkortostan": [
+  "ru-bashkortostan",
+  "ru-bashkortostan-sterlitamak",
+  "ru-bashkortostan-neftekamsk",
+  "ru-bashkortostan-oktyabrsky",
+  "ru-bashkortostan-ural-mountains",
+  "ru-bashkortostan-sibay",
+  "ru-bashkortostan-ural-mountains-bashkortostan",
+  "ru-bashkortostan-belebey"
+ ],
+ "ru-belgorod": [
+  "ru-belgorod",
+  "ru-belgorod-stary-oskol"
+ ],
+ "ru-bryansk": [
+  "ru-bryansk",
+  "ru-bryansk-klintsy"
+ ],
+ "ru-chechen-republic": [
+  "ru-chechen-republic",
+  "ru-chechen-republic-pontic-caspian-steppe-chechen-republic"
+ ],
+ "ru-chelyabinsk": [
+  "ru-chelyabinsk",
+  "ru-chelyabinsk-magnitogorsk",
+  "ru-chelyabinsk-zlatoust",
+  "ru-chelyabinsk-troitsk",
+  "ru-chelyabinsk-kyshtym",
+  "ru-chelyabinsk-asha"
+ ],
+ "ru-irkutsk": [
+  "ru-irkutsk",
+  "ru-irkutsk-tulun",
+  "ru-irkutsk-nizhneudinsk",
+  "ru-irkutsk-ust-ilimsk",
+  "ru-irkutsk-zheleznogorsk-ilimsky",
+  "ru-irkutsk-bratsk",
+  "ru-irkutsk-bodaybo",
+  "ru-irkutsk-yerema",
+  "ru-irkutsk-kirensk",
+  "ru-irkutsk-ulkan",
+  "ru-irkutsk-central-siberian-plateau",
+  "ru-irkutsk-stanovoy-range",
+  "ru-irkutsk-eastern-sayan-mountains",
+  "ru-irkutsk-irkutsk-north-east"
+ ],
+ "ru-kaluga": [
+  "ru-kaluga",
+  "ru-kaluga-kirov-kaluga"
+ ],
+ "ru-kamchatka-krai": [
+  "ru-kamchatka-krai",
+  "ru-kamchatka-krai-palana",
+  "ru-kamchatka-krai-klyuchi",
+  "ru-kamchatka-krai-korf"
+ ],
+ "ru-karelia": [
+  "ru-karelia",
+  "ru-karelia-segezha",
+  "ru-karelia-karelia-north"
+ ],
+ "ru-kemerovo": [
+  "ru-kemerovo",
+  "ru-kemerovo-kemerovo-kemerovo",
+  "ru-kemerovo-leninsk-kuznetsky",
+  "ru-kemerovo-mariinsk",
+  "ru-kemerovo-anzhero-sudzhensk"
+ ],
+ "ru-khabarovsk-krai": [
+  "ru-khabarovsk-krai",
+  "ru-khabarovsk-krai-komsomolsk-on-amur",
+  "ru-khabarovsk-krai-nikolayevsk-on-amur",
+  "ru-khabarovsk-krai-sovetskaya-gavan",
+  "ru-khabarovsk-krai-bikin",
+  "ru-khabarovsk-krai-okhotsk",
+  "ru-khabarovsk-krai-de-kastri",
+  "ru-khabarovsk-krai-chumikan",
+  "ru-khabarovsk-krai-ayan"
+ ],
+ "ru-khanty-mansi-autonomous-okrug": [
+  "ru-khanty-mansi-autonomous-okrug",
+  "ru-khanty-mansi-autonomous-okrug-kogalym",
+  "ru-khanty-mansi-autonomous-okrug-nyagan",
+  "ru-khanty-mansi-autonomous-okrug-khanty-mansiysk",
+  "ru-khanty-mansi-autonomous-okrug-saranpaul",
+  "ru-khanty-mansi-autonomous-okrug-uray",
+  "ru-khanty-mansi-autonomous-okrug-laryak",
+  "ru-khanty-mansi-autonomous-okrug-numto",
+  "ru-khanty-mansi-autonomous-okrug-igrim",
+  "ru-khanty-mansi-autonomous-okrug-khanty-mansi-autonomous-okrug-west"
+ ],
+ "ru-kirov": [
+  "ru-kirov",
+  "ru-kirov-omutninsk",
+  "ru-kirov-sovetsk",
+  "ru-kirov-kirov-north-west"
+ ],
+ "ru-komi-republic": [
+  "ru-komi-republic",
+  "ru-komi-republic-ukhta",
+  "ru-komi-republic-vorkuta",
+  "ru-komi-republic-pechora",
+  "ru-komi-republic-inta",
+  "ru-komi-republic-vychegda-lowland"
+ ],
+ "ru-kostroma": [
+  "ru-kostroma",
+  "ru-kostroma-sharya"
+ ],
+ "ru-krasnodar-krai": [
+  "ru-krasnodar-krai",
+  "ru-krasnodar-krai-sochi",
+  "ru-krasnodar-krai-novorossiysk",
+  "ru-krasnodar-krai-armavir",
+  "ru-krasnodar-krai-tuapse",
+  "ru-krasnodar-krai-kropotkin",
+  "ru-krasnodar-krai-pontic-caspian-steppe"
+ ],
+ "ru-krasnoyarsk-krai": [
+  "ru-krasnoyarsk-krai",
+  "ru-krasnoyarsk-krai-noginsk",
+  "ru-krasnoyarsk-krai-abakan",
+  "ru-krasnoyarsk-krai-norilsk",
+  "ru-krasnoyarsk-krai-lesosibirsk",
+  "ru-krasnoyarsk-krai-boyarka",
+  "ru-krasnoyarsk-krai-kodinsk",
+  "ru-krasnoyarsk-krai-tura",
+  "ru-krasnoyarsk-krai-igarka",
+  "ru-krasnoyarsk-krai-khatanga",
+  "ru-krasnoyarsk-krai-chelyuskin",
+  "ru-krasnoyarsk-krai-vorontsovo",
+  "ru-krasnoyarsk-krai-krasnoyarsk-krai-north",
+  "ru-krasnoyarsk-krai-komsa",
+  "ru-krasnoyarsk-krai-yessey",
+  "ru-krasnoyarsk-krai-krasnoyarsk-krai-north-krasnoyarsk-krai",
+  "ru-krasnoyarsk-krai-krasnoyarsk-krai-north-krasnoyarsk-krai-north",
+  "ru-krasnoyarsk-krai-krasnoyarsk-krai-north-krasnoyarsk-krai-north-2"
+ ],
+ "ru-kurgan": [
+  "ru-kurgan",
+  "ru-kurgan-shadrinsk"
+ ],
+ "ru-kursk": [
+  "ru-kursk",
+  "ru-kursk-zheleznogorsk"
+ ],
+ "ru-leningrad": [
+  "ru-leningrad-volkhov",
+  "ru-leningrad-vyborg",
+  "ru-leningrad-tikhvin",
+  "ru-leningrad"
+ ],
+ "ru-lipetsk": [
+  "ru-lipetsk",
+  "ru-lipetsk-yelets"
+ ],
+ "ru-magadan": [
+  "ru-magadan",
+  "ru-magadan-omsukchan"
+ ],
+ "ru-moscow": [
+  "ru-moscow",
+  "ru-moscow-orekhovo-zuyevo",
+  "ru-moscow-kolomna",
+  "ru-moscow-sergiyev-posad",
+  "ru-moscow-klin",
+  "ru-moscow-moscow-west"
+ ],
+ "ru-murmansk": [
+  "ru-murmansk",
+  "ru-murmansk-apatity"
+ ],
+ "ru-nizhny-novgorod": [
+  "ru-nizhny-novgorod",
+  "ru-nizhny-novgorod-nizhny-novgorod-south-east",
+  "ru-nizhny-novgorod-arzamas",
+  "ru-nizhny-novgorod-nizhny-novgorod-north-east",
+  "ru-nizhny-novgorod-nizhny-novgorod-north-east-nizhny-novgorod"
+ ],
+ "ru-novgorod": [
+  "ru-novgorod",
+  "ru-novgorod-borovichi"
+ ],
+ "ru-novosibirsk": [
+  "ru-novosibirsk",
+  "ru-novosibirsk-west-siberian-plain-novosibirsk",
+  "ru-novosibirsk-karasuk",
+  "ru-novosibirsk-barabinsk",
+  "ru-novosibirsk-toguchin",
+  "ru-novosibirsk-kazakh-steppe",
+  "ru-novosibirsk-kargat"
+ ],
+ "ru-omsk": [
+  "ru-omsk",
+  "ru-omsk-tara",
+  "ru-omsk-isilkul",
+  "ru-omsk-cherlak",
+  "ru-omsk-west-siberian-plain-omsk"
+ ],
+ "ru-orenburg": [
+  "ru-orenburg",
+  "ru-orenburg-buzuluk",
+  "ru-orenburg-novotroitsk",
+  "ru-orenburg-buguruslan",
+  "ru-orenburg-dombarovsky"
+ ],
+ "ru-penza": [
+  "ru-penza",
+  "ru-penza-kuznetsk"
+ ],
+ "ru-perm-krai": [
+  "ru-perm-krai",
+  "ru-perm-krai-berezniki",
+  "ru-perm-krai-chusovoy",
+  "ru-perm-krai-kudymkar",
+  "ru-perm-krai-perm-krai-north",
+  "ru-perm-krai-vychegda-lowland-perm-krai",
+  "ru-perm-krai-perm-krai-south"
+ ],
+ "ru-primorsky-krai": [
+  "ru-primorsky-krai",
+  "ru-primorsky-krai-arsenyev",
+  "ru-primorsky-krai-lesozavodsk",
+  "ru-primorsky-krai-kavalerovo",
+  "ru-primorsky-krai-sikhote-alin"
+ ],
+ "ru-pskov": [
+  "ru-pskov",
+  "ru-pskov-velikiye-luki"
+ ],
+ "ru-republic-of-buryatia": [
+  "ru-republic-of-buryatia",
+  "ru-republic-of-buryatia-severobaykalsk",
+  "ru-republic-of-buryatia-taksimo",
+  "ru-republic-of-buryatia-republic-of-buryatia-west",
+  "ru-republic-of-buryatia-republic-of-buryatia-north-east",
+  "ru-republic-of-buryatia-novy-uoyan"
+ ],
+ "ru-republic-of-dagestan": [
+  "ru-republic-of-dagestan",
+  "ru-republic-of-dagestan-derbent",
+  "ru-republic-of-dagestan-pontic-caspian-steppe-republic-of-dagestan",
+  "ru-republic-of-dagestan-caucasus-mountains"
+ ],
+ "ru-republic-of-khakassia": [
+  "ru-republic-of-khakassia",
+  "ru-republic-of-khakassia-chernogorsk"
+ ],
+ "ru-republic-of-tatarstan": [
+  "ru-republic-of-tatarstan",
+  "ru-republic-of-tatarstan-naberezhnye-chelny",
+  "ru-republic-of-tatarstan-almetyevsk",
+  "ru-republic-of-tatarstan-cistay",
+  "ru-republic-of-tatarstan-republic-of-tatarstan-south-west"
+ ],
+ "ru-rostov": [
+  "ru-rostov",
+  "ru-rostov-shakhty",
+  "ru-rostov-volgodonsk",
+  "ru-rostov-kamensk-shakhtinsky",
+  "ru-rostov-salsk",
+  "ru-rostov-pontic-caspian-steppe-rostov",
+  "ru-rostov-pontic-caspian-steppe-rostov-east"
+ ],
+ "ru-ryazan": [
+  "ru-ryazan",
+  "ru-ryazan-kasimov"
+ ],
+ "ru-sakha-republic": [
+  "ru-sakha-republic",
+  "ru-sakha-republic-lensk",
+  "ru-sakha-republic-saskylakh",
+  "ru-sakha-republic-aldan",
+  "ru-sakha-republic-ust-nera",
+  "ru-sakha-republic-khandyga",
+  "ru-sakha-republic-verkhnevilyuysk",
+  "ru-sakha-republic-tiksi",
+  "ru-sakha-republic-udachny",
+  "ru-sakha-republic-ust-kuyga",
+  "ru-sakha-republic-chersky",
+  "ru-sakha-republic-chokurdakh",
+  "ru-sakha-republic-batagay"
+ ],
+ "ru-sakhalin": [
+  "ru-sakhalin",
+  "ru-sakhalin-okha"
+ ],
+ "ru-samara": [
+  "ru-samara",
+  "ru-samara-syzran",
+  "ru-samara-otradny",
+  "ru-samara-pontic-caspian-steppe-samara"
+ ],
+ "ru-saratov": [
+  "ru-saratov",
+  "ru-saratov-balakovo",
+  "ru-saratov-balashov",
+  "ru-saratov-atkarsk",
+  "ru-saratov-pontic-caspian-steppe-saratov"
+ ],
+ "ru-smolensk": [
+  "ru-smolensk",
+  "ru-smolensk-roslavl"
+ ],
+ "ru-stavropol-krai": [
+  "ru-stavropol-krai",
+  "ru-stavropol-krai-kislovodsk",
+  "ru-stavropol-krai-zelenokumsk",
+  "ru-stavropol-krai-blagodarny",
+  "ru-stavropol-krai-pontic-caspian-steppe-stavropol-krai"
+ ],
+ "ru-sverdlovsk": [
+  "ru-sverdlovsk",
+  "ru-sverdlovsk-nizhny-tagil",
+  "ru-sverdlovsk-kamensk-uralsky",
+  "ru-sverdlovsk-serov",
+  "ru-sverdlovsk-nizhnyaya-tura",
+  "ru-sverdlovsk-alapayevsk",
+  "ru-sverdlovsk-krasnoufimsk",
+  "ru-sverdlovsk-tavda",
+  "ru-sverdlovsk-ivdel"
+ ],
+ "ru-tambov": [
+  "ru-tambov",
+  "ru-tambov-morshansk"
+ ],
+ "ru-tomsk": [
+  "ru-tomsk",
+  "ru-tomsk-strezhevoy",
+  "ru-tomsk-kolpashevo",
+  "ru-tomsk-west-siberian-plain-tomsk",
+  "ru-tomsk-west-siberian-plain-tomsk-north-east",
+  "ru-tomsk-west-siberian-plain-tomsk-north"
+ ],
+ "ru-tula": [
+  "ru-tula",
+  "ru-tula-yefremov"
+ ],
+ "ru-tuva-republic": [
+  "ru-tuva-republic",
+  "ru-tuva-republic-teeli"
+ ],
+ "ru-tver": [
+  "ru-tver",
+  "ru-tver-rzhev",
+  "ru-tver-vyshny-volochyok"
+ ],
+ "ru-tyumen": [
+  "ru-tyumen",
+  "ru-tyumen-tobolsk",
+  "ru-tyumen-ishim",
+  "ru-tyumen-west-siberian-plain",
+  "ru-tyumen-west-siberian-plain-tyumen"
+ ],
+ "ru-udmurt-republic": [
+  "ru-udmurt-republic",
+  "ru-udmurt-republic-glazov"
+ ],
+ "ru-ulyanovsk": [
+  "ru-ulyanovsk",
+  "ru-ulyanovsk-dimitrovgrad"
+ ],
+ "ru-vladimir": [
+  "ru-vladimir",
+  "ru-vladimir-kovrov"
+ ],
+ "ru-volgograd": [
+  "ru-volgograd",
+  "ru-volgograd-mikhaylovka",
+  "ru-volgograd-kamyshin",
+  "ru-volgograd-uryupinsk",
+  "ru-volgograd-nikolayevsk",
+  "ru-volgograd-pontic-caspian-steppe-volgograd"
+ ],
+ "ru-vologda": [
+  "ru-vologda",
+  "ru-vologda-vologda-vologda",
+  "ru-vologda-veliky-ustyug",
+  "ru-vologda-north-european-plain"
+ ],
+ "ru-voronezh": [
+  "ru-voronezh",
+  "ru-voronezh-borisoglebsk",
+  "ru-voronezh-rossosh",
+  "ru-voronezh-buturlinovka"
+ ],
+ "ru-yamalo-nenets-autonomous-okrug": [
+  "ru-yamalo-nenets-autonomous-okrug",
+  "ru-yamalo-nenets-autonomous-okrug-yamburg",
+  "ru-yamalo-nenets-autonomous-okrug-salekhard",
+  "ru-yamalo-nenets-autonomous-okrug-tazovsky"
+ ],
+ "ru-yaroslavl": [
+  "ru-yaroslavl",
+  "ru-yaroslavl-rybinsk"
+ ],
+ "ru-zabaykalsky-krai": [
+  "ru-zabaykalsky-krai",
+  "ru-zabaykalsky-krai-krasnokamensk",
+  "ru-zabaykalsky-krai-petrovsk-zabaykalsky",
+  "ru-zabaykalsky-krai-mogocha",
+  "ru-zabaykalsky-krai-nerchinsk",
+  "ru-zabaykalsky-krai-yablonoi-mountains",
+  "ru-zabaykalsky-krai-yablonoi-mountains-zabaykalsky-krai"
+ ],
+ "sa-al-madinah": [
+  "sa-al-madinah",
+  "sa-al-madinah-yanbu-governorate",
+  "sa-al-madinah-al-ula"
+ ],
+ "sa-eastern": [
+  "sa-eastern",
+  "sa-eastern-hafar-al-batin-governorate",
+  "sa-eastern-rub-al-khali",
+  "sa-eastern-rub-al-khali-eastern",
+  "sa-eastern-rub-al-khali-eastern-south",
+  "sa-eastern-rub-al-khali-eastern-south-2",
+  "sa-eastern-rub-al-khali-eastern-south-east",
+  "sa-eastern-eastern-south"
+ ],
+ "sa-ha-il": [
+  "sa-ha-il",
+  "sa-ha-il-ha-il-south-west"
+ ],
+ "sa-makkah": [
+  "sa-makkah",
+  "sa-makkah-mecca",
+  "sa-makkah-al-qunfudhah-governorate",
+  "sa-makkah-ranyah",
+  "sa-makkah-makkah-north-east",
+  "sa-makkah-al-khurmah"
+ ],
+ "sa-northern-borders": [
+  "sa-northern-borders",
+  "sa-northern-borders-rafha-governorate"
+ ],
+ "sa-riyadh": [
+  "sa-riyadh",
+  "sa-riyadh-al-hillah",
+  "sa-riyadh-as-sulayyil-governorate",
+  "sa-riyadh-al-quway-iyah-governorate",
+  "sa-riyadh-az-zulfi",
+  "sa-riyadh-afif",
+  "sa-riyadh-riyadh-south-west",
+  "sa-riyadh-layla",
+  "sa-riyadh-rub-al-khali-riyadh"
+ ],
+ "sa-tabuk": [
+  "sa-tabuk",
+  "sa-tabuk-al-wajh-governorate"
+ ],
+ "sd-al-jazirah": [
+  "sd-al-jazirah",
+  "sd-al-jazirah-sahel"
+ ],
+ "sd-al-qadarif": [
+  "sd-al-qadarif",
+  "sd-al-qadarif-al-faw",
+  "sd-al-qadarif-al-hawatah"
+ ],
+ "sd-blue-nile": [
+  "sd-blue-nile",
+  "sd-blue-nile-blue-nile-south"
+ ],
+ "sd-east-darfur": [
+  "sd-east-darfur",
+  "sd-east-darfur-libyan-desert-east-darfur"
+ ],
+ "sd-khartoum": [
+  "sd-khartoum",
+  "sd-khartoum-sahel-khartoum",
+  "sd-khartoum-libyan-desert-khartoum",
+  "sd-khartoum-sahel-khartoum-east"
+ ],
+ "sd-north-darfur": [
+  "sd-north-darfur",
+  "sd-north-darfur-jabal-abyad-plateau",
+  "sd-north-darfur-jabal-abyad-plateau-north-darfur"
+ ],
+ "sd-north-kordofan": [
+  "sd-north-kordofan",
+  "sd-north-kordofan-en-nahud",
+  "sd-north-kordofan-umm-ruwaba",
+  "sd-north-kordofan-libyan-desert-north-kordofan",
+  "sd-north-kordofan-libyan-desert-north-kordofan-north-east",
+  "sd-north-kordofan-libyan-desert-north-kordofan-north",
+  "sd-north-kordofan-libyan-desert-north-kordofan-north-west"
+ ],
+ "sd-northern": [
+  "sd-northern",
+  "sd-northern-libyan-desert"
+ ],
+ "sd-red-sea": [
+  "sd-red-sea",
+  "sd-red-sea-nubian-desert-red-sea"
+ ],
+ "sd-river-nile": [
+  "sd-river-nile",
+  "sd-river-nile-nubian-desert"
+ ],
+ "sd-sennar": [
+  "sd-sennar",
+  "sd-sennar-sennar-south-east"
+ ],
+ "sd-south-darfur": [
+  "sd-south-darfur",
+  "sd-south-darfur-kafia-kingi",
+  "sd-south-darfur-gereida"
+ ],
+ "sd-south-kordofan": [
+  "sd-south-kordofan",
+  "sd-south-kordofan-babanusa",
+  "sd-south-kordofan-abu-jibeha",
+  "sd-south-kordofan-abyei",
+  "sd-south-kordofan-libyan-desert-south-kordofan"
+ ],
+ "sd-west-soudan": [
+  "sd-west-soudan",
+  "sd-west-soudan-libyan-desert-west-soudan"
+ ],
+ "sd-white-nile": [
+  "sd-white-nile",
+  "sd-white-nile-ed-dueim"
+ ],
+ "se-vasterbotten": [
+  "se-vasterbotten",
+  "se-vasterbotten-vasterbotten-north-west"
+ ],
+ "se-vastra-gotaland": [
+  "se-vastra-gotaland",
+  "se-vastra-gotaland-trollhattan"
+ ],
+ "sl-northern": [
+  "sl-northern",
+  "sl-northern-kabala",
+  "sl-northern-port-loko"
+ ],
+ "sl-southern": [
+  "sl-southern",
+  "sl-southern-njala"
+ ],
+ "sn-tambacounda": [
+  "sn-tambacounda",
+  "sn-tambacounda-tambacounda-east"
+ ],
+ "so-bari": [
+  "so-bari",
+  "so-bari-bayla"
+ ],
+ "so-bay": [
+  "so-bay",
+  "so-bay-bay-south-west"
+ ],
+ "so-gedo": [
+  "so-gedo",
+  "so-gedo-gedo-south-west"
+ ],
+ "so-lower-juba": [
+  "so-lower-juba",
+  "so-lower-juba-buur-gaabo"
+ ],
+ "so-mudug": [
+  "so-mudug",
+  "so-mudug-mudug-south"
+ ],
+ "sol-somaliland": [
+  "sol-somaliland",
+  "sol-somaliland-erigavo",
+  "sol-somaliland-berbera",
+  "sol-somaliland-burao",
+  "sol-somaliland-borama",
+  "sol-somaliland-las-anod"
+ ],
+ "ss-central-equatoria": [
+  "ss-central-equatoria",
+  "ss-central-equatoria-yei"
+ ],
+ "ss-eastern-equatoria": [
+  "ss-eastern-equatoria-eastern-equatoria-east",
+  "ss-eastern-equatoria"
+ ],
+ "ss-jonglei": [
+  "ss-jonglei",
+  "ss-jonglei-jonglei-north-west",
+  "ss-jonglei-jonglei-east"
+ ],
+ "ss-upper-nile": [
+  "ss-upper-nile",
+  "ss-upper-nile-melut",
+  "ss-upper-nile-nasir"
+ ],
+ "ss-western-bahr-el-ghazal": [
+  "ss-western-bahr-el-ghazal",
+  "ss-western-bahr-el-ghazal-western-bahr-el-ghazal-north-west"
+ ],
+ "sv": [
+  "sv",
+  "sv-san-miguel",
+  "sv-santa-tecla"
+ ],
+ "sy-aleppo": [
+  "sy-aleppo",
+  "sy-aleppo-manbij"
+ ],
+ "sy-homs": [
+  "sy-homs",
+  "sy-homs-tadmur",
+  "sy-homs-homs-east"
+ ],
+ "td-batha": [
+  "td-batha",
+  "td-batha-oum-hadjer"
+ ],
+ "td-guera": [
+  "td-guera",
+  "td-guera-guera-south"
+ ],
+ "td-moyen-chari": [
+  "td-moyen-chari",
+  "td-moyen-chari-kyabe"
+ ],
+ "th-chiang-mai": [
+  "th-chiang-mai",
+  "th-chiang-mai-san-pa-tong"
+ ],
+ "th-kanchanaburi": [
+  "th-kanchanaburi",
+  "th-kanchanaburi-payathonzu"
+ ],
+ "th-tak": [
+  "th-tak-tak-south",
+  "th-tak"
+ ],
+ "tj-khatlon": [
+  "tj-khatlon",
+  "tj-khatlon-bokhtar"
+ ],
+ "tj-khujand": [
+  "tj-khujand",
+  "tj-khujand-istarawshan"
+ ],
+ "tm-ahal": [
+  "tm-ahal",
+  "tm-ahal-tejen"
+ ],
+ "tm-balkan": [
+  "tm-balkan-turkmenbasy",
+  "tm-balkan"
+ ],
+ "tm-lebap": [
+  "tm-lebap",
+  "tm-lebap-kerki",
+  "tm-lebap-gazojak"
+ ],
+ "tr-adana": [
+  "tr-adana",
+  "tr-adana-kozan"
+ ],
+ "tr-ankara": [
+  "tr-ankara",
+  "tr-ankara-polatl",
+  "tr-ankara-sereflikochisar"
+ ],
+ "tr-erzurum": [
+  "tr-erzurum",
+  "tr-erzurum-oltu"
+ ],
+ "tr-izmir": [
+  "tr-izmir",
+  "tr-izmir-odemis"
+ ],
+ "tr-konya": [
+  "tr-konya",
+  "tr-konya-eregli"
+ ],
+ "tr-sivas": [
+  "tr-sivas",
+  "tr-sivas-susehri"
+ ],
+ "tw-special-municipalities": [
+  "tw-special-municipalities",
+  "tw-special-municipalities-kaohsiung"
+ ],
+ "tw-taiwan-province": [
+  "tw-taiwan-province",
+  "tw-taiwan-province-keelung",
+  "tw-taiwan-province-chiayi-city",
+  "tw-taiwan-province-hualien-city",
+  "tw-taiwan-province-pingtung-city"
+ ],
+ "tz-arusha": [
+  "tz-arusha",
+  "tz-arusha-ngorongoro"
+ ],
+ "tz-dodoma": [
+  "tz-dodoma-maasai-steppe-dodoma",
+  "tz-dodoma"
+ ],
+ "tz-iringa": [
+  "tz-iringa",
+  "tz-iringa-mafinga"
+ ],
+ "tz-katavi": [
+  "tz-katavi",
+  "tz-katavi-iwembere-steppe-katavi"
+ ],
+ "tz-kigoma": [
+  "tz-kigoma",
+  "tz-kigoma-kasulu"
+ ],
+ "tz-lindi": [
+  "tz-lindi",
+  "tz-lindi-liwale"
+ ],
+ "tz-manyara": [
+  "tz-manyara",
+  "tz-manyara-maasai-steppe-manyara"
+ ],
+ "tz-mbeya": [
+  "tz-mbeya",
+  "tz-mbeya-tunduma",
+  "tz-mbeya-iwembere-steppe"
+ ],
+ "tz-morogoro": [
+  "tz-morogoro",
+  "tz-morogoro-mikumi",
+  "tz-morogoro-morogoro-south-west"
+ ],
+ "tz-mwanza": [
+  "tz-mwanza",
+  "tz-mwanza-nansio"
+ ],
+ "tz-ruvuma": [
+  "tz-ruvuma-ruvuma-north-east",
+  "tz-ruvuma",
+  "tz-ruvuma-tunduru"
+ ],
+ "tz-singida": [
+  "tz-singida",
+  "tz-singida-manyoni"
+ ],
+ "tz-tabora": [
+  "tz-tabora-iwembere-steppe-tabora",
+  "tz-tabora",
+  "tz-tabora-sikonge"
+ ],
+ "tz-tanga": [
+  "tz-tanga",
+  "tz-tanga-maasai-steppe"
+ ],
+ "ua-autonomous-republic-of-crimea": [
+  "ua-autonomous-republic-of-crimea",
+  "ua-autonomous-republic-of-crimea-kerch"
+ ],
+ "ua-cherkasy": [
+  "ua-cherkasy",
+  "ua-cherkasy-uman"
+ ],
+ "ua-chernihiv": [
+  "ua-chernihiv",
+  "ua-chernihiv-nizhyn"
+ ],
+ "ua-dnipropetrovsk": [
+  "ua-dnipropetrovsk",
+  "ua-dnipropetrovsk-kryvyi-rih",
+  "ua-dnipropetrovsk-nikopol",
+  "ua-dnipropetrovsk-pavlohrad"
+ ],
+ "ua-donetsk": [
+  "ua-donetsk",
+  "ua-donetsk-mariupol",
+  "ua-donetsk-kramatorsk"
+ ],
+ "ua-kharkiv": [
+  "ua-kharkiv",
+  "ua-kharkiv-kupiansk",
+  "ua-kharkiv-lozova"
+ ],
+ "ua-kherson": [
+  "ua-kherson",
+  "ua-kherson-henichesk"
+ ],
+ "ua-khmelnytskyi": [
+  "ua-khmelnytskyi",
+  "ua-khmelnytskyi-kamianets-podilskyi"
+ ],
+ "ua-kirovohrad": [
+  "ua-kirovohrad",
+  "ua-kirovohrad-novoukrayinka"
+ ],
+ "ua-kyiv": [
+  "ua-kyiv",
+  "ua-kyiv-brovary"
+ ],
+ "ua-luhansk": [
+  "ua-luhansk",
+  "ua-luhansk-lysychansk"
+ ],
+ "ua-lviv": [
+  "ua-lviv",
+  "ua-lviv-drohobych"
+ ],
+ "ua-mykolaiv": [
+  "ua-mykolaiv",
+  "ua-mykolaiv-voznesensk"
+ ],
+ "ua-odessa": [
+  "ua-odessa",
+  "ua-odessa-izmail",
+  "ua-odessa-pontic-caspian-steppe"
+ ],
+ "ua-poltava": [
+  "ua-poltava",
+  "ua-poltava-kremenchuk"
+ ],
+ "ua-rivne": [
+  "ua-rivne",
+  "ua-rivne-varash"
+ ],
+ "ua-sumy": [
+  "ua-sumy",
+  "ua-sumy-konotop"
+ ],
+ "ua-vinnytsia": [
+  "ua-vinnytsia",
+  "ua-vinnytsia-mohyliv-podilskyy"
+ ],
+ "ua-volyn": [
+  "ua-volyn",
+  "ua-volyn-kovel"
+ ],
+ "ua-zaporizhzhia": [
+  "ua-zaporizhzhia",
+  "ua-zaporizhzhia-melitopol",
+  "ua-zaporizhzhia-berdiansk"
+ ],
+ "ua-zhytomyr": [
+  "ua-zhytomyr",
+  "ua-zhytomyr-korosten"
+ ],
+ "ug-central": [
+  "ug-central",
+  "ug-central-masaka",
+  "ug-central-mityana",
+  "ug-central-kiboga",
+  "ug-central-kayunga",
+  "ug-central-mubende"
+ ],
+ "ug-eastern": [
+  "ug-eastern",
+  "ug-eastern-jinja",
+  "ug-eastern-eastern-south"
+ ],
+ "ug-northern": [
+  "ug-northern-lira",
+  "ug-northern-moroto-town",
+  "ug-northern-arua",
+  "ug-northern",
+  "ug-northern-nebbi",
+  "ug-northern-kaabong"
+ ],
+ "ug-western": [
+  "ug-western",
+  "ug-western-kasese",
+  "ug-western-kabale",
+  "ug-western-masindi"
+ ],
+ "us-alabama": [
+  "us-alabama",
+  "us-alabama-montgomery",
+  "us-alabama-mobile",
+  "us-alabama-huntsville",
+  "us-alabama-dothan",
+  "us-alabama-gadsden"
+ ],
+ "us-alaska": [
+  "us-alaska",
+  "us-alaska-fairbanks",
+  "us-alaska-juneau",
+  "us-alaska-ketchikan",
+  "us-alaska-dillingham",
+  "us-alaska-bethel",
+  "us-alaska-kotzebue",
+  "us-alaska-utqiagvik",
+  "us-alaska-prudhoe-bay"
+ ],
+ "us-arizona": [
+  "us-arizona",
+  "us-arizona-tucson",
+  "us-arizona-yuma",
+  "us-arizona-flagstaff",
+  "us-arizona-lake-havasu-city",
+  "us-arizona-douglas",
+  "us-arizona-mogollon-rim",
+  "us-arizona-grand-canyon-village",
+  "us-arizona-colorado-plateau"
+ ],
+ "us-arkansas": [
+  "us-arkansas",
+  "us-arkansas-fort-smith",
+  "us-arkansas-jonesboro",
+  "us-arkansas-texarkana"
+ ],
+ "us-california": [
+  "us-california",
+  "us-california-san-diego",
+  "us-california-san-jose",
+  "us-california-sacramento",
+  "us-california-fresno",
+  "us-california-riverside",
+  "us-california-bakersfield",
+  "us-california-lancaster-california",
+  "us-california-sierra-nevada",
+  "us-california-santa-rosa",
+  "us-california-salinas",
+  "us-california-redding",
+  "us-california-santa-maria",
+  "us-california-chico",
+  "us-california-palm-springs",
+  "us-california-el-centro",
+  "us-california-eureka",
+  "us-california-san-luis-obispo",
+  "us-california-great-basin",
+  "us-california-ukiah",
+  "us-california-needles",
+  "us-california-bishop",
+  "us-california-mount-shasta",
+  "us-california-great-basin-california"
+ ],
+ "us-colorado": [
+  "us-colorado",
+  "us-colorado-colorado-springs",
+  "us-colorado-fort-collins",
+  "us-colorado-grand-junction",
+  "us-colorado-gunnison",
+  "us-colorado-durango",
+  "us-colorado-craig",
+  "us-colorado-glenwood-springs",
+  "us-colorado-lamar",
+  "us-colorado-trinidad",
+  "us-colorado-great-plains"
+ ],
+ "us-connecticut": [
+  "us-connecticut",
+  "us-connecticut-hartford"
+ ],
+ "us-florida": [
+  "us-florida",
+  "us-florida-miami",
+  "us-florida-tampa",
+  "us-florida-kissimmee",
+  "us-florida-tallahassee",
+  "us-florida-lake-city",
+  "us-florida-cape-coral",
+  "us-florida-west-palm-beach",
+  "us-florida-melbourne",
+  "us-florida-ocala",
+  "us-florida-gainesville",
+  "us-florida-pensacola",
+  "us-florida-sarasota",
+  "us-florida-orlando"
+ ],
+ "us-georgia": [
+  "us-georgia",
+  "us-georgia-columbus",
+  "us-georgia-savannah",
+  "us-georgia-macon",
+  "us-georgia-albany-georgia",
+  "us-georgia-athens",
+  "us-georgia-valdosta",
+  "us-georgia-augusta",
+  "us-georgia-dalton"
+ ],
+ "us-idaho": [
+  "us-idaho",
+  "us-idaho-idaho-falls",
+  "us-idaho-twin-falls",
+  "us-idaho-coeur-d-alene"
+ ],
+ "us-illinois": [
+  "us-illinois",
+  "us-illinois-aurora",
+  "us-illinois-rockford",
+  "us-illinois-springfield-illinois",
+  "us-illinois-peoria",
+  "us-illinois-elgin",
+  "us-illinois-central-lowlands-illinois",
+  "us-illinois-belleville",
+  "us-illinois-quincy",
+  "us-illinois-urbana",
+  "us-illinois-rock-island",
+  "us-illinois-galesburg",
+  "us-illinois-kankakee",
+  "us-illinois-carbondale"
+ ],
+ "us-indiana": [
+  "us-indiana",
+  "us-indiana-fort-wayne",
+  "us-indiana-evansville",
+  "us-indiana-south-bend",
+  "us-indiana-lafayette-indiana",
+  "us-indiana-bloomington"
+ ],
+ "us-iowa": [
+  "us-iowa",
+  "us-iowa-cedar-rapids",
+  "us-iowa-davenport",
+  "us-iowa-sioux-city",
+  "us-iowa-mason-city",
+  "us-iowa-council-bluffs",
+  "us-iowa-waterloo"
+ ],
+ "us-kansas": [
+  "us-kansas",
+  "us-kansas-kansas-city",
+  "us-kansas-topeka",
+  "us-kansas-salina",
+  "us-kansas-garden-city",
+  "us-kansas-hays",
+  "us-kansas-coffeyville",
+  "us-kansas-goodland",
+  "us-kansas-dodge-city"
+ ],
+ "us-kentucky": [
+  "us-kentucky",
+  "us-kentucky-london",
+  "us-kentucky-owensboro",
+  "us-kentucky-bowling-green",
+  "us-kentucky-lexington"
+ ],
+ "us-louisiana": [
+  "us-louisiana",
+  "us-louisiana-baton-rouge",
+  "us-louisiana-shreveport",
+  "us-louisiana-lafayette",
+  "us-louisiana-lake-charles",
+  "us-louisiana-monroe",
+  "us-louisiana-alexandria"
+ ],
+ "us-maine": [
+  "us-maine",
+  "us-maine-bangor",
+  "us-maine-presque-isle"
+ ],
+ "us-maryland": [
+  "us-maryland",
+  "us-maryland-hagerstown",
+  "us-maryland-st-charles"
+ ],
+ "us-massachusetts": [
+  "us-massachusetts",
+  "us-massachusetts-worcester",
+  "us-massachusetts-springfield"
+ ],
+ "us-michigan": [
+  "us-michigan",
+  "us-michigan-grand-rapids",
+  "us-michigan-lansing",
+  "us-michigan-flint",
+  "us-michigan-kalamazoo",
+  "us-michigan-laurentian-upland",
+  "us-michigan-sault-ste-marie",
+  "us-michigan-traverse-city",
+  "us-michigan-escanaba",
+  "us-michigan-alpena",
+  "us-michigan-marquette",
+  "us-michigan-petoskey",
+  "us-michigan-ironwood",
+  "us-michigan-hancock"
+ ],
+ "us-minnesota": [
+  "us-minnesota",
+  "us-minnesota-rochester",
+  "us-minnesota-fargo",
+  "us-minnesota-ely",
+  "us-minnesota-st-cloud",
+  "us-minnesota-mankato",
+  "us-minnesota-willmar",
+  "us-minnesota-duluth",
+  "us-minnesota-bemidji",
+  "us-minnesota-virginia-minnesota",
+  "us-minnesota-crookston"
+ ],
+ "us-mississippi": [
+  "us-mississippi",
+  "us-mississippi-gulfport",
+  "us-mississippi-natchez",
+  "us-mississippi-meridian",
+  "us-mississippi-southaven"
+ ],
+ "us-missouri": [
+  "us-missouri",
+  "us-missouri-st-louis",
+  "us-missouri-springfield-missouri",
+  "us-missouri-columbia",
+  "us-missouri-st-joseph",
+  "us-missouri-joplin",
+  "us-missouri-cape-girardeau",
+  "us-missouri-kirksville",
+  "us-missouri-poplar-bluff",
+  "us-missouri-ozarks",
+  "us-missouri-ozarks-missouri"
+ ],
+ "us-montana": [
+  "us-montana",
+  "us-montana-missoula",
+  "us-montana-great-falls",
+  "us-montana-bozeman",
+  "us-montana-butte",
+  "us-montana-kalispell",
+  "us-montana-havre",
+  "us-montana-miles-city",
+  "us-montana-glendive",
+  "us-montana-glasgow"
+ ],
+ "us-nebraska": [
+  "us-nebraska",
+  "us-nebraska-grand-island",
+  "us-nebraska-great-plains-nebraska",
+  "us-nebraska-norfolk",
+  "us-nebraska-scottsbluff",
+  "us-nebraska-great-plains-nebraska-north-west",
+  "us-nebraska-north-platte",
+  "us-nebraska-sidney",
+  "us-nebraska-great-plains-nebraska-west"
+ ],
+ "us-nevada": [
+  "us-nevada",
+  "us-nevada-reno",
+  "us-nevada-elko",
+  "us-nevada-winnemucca"
+ ],
+ "us-new-mexico": [
+  "us-new-mexico",
+  "us-new-mexico-deming",
+  "us-new-mexico-roswell",
+  "us-new-mexico-farmington",
+  "us-new-mexico-clovis",
+  "us-new-mexico-hobbs",
+  "us-new-mexico-las-cruces",
+  "us-new-mexico-socorro",
+  "us-new-mexico-las-vegas"
+ ],
+ "us-new-york": [
+  "us-new-york",
+  "us-new-york-rochester-new-york",
+  "us-new-york-syracuse",
+  "us-new-york-albany",
+  "us-new-york-utica",
+  "us-new-york-binghamton",
+  "us-new-york-ithaca",
+  "us-new-york-kingston",
+  "us-new-york-jamestown-new-york",
+  "us-new-york-watertown",
+  "us-new-york-plattsburgh",
+  "us-new-york-new-rochelle",
+  "us-new-york-adirondack-mountains",
+  "us-new-york-poughkeepsie",
+  "us-new-york-saratoga-springs",
+  "us-new-york-allegheny-plateau-new-york",
+  "us-new-york-adirondack-mountains-new-york"
+ ],
+ "us-north-carolina": [
+  "us-north-carolina",
+  "us-north-carolina-raleigh",
+  "us-north-carolina-greensboro",
+  "us-north-carolina-fayetteville",
+  "us-north-carolina-wilmington",
+  "us-north-carolina-greenville",
+  "us-north-carolina-asheville"
+ ],
+ "us-north-dakota": [
+  "us-north-dakota",
+  "us-north-dakota-grand-forks",
+  "us-north-dakota-minot",
+  "us-north-dakota-dickinson",
+  "us-north-dakota-jamestown",
+  "us-north-dakota-williston",
+  "us-north-dakota-devils-lake"
+ ],
+ "us-ohio": [
+  "us-ohio",
+  "us-ohio-cleveland",
+  "us-ohio-toledo",
+  "us-ohio-cincinnati",
+  "us-ohio-dayton",
+  "us-ohio-canton",
+  "us-ohio-youngstown",
+  "us-ohio-mansfield",
+  "us-ohio-lima",
+  "us-ohio-central-lowlands"
+ ],
+ "us-oklahoma": [
+  "us-oklahoma",
+  "us-oklahoma-tulsa",
+  "us-oklahoma-lawton",
+  "us-oklahoma-enid",
+  "us-oklahoma-stillwater",
+  "us-oklahoma-ardmore",
+  "us-oklahoma-mcalester",
+  "us-oklahoma-woodward",
+  "us-oklahoma-guymon"
+ ],
+ "us-oregon": [
+  "us-oregon",
+  "us-oregon-eugene",
+  "us-oregon-klamath-falls",
+  "us-oregon-bend",
+  "us-oregon-pendleton",
+  "us-oregon-medford",
+  "us-oregon-ontario",
+  "us-oregon-great-basin-oregon"
+ ],
+ "us-pennsylvania": [
+  "us-pennsylvania",
+  "us-pennsylvania-pittsburgh",
+  "us-pennsylvania-lancaster",
+  "us-pennsylvania-allentown",
+  "us-pennsylvania-erie",
+  "us-pennsylvania-scranton",
+  "us-pennsylvania-altoona",
+  "us-pennsylvania-williamsport",
+  "us-pennsylvania-allegheny-plateau",
+  "us-pennsylvania-allegheny-plateau-pennsylvania",
+  "us-pennsylvania-state-college"
+ ],
+ "us-puerto-rico": [
+  "us-puerto-rico",
+  "us-puerto-rico-ponce"
+ ],
+ "us-south-carolina": [
+  "us-south-carolina",
+  "us-south-carolina-charleston",
+  "us-south-carolina-rock-hill"
+ ],
+ "us-south-dakota": [
+  "us-south-dakota",
+  "us-south-dakota-rapid-city",
+  "us-south-dakota-aberdeen-south-dakota",
+  "us-south-dakota-mitchell",
+  "us-south-dakota-pierre",
+  "us-south-dakota-mobridge",
+  "us-south-dakota-great-plains-south-dakota",
+  "us-south-dakota-great-plains-south-dakota-west"
+ ],
+ "us-tennessee": [
+  "us-tennessee",
+  "us-tennessee-memphis",
+  "us-tennessee-knoxville",
+  "us-tennessee-chattanooga",
+  "us-tennessee-jackson",
+  "us-tennessee-johnson-city"
+ ],
+ "us-texas": [
+  "us-texas",
+  "us-texas-san-antonio",
+  "us-texas-dallas",
+  "us-texas-austin",
+  "us-texas-el-paso",
+  "us-texas-corpus-christi",
+  "us-texas-lubbock",
+  "us-texas-amarillo",
+  "us-texas-brownsville",
+  "us-texas-waco",
+  "us-texas-beaumont",
+  "us-texas-abilene",
+  "us-texas-midland",
+  "us-texas-wichita-falls",
+  "us-texas-tyler",
+  "us-texas-san-angelo",
+  "us-texas-bryan",
+  "us-texas-victoria",
+  "us-texas-denton",
+  "us-texas-del-rio",
+  "us-texas-lufkin",
+  "us-texas-brownwood",
+  "us-texas-bay-city",
+  "us-texas-pecos"
+ ],
+ "us-utah": [
+  "us-utah",
+  "us-utah-st-george",
+  "us-utah-moab",
+  "us-utah-price"
+ ],
+ "us-virginia": [
+  "us-virginia",
+  "us-virginia-richmond",
+  "us-virginia-roanoke",
+  "us-virginia-harrisonburg",
+  "us-virginia-lynchburg",
+  "us-virginia-bristol"
+ ],
+ "us-washington": [
+  "us-washington",
+  "us-washington-spokane",
+  "us-washington-yakima",
+  "us-washington-bellingham",
+  "us-washington-kennewick",
+  "us-washington-longview",
+  "us-washington-wenatchee",
+  "us-washington-aberdeen"
+ ],
+ "us-west-virginia": [
+  "us-west-virginia",
+  "us-west-virginia-wheeling"
+ ],
+ "us-wisconsin": [
+  "us-wisconsin",
+  "us-wisconsin-madison",
+  "us-wisconsin-green-bay",
+  "us-wisconsin-eau-claire",
+  "us-wisconsin-la-crosse",
+  "us-wisconsin-appleton",
+  "us-wisconsin-wausau",
+  "us-wisconsin-superior",
+  "us-wisconsin-rhinelander"
+ ],
+ "us-wyoming": [
+  "us-wyoming",
+  "us-wyoming-casper",
+  "us-wyoming-gillette",
+  "us-wyoming-riverton"
+ ],
+ "uz-karakalpakstan": [
+  "uz-karakalpakstan",
+  "uz-karakalpakstan-mo-ynoq"
+ ],
+ "uz-samarqand": [
+  "uz-samarqand",
+  "uz-samarqand-katta-kurgan"
+ ],
+ "uz-surxondaryo": [
+  "uz-surxondaryo",
+  "uz-surxondaryo-denov"
+ ],
+ "uz-tashkent": [
+  "uz-tashkent-tashkent-north-east",
+  "uz-tashkent"
+ ],
+ "ve-amazonas": [
+  "ve-amazonas",
+  "ve-amazonas-guiana-highlands-amazonas"
+ ],
+ "ve-anzoategui": [
+  "ve-anzoategui",
+  "ve-anzoategui-el-tigre",
+  "ve-anzoategui-llanos-anzoategui"
+ ],
+ "ve-apure": [
+  "ve-apure",
+  "ve-apure-guasdualito",
+  "ve-apure-llanos"
+ ],
+ "ve-barinas": [
+  "ve-barinas",
+  "ve-barinas-llanos-barinas"
+ ],
+ "ve-bolivar": [
+  "ve-bolivar",
+  "ve-bolivar-el-dorado",
+  "ve-bolivar-la-paragua",
+  "ve-bolivar-caicara-del-orinoco",
+  "ve-bolivar-pakaraima-mountains",
+  "ve-bolivar-guiana-highlands"
+ ],
+ "ve-guarico-state": [
+  "ve-guarico-state",
+  "ve-guarico-state-san-juan-de-los-morros",
+  "ve-guarico-state-valle-de-la-pascua"
+ ],
+ "ve-zulia": [
+  "ve-zulia",
+  "ve-zulia-san-carlos-del-zulia",
+  "ve-zulia-machiques"
+ ],
+ "ye-al-hudaydah": [
+  "ye-al-hudaydah",
+  "ye-al-hudaydah-zabid"
+ ],
+ "ye-hadhramaut": [
+  "ye-hadhramaut",
+  "ye-hadhramaut-seiyun"
+ ],
+ "ye-sanaa": [
+  "ye-sanaa",
+  "ye-sanaa-sanaa-east"
+ ],
+ "za-eastern-cape": [
+  "za-eastern-cape",
+  "za-eastern-cape-east-london",
+  "za-eastern-cape-queenstown",
+  "za-eastern-cape-mthatha",
+  "za-eastern-cape-makhanda",
+  "za-eastern-cape-graaff-reinet",
+  "za-eastern-cape-qacha-s-nek",
+  "za-eastern-cape-middelburg"
+ ],
+ "za-free-state": [
+  "za-free-state",
+  "za-free-state-welkom",
+  "za-free-state-bethlehem",
+  "za-free-state-kalahari-desert-free-state",
+  "za-free-state-zastron",
+  "za-free-state-bultfontein",
+  "za-free-state-sasolburg"
+ ],
+ "za-gauteng": [
+  "za-gauteng",
+  "za-gauteng-pretoria",
+  "za-gauteng-vereeniging",
+  "za-gauteng-benoni"
+ ],
+ "za-kwazulu-natal": [
+  "za-kwazulu-natal",
+  "za-kwazulu-natal-pietermaritzburg",
+  "za-kwazulu-natal-vryheid",
+  "za-kwazulu-natal-ladysmith",
+  "za-kwazulu-natal-port-shepstone",
+  "za-kwazulu-natal-ulundi",
+  "za-kwazulu-natal-ubombo"
+ ],
+ "za-limpopo": [
+  "za-limpopo",
+  "za-limpopo-thohoyandou",
+  "za-limpopo-musina",
+  "za-limpopo-thabazimbi",
+  "za-limpopo-marapong",
+  "za-limpopo-mokopane"
+ ],
+ "za-mpumalanga": [
+  "za-mpumalanga",
+  "za-mpumalanga-mbombela",
+  "za-mpumalanga-bethal"
+ ],
+ "za-north-west": [
+  "za-north-west",
+  "za-north-west-rustenburg",
+  "za-north-west-vryburg"
+ ],
+ "za-northern-cape": [
+  "za-northern-cape",
+  "za-northern-cape-kalahari-desert",
+  "za-northern-cape-kuruman",
+  "za-northern-cape-carnarvon",
+  "za-northern-cape-de-aar",
+  "za-northern-cape-upington",
+  "za-northern-cape-prieska",
+  "za-northern-cape-northern-cape-west",
+  "za-northern-cape-springbok"
+ ],
+ "za-western-cape": [
+  "za-western-cape",
+  "za-western-cape-george",
+  "za-western-cape-beaufort-west",
+  "za-western-cape-saldanha",
+  "za-western-cape-western-cape-east",
+  "za-western-cape-vanrhynsdorp",
+  "za-western-cape-swellendam",
+  "za-western-cape-great-karoo",
+  "za-western-cape-great-karoo-western-cape",
+  "za-western-cape-great-karoo-western-cape-east"
+ ],
+ "zm-central": [
+  "zm-central",
+  "zm-central-mumbwa"
+ ],
+ "zm-copperbelt": [
+  "zm-copperbelt",
+  "zm-copperbelt-chingola",
+  "zm-copperbelt-katanga-plateau-copperbelt"
+ ],
+ "zm-eastern": [
+  "zm-eastern-nyimba",
+  "zm-eastern"
+ ],
+ "zm-lusaka": [
+  "zm-lusaka",
+  "zm-lusaka-muchinga-mountains"
+ ],
+ "zm-muchinga": [
+  "zm-muchinga",
+  "zm-muchinga-chinsali"
+ ],
+ "zm-northern": [
+  "zm-northern",
+  "zm-northern-mbala"
+ ],
+ "zm-northwestern": [
+  "zm-northwestern",
+  "zm-northwestern-kasempa",
+  "zm-northwestern-zambezi"
+ ],
+ "zm-southern": [
+  "zm-southern",
+  "zm-southern-mazabuka",
+  "zm-southern-katanga-plateau"
+ ],
+ "zm-western": [
+  "zm-western",
+  "zm-western-kaoma",
+  "zm-western-senanga"
+ ],
+ "zw-mashonaland-west": [
+  "zw-mashonaland-west-kariba",
+  "zw-mashonaland-west"
+ ],
+ "zw-masvingo": [
+  "zw-masvingo",
+  "zw-masvingo-chiredzi"
+ ],
+ "zw-matabeleland-north": [
+  "zw-matabeleland-north",
+  "zw-matabeleland-north-matabeleland-north-east",
+  "zw-matabeleland-north-matabeleland-north-north-east"
+ ],
+ "zw-matabeleland-south": [
+  "zw-matabeleland-south-beitbridge",
+  "zw-matabeleland-south"
+ ],
+ "zw-midlands": [
+  "zw-midlands-midlands-north-west",
+  "zw-midlands"
+ ]
+}

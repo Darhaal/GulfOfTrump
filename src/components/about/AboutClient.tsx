@@ -7,6 +7,7 @@ import PortraitCredits from "./PortraitCredits";
 import { BUILTIN_VOICES } from "@/lib/voice/builtin";
 import { APP_NAME, APP_VERSION, DOWNLOAD_URL, REPO_URL, STORE_URL } from "@/constants/app";
 import { ABOUT, AUTHOR_EMAIL, AUTHOR_LINKS } from "@/i18n/about";
+import { useLocalePath } from "@/i18n/routeLocale";
 import { useI18n } from "@/i18n/useI18n";
 
 /** One icon per entry of "what is in the game", in order. */
@@ -15,11 +16,12 @@ const FEATURE_ICONS = [Map, Shield, TrendingUp, FlaskConical, Users, Landmark, G
 /** Rules in short, what the game has, where the data lives and who makes it; `embedded` is the header's popup, without a header of its own. */
 export default function AboutClient({ embedded = false }: { embedded?: boolean }) {
   const { locale, t } = useI18n();
+  const localized = useLocalePath();
   const a = ABOUT[locale];
 
   return (
     <div className={embedded ? "" : "min-h-screen"}>
-      {!embedded && <AppHeader back="/" title={a.title} subtitle={`${APP_NAME} · ${t("app.stage")} ${APP_VERSION}`} />}
+      {!embedded && <AppHeader back={localized("/")} title={a.title} subtitle={`${APP_NAME} · ${t("app.stage")} ${APP_VERSION}`} />}
       <main className={embedded ? "grid gap-4" : "mx-auto grid max-w-4xl gap-4 px-4 py-8"}>
         <section className="pb-4">
           <h1 className="text-3xl md:text-5xl font-black tracking-tighter leading-none text-ink">

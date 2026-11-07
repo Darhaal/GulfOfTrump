@@ -261,7 +261,8 @@ export function describeLand(provinces, regions, rivers, { bbox, contains, centr
 
     let fertility = total / samples;
     if (Math.abs(cy) > 55) fertility -= 10;
-    const fixed = PROVINCE_LAND[province.properties.pid];
+    // A part of a division split on the finer map (scripts/split.mjs) keeps its division's correction.
+    const fixed = PROVINCE_LAND[province.properties.pid] ?? PROVINCE_LAND[province.properties.up];
     province.properties.terrain = fixed?.terrain ?? terrain;
     province.properties.fertility = fixed?.fertility ?? Math.round(Math.max(0, Math.min(100, fertility)));
   }

@@ -7,7 +7,9 @@ import type { DiplomacyReply } from "@/engine/diplomacy";
 import type { SessionTalk } from "@/engine/parliament";
 import type { MinisterReport } from "@/engine/reports";
 import type { StagePart, StoryCarry, TurnStage } from "@/engine/stages";
-import type { ArmyOrganisation, GameState, Locale, Official, OfficialPost, Politics, SummitLine, TalkResult } from "@/engine/types";
+import type { SuggestRequest } from "@/engine/suggest";
+import type { ArmyOrganisation, GameState, Locale, Official, OfficialPost, Politics, SpeechProfile, SummitLine, TalkResult } from "@/engine/types";
+import type { PlanUsage } from "@/server/chatgpt/limits";
 import { DEMO_HEADER } from "@/constants/app";
 import { readPreference } from "./preferences";
 
@@ -16,10 +18,14 @@ export class ApiError extends Error {
     readonly code: string,
     message: string,
     readonly retryable = false,
+    /** For the plan's usage limit: when it resets (ms since 1970), when ChatGPT said. */
+    readonly resetsAt?: number,
   ) {
     super(message);
   }
 }
+
+const resetTime = (value: unknown) => (typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined);
 
 export interface AiStatus {
   provider: "chatgpt" | "mock";
@@ -32,8 +38,8 @@ export interface AiStatus {
 async function json<T>(response: Response): Promise<T> {
   const body = await response.json().catch(() => null);
   if (!response.ok) {
-    const error = (body as { error?: { code?: string; message?: string } } | null)?.error;
-    throw new ApiError(error?.code ?? "network_error", error?.message ?? `HTTP ${response.status}`);
+    const error = (body as { error?: { code?: string; message?: string; resetsAt?: unknown } } | null)?.error;
+    throw new ApiError(error?.code ?? "network_error", error?.message ?? `HTTP ${response.status}`, false, resetTime(error?.resetsAt));
   }
   return body as T;
 }
@@ -52,6 +58,8 @@ export const connectAi = () => post("/api/ai/connect", {}).then((r) => json<{ au
 export const disconnectAi = () => post("/api/ai/disconnect", {}).then((r) => json<{ revoked: boolean }>(r));
 export const getModels = () =>
   fetch("/api/ai/models", { cache: "no-store" }).then((r) => json<{ models: { slug: string; displayName: string }[] }>(r));
+/** The ChatGPT plan's latest usage numbers (server/chatgpt/usage.ts). */
+export const getPlanUsage = () => fetch("/api/ai/usage", { cache: "no-store" }).then((r) => json<{ usage: PlanUsage }>(r));
 
 /**
  * Reads a newline-delimited JSON stream: progress lines while the model is
@@ -78,9 +86,9 @@ async function stream<T>(url: string, body: unknown, onProgress: (chars: number)
         const line = buffer.slice(0, newline).trim();
         buffer = buffer.slice(newline + 1);
         if (!line) continue;
-        const event = JSON.parse(line) as { type: string; chars?: number; code?: string; message?: string; retryable?: boolean } & T;
+        const event = JSON.parse(line) as { type: string; chars?: number; code?: string; message?: string; retryable?: boolean; resetsAt?: unknown } & T;
         if (event.type === "progress") onProgress(event.chars ?? 0);
-        else if (event.type === "error") throw new ApiError(event.code ?? "error", event.message ?? "Error", event.retryable);
+        else if (event.type === "error") throw new ApiError(event.code ?? "error", event.message ?? "Error", event.retryable, resetTime(event.resetsAt));
         else if (event.type === "done") return event;
       }
     }
@@ -172,6 +180,16 @@ export function requestBio(state: GameState, name: string, options: { locale: Lo
   );
 }
 
+/** How one person speaks, written once per person and language (engine/speech.ts); null when the answer had nothing usable. */
+export function requestSpeech(state: GameState, name: string, options: { locale: Locale; model?: string; signal?: AbortSignal; onProgress?: (chars: number) => void }) {
+  return stream<{ key: string; profile: SpeechProfile | null }>(
+    "/api/game/speech",
+    { state: trimForServer(state), name, locale: options.locale, model: options.model || undefined },
+    options.onProgress ?? (() => {}),
+    options.signal,
+  );
+}
+
 /** A minister's report on a turn already played; null when the ministry had nothing to report on. */
 export function requestReport(state: GameState, ministry: AdvisorId, turn: number, options: { locale: Locale; model?: string; signal?: AbortSignal; onProgress: (chars: number) => void }) {
   return stream<{ report: MinisterReport | null }>(
@@ -241,6 +259,11 @@ export function talksSpeak(state: GameState, talk: string, line: string, options
 /** What came of talks, as the model sees it; the engine decides (engine/talks.ts). */
 export function talksFinish(state: GameState, talk: string, options: { locale: Locale; model?: string; signal?: AbortSignal; onProgress: (chars: number) => void }) {
   return stream<{ result: TalkResult; note: string }>("/api/game/talks", { state: trimForServer(state), talk, finish: true, locale: options.locale, model: options.model || undefined }, options.onProgress, options.signal);
+}
+
+/** Names to pick for a rename by order, or an order drafted as a decree (engine/suggest.ts). */
+export function suggest(state: GameState, request: SuggestRequest, options: { locale: Locale; model?: string; signal?: AbortSignal; onProgress?: (chars: number) => void }) {
+  return stream<{ options: string[] }>("/api/game/suggest", { state: trimForServer(state), ...request, locale: options.locale, model: options.model || undefined }, options.onProgress ?? (() => {}), options.signal);
 }
 
 export function findCandidates(

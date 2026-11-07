@@ -3,9 +3,9 @@
 import { useSyncExternalStore } from "react";
 import type { ChronicleEntry, Locale } from "@/engine/types";
 import { getPreference } from "@/lib/preferences";
-import { isBuiltinLang, parseBuiltinChoice } from "./builtin";
+import { BUILTIN_VOICES, isBuiltinLang, parseBuiltinChoice } from "./builtin";
 import { builtinReady, readBuiltin, stopBuiltin } from "./builtinVoice";
-import { cleanForSpeech, readerFor, SPEECH_LANG, splitForSpeech, turnSpeech } from "./text";
+import { builtinSpeakerFor, cleanForSpeech, personVoice, readerFor, SPEECH_LANG, splitForSpeech, turnSpeech, type SpeakerLike } from "./text";
 
 /**
  * Reading the game's text aloud with the voices of the system or the browser
@@ -87,7 +87,7 @@ export function stopSpeaking() {
  * language it reads nothing and says why (`missing`) rather than let a voice
  * of another script read the digits.
  */
-export function speak(id: string, text: string, locale: Locale) {
+export function speak(id: string, text: string, locale: Locale, who?: SpeakerLike) {
   const own = isBuiltinLang(locale) && builtinReady(locale) ? locale : null;
   if (!canSpeak() && !own) return;
   if (canSpeak()) speechSynthesis.cancel();
@@ -97,10 +97,17 @@ export function speak(id: string, text: string, locale: Locale) {
   const wanted = getPreference("voice") || undefined;
   const rate = RATES[rateOf(getPreference("rate"))];
   const volume = volumeOf(getPreference("volume"));
-  const { voice, standIn, missing } = canSpeak() ? readerFor(speechSynthesis.getVoices(), locale, wanted) : { voice: null, standIn: false, missing: true };
+  const all = canSpeak() ? speechSynthesis.getVoices() : [];
+  const reader = canSpeak() ? readerFor(all, locale, wanted) : { voice: null, standIn: false, missing: true };
+  const { standIn, missing } = reader;
+  // A person's words in a voice of their own, unless the player keeps one voice for everyone (Settings).
+  const person = who && getPreference("peopleVoices") !== "off" ? who : undefined;
+  const theirs = person && !missing && all.length ? personVoice(all, locale, person) : null;
+  const voice = theirs?.voice ?? reader.voice;
   const picked = wanted ? parseBuiltinChoice(wanted) : null;
   if (own && (picked?.lang === own || missing || standIn)) {
-    readBuiltin(pieces, own, picked?.lang === own ? picked.speaker : 0, { rate, volume }, () => state.speaking === id && set({ speaking: null }));
+    const speaker = person ? builtinSpeakerFor(BUILTIN_VOICES[own].speakers, person) : picked?.lang === own ? picked.speaker : 0;
+    readBuiltin(pieces, own, speaker, { rate, volume }, () => state.speaking === id && set({ speaking: null }));
     return set({ speaking: id, missing: null });
   }
   if (missing) return set({ speaking: null, missing: locale });
@@ -110,6 +117,7 @@ export function speak(id: string, text: string, locale: Locale) {
     if (voice) u.voice = voice;
     u.rate = rate;
     u.volume = volume;
+    if (theirs) u.pitch = theirs.pitch;
     // The last piece, or any failure, ends the reading; a cancelled one belongs to the next reading.
     if (i === pieces.length - 1) u.onend = () => state.speaking === id && set({ speaking: null });
     u.onerror = (e) => e.error !== "interrupted" && e.error !== "canceled" && state.speaking === id && set({ speaking: null });

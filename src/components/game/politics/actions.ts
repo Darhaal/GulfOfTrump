@@ -37,6 +37,26 @@ export const PARTY_ACTIONS: Record<string, PoliticsAction> = {
 /** Seats a vote needs. */
 export const needed = (vote: "majority" | "twothirds", total: number) => (vote === "majority" ? Math.floor(total / 2) + 1 : Math.ceil((total * 2) / 3));
 
+/** What an opposition party can do about another (engine/remit.ts): attack it, lure its members, run on one list; an outlawed one, defend. The coalition itself is offered on the party's own panel. */
+const OPPOSITION_ACTIONS: Record<string, PoliticsAction> = {
+  attack: { id: "attack", icon: Megaphone, risk: "medium" },
+  lure: { id: "lure", icon: UserPlus, risk: "medium" },
+  jointList: { id: "jointList", icon: Handshake, risk: "low" },
+  defend: { id: "defend", icon: ShieldAlert, risk: "medium" },
+};
+
+export function oppositionActions(p: Party): PoliticsAction[] {
+  const ids = p.status === "ruling" || p.status === "coalition" ? ["attack", "lure"] : p.status === "opposition" ? ["jointList", "lure", "attack"] : ["defend"];
+  return ids.map((id) => OPPOSITION_ACTIONS[id]);
+}
+
+/** What an opposition party can do in a protest at home: lead it under its own banner, or keep its distance. */
+export const OPPOSITION_STREET: readonly PoliticsAction[] = [
+  { id: "leadProtest", icon: Megaphone, risk: "high" },
+  { id: "distanceProtest", icon: LogOut, risk: "low" },
+];
+
+/** What the government can do with one party, on its card: campaign, talk, court, support, legalise. */
 export function partyActions(p: Party): PoliticsAction[] {
   const ids =
     p.status === "ruling"
@@ -44,7 +64,13 @@ export function partyActions(p: Party): PoliticsAction[] {
       : p.status === "coalition"
         ? ["support", "negotiate", "leave"]
         : p.status === "opposition"
-          ? ["coalition", "negotiate", "poach", "support", "smear", "suppress", "arrest", "ban"]
-          : ["legalise", "secretTalks", "crackdown"];
+          ? ["coalition", "negotiate", "poach", "support"]
+          : ["legalise", "secretTalks"];
+  return ids.map((id) => PARTY_ACTIONS[id]);
+}
+
+/** What the government can do against one party, with the threats in the street: smear it, hold it down, arrest its leader, ban it; hunt it underground. */
+export function pressureActions(p: Party): PoliticsAction[] {
+  const ids = p.status === "opposition" ? ["smear", "suppress", "arrest", "ban"] : p.status === "banned" || p.status === "underground" ? ["crackdown"] : [];
   return ids.map((id) => PARTY_ACTIONS[id]);
 }

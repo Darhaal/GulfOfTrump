@@ -12,6 +12,25 @@ export const COUNTRIES_TODAY: Record<string, string> = {
   SLB: "solomon-islands",
 };
 
+/**
+ * Modern countries whose edges the sources draw loosely: cut finer, a strip
+ * of the land falls into a neighbour's polygon (Nuevo Laredo to the United
+ * States, the Mekong bank of Isan to Laos, Borneo's north rim to Malaysia).
+ * Their borders have not moved since 1991, so every province of them is
+ * theirs (Natural Earth adm0 code -> owner tag).
+ */
+export const BORDERS_TODAY: Record<string, string> = {
+  CHN: "china",
+  IDN: "indonesia",
+  IRN: "iran",
+  KEN: "kenya",
+  MAR: "morocco",
+  MEX: "mexico",
+  SAU: "saudi-arabia",
+  THA: "thailand",
+  UGA: "uganda",
+};
+
 /** Single provinces the sources give to a neighbour (province id -> owner tag). */
 export const ISLANDS_TODAY: Record<string, string> = {
   "fr-reunion": "france",

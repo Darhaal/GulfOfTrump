@@ -11,8 +11,8 @@ export function extractJson(text: string): unknown {
   return JSON.parse(body.slice(start, end + 1));
 }
 
-/** Fields where null means something: a cancelled election is not the same as no change. */
-const MEANINGFUL_NULLS = new Set(["nextElection"]);
+/** Fields where null means something: a cancelled election is not the same as no change, nor a dissolved parliament. */
+const MEANINGFUL_NULLS = new Set(["nextElection", "parliament"]);
 
 /**
  * A model writes null for "nothing" where the answer's schema expects a

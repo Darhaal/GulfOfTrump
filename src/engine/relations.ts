@@ -1,9 +1,11 @@
 import { lostShares, yearsBetween } from "./abroad";
 import { countryCrises } from "./crises";
 import { fixed, roll } from "./dice";
+import { byEra } from "./era";
+import { NON_BINDING, OPEN_BLOCS, TREATY_AREA } from "./scenarios/treaties";
 import { countryCentres, distanceKm, exportShares } from "./trade";
 import { STRATEGIC_KINDS } from "./types";
-import type { Aim, Alliance, AppliedChange, Course, DeedKind, GameState, MapRegion, RegimeKind, ScenarioId, Tie, War } from "./types";
+import type { Aim, Alliance, AppliedChange, Course, DeedKind, GameState, MapRegion, RegimeKind, ScenarioId, Tie, TreatyArea, War } from "./types";
 
 /**
  * How the governments that matter see the world, kept by the engine with no
@@ -21,7 +23,12 @@ const MAX_TIES = 10;
 /** Ties a government keeps whatever their salience: its enemies and those in its plans. */
 const MAX_TIES_KEPT = 14;
 const MAX_MEMORY = 8;
+/** Claims and ambitions a course keeps at once; the countries it guards are counted apart (MAX_PLEDGES). */
 export const MAX_AIMS = 3;
+/** Countries a course guards at once: protégés of the start date and pledges given after an aggression (engine/aggression.ts). */
+export const MAX_PLEDGES = 5;
+/** How close a hostile nuclear power feels however far it is, 0–100: its bombs reach. */
+const NUCLEAR_REACH = 70;
 /** Blocs this big are world bodies, not alliances anyone counts on (NATO has 30 members in 2022, the UN 60 in 1950). */
 const WORLD_BODY = 60;
 
@@ -31,7 +38,7 @@ const int = (value: number) => Math.round(value);
 /** Appetite for force by the kind of government, before its era and how it came to power. */
 const HAWK_BASE: Record<RegimeKind, number> = { democracy: 35, limited: 45, party: 50, autocracy: 55, military: 65 };
 /** How readily states reached for force in each era. */
-const ERA_HAWK: Record<ScenarioId, number> = { "1914": 10, "1939": 10, "1950": 5, "1964": 5, "1991": 0, "1999": 0, "2014": 0, "2022": 0 };
+const ERA_HAWK: Record<ScenarioId, number> = { "1914": 10, "1933": 10, "1939": 10, "1950": 5, "1957": 5, "1964": 5, "1973": 4, "1979": 4, "1991": 0, "1999": 0, "2014": 0, "2022": 0 };
 
 /** Every country that holds land. */
 export function landHolders(state: Pick<GameState, "regions">): Set<string> {
@@ -85,9 +92,35 @@ export function landNeighbours(state: Pick<GameState, "regions">, neighbors: Rec
   return out;
 }
 
+/** Whether a treaty binds its members to anything: arms control, conventions and settlements do not (scenarios/treaties.ts NON_BINDING). */
+export const binding = (a: Pick<Alliance, "id" | "binds">) => a.binds !== false && !NON_BINDING.has(a.id);
 /** A bloc that binds its members to fight for each other, not a world body. */
-export const isMilitary = (a: Alliance) => (!a.kind || a.kind === "alliance") && a.members.length < WORLD_BODY;
-export const isPact = (a: Alliance) => a.kind === "pact" && a.members.length < WORLD_BODY;
+export const isMilitary = (a: Alliance) => (!a.kind || a.kind === "alliance") && a.members.length < WORLD_BODY && binding(a);
+export const isPact = (a: Alliance) => a.kind === "pact" && a.members.length < WORLD_BODY && binding(a);
+/** Where an attack on a member binds the others; none for a bloc that binds for its members' home land only. */
+export const areaOf = (a: Pick<Alliance, "id" | "area">): TreatyArea | undefined => a.area ?? TREATY_AREA[a.id];
+/** Whether a bloc takes new members: as its treaty says, else a bloc of three or more does and a bilateral treaty never. */
+export const isOpen = (a: Pick<Alliance, "id" | "open" | "members">) => a.open ?? OPEN_BLOCS[a.id] ?? a.members.length >= 3;
+/** The military alliances two countries share. */
+export const sharedBlocs = (state: Pick<GameState, "alliances">, a: string, b: string) => state.alliances.filter((x) => isMilitary(x) && x.members.includes(a) && x.members.includes(b));
+/**
+ * Whether one of the two is the other's client government (engine/provisional.ts). A client fights its patron only in a
+ * war of independence, once it has declared itself independent, or in a civil war of its own (Artem, 5 November 2026):
+ * between the two no incident, crisis or war plan, and neither leaves the treaty that binds them by an ordinary plan.
+ */
+export const clientOf = (state: Pick<GameState, "countries">, a: string, b: string) => state.countries[a]?.client?.patron === b || state.countries[b]?.client?.patron === a;
+/** A client's treaty with its patron, which ends only with the client's independence (or its end). */
+export const isClientBond = (state: Pick<GameState, "countries">, bloc: Pick<Alliance, "id" | "members">) =>
+  bloc.members.some((m) => {
+    const c = state.countries[m]?.client;
+    return c?.bloc === bloc.id && bloc.members.includes(c.patron);
+  });
+/**
+ * Whether two countries share a small military alliance (two members), or one is the other's client: bound too closely
+ * for one to plan a war on the other. In a bloc of three or more a war between members is braked, not barred
+ * (engine/intentions.ts).
+ */
+export const closeAllies = (state: Pick<GameState, "alliances" | "countries">, a: string, b: string) => clientOf(state, a, b) || sharedBlocs(state, a, b).some((x) => x.members.length < 3);
 
 /** Whether two countries share a military alliance. */
 export const allied = (state: Pick<GameState, "alliances">, a: string, b: string) => state.alliances.some((x) => isMilitary(x) && x.members.includes(a) && x.members.includes(b));
@@ -186,8 +219,9 @@ const closeness = (at: Map<string, [number, number]>, a: string, b: string): num
 export const goodwillOf = (state: Pick<GameState, "countries" | "alliances" | "wars">, a: string, b: string) => 1 + Math.max(0, tieOf(state, a, b).trust + tieOf(state, b, a).trust) / 100;
 
 /** A government's appetite for force when it takes office. */
-export function hawkFor(regime: RegimeKind, era: ScenarioId, how: Course["set"]["how"], before: number | undefined, noise: number): number {
-  const base = HAWK_BASE[regime] + ERA_HAWK[era];
+export function hawkFor(regime: RegimeKind, era: ScenarioId, how: Course["set"]["how"], before: number | undefined, noise: number, date?: string): number {
+  // The era by the government's own day, not the day the game began (engine/era.ts).
+  const base = HAWK_BASE[regime] + (date ? byEra(ERA_HAWK, date) : ERA_HAWK[era]);
   let hawk = base;
   if (how === "coup") hawk = base + 10;
   // Voters who threw out a government chose its opposite as often as not.
@@ -230,8 +264,10 @@ export function greatPowers(power: Map<string, number>): Set<string> {
 export function freshCourse(state: GameState, tag: string, seeded: { aims: Aim[]; hawk?: number; trust?: [string, number][] }, date: string, occupied = occupiedBy(state)): Course {
   const d = state.countries[tag]?.domestic;
   const noise = spread(fixed(`hawk:${state.scenarioId}:${tag}`));
-  const hawk = seeded.hawk ?? hawkFor(d?.regime ?? "autocracy", state.scenarioId, "start", undefined, noise);
-  const course: Course = { hawk, reach: 50, aims: [...seeded.aims].slice(0, MAX_AIMS), ties: {}, memory: [], set: { date, how: "start" } };
+  const hawk = seeded.hawk ?? hawkFor(d?.regime ?? "autocracy", state.scenarioId, "start", undefined, noise, date);
+  const claims = seeded.aims.filter((a) => a.kind !== "protect").slice(0, MAX_AIMS);
+  const guards = seeded.aims.filter((a) => a.kind === "protect").slice(0, MAX_PLEDGES);
+  const course: Course = { hawk, reach: 50, aims: seeded.aims.filter((a) => claims.includes(a) || guards.includes(a)), ties: {}, memory: [], set: { date, how: "start" } };
   for (const e of enemiesOf(state, tag)) tie(state, course, tag, e);
   for (const a of alliesOf(state, tag)) tie(state, course, tag, a);
   for (const aim of course.aims) if (aim.target && state.countries[aim.target]) tie(state, course, tag, aim.target);
@@ -258,16 +294,35 @@ function addClaims(tag: string, course: Course, occupied: Map<string, Map<string
   if (!held) return;
   for (const [by, n] of [...held].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))) {
     if (course.aims.some((a) => a.kind === "reclaim" && a.target === by)) continue;
-    if (course.aims.length >= MAX_AIMS) break;
+    if (course.aims.filter((a) => a.kind !== "protect").length >= MAX_AIMS) break;
     course.aims.push({ kind: "reclaim", target: by, weight: int(clamp(40 + 5 * n, 40, 90)) });
   }
 }
+
+/**
+ * Hostile deeds remembered once a year: the same deed by the same government within a year is one deed, kept at the
+ * gravest – a recognition of rebels, volunteers sent and the entry into their war are one siding with the enemy, an
+ * embargo after partial sanctions costs only the difference, an attack judged twice is judged once.
+ */
+const ONCE_A_YEAR = new Set<DeedKind>(["attacked", "broke-pact", "joined-enemy", "aggression", "occupied", "sanctioned", "stood-aside", "recalled", "broke-relations"]);
 
 /** Something another country did, remembered: trust moves by its weight and the deed joins the memory. */
 export function remember(state: GameState, who: string, by: string, what: DeedKind, weight: number, date: string, keep = true): void {
   const course = state.countries[who]?.course;
   if (!course || who === by || !state.countries[by]) return;
   const t = tie(state, course, who, by);
+  if (weight < 0 && ONCE_A_YEAR.has(what)) {
+    const prior = course.memory.find((m) => m.by === by && m.what === what && Math.abs(yearsBetween(m.date, date)) < 1);
+    if (prior) {
+      // Only what is graver than the deed already remembered costs more trust.
+      if (weight < prior.weight) {
+        t.trust = int(clamp(t.trust + weight - prior.weight, -100, 100));
+        prior.weight = int(weight);
+        prior.date = date;
+      }
+      return;
+    }
+  }
   t.trust = int(clamp(t.trust + weight, -100, 100));
   if (!keep) return;
   course.memory.push({ by, what, date, weight: int(weight) });
@@ -282,6 +337,24 @@ export function remember(state: GameState, who: string, by: string, what: DeedKi
   }
 }
 
+/** The most alarm a tie keeps on top of the threat its course computes. */
+const MAX_ALARM = 60;
+
+/**
+ * Alarm one government feels at another's deed – joint manoeuvres on its borders, a first satellite or missile, a
+ * nuclear strike: the threat it sees rises now, and the alarm stays on top of the threat its course computes every
+ * turn, halving in a year (easeTies).
+ */
+export function raiseAlarm(state: GameState, who: string, toward: string, amount: number): void {
+  const course = state.countries[who]?.course;
+  if (!course || who === toward || !state.countries[toward] || amount <= 0) return;
+  const t = tie(state, course, who, toward);
+  const before = t.alarm ?? 0;
+  const alarm = int(clamp(before + amount, 0, MAX_ALARM));
+  t.alarm = alarm;
+  t.threat = int(clamp(t.threat + alarm - before, 0, 100));
+}
+
 /** Tension one government feels toward another rises. */
 export function addTension(state: GameState, who: string, toward: string, amount: number): void {
   const course = state.countries[who]?.course;
@@ -290,7 +363,7 @@ export function addTension(state: GameState, who: string, toward: string, amount
   t.tension = int(clamp(t.tension + amount, 0, 100));
 }
 
-/** Time softens: tension halves in a year, trust drifts back to where the treaties put it in eight. */
+/** Time softens: tension and alarm halve in a year, trust drifts back to where the treaties put it in eight. */
 export function easeTies(state: GameState, years: number): void {
   const tension = 0.5 ** years;
   const trust = 0.5 ** (years / 8);
@@ -302,6 +375,11 @@ export function easeTies(state: GameState, years: number): void {
       t.trust = int(base + (t.trust - base) * trust);
       // A war keeps tension high.
       t.tension = int(Math.max(bound(bonds.enemies, c.tag).has(other) ? 70 : 0, t.tension * tension));
+      if (t.alarm !== undefined) {
+        const alarm = int(t.alarm * tension);
+        if (alarm >= 1) t.alarm = alarm;
+        else delete t.alarm;
+      }
     }
   }
 }
@@ -319,7 +397,9 @@ export function learnFromTurn(before: GameState, next: GameState, applied: Appli
       if (!war) continue;
       for (const d of war.defenders) {
         for (const a of war.attackers) {
-          if (pacted(before, a, d)) remember(next, d, a, "broke-pact", -70, date);
+          // An ally that attacks breaks the gravest bond; a pact partner breaks its word.
+          if (allied(before, a, d)) remember(next, d, a, "broke-pact", -85, date);
+          else if (pacted(before, a, d)) remember(next, d, a, "broke-pact", -70, date);
           else remember(next, d, a, "attacked", -50, date);
           addTension(next, a, d, 80);
           addTension(next, d, a, 80);
@@ -400,15 +480,19 @@ export function learnFromTurn(before: GameState, next: GameState, applied: Appli
   }
 }
 
-/** The incidents the game master told of: an event of war between two countries not at war raises tension both ways, a little. */
-export function incidentsFromEvents(next: GameState, events: { kind: string; countries: string[] }[]): Map<string, number> {
+/**
+ * The incidents the game master told of: an event of war between two countries not at war raises tension both ways,
+ * a little – unless the engine's own incident between them this period already did (`told`, "a|b" with a before b):
+ * the game master tells that one, and it is counted once.
+ */
+export function incidentsFromEvents(next: GameState, events: { kind: string; countries: string[] }[], told: Set<string> = new Set()): Map<string, number> {
   const raised = new Map<string, number>();
   for (const e of events) {
     if (e.kind !== "war" && e.kind !== "military") continue;
     const tags = [...new Set(e.countries)].filter((t) => next.countries[t]).slice(0, 4);
     for (const a of tags) {
       for (const b of tags) {
-        if (a >= b || warBetween(next, a, b)) continue;
+        if (a >= b || warBetween(next, a, b) || told.has(`${a}|${b}`)) continue;
         const key = `${a}|${b}`;
         const now = raised.get(key) ?? 0;
         if (now >= 16) continue;
@@ -433,7 +517,7 @@ export function newGovernments(next: GameState, from: string): string[] {
     if (!c.course || !changed || changed.date <= from || changed.date <= c.course.set.date) continue;
     const before = c.course.hawk;
     const noise = spread(roll(next.seed ?? next.id, next.turn, `hawk:${c.tag}`));
-    const hawk = hawkFor(c.domestic!.regime, next.scenarioId, changed.how, before, noise);
+    const hawk = hawkFor(c.domestic!.regime, next.scenarioId, changed.how, before, noise, changed.date);
     c.course.hawk = hawk;
     c.course.set = { date: changed.date, how: changed.how };
     // Old ambitions outlive only a government with the appetite for them; a claim on lost land stays, weighed by it.
@@ -480,8 +564,8 @@ export function refreshCourses(next: GameState, map: Record<string, MapRegion> |
     const course = c.course!;
     course.reach = reachOf(next, c.tag, lost.get(c.tag) ?? 0, great.has(c.tag));
     addClaims(c.tag, course, occupied);
-    // Aims at countries that are gone go with them.
-    course.aims = course.aims.filter((a) => !a.target || power.has(a.target) || next.countries[a.target]?.dormant);
+    // Aims at countries that are gone go with them, and a pledge given after an aggression lapses after its decade (engine/aggression.ts).
+    course.aims = course.aims.filter((a) => (!a.target || power.has(a.target) || next.countries[a.target]?.dormant) && !(a.until && a.until <= next.date));
 
     const pa = power.get(c.tag) ?? 0;
     const enemies = bound(bonds.enemies, c.tag);
@@ -519,11 +603,15 @@ export function refreshCourses(next: GameState, map: Record<string, MapRegion> |
       if (enemies.has(other)) hostility += 1;
       if (mine.has(other)) hostility -= 0.7;
       else if (pacts.has(other)) hostility -= 0.3;
-      const reach = pb * (near / 100);
-      const threat = int(clamp((100 * reach) / (pa + reach + 0.01) * clamp(hostility, 0, 1.5), 0, 100));
+      // A hostile power with the bomb reaches far beyond its borders: its bombers, and later its missiles, carry the threat (engine/atom.ts).
+      const nuclear = next.countries[other]?.arsenal?.nuclear && hostility > 0.5 ? NUCLEAR_REACH : 0;
+      const reach = pb * (Math.max(near, nuclear) / 100);
+      // The alarm its deeds raised stays on top of what power, closeness and hostility say (raiseAlarm).
+      const threat = int(clamp((100 * reach) / (pa + reach + 0.01) * clamp(hostility, 0, 1.5) + (t.alarm ?? 0), 0, 100));
       const kept = enemies.has(other) || aimed.has(other) || remembered.has(other) || planned.has(other);
       const salience = threat + t.tension + Math.abs(t.trust - base) / 2 + 100 * share + (mine.has(other) ? 25 + 40 * pb : 0) + (other === next.player ? 10 : 0);
       const updated: Tie = { trust: t.trust, tension: t.tension, threat, near };
+      if (t.alarm) updated.alarm = t.alarm;
       if (share > 0.005) updated.trade = int(share * 100);
       if (land ? land.has(c.tag < other ? `${c.tag}|${other}` : `${other}|${c.tag}`) : existing?.land) updated.land = true;
       scored.push({ tag: other, salience, kept, tie: updated });

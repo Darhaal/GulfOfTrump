@@ -11,6 +11,1841 @@ included.
 
 ## [Unreleased]
 
+## [1.0.7-beta] — 2026-11-07
+
+### Changed
+- **Governments call up their reserves when they are invaded.** A
+  government the engine plays fought every war with its peacetime army
+  and only replaced its losses: Israel met Egypt's 180 thousand with 45
+  thousand, lost five of its six provinces and, in a 1964 game, struck
+  Cairo with the bomb five times. Now, with the enemy on its soil, it
+  calls up reservists towards an army as large as the enemy's standing
+  one beyond its allies' – each army weighed by how near it is and split
+  between the wars it fights – within what its people allow, the more of
+  it the more of its people the fighting reaches, and sends them home
+  over months after the peace – those the war left: its losses fall on
+  the reservists as on the standing army, so a peace after a costly war
+  no longer sends home what was left of the army itself. The economy
+  pays their labour and pay, and the strain of a long mobilisation
+  follows. In the same game Israel now holds the Negev with some 175
+  thousand, and the Americans' army across the Pacific counts for a
+  tenth of itself to North Vietnam.
+- **No second war while fighting off the first.** A country with the enemy
+  on its soil, or attacked by a side at least as strong as its own, no
+  longer opens a new war – history's planned ones included (Israel's
+  front against Syria in 1967, opened in that game in the middle of
+  Egypt's invasion) – and any country weighs a new war with the strength
+  its other wars leave it.
+- **Parties painted, their leaders in portrait.** The party colours are
+  toned like a painter's pigments – no more highlighter greens – and the
+  ideas compass and the house draw them with a brush: strokes with a faint
+  relief, broken edges, a rim of their own colour. Each party card has the
+  party's emblem as a small oil painting in the officials' portrait frame
+  (its camp's: a star, a rose, wheat, a torch…) and its leader with a
+  portrait. The player's own party picks its emblem from 34, or brings a
+  picture of its own, which the browser paints in oil as the portraits are.
+  The moves against a party – smear, suppress, arrest, ban, a crackdown –
+  and the repression of its leader move to the threats tab, under
+  "Pressure on the parties".
+- **A new ministry with advice.** The dialog is wider: a minister of the
+  player's choosing sits on the right, with a portrait, to consult on the
+  new ministry; a spark drafts its remit (three versions, from the
+  game master); the icon list opens from its button.
+- **Panels away, keys for the tabs.** Pressing the open tab again puts both
+  panels away and leaves the map; a tab or another place picked brings
+  them back. F1–F9 open the rail's tabs in their order.
+- **The army's formations in person.** Each formation shows its
+  commander's portrait, its divisions and the commander's loyalty – the
+  army's own and his leaning, the same for the same name; a disloyal one
+  carries orders out half-heartedly more often. Orders to a formation are
+  written in the player's own words: the staff reads the kind of order in
+  them (an offensive, a hold, a withdrawal, a new commander…) and the game
+  master reads the words; words with no kind of order in them go to the
+  turn's orders.
+- **The tutorial told by the government.** The tour's and the guide's
+  cards are wider, each part told by its minister – the chief of staff
+  first, the interior for politics, the foreign minister for diplomacy,
+  the military for the army, finance for the economy – with the portrait in
+  the card's bottom right corner, signed.
+- **Signs of the movements, the map's buttons in oil.** Twelve new party
+  emblems drawn for the game – the hammer and sickle, the eagle with one
+  head and two, the skull, the crescent and star, the fasces, the
+  anarchists' A, the Latin and the Orthodox cross, the star of David, the
+  olive branch, the torch – and a party's emblem follows its own words
+  first (communists, nationalists, liberals, social democrats, Christian,
+  Islamic, green, agrarian, populist, centrist parties in the three
+  languages), its camp after. The pressure on a party is back on its card
+  as a row of red squares. The map's controls – zoom, the turn's length,
+  the layers and the modes – are one set of painted squares, orange only
+  for the one chosen. A new ministry's icon is a square beside its name
+  that opens its own list; the remit's drafts say what they are. A dialog
+  opened over another closes alone on Escape.
+- **The leader in one's own photo, a dissident and an émigré, landings
+  as orders.** The card of a leader the game has no portrait of takes a photo
+  of the player's own (a real portrait is never replaced), which the
+  browser paints in oil as the portraits are – it shows wherever the
+  leader does, and the leader's portrait comes back on the same button. A
+  game may start as a dissident (one voice and a few friends at home,
+  underground) or an émigré (abroad, sheltered by the government that would
+  take them in) beside the leader, the opposition, a minister and a
+  general. The army's landings put what is missing in the orders on one
+  press: landing ships and transports from industry, or the command of the
+  sea and the air off the shore.
+- **A new ministry with its colour and tasks; headquarters behind the
+  lines.** The new ministry's dialog has the ministry's colour beside its
+  icon (it tints the icon on the cabinet's tiles), the description in the
+  player's own words – the spark corrects it in place, clearer and shorter,
+  with a way back to one's own words – and a list of the ministry's tasks,
+  told to its minister and to the game master with the description; the
+  game master's edits box is gone. An army's headquarters stands only in
+  land the player holds behind its lines – never in a province the enemy
+  took or one fought over; a sector all in enemy hands gets the nearest
+  held province.
+- **The map's buttons as they were, its markers to match.** The corner's
+  buttons are the sheets they were – the length, the layers and the modes
+  each in a tray, tight, ink for the one chosen – still folded to the right
+  and unfolding as a stair. The markers take the same format, round: a disc
+  of the sheet's colour, a fine line, the sign in ink, the player's own
+  headquarters dark, a riot in red. A party's colour has a button of its own
+  beside its emblem. A remit's edits show on the player's words – in green
+  what they add, struck through what they take out – and the spark shows
+  only once there are words to edit; the orders' spark too.
+- **A lighter dock, a party's colour, help after one's own words, a
+  microphone in every box.** The map's corner is lighter and folds to the
+  right: only the turn's length and the map mode chosen show, and a hover
+  unfolds the rest as a stair – the five lengths over the seven layers over
+  the eight modes. The player's party picks its colour beside its emblem,
+  from fourteen of the press's or any from a palette. The spark sits inside
+  its field, the microphone to its right: the orders, a rename, a new
+  ministry's remit; the remit's edits come once the player has written it –
+  something to add, something to cut, the same said better. Every box of
+  free words takes dictation: the army's orders, a front's, the
+  operations, a motion, a role's proposal, the order being edited, a new
+  ministry's name and the question to its adviser, the figure's story at
+  the start.
+- **A lighter Windows app.** Chromium's own translations only for the
+  game's three languages, and no image optimiser in the app's server (its
+  pictures are on the player's disk), so the sharp library stays out.
+- **A quicker stylesheet.** Tailwind reads the classes from src only, not
+  the maps, portraits and docs as well: the stylesheet builds in about a
+  second instead of eighteen, and the dev server no longer times out on it
+  under load.
+- **Map markers in oil.** Headquarters, ports, protests and rocket sites
+  are painted medallions: a warm ground lit from the upper left, brush
+  strokes, an umber rim, a soft shadow and the sign laid on in paint.
+- **Politics opens with the study.** Until the political situation is
+  studied, the tab shows only the button to study it – no parliament,
+  parties, threats or society sections. Sport moves into Society. The
+  ruling party's pencil shows when governing.
+- **The army tab in four sections.** Segment buttons at the top – Forces,
+  Fronts, Losses, Command – and the open one is remembered in this browser.
+  *Forces*: the money for new weapons, soldiers by training, each kind of
+  weapon – aircraft, ships and armour by type – with its technology level
+  (and the level new ones are built at), the turn's gains and losses, and
+  the orders to industry. *Fronts and movements*: the turn's front changes
+  in full, war by war – provinces occupied, fought over (the share held
+  before and after), liberated, pushed back and left behind – each leading
+  to the map, which lights the turn's changes as the chronicle's "On the
+  map" does, with arrows to step back through the turns the fronts moved
+  in; then each war's divisions and strength, means and pace, outlook and
+  theatres with the provinces fought over, the enemy's plans known and an
+  offensive to order. *Losses*: each war's killed, wounded, prisoners and
+  equipment, since it began and in the last turn, the player's own
+  equipment by kind; the enemy's as the intelligence estimates them.
+  *Command*: the general's own command, the formations with their
+  commanders, divisions, theatres and headquarters (the star the map draws,
+  found the same way), and the request that describes them anew. The turn
+  report's "see the army tab" opens Fronts at that turn's changes.
+- **A war's losses keep the last turn's part** beside the total, for the
+  army tab (a record only: nothing reads it back into the world).
+- **The country card keeps the section you opened.** Reading "Power" and
+  clicking another country or province now keeps "Power" open instead of
+  jumping to the province; the province opens by itself only when no other
+  section was picked.
+- **Breakthroughs fall on the day history made them** (Sputnik on 4
+  October, Trinity on 16 July), not all on the first of January, and their
+  effects say plainly what changes. The flat bonus to intelligence once
+  satellites were researched is gone: reconnaissance comes from the space
+  programme's satellites.
+- **The turn report no longer repeats the top bar.** Its economy block –
+  GDP, reserves, soldiers and people before and after – is gone: the top
+  bar shows the same figures with what the last turn changed.
+- **The turn report is told in stages.** The story (the narrative and the
+  orders judged) opens first; politics at home, the economy, the army and
+  the world follow, each folded to one line with a count until opened. Each
+  minister's view goes to its own stage – the general staff's to the army,
+  the foreign minister's to the world – and the numbers (stat swings) fold
+  away. The fronts' changes (land occupied, freed, fought over, thrown back,
+  left behind) leave the lists: one line counts the provinces that changed
+  hands and those where the line moved, with a link to the army tab. The
+  chronicle and its full report use the same stages.
+- **Map layers by the zoom buttons.** Seven quick toggles – fronts,
+  movements and arrows, army headquarters, towns, country names, ports and
+  resources, protests – sit next to the turn length; the layers menu lists
+  every layer with its icon, the base map (rivers, railways, province
+  borders) last, and the choice is remembered. "Ports and resources" brings
+  the resource bubbles to any map mode, once the provinces are big enough
+  to hold them.
+- **Lighter turn prompts.** A bloc most of the world belongs to – the
+  United Nations, the League of Nations – is written by the countries
+  outside it: 3 tags instead of 176 for the UN in 2022, about 4% off the
+  world stage of a Ukraine 2022 turn, with nothing lost.
+- A country at war may join a military bloc whose members already fight its
+  enemy, as Turkey joined NATO while its brigade fought in Korea.
+- The countries a government guards no longer crowd out its claims: a course
+  keeps three claims and up to five protégés (America's fourth protégé in
+  2014, Taiwan, was dropped before).
+- A bloc's leader at war with an aggressor leads its members' sanctions as
+  one that sanctions it does.
+- **Incumbents lose about as often as in reality.** Years in office wear a
+  government's support down by a point and a half a year, at most eight
+  (it was two and a half, at most twelve), and a free vote's chance follows
+  support around 50 less steeply: governments in democracies lose 35–50% of
+  national elections instead of three in four, most of them after a slump,
+  fewest in a boom.
+- **The tutorial answers orders its script does not expect.** An order to
+  pull back from Kyiv, move the government to Lviv, refuse talks, strike
+  Moscow or deep into Russia, resign, or nonsense is read as such – and
+  "never give up" is no surrender – each with a verdict that says why the
+  written week went as its story tells it.
+- **France's open licence for portraits.** The licence check accepts the
+  Licence Ouverte (Etalab), compatible with CC BY, that the French
+  government's photographs carry, credited with their source: Laurent
+  Nuñez, François Bayrou and Fabien Mandon are painted (Mandon cut from a
+  full-length picture to his face). Commons' "copyrighted free use" (any
+  use allowed by the holder) is accepted too: Ernst Welteke, Nebojša
+  Stefanović and Nikolaos Plastiras are painted. A JPEG libjpeg only warns about is
+  read, so Bill Gates, Viktor Pinchuk, Antonio Tajani and Fakhruddin Ali
+  Ahmed are painted too.
+
+### Added
+- **The game's own politicians on the waiting screen.** 190 new quotes by
+  141 of the game's heads of state and government, party leaders and
+  ministers of every date – from George V, Piłsudski and Atatürk to
+  Macmillan, Nasser, Nyerere, Zhu Rongji and Niinistö – each
+  taken from its Wikiquote page and found there again, in Russian,
+  Ukrainian and English, with the portrait the game already has (702
+  quotes in all).
+- **Russian and Ukrainian names for many more towns, and the finer map's
+  parts named after them.** The towns take GeoNames' Russian and Ukrainian
+  names for every country, then Wikidata's labels of the same places:
+  16,212 of the 25,284 towns have one now (12,111 before). A part of the
+  finer map with no town in it takes its largest village with a Cyrillic
+  name (GeoNames' places of 1,000 and more) before a landform or a side,
+  and the selva's empty parts are "Сельва". 166 of about 6,300 parts are
+  left without a Russian name (286 before), 164 without a Ukrainian one
+  (272). A part keeps its id when its name changes (scripts/split-ids.json
+  holds every split part's id), so saves and scenario data stay valid.
+- **Every resource region's output where its mines are.** On the finer
+  maps a region's oil, gas, coal, ores and rubber went to the provinces
+  holding its real fields and mines for four regions only; now for all
+  280 – Samotlor and Urengoy, the Kuzbass, the Witwatersrand, the Permian,
+  the Pilbara – an offshore field at the coast it is worked from (Macaé
+  for the Campos basin, Sullom Voe for the Shetland oil), so the side of a
+  front or a border a mine lies on holds it.
+- **The commanders of every start date, and the opposition's faces.** 60
+  commanders of fronts, armies and fleets – Foch, Kluck, Brusilov,
+  Samsonov, Haig, Beatty, Tukhachevsky, Blomberg, Manstein, Konev,
+  Kesselring, Wavell, Kutrzeba, Gonen, Tlass, Kulikov, Ogarkov, Sokolov,
+  Schwarzkopf, Lebed, Troshev, Shamanov – on the dates they held a
+  command, and those who rose later (Nivelle, Kornilov, Pershing, Rommel,
+  Nimitz, Patton, Gromov) among history's successors; twelve public
+  figures outside office (Luxemburg, Liebknecht, Thälmann, Wels,
+  Solzhenitsyn, Sakharov, Nemtsov, Khodorkovsky, Kasparov, Yashin,
+  Kara-Murza, Shtefanov). All found by the names a model writes in three
+  languages, all with portraits; Rokossovsky, Weygand, Montgomery, Dayan,
+  Elazar, Shazly, Ahmad Ismail Ali, MacArthur, Malinovsky, Mandela and Mike
+  Jackson hold their command on more dates. New portraits for López
+  Portillo, Sabah al-Salim, Castex, Hasanov and Schulthess from free
+  pictures of their own; İbrahim Şevki Atasagun's picture, which showed
+  Ceaușescu and Sunay, is gone for a shadow. A changed picture is
+  downloaded afresh, so the credits always name what is painted.
+- **The faces of the parties.** The party cards show each leader's
+  portrait: 143 more leaders of the main parties on the start dates, ruling
+  and opposition, for the great powers and the countries that matter then
+  (1914: Bonar Law, Caillaux, Haase, Bassermann, Guchkov, Martov, Chernov,
+  Adler, Turati, Debs, Hara...; 1939: Blum, Thorez, Doriot, Dewey, Witos;
+  1950–1964: Schumacher, Togliatti, Nenni, Waldeck Rochet, Lecanuet,
+  Kamaraj; 1991–1999: Gysi, Ashdown, Marchais, Takako Doi, Mazowiecki,
+  Bahçeli, Moroz, Vitrenko; 2014–2022: Farage, Grillo, Kipping, Schumer,
+  Mironov, Slutsky, Nechayev, Liashko, Vakarchuk, Weidel, Söder,
+  Hołownia, Akşener, Rajoy, Sánchez, Abascal...), with those already known
+  (Zelensky, Poroshenko, Tymoshenko, Zyuganov, Zhirinovsky, Medvedev and
+  the rest) about 260 leaders in all; 141 of the new ones painted.
+- **The famous of every date, in portrait.** 593 people outside office a
+  game master names – TV hosts, journalists and propagandists, political
+  bloggers and YouTubers, writers, scientists, artists, sportsmen,
+  magnates and church leaders – on each start date they were alive and
+  grown on, from 79 on 1914 to 227 on 2022. Russia and the USSR (Solovyov,
+  Kiselyov, Simonyan, Pozner, Dud, Varlamov, Kats, Puchkov "Goblin", Klim
+  Zhukov, Lebedev, Dugin, Prilepin, the oligarchs, Patriarchs Kirill and
+  Alexy II, Pugacheva; Gorky, Blok, Chaliapin, Pavlov in 1914; Sholokhov,
+  Akhmatova, Shostakovich, Levitan, Gagarin, Vysotsky later), Ukraine
+  (Gordon, Portnikov, Arestovych, Prytula, Shariy, Butusov, Kolomoyskyi,
+  Akhmetov, Pinchuk, Metropolitans Epiphanius and Onufriy, Klitschko,
+  Usyk), Belarus, the USA (Musk, Carlson, Rogan, MrBeast, Oprah, Murdoch,
+  Soros, Gates, Bezos; Hearst, Ford, Edison, Lindbergh, Father Coughlin,
+  Murrow, Cronkite, Billy Graham), the UK (Northcliffe, Beaverbrook, the
+  Pankhursts, Diana, Attenborough, Rowling), France, Germany, Italy with
+  the popes from Pius X to Francis, Spain, Poland, Central Europe, Turkey,
+  Israel, Iran, the Arab world, India, China, Japan, Korea, Latin America
+  and Africa. They hold the post `media` – the political ones, party and
+  movement leaders, dissidents and activists, `party`, as the opposition's
+  faces do – and neither ever makes a minister. Names given name first in
+  Russian and Ukrainian, with the nicknames and spellings a model writes
+  ("Гоблин", "Мистер Бист", "Тёма Лебедев", "Шарий", "Патриарх Кирилл");
+  an alias someone else of the same years goes by is left out. Michael
+  Jackson is the singer and General Sir Mike Jackson goes by Mike, so
+  each is found by his own name. Nineteen of
+  the writers quoted on the waiting screen (Einstein, Shaw, Wells, Kipling,
+  Orwell, Hemingway, Bulgakov, Brodsky, Hayek, Friedman...) are the game's
+  people now, so a game master's mention finds them. 578 painted from free
+  pictures, every face looked at on contact sheets, 39 cut to the face and
+  Kolomoyskyi, Abramovich and Amanpour from better pictures in their own
+  Commons categories; 15 keep a shadow – no free picture of Liu Xiaobo, Paul Dacre,
+  Robert Runcie or Mary Whitehouse, and for Jamala, Kazantzakis, Meinhof,
+  Baader, Amancio Ortega, Fela Kuti, Aziz Nesin, Geoffrey Fisher, Henriette
+  Caillaux, Assis Chateaubriand and Petro Hryhorenko only a caricature, a
+  plaque, a coin, a stage or a crowd.
+- **How an order is carried out.** Each order has its settings beside
+  its words (the sliders on its card): the ministry entrusted with it –
+  its minister's competence and loyalty decide how well it is done, and a
+  ministry that drags its feet marks down what it was given; the
+  ministries it is kept from – their ministers never learn of it, not in
+  talks, deputies, reports or the history they read – each ministry an icon
+  with its name on hover; how pressing it is (ordinary, important, urgent)
+  and whether it is secret (kept from the press, the public and other
+  governments); when it begins (in so many days – until then it waits,
+  untold); and how long it runs – this turn, a number of days typed or
+  picked (fifty days on weekly turns is eight turns), or until cancelled;
+  an order that runs past the turn stands every turn until its date, then
+  lapses into the turn's record. The card shows them as small icons, each
+  saying what it is on hover; the game master reads them beside each order.
+- **The date's real generals command the fronts.** The formations the
+  engine fights its wars with had no commanders' names unless the game
+  master described the army; now they take the date's own military people
+  (Joffre, Gallieni, Moltke on the Western Front of 1914), each once, alive
+  and of age, their character the same in every game – the offline game
+  master's army names them too, in the player's language.
+- **The leader at the world body in person.** A case at the United
+  Nations (or the League) has a "Speak in person" button: an order that
+  sends the leader to the session. The governments on good terms with the
+  player's that had not made up their minds vote with its delegation, and
+  the next game master tells the speech and how the hall took it.
+- **Landings, told.** Each war in the army's fronts now lists the islands
+  and shores the player's side could land on, about how many soldiers its
+  ships could put ashore and keep there, and the odds once ashore – and
+  says what is missing: landing ships and transports to order from
+  industry (Taiwan), or the sea and the air the enemy holds (Malta while
+  NATO holds the sea).
+- **Headquarters before asking.** The map showed headquarters only after
+  "Learn about the army"; until the army is described, the engine's own
+  formations stand on the map at their sectors, with their commanders.
+- **A ministry costs money.** Creating or closing ministries cost nothing;
+  now each ministry the government creates raises the state's usual running
+  costs (the budget's "other" line) by 2% and each standard one it closes
+  lowers them by 1.5% – an "other" line left where it was falls short and
+  the state runs down as it does under any cut. The line's hint and the
+  ministry dialogs say so, and the game master is told.
+- **A ministry's icon.** Every ministry wears an icon on the cabinet's
+  tiles, in the orders' settings and in the reports; the player picks
+  another for any ministry by its name in the cabinet, and one for a new
+  ministry when creating it.
+- **Up to twenty orders a turn.** Twelve were too few and orders had to
+  be merged; past a dozen the orders panel says that each one more makes
+  the turn longer to write, since the game master answers every one.
+- **Pencils that write orders, with names to pick.** By a minister's post,
+  a ministry's name, the ruling party (on its card), the movement (in
+  opposition), a war (the army's fronts) and a formation (the army's
+  command): a small pencil opens a pop-up with the name, a spark asks the
+  game master for names of the era when wanted, and "To the orders" puts the
+  rename into the turn's orders – the game master carries it out, so
+  nothing changes before the turn. The post's pencil no longer renames it at
+  once.
+- **Tidy up an order.** A spark beside "Add", and on every order already
+  added: the game master drafts the order as it should read – the same
+  meaning, every name and number kept, fewer words – in two versions to
+  pick; the one picked takes the order's place, its settings with it.
+- **More can be renamed by order.** Beside the country and its cities, an
+  order may rename one of the cabinet's ministries, the ruling party, a war
+  the country fights or one of its formations – and an opposition player
+  its own movement. The game master answers it as an act of state, with how
+  the country takes it, and the new name takes effect at the end of the
+  turn, in the chronicle like any other.
+- **A review in the Microsoft Store, or a letter.** The Store copy asks
+  once, after half an hour of play counted across sessions, for a review in
+  the Microsoft Store – or, beside it, a letter to the author for what went
+  wrong, said in private; "later" asks again after two more hours, "don't
+  ask again" never. Never over a turn being written, its report, the tour
+  or the tutorial; nothing in a browser or the other desktop copies. The
+  desktop app now opens mail links (the About page's too) in the mail app.
+- **Three new dates, twelve in all, each with its eve.** Every date now has
+  the next within its twenty years, and the front page lays the twelve out
+  four to a row.
+  - *30 January 1933, Hitler Comes to Power* (eve: 23 January, Schleicher's
+    cabinet falling). The 1938 map undone for 1933: Austria, Czechoslovakia
+    whole, Memel Lithuanian, the Saar under the League, Ethiopia and Albania
+    free, Manchukuo without Jehol. The Depression's economy, the League with
+    Germany and Japan still in, Locarno and France's eastern alliances; the
+    wars over Manchuria, the Jiangxi Soviet, the Chaco and Leticia; history
+    to come from Japan leaving the League to Pearl Harbor.
+  - *6 October 1973, the Yom Kippur War* (eve: 29 September, Operation Badr
+    planned, Iraq to follow). Israel on the canal and the Golan
+    with Egypt's bridgeheads and Syria's breakthrough contested, Indochina
+    after the Paris Accords, Portugal's three African wars, Rhodesia and
+    Eritrea; the oil prices of the eve of the embargo.
+  - *25 December 1979, Into Afghanistan* (eve: 18 December). The Soviet
+    Union joins the War in Afghanistan against the mujahideen; Vietnam's
+    Cambodia against the Khmer Rouge, Polisario, UNITA, the Patriotic Front
+    before the Lancaster House ceasefire; Iran's revolution and the hostages;
+    history to come from the Iran–Iraq war to Kuwait.
+  - Some 230 countries' and movements' leaders in three languages, 119 new
+    people with their portraits (six left a shadow where no free picture
+    exists); the scenes painted from free pictures (the torchlight march,
+    the canal crossing, the Tajbeg Palace); link-preview cards and a home
+    card of all twelve; every per-date table (economy, arms, research,
+    space, parties, trade, crises, cities); history's crimes of the new
+    twenty years (the Great Purge, the Night of the Long Knives,
+    Kristallnacht, the Red Terror, East Timor, Hama, the Anfal); cloud saves
+    for the new dates (a Supabase migration).
+  - Their power and their colonies: each date's generation and mix, its
+    reactors; the Portuguese wars of 1973 taken up by the colonies they
+    free, and the calendar's Spanish Sahara and Portuguese Timor (1976),
+    Zimbabwe (1980, ZANU's war ended at Lancaster House), Namibia (1990)
+    and Eritrea's thirty-year war; the Urengoy pipeline among history's
+    joint projects.
+- **Joint actions with allies.** A new section of the foreign panel, "Joint
+  actions": propose to an ally, or to every member of one of your blocs, one
+  of ten kinds, and see each one's likely answer before it is sent – keen,
+  unsure or reluctant, the chance and what weighs most – or why it will not
+  take part at all. The ally answers at once by the engine's dice, from its
+  trust in you and the tension between you, its alliance or common war with
+  you, its interest in the aim, its trade with the target, its appetite for
+  force and its means, and your record of walking out (engine/joint.ts):
+  - *a joint offensive*: pick a war you fight side by side and where your
+    lines meet (an enemy province next to both), this turn or the next; both
+    formations there take the offensive and each attacks with 0.2 doublings
+    more (the enemy cannot shift its reserves), counted over the two months
+    such a push lasts in a longer turn; the ground it gained is told;
+  - *a joint air and naval operation*: cover for the formations fighting a
+    war for its term, up to 0.15 doublings by the supporter's aircraft
+    against the enemy's; a supporter not in the war loses 1% of its
+    aircraft a month and earns the enemy's anger (the Soviet MiGs over
+    Korea);
+  - *joint manoeuvres*: a warning to a rival – trust among the members, the
+    rival's threat and tension up, and by the dice and the members' weight
+    its war plans against them given up;
+  - *joint research* in one direction, *a joint space programme*, *a joint
+    atomic programme*: each member's money counts for the others less a
+    quarter lost to coordination, the pace rising by the root of the pooled
+    money (at most doubled); the player's breakthroughs come as usual, a
+    partner's economy gains a little of what is learnt, a feat in space is
+    every member's pride, and the bomb's design goes to every member at the
+    lead's test or stays with the lead, as agreed;
+  - *a joint project* – pipeline, canal, plant, airliner, railway, tunnel –
+    built over its years (4 to 12), every member paying 0.1–0.2% of its
+    economy a year from reserves or borrowing, every economy 0.1–0.5% larger
+    once built (an airliner more prestige than money);
+  - *a joint note*, which the target yields to or rejects by the members'
+    weight against its own and its appetite; *joint sanctions*, imposed by
+    every member at once and biting half again as hard (no way round
+    through the partner); *one line at the world body*, the partner's
+    delegation voting with yours on that government.
+  Actions under way show their term and progress, with a way out (the
+  partners remember it). Other governments run joint actions among
+  themselves – allies attacking together where their lines meet, a bloc's
+  yearly manoeuvres, an economic community's project, two friendly powers'
+  space programmes, an ally joining sanctions one of them imposed – and
+  offer some to you, to answer before the next turn. In the historical mode
+  history's own open on their days: the Manhattan Project (1942–45), Soviet
+  air cover over Korea (1950–53), the Druzhba pipeline, Concorde, Interkosmos,
+  Airbus, Apollo–Soyuz, Ariane, the Channel Tunnel, the International Space
+  Station, Nord Stream – offered to you when you play one of their members.
+  The game master is told what is under way and what the engine decided for
+  the period; the news tells each step in Russian, Ukrainian and English.
+  Save step 52.
+- **The war's toll on the people, beside the soldiers'.** Every war now
+  counts the civilians it kills and drives from their homes, by its means
+  and its era, and keeps them per war and country beside the soldiers'
+  record: bombing where the enemy's strategic bombers reach (a few hundred
+  kilometres in the Great War, a thousand by 1940, the whole world in the
+  jet age) at the era's lethality – the Blitz comes to some 43,000 a year,
+  Russia's strikes on Ukraine to about a thousand; sieges – a town cut off
+  from its side's land, or three quarters surrounded – where the shells
+  kill from the first day and hunger once the stores run out (Leningrad,
+  sealed, loses nearly a quarter of its people in half a winter), unless
+  its side's fleet keeps the sea open; occupation,
+  more where the people resist; the fighting in a front province's
+  streets, and the people it drives out; and the war's hunger where a
+  country's food runs short. The dead leave their provinces, the game
+  master's own figure for a country's dead counts them among its own
+  rather than on top, and they reach the country's age cohorts once – the
+  small children and the old the most. Mass crimes keep their own toll.
+  The army tab's losses show each side's civilian dead and fled with the
+  last turn's part and the causes (the enemy's under the fog as an
+  estimate), the turn report and the news a line per country hit, and the
+  game master each war's toll.
+- **A long mobilisation strains the country.** The share of the people
+  under arms beyond the peace's, the months they have been kept there and
+  the soldiers the wars have killed and taken make a strain of 0–100 – a
+  year of Ukraine's war from 2022 comes to about a third, Germany's third
+  year of the Great War to all of it. It takes up to 8% of the output while
+  it lasts – given back as the men come home, not a toll on growth that
+  compounds for a decade – and some of the people's goods and food (a
+  "mobilisation" cause in the people's provision), puts a floor under
+  unrest, feeds the parties' war discontent and wears down the support of
+  governments abroad. The families come out openly where people vote – rallies to
+  bring the men home, then strikes, then riots, an engine-made protest that
+  climbs a step a turn and goes home once the men do – and under a police
+  state only once its grip slips, as strikes first. The losses section
+  shows the strain; the game master is told it. Months under arms count
+  only at war, so a standing army in peacetime is no strain.
+- **Civil wars, playable from either side.** A coup abroad can half
+  succeed (4–16% of coups, the shakier the state the likelier), and in the
+  free mode a state near collapse can see a revolution or a rising and a
+  restless nation inside it can break away; at home, an overthrow the game
+  master reports may be left half done by the engine's dice where a pillar
+  of the state still stands by the government, and the opposition's
+  revolution or coup may take only part of the country. Then the rebels set
+  up a government of their own holding their side's regions – grown from
+  where the rising began by the provinces most inclined to it, a nation's
+  own land for a secession, under its waiting government (Croatia from
+  Yugoslavia) – the army and its weapons divide by its loyalty, the
+  player's formations in the rebels' land go with them, and a coup's
+  capital is fought over. The fronts, formations, losses and the people's
+  toll work between the two as in any war. Each side's legitimacy follows
+  the people and the capital it holds, its form of government and the
+  recognition it has; soldiers and provinces by the front go over to the
+  more rightful side; governments abroad recognise the rebels, send
+  volunteers from their own armies or plan to enter the war by how they
+  stand to the old government and each side's kind of regime, and the
+  world body's seat follows most great powers. It ends in victory (the
+  winner governs the whole country under its name – the player's
+  government, if beaten, has fallen), partition (a secession, or rebels as
+  rightful as the government, at a peace – or a front that has not moved
+  in years with both sides worn out) or a settlement (one country again,
+  power shared). The leader of the opposition whose rising half succeeds
+  leads the rebels' government – its politics, army and orders – until it
+  wins the country, is crushed (back underground) or keeps its land. The
+  fronts section shows each civil war's state; the news and the game
+  master are told every step.
+- **Energy: every country's power plants and the electricity they give.**
+  Seven kinds – coal, oil, gas, hydro, nuclear, wind, solar – in gigawatts,
+  and a demand in terawatt-hours that grows with the economy (faster in the
+  age of electrification). Each start date is history's for the great
+  powers and featured countries (the United States of 1950 at 389 TWh,
+  coal 47%, hydro 29%, gas 14%, oil 10%; the Soviet Union at 91 TWh, three
+  quarters coal; France's reactors in 1991; China's coal in 2022), the rest
+  get the era's mix leaned by their own coal, oil, gas and mountains. Coal,
+  oil and gas plants burn the strategic resources a country digs or
+  imports, reactors burn uranium – a blockade or sanctions that cut the
+  imports empty the stores and then darken the plants – and land the enemy
+  holds takes its plants out of use. Plants are built from the industry
+  line over the years each kind takes: by the player's orders
+  (`energy.build`), by the industry minister's own routine, and by every
+  other government's planners ahead of the demand they see coming, in the
+  era's mix; old ones retire. A front wrecks the plants it runs through,
+  bombers wear them down, land that passes for good takes its plants with
+  it. A shortage is a cause of growth of its own, darkens the people's
+  homes (the energy line of the provision), is a crisis that holds unrest
+  up, and is news for the great powers. The uranium a country needs now
+  follows its reactors. A new *Energy* tab in the economy panel: demand and
+  supply, the mix as a bar, the plants by kind with the fuel each has left,
+  the plants under construction and what they take of the industry line.
+- **The atom: atomic programmes, the bomb and its stockpile.** Every
+  programme history had – the United States, the Soviet Union and Russia,
+  Britain, France, China, Israel (never tested), India, Pakistan, North
+  Korea, South Africa (given up), the war's German and Japanese attempts,
+  Iran's – moves through its stages: a first reactor, the material for a
+  bomb, a device, the first test, the hydrogen bomb. In the historical mode
+  other governments test on history's days (16 July 1945, 29 August 1949,
+  3 October 1952, 13 February 1960, 16 October 1964, 18 May 1974, 28 May
+  1998, 9 October 2006); in the free mode by their money and the engine's
+  dice, a test that can fizzle. The player's programme runs on the
+  strategic direction of research as before, now through the same stages.
+  Stockpiles follow history's from the day a country tested (earlier or
+  later with it); the player can order its own built up or cut
+  (`atom.goal`), paying for what is built. Deterrence weighs in war
+  decisions: a nuclear power is far less likely to be attacked – fewer war
+  plans against it, crises against it fade at preparation and at the brink,
+  the player with the bomb is provoked less – the more so with more
+  warheads, a later era, missiles and the hydrogen bomb; a hostile nuclear
+  power is a threat however far away. Other governments use one only as
+  their nuclear doctrines decide (below). A player's order to use one, in so many
+  words, at war with the target and with warheads in store (`atom.use`), is
+  carried out by the engine alone: a city's people killed, its plants and
+  output destroyed, every government's trust lost and an atrocity
+  remembered, the largest economies' full sanctions, unrest at home, and an
+  answer in kind from a nuclear power or its nuclear ally, cast by the dice
+  before the turn and told to the game master. The atomic programme beside
+  the space programme in the science panel: its stages and when the next
+  comes, the stockpile, the world's atomic powers, the strikes made. The
+  game master is told the atomic powers and their stockpiles, the secret
+  programmes, and each country's mix and shortages in a few lines.
+- **Save step 47** gives a save from before them its power plants (history's
+  for its start date, grown into its own date) and the atomic programmes as
+  of its date, the bombs it already counts kept and the player's old atomic
+  progress carried into the stages.
+- **People and society.** Society is its own tab in domestic affairs, the
+  people are widened into classes, and light and heavy industry are two
+  parts of the economy (engine/societyRecord.ts, engine/classes.ts,
+  engine/industry.ts).
+  - *The society tab* (politics, beside parliament, parties, threats and
+    sport) shows the people now – population and its change, life
+    expectancy, literacy, the age pyramid with the one the record opened
+    with drawn in outline – the classes, and charts of how the country
+    moved turn by turn: births and deaths a year per thousand, life
+    expectancy and medicine, literacy and towns, income per head, the
+    poor, the rich and inequality (Gini), unemployment, the people's
+    provision, migration and refugees (fled, came, deported) and the toll
+    of wars and crimes (soldiers killed, civilians dead, the state's
+    victims) with their totals. The record is kept in the save, a point a
+    turn, never more than 96: past that the oldest half is thinned two
+    turns into one, keeping the later levels and the sum of both turns'
+    tolls, so a long game keeps its whole course and loses no dead. A role
+    sees what it would know: the minister of the interior and the leader's
+    office the state's statistics, other ministers and generals rough
+    estimates, the opposition the official figures – less poverty and
+    joblessness, longer lives, the moods of a united people, the state's
+    crimes kept secret where the regime and the press let it.
+  - *The classes*: workers, peasants, the middle class, the intelligentsia
+    and the elites – the collective farmers, office workers and
+    nomenklatura of a planned economy, the nobility before 1918 – each
+    with its share (from the farms, industry, services, schooling and the
+    rich), a mood that moves most of the way to what the times make it
+    within the year, and what it wants most: jobs, wages, prices, goods,
+    bread, welfare, lower taxes, peace, freedom, land, order. Growth and a
+    slump, joblessness, prices, the goods and the bread, the social budget,
+    taxes, the war and its dead, censorship and the state's crimes, light
+    industry against heavy, disorder in the street – each weighs on the
+    classes it touches. Angry classes that count put a floor under unrest,
+    swell the camps of opinion they lean to (angry workers the communists
+    and socialists, peasants the agrarians, the intelligentsia the
+    liberals and greens), where new parties rise; the game master is told
+    each class's share, mood and want, for the street and the vote.
+  - *Light and heavy industry.* Heavy industry's share of output is the
+    usual for a country's income (Hoffmann's law: India and China about a
+    fifth to two fifths around 1950, Britain and America a half and more)
+    and its system – a planned economy leans 25 points heavier: the Soviet
+    Union of 1950 stands at 68% heavy, the United States at 55%. The
+    government splits the industry line between the two (a slider in the
+    economy centre's budget tab, up to 20 points either way; the industry
+    ministry's lever for a minister-player), and the industry minister
+    moves it on his own – heavy at war or for the plan, light when the
+    shops are empty – within three points of a split set by hand. The
+    plants follow the money over about six years, faster with more; a
+    system changed overnight leaves them as they were. Heavy industry past
+    the usual makes the arms money buy more (up to a quarter), money tilted
+    to it adds growth (up to 0.6 points a year), but takes goods from the
+    shops; light industry past the usual holds the goods up and pleases the
+    workers. Every effect is measured from the usual for the era, income
+    and system, so the starts play as before. The game master is told both
+    industries, the split and what each feeds.
+  - *Refugees by age and sex.* Women, children and the old leave first; in
+    a war the men of 20–59 stay, called up or kept from leaving. The
+    country they leave and the one that takes them in both carry it in
+    their cohorts.
+  - Save step 50: nothing changes at once; the record opens with the next
+    turn played.
+- **Nuclear doctrine for computer governments.** "If America takes Russia in
+  2023, Putin uses the bomb": every atomic power the computer plays now has
+  the doctrine of its era – the Soviet Union's massive answer (a no-first-use
+  pledge declared from 1982), Russia's "existence of the state" from 1993,
+  lowered in 2000, spelled out for a conventional attack in 2020 and
+  extended to Belarus in 2024; the United States' monopoly, massive
+  retaliation and flexible response, with its allies (NATO, Japan, South
+  Korea) under its umbrella; Britain's minimum deterrent; France's "vital
+  interests" and a single warning strike; China's and India's no first use,
+  answering only a nuclear strike; Israel's last resort; Pakistan's first use
+  against a defeat by India (land lost, the army destroyed, the economy
+  strangled, the state destabilised; lower once it had tactical weapons in
+  2011); North Korea's regime survival and pre-emption (by law from 2022);
+  South Africa's demonstration only; a newcomer's by its regime, lower
+  against an enemy with the bomb. At war the engine climbs an escalation
+  ladder for each: open threats, a raised alert, a demonstration (a test or
+  a warning shot at sea), a tactical strike at the front, a strike on
+  cities. A rung is reached when the danger the country sees passes its
+  doctrine's line – the capital held, fought for or approached, the
+  heartland and the land lost (by output, so a colony's rising is not the
+  homeland), the army's losses, the regime about to fall, the economy
+  strangled, the enemy on its soil, a nuclear strike on it, its allies'
+  danger under its umbrella – and climbed by the dice: faster the further
+  past the line, slower for a cautious leader (Gorbachev never goes past the
+  alert, Kennedy or Brezhnev past a demonstration, unless struck), against
+  an enemy that can answer (its stockpile, missiles, a nuclear ally) and
+  under the era's taboo, strongest after the Cuban crisis and through the
+  arms-control years; both weigh less the nearer defeat is, and never
+  nothing. When the danger recedes it climbs down; when the war ends its
+  forces stand down. A strike goes through the atom's machinery – the toll,
+  the world's outrage and sanctions (never the player's: that is its own
+  decision), unrest at home, an answer in kind by the dice (the player
+  answers by its own orders) – and a tactical strike kills and wounds the
+  struck side's soldiers in thousands where it falls, its formation there
+  falls back and its advance in that war stops for the turn. All of it is
+  cast before the turn: the game master is told every atomic power at war,
+  its doctrine, rung and danger, and what the engine decided for the
+  period, and adds nothing of its own. The army tab's war card shows each
+  atomic power's rungs and red lines ("Russia: threats – alert raised"; the
+  capital, the heartland, the army… far, near or crossed), and threats,
+  alerts, tests, warning shots, strikes and stand-downs are news. With the
+  USA at Moscow's approaches in 2023 Russia threatens and raises its alert
+  in the first month, fires a warning shot at sea in the second and strikes
+  at the front within six months in 18 of 20 seeds (by the fourth in most);
+  a border war never goes past threats; the world statistics count the rungs
+  climbed and hold the computer governments to no strike in an ordinary
+  world, and so does the long run of the ordinary suite. Older saves need no
+  step: a ladder begins with their next turn.
+- **Repressions and mass crimes, carried out by the engine.** The game
+  master would not write an execution or a purge, so the engine decides
+  them, records them and writes a fixed, dry line the story is told around;
+  whatever the model writes, the line, the result and the order's verdict
+  stand (engine/repressions.ts).
+  - *A named person.* An order to arrest, try in a show trial, exile or
+    execute a minister, a deputy, a party's or a protest's leader or a
+    general – written in any of the three languages, any case ending, or
+    from the "Repress" square on their card, which shows the odds – is
+    carried out by the security service: the chief's competence and
+    loyalty and the police state set the odds, the target may be warned
+    and flee abroad (less often behind a closed border), the one told to
+    do it may refuse (more often when disloyal or of the target's faction),
+    and where the courts are free they stop it (never an execution).
+  - *Both ways.* The person leaves the post, the party's lead or the
+    crowd; an underground loses a quarter to nearly half of its strength,
+    a rising whose leader is shot falters. But the victim may become a
+    martyr – likelier the harsher the measure, the better known the victim
+    and the freer the press – and the cause grows instead; the elites and
+    the army fear for themselves and plot, the target's faction most; a
+    show trial or a shooting of someone known costs trust abroad.
+  - *The organs' power.* Every case and campaign adds to the security
+    services' power, which fades when they are given nothing; past 60
+    their chief grows ambitious and shields his own plots, and where one
+    man rules the leader may turn on him – on the player, when he is that
+    chief (Yagoda, Yezhov).
+  - *The leader's orders.* A minister of the interior or of intelligence
+    under a party, autocratic or military rule is ordered from time to time
+    (about one month in nine under Stalin) to repress the man the leader
+    trusts least, a plotter, an underground's or a rising's leader – or to
+    carry out history's own operation. Obeying wins the leader's ear and
+    leaves the player's hands on it; refusing costs influence, may cost
+    the player's freedom, and someone else does it anyway; silence counts
+    as refusal. A new leader may clear the old one's victims and make the
+    executioner answer for them (Beria, 1953).
+  - *Mass crimes.* A deportation, a purge of the army, the party or the
+    state, mass killings or a famine made by requisitions go down the chain
+    of command and can be refused there (a disloyal minister, a pillar
+    whose loyalty is low; a democracy's parliament, courts and army refuse
+    almost always). Carried out, each is recorded with its toll on the
+    people of the provinces it names (the deported sent to the country's
+    emptiest provinces, about one in seven dying), and its price: unrest,
+    the ruling party's lost support, the elites' and the army's loyalty, a
+    split army, anger among the victims' kin elsewhere, condemnation abroad
+    by the era's norms and, since 1950, sanctions for the gravest; a
+    tribunal after the government falls, an international indictment since
+    1993. A purge breaks the plots and takes one of the cabinet with it,
+    and its dead leave a gap among the country's grown men; a deportation
+    breaks a revolt's base for a while. Never free.
+  - *History's own, in the historical mode*, on their dates with their
+    toll, wherever the government still stands as it was and holds the
+    land: the Armenian Genocide, dekulakisation, the Kazakh famine and the
+    Holodomor (1914's twenty years); Aktion T4, the Holocaust, Katyn, the
+    Soviet deportations of 1940–49 (1939); the Leningrad affair, Operation
+    North, China's campaigns, the Great Famine and the Cultural Revolution,
+    Indonesia 1965–66 (1950); Cambodia, Chile, Argentina, East Pakistan
+    (1957, 1964); Rwanda, Kosovo, Darfur (1991, 1999); the Rohingya and
+    Xinjiang (2014); the children taken from occupied Ukraine (2022). The
+    Great Purge of 1936–38 falls between the dates. The player who rules
+    sees them coming in the street tab and may stop them, or order a
+    deportation or a purge harsher.
+  - *The record.* The street tab keeps the organs' power, history's course
+    ahead, the repressed with an order to rehabilitate them (one by one or
+    all), and the mass crimes with their toll, tribunals and condemnation.
+    The news, the turn report, the ministers' views and the world news
+    carry the lines in Russian, Ukrainian and English. Nothing to migrate:
+    a save from before simply has none of it.
+- **Sport: the Olympic Games and the World Cup** (engine/sport.ts, save
+  step 43). The Summer and Winter Games and the football World Cup from
+  1930 keep history's calendar; in the historical mode history's hosts,
+  each chosen on the day history chose it (Tokyo and Sapporo giving up
+  1940, Denver 1976 and Colombia the Cup of 1986 on their days too); in
+  the free mode, and past the calendar history knows, the committees vote
+  about seven years ahead among the bids – wealth, size and the world's
+  goodwill weigh, a recent host weighs less, the dice decide.
+  - *Hosts lost.* A host that can no longer hold its Games loses them, in
+    the historical mode too: conquered, gone, or at war on its home soil
+    (a colonial war far away is not), the Games go to a new vote while
+    there is time and are cancelled when there is none. A great war – one
+    whose weaker side holds a quarter of the largest economy – cancels the
+    Games that fall in it or the year after, and no vote is held while it
+    lasts.
+  - *Results made, never replayed.* Every Olympic event is drawn among the
+    countries that come, weighted by people at home, wealth (a poor
+    country is held back far more than a rich one lifted), a state sport
+    system (the Soviet Union's, East Germany's above all from 1968, and
+    what they leave behind after 1990), a sporting tradition, the money
+    the player gives sport, the host's edge and the luck of the Games. A
+    World Cup is a knockout by football strength and the host's edge,
+    upsets and penalties included.
+  - *Boycotts and bans.* Countries at war with a host stay away. History's
+    boycotts (1976, 1980, 1984, 1988) come again in the historical mode
+    while their leader distrusts the host; a great power stays away from
+    the Games of an aggressor it condemned, a host whose Games were
+    boycotted answers in kind, deep hostility keeps a country home. Bans:
+    South Africa 1964–1991 and Russia and Belarus during their war, an
+    aggressor under the world body's sanctions, a ban the player calls for
+    and the world votes on. The host remembers a boycott, the target a
+    call for its ban, and their friends cool too.
+  - *Money and prestige.* Hosting costs the host a share of the largest
+    economy over the years before the Games and lifts its people when they
+    are held; leading the medal table, beating hopes or winning the Cup
+    lift them too. The player's money for sport, a share of the social
+    budget, costs more above the usual share and saves below it, builds
+    the team's form over years and with it a little of the nation's health
+    (engine/society.ts).
+  - *The sport tab* in politics: the country's place among sporting
+    nations and its money for sport; the coming Games with their hosts or
+    the year the host is chosen, a bid, a boycott, or giving up the
+    country's own Games (an order); the bans; the last Games of each kind
+    with their medal table or final. Orders can do the same through the
+    game master ("sport"), and a line in the news for every host chosen or
+    lost, Games cancelled, boycott, ban, medal table and final, in RU, UK
+    and EN.
+  - *The game master* is told the coming Games, hosts, bids, boycotts and
+    bans, the player's money and strength, and what the engine decided for
+    the period, so the story tells it; national champions and record
+    holders (the all-Union ones in the Soviet Union) are its flavour.
+- **Decolonisation as a process.** Until now no colony ever came free
+  unless the game master wrote it (in a USSR 1950 game no African state was
+  independent by June 1953). Every colony – land a power rules overseas
+  that would be a state of its own – now has a national movement whose
+  pressure grows with the era's norm (low before the Great War, rising
+  after 1945, all but universal after 1960), the metropole's weakness, the
+  wave of colonies already free and war. It climbs from quiet rule to
+  demands; the metropole answers – hands it over (talks, a day set),
+  offers self-government in a federation (independence later, inside its
+  community), puts it off or fights – and a colony kept too long rises in
+  a colonial war: a liberation movement with fighters of its own, fronts
+  in the colony's roughest provinces, which ends in a handover, the rising
+  crushed, or the movement taking the land. No treaty calls a metropole's
+  allies into its colonial war, and the war-weariness that ends other wars
+  leaves these to the colony's own course.
+  - *The historical mode keeps history's calendar* (from 1914 to 2011):
+    Egypt 1922, Ireland after its war, Iraq 1932, Lebanon, Iceland, Syria,
+    the Philippines, India and Pakistan 1947, Burma, Ceylon, Israel,
+    Indonesia after its revolution, Indochina, Libya in December 1951,
+    Eritrea joined to Ethiopia, the Rhodesian federation, Sudan, Morocco
+    and Tunisia 1956, Ghana and Malaya 1957, Guinea 1958, the seventeen
+    states of 1960, Cyprus after EOKA, Algeria in 1962 after its war since
+    1954, Kenya after the Mau Mau rising was crushed, Malaysia, Singapore,
+    the Caribbean, the Gulf, South Yemen after the Aden emergency,
+    Bangladesh 1971, the Portuguese colonies in 1974–75 after their wars,
+    the last islands to Brunei in 1984, Hong Kong 1997, East Timor and
+    South Sudan. Each is a plan the engine moves toward its day, a few
+    weeks either way; a beaten metropole lets go sooner, and the colonial
+    wars open and close on history's days.
+  - *New states take their modern borders*, the name of their day
+    (Dahomey, Upper Volta, Tanganyika, Congo (Léopoldville)) and their real
+    first government (King Idris, Nkrumah, Sékou Touré, Kasa-Vubu and
+    Lumumba, Ben Bella, Kenyatta…); one the free mode frees far from
+    history's day is named by the game master. A movement that fought for
+    its land becomes the state; those that joined their metropole's
+    community join the Commonwealth or the French Community.
+  - *The player's colonies wait for the player's answer.* The foreign
+    panel's new Colonies section shows each with its pressure, stage and
+    history's day, and four answers – hand over, delay, fight, federation –
+    acted on when the turn is played; an order does the same through the
+    game master. Left unanswered, a colony's patience runs out. The section
+    also lists the world's colonial wars, the independences to come and the
+    states lately free, and the news tells each step in three languages.
+  - *The game master is told* what the period brings for the colonies,
+    the colonial wars under way, the days to come and the player's own
+    colonies, and never makes a colony's state itself. Save step 45: a save
+    from before reads its colonies from the map on its next turn.
+- **Formations that fight on their own, and losses by how they fight.**
+  Each side of a war now fights it with formations – armies, corps and
+  fronts – each holding a sector of the front with its soldiers, tanks,
+  guns and aircraft (the staff masses them where it attacks), supply,
+  commander (his character and skill) and task. The player's are the ones
+  the game master described where they stand near the front; the rest the
+  engine makes from the front itself, an army to about every hundred
+  kilometres, and they keep their numbers, commanders and guns from turn to
+  turn (engine/formations.ts).
+  - *Postures.* Every turn the general staff sets each formation's task
+    (attack where the odds are no worse than the era's staffs would attack
+    at, or hold) and its commander picks how to fight it – hold, probe,
+    offensive or all-out assault – by the odds on his sector, his supply,
+    the era's doctrine and his character, with his own dice: a reckless one
+    assaults, a careful one waits for the guns, which make his attack
+    cheaper when it comes. The player's staff follows its minister's line
+    (pressing or holding), other countries' the side that began the war.
+  - *Orders to the armies.* In the Army tab's Command section each
+    formation can be given an order – hold the line, take ground, an
+    offensive, an all-out assault, fall back, a new commander (bold,
+    steady or careful, named or not). Orders come first, but the general
+    staff decides how: by its chief's competence and loyalty, the
+    commander's character, supply and the odds an order is carried out as
+    given, late, half-heartedly or badly, and the turn says which. With no
+    order the staff and the commanders carry on.
+  - *Each sector's turn told.* The Fronts section shows, for every turn,
+    each formation's fight: "Assault at the Somme: 57 thousand lost, 2 km
+    gained", the enemy's losses against it, prisoners taken and the fate of
+    the order; the game master is told the plan before it writes the turn.
+  - *Losses by posture and defence.* An attack that fails costs the
+    attacker 2 × Δ and the defender 0.7 / Δ of the fight, where Δ is the
+    defence's advantage: the era's (machine guns and wire in 1915–17, mines
+    and drones since 2015), the months the line has stood, the ground and
+    its rivers, less the attacker's guns, gas (1915–18), tanks and aircraft.
+    A failed assault on the trenches of 1916 costs 10–20 times the
+    defender's loss in a week; a breakthrough turns it round, with
+    prisoners; a quiet line costs both sides alike, more for the side under
+    the guns being gathered against it. A season on the Somme comes to
+    about 1.3 : 1, near history's.
+  - *Lines dig in.* Every front province counts the months its line has
+    stood (`dug`): an attack needs that much more edge to gain ground there,
+    and a lodgement dug in is as hard to clear – between the two the line
+    stands, most in 1915–17, in Korea's second year and since 2015.
+- **Island parts.** A landing on one part of an island (Corsica, Cyprus,
+  Taiwan on the finer maps) no longer takes the other parts beyond what its
+  ships keep supplied: no side gains ground, breaks in or probes where its
+  reach is below 0.15, as the world statistics count it.
+- **Each role its own game.** The leader keeps every panel as before. A
+  minister governs their own ministry's panel – the foreign minister
+  foreign affairs, the interior minister politics, the general staff's
+  minister the army, the finance minister the budget and the industry
+  minister the trade deals, the science minister research – and only reads
+  the rest; a general commands the army and reads the rest; the opposition
+  runs its party and plays parliament from its benches, and reads the
+  economy, the army, foreign affairs and research. A panel the role only
+  reads says so and why, and has no buttons that do the government's work.
+  - *What a role knows.* Along the top and on the panels it reads, a role
+    that does not govern sees its own country as it would know it: a
+    minister their ministry's figures exactly and the rest as estimates
+    (≈, with a range); a general the army; the opposition the official
+    figures – the true ones under a free press, dressed up under a
+    dictatorship as far as the kind of rule and the press law let the
+    government (more growth, less inflation, joblessness, debt, deficit
+    and unrest), with the reserves and the army kept secret – and beside
+    each the rumours, as near the truth as the movement's press and friends
+    inside get them. The game master is told the same limits.
+  - *Proposals to the leader.* What lies beyond a minister's or a general's
+    post they propose from that panel, up to two a turn; the leader takes
+    each up or not by the engine's dice – the kind of rule, the player's
+    influence and how far the leader trusts the colleague whose field it is
+    – and the game master plays an accepted one as the government's own.
+  - *Inside the government.* The post panel shows how the leader hears the
+    player, a minister's colleagues with their factions and standing, the
+    plots against the player that anyone whispers of, a general's general
+    staff and the other commanders, the career so far and the proposals
+    waiting.
+  - *The party.* The opposition's own panel is the party's: its
+    organisation, its programme, coalitions with other parties – offered
+    there and taken up or turned down by the engine's dice, the nearer
+    their ideas the likelier, an ally bringing half its voters to an
+    election and joining the government if the movement takes power – and
+    the campaign, with how far the movement and its allies are from
+    winning. In parliament it tables its own bills, changes of law, early
+    elections and motions of no confidence where its party holds seats;
+    the government's parties vote against, the rest of the opposition
+    leans for, and a carried motion of no confidence is the government's
+    crisis. The politics panel gives it moves of its own on other parties
+    and in the street, and keeps the government's intelligence on plots to
+    itself.
+- **Hints inside hints, as in Crusader Kings.** A hint opens on hover,
+  keyboard focus or a tap, and a highlighted word inside it – in the
+  accent, underlined – opens its own hint, up to three deep; a word already
+  explained further up the chain opens nothing again. The chain stays open
+  while the pointer is in any of its hints and closes a moment after it
+  leaves; a click pins a hint, Escape closes the innermost. A glossary of 48
+  terms in Russian, Ukrainian and English – GDP and growth, the budget
+  lines, debt, interest, reserves, inflation, unemployment, the five needs
+  of provision, war footing, mobilisation, readiness, supply, will,
+  war-weariness, resistance, command of the air and the sea, blockade,
+  landing, theatre, front, contested provinces, sanctions, pledges, blocs,
+  the Security Council, the veto, Uniting for Peace, support, stability,
+  unrest, plots, factions, loyalty, research directions and society's
+  strata – says what the engine does with each. The top bar's figures, the
+  economy centre's overview, budget lines and causes of growth, the
+  provision panel, the war means and outlook in the foreign and army
+  panels, and the UN cases use them (`components/ui/Tip.tsx`, `Term.tsx`,
+  `i18n/glossary.ts`).
+- **Parties that live and die.** The engine, not only the game master,
+  decides when parties end and begin. A banned or underground party keeps
+  an organisation (strength 0–100, on its card) that the state wears down
+  – faster under a hard police state (its laws, a loyal police and
+  security service), a steady regime and orders that strike at it, slower
+  with a foreign backer, mass discontent or a war on the land, which also
+  draws the state's forces away – until it is crushed or fades away. In a
+  Soviet game of 1950 the Forest Brothers end in 1951, the Lithuanian
+  partisans in 1952 and the OUN, backed from abroad, in 1954; in the
+  historical mode the undergrounds history broke (the OUN–UPA, the
+  Lithuanian partisans, the forest brothers, the Polish underground) follow
+  its dates. A camp of opinion no party speaks for, in a slump, a war, a
+  scandal or a generation later, gives rise to a new movement (underground
+  under a police state) that the game master names in the next turn; a
+  divided party (power lost, ideas moving fast, a coalition partner far
+  away) may split, two small legal parties close in their ideas may merge,
+  and a fringe party folds when a larger one speaks for its people. Each
+  change is news, the game master is told which parties ended and cannot
+  bring them back under any of their names, and the parties tab folds the
+  ended ones into a short list with how and when. Saves get the strength
+  of their outlawed parties (step 40).
+- **Ministers who work every turn.** Each minister now does his ministry's
+  routine on his own, unasked: the economy minister keeps the deficit and
+  the debt within the era's norms (spending trimmed and taxes raised, the
+  army spared in a war, or more for industry when there is room); the
+  foreign minister renews a bilateral treaty about to run out, answers the
+  notes of a country that provoked or threatens the country, tends the
+  ties of the ally that trusts it least, eases the tension with a rival –
+  or, a hard-liner, holds a firm line; the interior minister polices the
+  biggest protest (within the law, or hard), watches the opposition and
+  may uncover a plot, and keeps the country calm; the chief of staff puts
+  the most pressing ministry first on the leader's agenda (it works better
+  that turn), keeps the cabinet together or looks after the leader's
+  image; the general staff keeps the fronts holding or pressing and drills
+  the recruits (formations of their own come with item 9); intelligence
+  works its networks where the danger lies (the government knows more of
+  that country) or watches the elites; the science minister moves the
+  research split towards his causes and the directions left behind;
+  industry orders arms to make good the army's losses and lays in the
+  stores the people's provision draws on; the head of the space programme
+  sets its share and what it puts first. The engine decides what each may
+  do – a small menu per ministry, within its means – and picks by the
+  turn, the minister's causes and character; competence sets how well it
+  is done and the chance of a botch (an incompetent minister botches a
+  routine month in ten), and a disloyal minister serves his faction
+  instead. The acts are cast before the turn, seeded and pure like the
+  plans of governments abroad, so the game master tells what came of
+  them and the engine applies them; each minister's view of the turn hears
+  what he did, and the turn report tells each in his stage. The
+  government's word comes first: a standing directive, an order of the
+  turn in his field or a lever set by hand (the budget, the research
+  split, the space programme) holds a minister to it, and a lever set by
+  hand stays the government's word – the minister keeps within two points
+  of it from then on. In the cabinet's tasks a minister can be told to act
+  "only on my orders"; the player's own post when playing a minister is
+  never acted for (`engine/ministers.ts`). No save step: what saves gain
+  is optional.
+- **The ChatGPT plan in Settings.** Under the game master, "ChatGPT plan"
+  shows each limit window the plan reports – the 5-hour and the weekly one
+  on ChatGPT plans – as a bar of the share used (orange from 75%, red from
+  90%), when it resets ("resets in 2 h 14 min – 23:24") and when the
+  numbers were last heard, after the last answer. When ChatGPT sends no
+  numbers it says so plainly instead of drawing zeros. The game reads what
+  OpenAI's Codex CLI reads from ChatGPT's backends (`x-codex-*` usage
+  headers, a `codex.rate_limits` event, `resets_at` / `resets_in_seconds`
+  on a limit error); Sign in with ChatGPT documents none of them, and on
+  29 October its refusals carried none, so for now the block mostly says
+  that. The latest numbers stay in `~/.gulf-of-trump/plan-usage.json`
+  (numbers only) and are forgotten on sign-out; `GET /api/ai/usage` serves
+  them to the page.
+- **The usage limit as the game's own red dialog.** When the plan runs out,
+  a dialog in the game's red opens over any screen: the limit is reached,
+  the time until it resets counts down live (or it says ChatGPT did not
+  tell), and what to do meanwhile – wait and play the turn again, play on
+  with the offline game master until the reset (it hands back to ChatGPT
+  by itself), or check the plan on ChatGPT. Other errors keep their notice.
+  The header chip's dot turns red while the limit stands.
+  `GOT_MOCK_PLAN=usage` or `limit` makes the mock pretend, for work on
+  these screens.
+- **The demo site in Russian and Ukrainian, for search engines too.** The
+  front page, every date and start, About and Privacy have their own
+  addresses in each language – `/ru`, `/uk/new/1939/eve` – rendered on the
+  server in that language, with `<html lang>` to match; English keeps the
+  bare addresses. Opening `/ru` sets Russian for the whole app, and picking
+  another language in Settings opens the same page at that language's
+  address. Each page has its own title and description ("1 September 1939 –
+  The Invasion of Poland"), a canonical address, hreflang links between the
+  three languages, and a link-preview card: the date's scene in oil under
+  its year (`npm run og`). The sitemap lists every page in every language,
+  structured data describes the game, the dates and the questions now
+  answered on the demo's front page, and a date's page tells its story and
+  links the other dates. Unknown addresses get a 404 in all three
+  languages. Slots for Yandex and Bing verification codes; docs/seo.md has
+  the owner's steps.
+
+- **Trade talks.** A deal is no longer only signed or declined. The market's
+  offers can be countered, any government can be offered a deal of your
+  own, and a deal in force can be reopened once a turn. The terms are
+  fields – volume, price, term, payment in money, in goods or on credit, and
+  terms besides (recognition, votes at the world body, a base, mutual
+  assistance, technology, exclusivity, asked or given). The card shows the
+  other government's stance (eager, cool, hostile) and why, the likely
+  answer before the offer goes, and the offers so far. The other side
+  answers at once by the engine's dice, from its need of the good, the
+  other suppliers or buyers it has, its ties and claims, rival camps and
+  your record of keeping deals: it signs, counters (twice at most) or walks
+  away, and haggling hard costs its trust. A counter left unanswered lapses
+  with the turn. The game master hears every offer and answer.
+- **Deals that live.** Deliveries fall short under a blockade of either
+  side's sea trade (not overland), partial sanctions between the two, or a
+  shortage of what you sell; a deal cut below 60% two turns running breaks,
+  and a partner you failed remembers it. A deal binds both sides: its
+  partner's trust grows while it runs, and tearing it up costs it. On
+  credit the buyer owes the seller until the deal runs out; a treaty of
+  mutual assistance in the terms is founded with the deal and ends with it;
+  votes pledged are cast with you at the world body; a good promised to one
+  buyer alone is offered to no one else. The turn report tells signings,
+  refusals with their reason, lapsed and renegotiated talks, cut deliveries
+  and torn-up deals. Saves need no new step: a proposal left waiting in an
+  older save gets the engine's answer when its turn is played.
+- **Each person is read aloud in a voice of their own.** A minister's
+  answer and view, a deputy's word, a foreign leader's letter, a speech in
+  parliament or at a summit and a protest leader's reply are read by a
+  voice of the speaker's sex where the computer has voices of both, picked
+  by their name so the same person always sounds the same, and at a pitch
+  of their own – so people differ even on a computer with one voice; the
+  game's own Ukrainian and Russian voices pick their speakers the same way.
+  The narration keeps the voice chosen in Settings, where "Each person in
+  a voice of their own" can be turned off.
+- **Ask a minister by voice from any tab.** The minister's line under the
+  army, economy and other tabs takes dictation like the cabinet does.
+- **Everyone speaks in a voice of their own.** Each minister, candidate
+  and deputy gets a speech profile when the game master first names them –
+  two or three pet phrases, the register they speak in, how they argue and
+  what they never say – and their conversations, views and private words
+  are written in it; a real person's is how they really spoke. Someone
+  named before voices were kept gives theirs in their first answer. The
+  minister's "About" tab shows it. Foreign governments' letters, summits,
+  sittings of parliament and talks with protest leaders are written in
+  each speaker's own voice, never the same boilerplate.
+- **Your delegation's vote.** On a case of aggression before the world
+  body your country sits in, the foreign panel's resolutions take an
+  instruction for your delegation – for, against, abstain, or as usual
+  (against a friend, for an ally) – and the votes still to come follow it.
+- **The civilian toll of every war.** The game master now says which of a
+  period's deaths were civilians a war killed – bombing, shelling,
+  massacres, a siege's hunger – and with which war; each war keeps them
+  beside the soldiers. The war's card shows a "Civilians" column (estimated
+  under the fog of war for others), and the game master reads the toll so
+  far.
+- **A long mobilisation wears the country down.** A year of war with over
+  a third of those who can be called up in uniform is a warning, two years
+  with half a crisis: families want their men home, factories and farms
+  miss their workers. It holds unrest up like any hardship, shows among the
+  crises and is told to the game master (the player's country only).
+- **Ministries closed, reopened and created.** Under the cabinet's
+  ministries: close the one on screen (not the chief of staff's office, not
+  your own ministry as a minister) – its minister leaves the government, its
+  deputies, their plots and its directives go, its work passes to the chief
+  of staff; reopen a closed one, its post vacant; or create a new ministry
+  with a name and a portfolio in your words, up to twelve in the cabinet
+  whichever were closed – its name given in each language by the next
+  turn's game master. A new ministry is a ministry like any other: a
+  minister to appoint, a conversation in its own voice, deputies,
+  directives, reports; its tile shows the name without "Ministry of". The
+  game master is told the cabinet's shape and what changed, fills no closed
+  post and reports nothing for it; the turn's report lists the changes.
+- **A protest's card on the map.** Pointing at a protest's marker (or
+  tapping it) shows what it is: its stage and size with the last turn's
+  growth, whose government it stands against when not yours, its demands,
+  who leads it, its support, organisation, dead and foreign sponsor, and
+  since when. A click on a protest against your own government opens it
+  in domestic politics, on the street; one abroad picks its country.
+- **Cards for the map's arrows and front lines.** Pointing at an arrow of
+  the turn shown tells who moved, how (an advance, a landing, a liberation,
+  a push on the front, a counter-attack), against whom and through which
+  provinces; pointing at a front line names its war, its sides, since when
+  and any truce. A click on either still picks the province beneath.
+- **A post renamed by order, or by hand.** An order such as "the chief of
+  staff is to be called Commander-in-Chief from now on" renames the post
+  and keeps its holder: the game master answers it as "retitled", the
+  cabinet shows the new title, the turn's report says so. The pencil by a
+  minister's title in the cabinet renames it at once, and the next game
+  master is told.
+- **A parliament that goes.** A parliament dissolved in play – a coup, a
+  decree, a constitution without one – leaves the game: its tab disappears
+  from domestic politics, the parties lose their seats, the tile reads
+  "dissolved" with the date, laws come by decree and the game master stops
+  asking to describe one. Where the regime had none on the start date, it
+  never appears. A parliament elected or convened again brings its tab
+  back; the turn's report tells both.
+- **Army headquarters on the map.** Each of the player's armies, corps,
+  fronts and reserves, as the game master last described them, gets a
+  headquarters where it stands: a star for a front, a flag for an army, the
+  size of the other markers at every zoom. Its card names the formation, its
+  divisions, theatre and commander; a general's own command is orange.
+
+- **Armed forces by type.** Aircraft are fighters, attack planes and
+  tactical bombers, strategic bombers and transports; ships are capital
+  ships and carriers, destroyers and frigates, submarines, and landing
+  ships with transports; armour is light, medium, heavy and main battle
+  tanks with infantry fighting vehicles. Each does its own job: fighters
+  against fighters and air defence decide command of the air, attack planes
+  weigh most at the front, strategic bombers take a little of the enemy's
+  output and arms industry, submarines and a fleet that commands the sea
+  cut its imports, landing ships and transports carry an army over the sea,
+  and tank types weigh differently in a breakthrough. Every country starts
+  with the era's mix for the size of its forces, the great powers with
+  their own (the Soviet fleet of 1950 mostly submarines, the Wehrmacht's
+  tanks of 1939 mostly light); the counts of the day stay those of the
+  combat types, the support types come on top. The army panel shows the
+  types under each kind with what each does on hover, the country card on
+  hover over the kind. The game master reports losses by type and turns the
+  player's orders to build ("200 landing ships") into orders industry
+  serves first from the arms money, within two years of it; save step 37
+  splits an old save's totals by the era's mix.
+- **The space race.** Every country's rocket programme races history's
+  twelve feats – an intercontinental missile, the first satellite, an animal
+  and a man in orbit, reconnaissance and early-warning satellites, a
+  spacewalk, a crew around the Moon and on it, a station, a reusable craft,
+  satellite navigation – by the game's dice and its means: a share of the
+  research money, rockets, industry and the head of the programme. The race
+  can go either way. Firsts bring support at home, trust abroad and a
+  headline; missiles and early warning raise a nuclear power's deterrence a
+  little, and reconnaissance satellites sharpen the fog of war. The science
+  panel shows the programme, its next feats and the world's firsts.
+- **Launch sites** – Kapustin Yar, Baikonur, Plesetsk, Cape Canaveral,
+  Vandenberg, Hammaguir, Kourou, Jiuquan, Uchinoura, Tanegashima,
+  Sriharikota and more, each from the year it opened – stand on their
+  provinces, change hands with them, show on the map and can be ordered
+  built.
+- **The head of the space programme**, a minister of the cabinet while the
+  government runs a programme: Korolev, von Braun, Glennan, Webb, Qian
+  Xuesen, Itokawa, Sarabhai and others, with portraits where a free picture
+  of the right person exists. Ask them and give them directives as other
+  ministers.
+- **A ninth date: the space race, 4 October 1957**, and its eve, 27
+  September, before Sputnik: the decolonised and the still colonial world of
+  that autumn, Algeria at war, the Syrian crisis, the Malayan Emergency,
+  Castro in the Sierra Maestra, NATO with West Germany, the Warsaw Pact,
+  SEATO and the Baghdad Pact, a scene of Sputnik on its card.
+- **The full report from the chronicle.** An unfolded turn in the
+  chronicle has "Full report", which opens it whole, as it opened at the end
+  of its turn.
+- **The world answers aggression, and the UN acts.** In a 1950 Soviet game
+  the player attacked Turkey, Afghanistan, Iran and Greece and nobody
+  sanctioned the Soviet Union in three years: a war was remembered by its
+  victim alone, the West could not sanction a country it already fought in
+  Korea, and the UN did nothing. Now an attack on another country is weighed
+  by the era's norm against conquest (faint in 1914, firm after 1945), the
+  attacker's weight against the victim's and its other attacks within a
+  year – a second and a third weigh more. Every government with a stake
+  condemns it and loses trust in the attacker; rivals, democracies and the
+  allies of a great power that opposes it impose sanctions; those who fear
+  it arm and look for a bloc sooner; up to three strong governments send
+  the victim arms from their stores while the war lasts; since 1950 a rival
+  great power pledges to defend the victim's neighbours, and the victim
+  itself after the gravest attacks, which brings it in by treaty. The world
+  body meets in emergency session the same turn and votes condemnation,
+  then sanctions, then a call for collective action, by its members'
+  stances: a permanent member's vote against is a veto in the Security
+  Council, and from 3 November 1950 (Uniting for Peace) the General Assembly
+  takes up what a veto blocked; before 1945 the League of Nations votes in
+  its Assembly, expels a member that attacked and calls no one to arms.
+  Members that voted for sanctions impose them, and a call for collective
+  action opens plans to enter the war and raises the odds of going. The news
+  tells the outcry, the session, each vote with its count and veto, arms and
+  pledges in three languages; the war's card shows how grave the attack was
+  judged, who condemned, sanctions, arms, who may enter, pledges and votes,
+  with hints, and the blocs list the world body's cases; the game master
+  reads one line. A lone small war far from anyone draws a shrug. Saves keep
+  the cases (save step 33).
+- **1950 as it was:** the Truman Doctrine (America's word to Turkey and
+  Greece), the Cold War's distrust between the blocs and between Tito and
+  Stalin, and Greece and Turkey joining NATO in February 1952 in the
+  historical mode.
+- **Wars end when nobody is left to fight, and the war panel says how they
+  will end.** A government that holds no land goes into exile while allies
+  fighting for it, a host, its soldiers abroad or resistance at home keep it
+  going; its standing fades without them, and at nothing it capitulates. With
+  neither allies nor a host it capitulates at once: it leaves its wars on the
+  winners' terms, out of its blocs, and dissolves. Under every war the panel
+  shows each side's state – holding, collapsing, broken, in exile – what
+  would end the war (the will falling below 25, the last provinces, allies
+  leaving, a government in exile giving up, a request for terms) with how
+  close each is, and the likeliest in a sentence; the game master reads the
+  same.
+- **Provisional governments.** An occupier can set up a government of a
+  country's own people in land it took: the player by order or from the
+  country's card (name, leader, the land at once or over months), the engine
+  checking that the country is taken or mostly held; governments abroad now
+  and then instead of annexing a country that capitulates. It is the country
+  brought back or a new one beside an old government that fights on, tied to
+  its patron by treaty, on the map in its own colour. Its people's
+  acceptance calms or stirs resistance; the patron's allies recognise it,
+  rivals refuse at a cost in trust. The player can later grant it
+  independence or annex it.
+- **Peace on terms.** When the player's enemy collapses or asks for terms,
+  the war panel offers the terms as orders – annex, a provisional
+  government, restore, disarm, reparations – each applied by the engine.
+  An enemy's request for terms now stands for a month for the player to
+  answer, instead of being refused in its name the turn it was made.
+- **Finer provinces, a prototype behind a flag.** `npm run maps -- --fine
+  1994` builds `world_1994_fine.json`: about 6,300 provinces instead of
+  2,700 – Natural Earth's divisions kept where the generator used to merge
+  them (France's departments, Japan's prefectures) and the large ones split
+  by land and people into parts named after their towns. Development builds
+  play it with `NEXT_PUBLIC_GOT_FINE_MAP=1`; a save of the standard map is
+  carried over part by part (save step 35, which changes nothing on the
+  standard map). The plan, the numbers and the steps to switch every era
+  are in docs/map-plan.md, "Finer provinces". The standard maps are
+  unchanged; `npm run maps -- --era <year>` builds one era.
+- **The statistics run covers every date, for twenty years.** `WORLD_STATS=1`
+  now plays all eight dates (1914, 1939, 1950, 1964, 1991, 1999, 2014, 2022)
+  twenty years forward, up to a hundred seeds a date in pieces
+  (`WORLD_STATS_ERA / MODE / SEEDS / FIRST / YEARS`, every seed cached), with
+  date-aware bounds (more wars allowed in the world wars and the breakups
+  after 1991, the growth bound scaled by the years played) and new numbers:
+  how often governments lose free elections (after a slump, in a boom),
+  elections put off in wartime, and the spread of growth between countries.
+  `docs/playtests/world-stats.md` puts every date on one page.
+- **Elections put off in wartime.** A national election that falls due in a
+  country with the war on its own soil, or a strong enemy holding land near
+  its heartland, is put off a year at a time and held soon after the peace
+  (Britain and France in 1940, Finland in 1943, Ukraine in 2024); the news
+  says so and why, and the game master is told no vote is held. The player's
+  own election is put off under martial law or with the war on its soil,
+  unless the orders lift martial law and the vote is held anyway.
+- **Economies that can diverge.** Each country's economy drifts to a trend of
+  its own instead of one trend for its era: the frontier's growth per head,
+  catching up with the frontier as far as the country's literacy,
+  government, stability, open trade and peace allow, and its people's
+  growth. Japan, West Germany and Italy of 1950 and South Korea of 1964 grow
+  fast; a country that cannot yet read, an unstable, closed or war-torn one
+  lags; a rich one grows at the frontier's pace. The economy panel's trend is
+  the country's own.
+- **Demography that follows the game.** Every country's age cohorts are kept
+  from the day its record opens – the start date's profile and scars, or an
+  old save's own year with the gaps its wars left (save step 38) – and from
+  then on they age, children are born by the country's own schooling, towns,
+  income, child survival, wars and slumps, and people die by its income, the
+  decades' medicine and the player's medical research. Its natural growth
+  moves its population; a game begun in 1950 or 1964 grows by its own births
+  and deaths rather than the 1990s' pace its map carries. Two histories from
+  one start end with different pyramids; an untouched one stays close to the
+  real.
+
+- **The "other" budget line matters.** It is the administration, police,
+  courts, roads and the state's upkeep, with a usual share of a seventh of
+  revenue. Kept below it, the state runs down over months – the deeper and
+  the longer the cut, the more – costing growth (a new cause on the economy
+  panel), order (a crisis that raises the floor under unrest) and housing,
+  and mends once the line is restored; above it more brings nothing. The
+  line's hint gives its usual share; the game master is told it is no purse
+  for every order, and one answer cuts it no lower than half its usual share.
+- **Finer provinces in every era.** Each date plays a map of about 6,300
+  provinces instead of 2,700 (`npm run maps -- --fine <year>`):
+  Natural Earth's divisions kept where the generator used to merge them
+  (France's departments, Japan's prefectures, Vietnam's provinces) and the
+  large ones split by land and people into parts named after their towns –
+  Manchuria, Siberia, Iran and Indochina no longer move a vast province at a
+  time. A save of the standard map is carried over part by part when it
+  opens (save step 35): owner, holder, people, occupation and resistance to
+  every part, a front laid out again from the side holding part of it, the
+  chronicle, formations and protests moved to the parts. Every standard
+  province is still found on the finer map, so scenario data and old saves
+  resolve. The `NEXT_PUBLIC_GOT_FINE_MAP` flag is gone.
+  - Slivers the finer cut makes along the historical source's loose borders
+    have their owners of the day (Belfort French and Metz German in 1914,
+    Jehol Manchukuo's in 1939, Nuevo Laredo Mexican); some are right where
+    the standard map was not and stay (Vyborg and Ladoga Karelia Finnish
+    and Transnistria Soviet in 1939, Trieste Italian after 1954).
+  - Lorraine's iron, Upper Silesia's coal, Hunedoara's mines and Sakhalin's
+    oil lie in the provinces that hold their mines, on the right side of the
+    1914 and 1938 borders.
+  - The 1950 Indochina front is laid out by province: the French hold Hue
+    and the road to Quang Tri, the Viet Minh contest a third of each Red
+    River Delta province. Guerrillas with no land of their own (the Viet
+    Cong in 1964) fight in every part of a province at their share.
+  - Fronts move by land, not by province: pace in points of a 10,000 km²
+    province, breakthroughs and pursuits counted by area. Manoeuvre is
+    faster and a pursuit opens more of the front at once, so Poland 1939
+    falls and Korea 1950 reaches the Pusan corner on the finer maps;
+    Ukraine 2022 stays a slow front. Hainan falls in the third month.
+  - The game master's prompt groups the player's interior provinces by the
+    province they lie in, one line each (the USSR in 1950: 19,900 tokens
+    instead of 25,700; 15,800 on the standard map).
+  - A turn walks the map once where it walked it once a country (provision,
+    incomes under the fog, homes at the fronts, beachheads): a new 1950
+    game as the USSR takes 1.5 s a turn instead of 2.2 s, Ukraine 2022 1.2 s
+    instead of 2.6 s.
+  The plan and the numbers are in docs/map-plan.md, "Finer provinces".
+
+- **Each person speaks in their own way.** A person about to speak gets a
+  short speech profile, written once by the game master in the player's
+  language: their register, a few turns of phrase, how they argue and lead
+  a talk, what they avoid and their habits of speech – from the record for
+  a figure of history, from the traits and manner of an invented one,
+  describing manner, never caricature or stereotype. It goes into every
+  prompt where that person speaks: the ministers' chat and their views of a
+  turn, a deputy in private, letters from another government (its leader),
+  meetings held in person and talks (those who answer), and sittings of
+  parliament (the party leaders). It is asked for only for people about to
+  speak – a question being written to a minister, a meeting, sitting, talks
+  or letters opened, a minister's view due – at most four new ones a turn,
+  in the background, and never holds a turn up; the save keeps it by person
+  and language, about a thousand characters at most each, for up to 60
+  people. The offline game master gives a plain one from the traits and
+  manner. Old saves load as they are.
+
+### Fixed
+- **Pinning an order keeps it.** Pinning changed the draft and the
+  standing list from the same old state, the second change undoing the
+  first; both now build on the latest.
+- **A government that is gone keeps no land.** A government an occupier
+  had set up, at war with its patron again and beaten, handed its land
+  "back" to itself as it gave up, and went on owning it once dissolved – a
+  country out of the game holding a whole country (Rwanda, set up by DR
+  Congo, in a 2022 game). Its land now goes to whoever holds it, and a
+  dissolved government owns nothing.
+- **An insurgency that wins its land is a state.** A movement that fought
+  on the winning side and held its province when the beaten country gave up
+  its land (Abkhazia after Georgia's defeat, in a 1999 game) got the land
+  but stayed a movement, owning a province from outside the game. It is a
+  state from then on, as at a peace it asked for.
+- **1957's people grow by their own births and deaths.** The date plays
+  on the 1994 map, as 1950 and 1964 do, but was missing from the dates
+  whose people grow at their own pace rather than the map's later one.
+  The world statistics now play 1957 too: it had no horizon and ran
+  without end.
+- **A crushed rising leaves no foreign army behind.** A country that fought
+  the rebels and held their provinces kept holding them once the rising was
+  crushed and the land was the government's again – Russia on four of
+  Belarus's provinces with no war against Belarus, in a 1999 game. That
+  land now goes back to the government, unless the foreign army is at war
+  with the government too.
+- **The economy loop, after its audit (docs/audit/economy.md).** Ukraine's
+  2022 campaign on quarterly turns no longer shrinks 21% a year behind a
+  front that has stopped, nor runs its debt to fourteen years of GDP.
+  - *Losses of level, not of growth.* A power shortage, trade cut off, a war
+    on the country's own soil and strategic bombing hold output below its
+    level while they last and give it back as they end – a gap, not points of
+    growth taken every year for as long as the cause stands. The panel shows
+    them on a line of their own ("output held down"), and the game master is
+    told them apart from growth's causes. The demand for electricity follows
+    the output they take; a heavy appetite for a resource (Ukraine's iron)
+    goes with the land that justified it.
+  - *The war's toll on power.* A front wrecks the plants of the land it runs
+    through and no further, and they are repaired once it goes; land an
+    enemy holds is off the supply and the demand alike. Bombing's toll on
+    the plants is inside its toll on output, and a nuclear strike takes the
+    city's demand with its plants: each is charged once.
+  - *The player's credit.* With no reserves, lenders lend a tenth of GDP a
+    year, nothing past 150% of GDP in debt and nothing for three years after
+    a default; the rest is printed, not borrowed as well, and prices rise as
+    far as it is printed. Past 300% of GDP the state defaults – the player's
+    as any other – and the default is a crisis. The pull a borrowed deficit
+    puts on prices is bounded. The economy minister counts the interest in
+    his deficit, cuts or taxes even at war once the debt has run away, and
+    says what the debt is instead of calling it "within the norms".
+  - *Shortages as deep as the cut.* The stores refill by the imports that
+    still come, so a cut of a tenth no longer ends in a permanent shortage;
+    a shortage is the share cut off once the stores are empty, and its toll,
+    its push on prices and its crisis follow that share. Gold is never short.
+  - *Money counted once.* The society tab deflates 1973 and 1979 by the
+    economy's own dollar (real incomes no longer sank 2–6% a year); the men
+    under arms pay their labour once, by the draft, and a long mobilisation's
+    strain only the rest; crises of one cause (power, provision, shortage;
+    recession and unemployment) count once under unrest; sport below its
+    usual share saves nothing from nowhere; a trade deal for a resource the
+    accounts already export moves only its premium; plants, weapons and
+    warheads are priced in the era's dollar like GDP; the industry line is
+    spent once: what the plants take past their usual share builds no
+    consumer factories.
+  - *Joint projects.* A pair is not asked again for three and a half years
+    after an offer lapses, is refused or is built (an offensive, a year); the
+    player is offered one at most every three years; the lead is the largest
+    economy that can pay; no offer to a government at war on its own soil or
+    with its debt past twice the era's norm; pipelines, railways and canals
+    join neighbours only.
+  - *The books the player reads.* Projects, the Games, warheads and launch
+    sites paid outside the budget count in the deficit and are shown under
+    it; a crisis that caps growth is named beside growth's causes; the
+    statistics report real growth beside nominal.
+- **Twelve dates, not eight.** The front page, its search description
+  and the Store listing still spoke of eight turning points.
+- **The politics loop, as its audit found it** (docs/audit/politics.md, all
+  22 findings):
+  - **An election the answer leaves out is held.** One missed vote wiped
+    the player's election calendar for good; the engine now holds it by the
+    parties' support (seats by D'Hondt, a vote on the record), and a lost
+    one is the leader's fall. Elections suspended by law put the vote off
+    a year at a time and the game master reads "suspended by law".
+  - **The cabinet's plots strike by their own dice.** A cabinet plot past 60
+    let the game master end the game before the engine's plot struck; the
+    fall test now leaves them out, and the engine's own strike brings the
+    government down without asking again.
+  - **Losing a civil war leaves the fallen leader.** "Stay with the person"
+    made the player the rebels' leader; the fallen one is recorded first.
+  - **No coup trap.** A junta promises a vote in two to six years, the next
+    attempt waits two or three, the state loses 3 stability, not 10, and a
+    junta's base risk is no longer the highest; coups breed coups for ten
+    years after one, whatever the government since. The statistics count
+    coups that repeat within five years.
+  - **A colonial war is a war away.** France's elections were put off for
+    the whole Algerian War; a colony's land is told from the metropole's own
+    soil for elections, the classes, the parties, war-weariness, the
+    occupation crisis and the economy's front at home.
+  - **The regime after a fall the player plays on from** is the junta's only
+    until the game master names it anew; parliament reads it the same way.
+  - **One floor under unrest.** The crises, war-weariness, the classes and
+    the strain hold unrest in one step at the end of the turn, so a
+    minister's calm or a medal no longer undoes a hardship floor; the game
+    master reads the floor and which unrest and loyalty the engine moves
+    itself, and a pillar moves at most 20 a turn in all.
+  - **Undergrounds worn by one hand.** The interior minister's watch is one
+    of the period's blows, an order already carried out as a case is not
+    struck again, and a crushed rising restores only the parties it
+    outlawed; the old government's party is not worn down while it fights.
+  - **Abroad, a war's dead lower support once**, as war-weariness.
+  - **The story is told the engine's fall test**, loyal army and police
+    included, and the election's pause by people, as home reads it.
+  - **An interior minister brings bills and laws** and proposes elections,
+    postponements, confidence votes, amendments and emergency rule to the
+    leader.
+  - **The country the player leaves for the rebels** keeps its politics
+    abroad: support, stability, elections and coups.
+  - **Losing the government outside an election is a fall** (deposed), as a
+    minister falls for the same.
+  - **A civil war counts as a regime change's cause**, and a government that
+    came by one says whether it was a coup, a revolution or a rising.
+  - The families' protest dispersed or conceded stays home a while; a
+    purge's arrests go on the repressions' record; a minister's economy
+    panel shows his estimates; support abroad keeps its decimals after
+    sport, joint feats and crimes.
+- **A client government fights its patron only for its independence.** A
+  government set up by a victor (DR Congo's in Rwanda, in one long run)
+  could see its patron leave the treaty between them, quarrel with it and
+  begin an ordinary war on it. Now neither leaves that treaty and they have
+  no incidents, crises or war plans between them; a client turned against
+  its patron – its trust at −50 or worse, or a new government hostile to
+  it – declares itself independent, the treaty ends, and the patron lets
+  it go or fights a war to keep it, as its regime, appetite and strength
+  decide. A civil war inside the client goes on as before.
+- **Sanctions lifted stay lifted for a year.** A government that lifted its
+  sanctions on a country – trouble at home, a quarrel that ebbed – was
+  drawn back into an ally's new sanctions on it within months; an ally now
+  joins only if it has not lifted its own within the year, and its
+  sanctions carry the reason of the plan it joins.
+- **The world and diplomacy loop, as the audit found it**
+  (docs/audit/world.md, findings 1–22).
+  - *Treaties bind where they say.* NATO is called to the North Atlantic, the
+    Rio Pact to the Americas, ANZUS and America's treaties to the Pacific,
+    SEATO, CENTO, the Warsaw Pact and the old European alliances each to
+    their own; a treaty without an area, or a pledge, binds for the
+    defender's home only – no NATO member goes to the Falklands, no
+    Portugal's ally to Goa. The land a war is about is what the attacker
+    holds of the defender, else the defender's province nearest it. A
+    guardian that cannot reach the war, over land or with ships, is not
+    called; a civil war calls no one by treaty and has no weariness peace of
+    the generic kind – its own recognition, volunteers and interventions
+    decide.
+  - *Only open blocs take members.* NATO, the Warsaw Pact, the Rio Pact,
+    SEATO, CENTO and blocs of three or more do; a bilateral treaty never
+    (no Taiwan in the Soviet–Vietnamese treaty). The other half of a divided
+    nation and a ruling party are partners in no bloc.
+  - *Neutrals stay neutral.* Each date has its neutrals (Switzerland,
+    Sweden, Ireland, Austria from 1955, Finland in the Cold War, Costa Rica,
+    Turkmenistan, Moldova, Serbia…): no bloc, no war entered by treaty,
+    opportunity or as a vulture, a war planned only on an attacker on their
+    soil; they still sanction and vote. Neutrality ends with an alliance –
+    history's (Finland and Sweden after 2022's invasion) or one a grave
+    attack next door brings – or a war.
+  - *The delegation's line counts the turn it is given:* the votes on that
+    turn's aggression are cast by it.
+  - *The Sino-Soviet treaty is a pact from 1964,* with the split's distrust
+    seeded; the Soviet friendship treaties with Egypt, Afghanistan and
+    Vietnam are pacts of consultation, not military alliances.
+  - *Arms control binds no one.* SALT, New START, the INF and START
+    treaties, the Test Ban, Montreux, the Budapest Memorandum, Dayton, the
+    Paris and Geneva accords and other settlements settle no trust between
+    their members, ease no threat and make no war between them a broken
+    pact; the game master sees them marked as binding no one.
+  - *Allies may fall out.* A war between members of a bloc of three or more
+    is braked at every step instead of barred (history's Panama now comes);
+    a bilateral ally is still never attacked. An attack on an ally is the
+    gravest broken bond, puts the attacker out of every bloc it shared with
+    its victim, and calls the rest to the victim's side where together they
+    outweigh the attacker (no one fights America over Panama).
+  - *One deed is remembered once.* A war on several neighbours is one case
+    at the world body, judged by the weightiest victim; its belligerents
+    judge it as belligerents, not as onlookers; the same hostile deed by the
+    same government within a year is kept at its gravest, not summed
+    (recognising rebels, sending volunteers and entering their war are one
+    siding with the enemy); no sanctions on an enemy already fought; the
+    engine's incident told by the game master raises no tension twice; a
+    small state attacked remembers it.
+  - *Alarm lasts.* Manoeuvres, a first satellite or missile and a nuclear
+    strike raise an alarm the courses keep on top of the threat, halving in
+    a year, instead of one erased the same turn.
+  - *Broken relations hold things up.* No treaty, trade agreement or joint
+    action while relations are broken, and coolness while the ambassadors
+    are recalled; a recall and a break are remembered by the other side.
+  - *The enemy's bombs weigh on entering its war,* less under a treaty or
+    for a government with the bomb or a nuclear ally; nobody joins a war on
+    a nuclear power for the opportunity.
+  - *The era follows the date.* The norm against conquest, pledges, the
+    bomb's restraint, appetite for force, a great power's guarantee, the
+    brink and the pace of war plans are read by the year, drawn between the
+    dates – a 1939 game in 1955 lives by the 1950s.
+  - *The United Nations grows.* Freed colonies, winners of a secession and
+    new states are admitted about a year after, unless a permanent member
+    that distrusts them vetoes; Beijing takes China's seat on 25 October 1971
+    (by the Assembly's majority in the free mode), with the Council veto.
+  - *Blocs founded in play end.* They run ten to twenty years and end at
+    once when the threat they were founded against is gone, or when no
+    member fears it any more; no second bloc of the same kind between the
+    same partners, and an alliance takes the place of their pact.
+  - *Votes follow deeds.* A government at war with the aggressor, its
+    victim's guardian, an arms giver of the case and – on condemnation and
+    sanctions – one already sanctioning the aggressor vote yes.
+  - *An eve's war comes on its day.* The war an eve opens with no longer
+    fades before its day and a fortnight after, and strikes on history's day.
+  - *A space feat wins no trust from enemies at war or rivals.*
+  - *Less noise for the game master.* The story stage gets the player's own
+    joint actions, the period's Games are told once a turn (the story; the
+    standing of the Games is home's), and each tension between two
+    governments is listed once.
+- **The war loop, as its audit found it (docs/audit/war.md).**
+  - *Soldiers killed and taken leave the army.* The war's killed, its
+    prisoners and a third of its wounded come off a country's soldiers –
+    career, trained and recruits alike, recruits hardest – and the killed off
+    its people, once; the game master's troops are mobilisation and
+    demobilisation only (a cut it still writes counts against the same
+    losses, not on top). A government the engine plays calls up recruits in
+    their place while it has people left to call up, so its numbers hold and
+    its training falls; an armament policy calls up within those left, and
+    none for a country that has lost most of its land.
+  - *A beaten army is lost with its country.* A government that goes into
+    exile or gives up keeps a tenth of its soldiers (more of its ships and
+    aircraft); most of the rest are taken prisoner, on the war's record, and
+    the winner takes half of the weapons left behind. A government that is
+    gone keeps no army budget; one installed or brought back raises a small
+    army from its land instead of inheriting the old one; a country that has
+    lost land spends at most half of what it still makes on its army.
+  - *Land freed for a government in exile goes back to it,* and the
+    government comes home with it; a landless government whose land a
+    friend holds is home again rather than given up, so no co-belligerent
+    annexes what it freed (Germany kept a Finnish province for years).
+  - *One budget for each member:* the quarter of its power a member sends to
+    the theatres it holds nothing in is split between them and taken from
+    where it fights – no more than its whole power in all its wars.
+  - *A government with no land reaches a front from its host's or allies'
+    land, or not at all* – not at full reach everywhere.
+  - *Massing tanks and guns weighs where the formations attack:* a sector a
+    formation attacks from has more of its country's tanks and guns, and its
+    armour edge there, a holding one fewer, with diminishing returns.
+  - *Civil wars under way on a date are civil wars:* China's of 1933 and
+    1950, Laos's, Cambodia's, Angola's and Afghanistan's of 1979 and 1999 are
+    recorded from the first day, with legitimacy, defections, recognition,
+    volunteers and their own end (a save from before gets them on opening,
+    save step 53); a rump smaller than the usual threshold – Taiwan's – loses
+    only below half of what it held, a movement without land of its own (the
+    Pathet Lao, the mujahideen) stands while it holds some instead of being
+    taken for crushed, a secession that makes peace keeps its land however
+    small, and soldiers go over only across a line where the two sides meet.
+  - *Every toll the engine takes is part of the game master's dead:* the
+    soldiers killed, the dead of mass crimes and of nuclear strikes join the
+    war's civilians in what its figure is read net of.
+  - *A truce's line is quiet:* contested provinces under a truce no longer
+    lose people every month.
+  - *A war's last period costs as any other:* a war ended in the turn – by a
+    peace, a capitulation, a plan – still takes its soldiers, weapons and
+    civilians for the fighting until it ended.
+  - *The game master cannot end any war:* a war among other governments ends
+    by the answer only where a peace plan of it reaches action or a side has
+    no land left; the player's own it may end as before.
+  - *Volunteers are lent and must reach:* they come home at a civil war's
+    end, less their share of their side's losses, and go only as far as
+    their country reaches – by land next to it, or by its ships.
+  - *Joint operations:* members already at war add no operation edge (their
+    aircraft fought in the fronts' air edge already); a supporter's aircraft
+    count by what reaches the front, and those it loses go on the war's record.
+  - *The atom:* an ally answers a strike in kind only by entering the war at
+    its partner's side; a strike's dead are the war's civilians, under their
+    own cause; a treaty's call against an atomic power is weighed against its
+    bomb, and an atomic power high on its escalation ladder is granted the
+    peace it asks for more readily.
+  - *Arms given to a country at war arrive by its routes:* in full over a
+    land border with the giver or a country at peace with it, through a
+    blockade in part, to an encircled land not at all.
+  - *A general's own formation goes over only with him* when his country
+    splits.
+  - *One strength for a war:* the arms list splits a member's power between
+    its wars as the wars' lines do.
+  - *Relations follow who is at war with whom:* a country leaving a war that
+    goes on recalls its ambassadors, and one entering it is news.
+  - *A truce between great economies no longer cancels the Games.*
+  - *No landing where the supply does not reach:* the engine's landings keep
+    to the reach every other advance keeps to (a far power's beachhead at a
+    reach of 0.13 in Konfrontasi).
+- **The tutorial plays the same in every game.** Its weeks are written in
+  advance, but each tutorial took a random seed, so on the finer map the
+  fronts could drift into a corner of Kherson in one game and not in
+  another; it now has one seed.
+- **A government set up abroad gets a name at its head.** One a victor
+  installed in a capitulated country had no leader, and the game master was
+  never asked for one; it is now asked, as for a government that fell.
+- **A peace draws no arrows.** The fronts a peace closed were told and drawn
+  as the holder throwing the enemy back; they are now "the front closes with
+  the peace", with no arrow and no count of moved fronts.
+- **An insurgency that takes a province stays in its war.** It became a
+  state as soon as it held land, and a state that owns nothing counts as
+  conquered, so its own war ended; it now becomes a state only when the
+  land is its own.
+- **An empire lives at home.** A country's centre for trade, distances and
+  who fears whom was its people's average with its colonies, so the 1950
+  Netherlands "lived" in Iran; it is now around its most populous province.
+- **A pledge to defend lapses after a decade.** A great power's word given
+  after an aggression held forever; it now holds ten years, renewed when the
+  same region is attacked again. Protégés of the start date stay guarded.
+- **The orders tell the delegation how to vote.** The player's delegation at
+  the United Nations or the League abstained unless an ally was attacked; an
+  order to condemn, oppose or abstain on an aggressor now sets its line, the
+  engine casts its votes by it, and the game master knows it.
+- **A war breaks relations.** Attacking Albania left its ambassador in
+  Moscow. Now a war closes the embassies of the governments that fight it
+  at once, truce or not, and the news says so; a peace brings the
+  ambassadors back after a year. The player's government recalls its
+  ambassador, breaks off or restores relations by its orders, and the game
+  master tells the same of others – never restored with an enemy at war.
+  The country card and the talks list show relations that are not normal,
+  and the game master sees them and is told an enemy has no embassy.
+- **Every leader of 1957 is someone the game knows**, with a portrait:
+  Zoli and Gronchi, Salazar, Raab and Schärf, Karamanlis, Gomułka, Novotný,
+  Kádár, Zhivkov, Suhrawardy, Bandaranaike, Ngo Dinh Diem, King Hussein,
+  King Saud, Haile Selassie, Nkrumah, Diefenbaker, Batista, Kubitschek and
+  the rest of the date's 46 – found by their names in Russian, Ukrainian and
+  English as a model writes them.
+- **History's successors have faces.** Eisenhower had none in a 1950 game:
+  the data knew only who ruled on the start day. Now everyone the offices
+  of each date passed to in the twenty years after it – heads of state and
+  government in the thirty countries that matter, and the ministers of the
+  great powers and the featured countries – is known by name in the three
+  languages, most with a free picture looked at one by one (busts, stamps
+  and crowd photographs replaced or left as a shadow, never someone else's
+  face).
+- **Protests end with the government they stood against.** A conquered,
+  annexed or vanished country, or one whose rulers are in exile, no longer
+  keeps its crowds (Turkey, long annexed, still had 3.6 million protesting
+  with 98% support): the protest ends with a line in the news, and what the
+  land's people think of their new rulers is the occupation's resistance.
+- **A post is no longer called "chief".** Appointing someone to an empty
+  post with no title of its own stored the post's inner name, and every
+  later appointment kept it. The post now shows its usual title (Chief of
+  Staff, Head of State and so on) until the game gives it one, and saves
+  that already show "chief" are mended.
+- **Map cards stay on the map.** A card for a province, city, protest or
+  headquarters near the map's right or bottom edge opened past it; it now
+  opens to the left or above the pointer.
+- **Refugees are mostly women and children.** Those who flee left every
+  age and both sexes evenly; they now leave from the bands they really
+  leave from – children and women more, the old a little less – and in a
+  war the men of fighting age mostly stay. The age pyramid and what the
+  game master and the ministers read of society show it.
+- **Ten painted politicians are the game's people.** Kennedy, Kissinger,
+  Hammarskjöld, Eleanor Roosevelt, Lee Kuan Yew, Gandhi, Reagan, Theodore
+  Roosevelt, Vynnychenko and Keynes had pictures painted for the quotes
+  but were not among the game's people, so a game that named them found
+  no face; they are recognised by name now, in three languages.
+- **Pledges to defend lapse.** A great power's word to defend a country,
+  given after an aggression, bound it forever; it now lapses after ten
+  years unless given again (a new pledge renews it).
+- **Governments set up abroad get a leader.** A coup, a lost vote or a
+  government an occupier sets up left the country with no named leader for
+  good; the engine now marks it, and the next game master is asked to name
+  the leader – the real one where history had one.
+- **A peace draws no push-back arrows.** The fronts a peace clears were
+  logged as land thrown back and drawn as arrows on the map; they are now
+  "the front is gone with the war", with nothing drawn.
+- **A war breaks relations.** Writing to a government at war with yours,
+  the talks show that relations are broken – the embassies closed, the
+  ambassadors recalled – and the letter goes through a neutral
+  intermediary: the enemy answers by note, as an enemy, until a peace (a
+  ceasefire does not mend relations).
+- **No more protests against governments that are gone.** A protest abroad
+  against a government that no longer rules its places – a country
+  annexed, a government in exile, land that changed hands – loses those
+  places and ends when none are left ("over – the government it stood
+  against no longer rules there"); the people of a conquered land resist
+  the conqueror in their provinces instead. Saves that still list such
+  protests (Turkey annexed with 3.6 million on strike) are cleaned on the
+  next turn.
+- **A new minister keeps the post's name.** Dismissing a minister and
+  naming another left the post titled by its internal id ("chief") or
+  without a name; a vacant post now keeps the title it last had (from this
+  turn's moves, the appointments or the chronicle) and otherwise takes the
+  post's own name in the government's language. Saves that already show
+  "chief" read the proper title.
+- **The map in Russian and Ukrainian.** 261 provinces Natural Earth names
+  only in English – the regions of France, Italy, Spain, Britain, Hungary,
+  Japan, the Philippines, Thailand, Vietnam and others, small countries and
+  territories – now have their names, applied when the map loads, with
+  short dashes; 125 more rivers are named; specks named by a code
+  ("COL+99?") have real names.
+- **A province's largest city is the era's and in your language.** The
+  province card named Natural Earth's pick in English, and sometimes the
+  wrong place (Nakhodka, the Primorye port, in the Yamal-Nenets okrug). It
+  now finds the biggest city inside the province on the start date, under
+  the name it had then: Novy Urengoy for the Yamal north today (the 1989
+  and 2021 censuses), Salekhard before the gas towns were built, Obdorsk in
+  1914; Stalingrad in 1939.
+- **A great army no longer loses more for being great in a war over water.**
+  In a war with no land front (fought at sea and in the air), losses were a
+  share of the whole army, so the biggest army lost the most whatever it
+  met; they now follow the forces that meet – a side's share of its army for
+  the war, no more than half as much again as its enemies bring – and so
+  does the cap on the game master's figures.
+- **A minister's old answers keep the name of the one who gave them.**
+  Naming a new minister renamed every earlier reply in the chat to the
+  newcomer; each answer now records who held the post when it was given.
+- **Every movement of the turn is drawn.** The map was given the turn's
+  list of changes as the report lists them, without the fronts' movements,
+  so a turn in which the fronts only shifted – most turns of a war of
+  attrition, and every one the engine moved on its own – drew no arrows at
+  all. The map now gets the whole list: each stretch a side pushed into, and
+  each stretch where the holder threw the other side back, has its arrow.
+  Arrows start where their side stood before the turn (a past turn's no
+  longer turn into landings), push-backs are grouped like pushes, and the
+  cap of 30 arrows is gone.
+
+- **Landings on islands move, and a far theatre no longer stalls a war.**
+  In a 1950 game a war against Taiwan had no front at all – an island has
+  no land neighbours – so the game master took towns that never reached
+  the map; Vietnam had not moved for half a year. Now a landing fights
+  with what its ships can carry and keep: landing ships, transports and,
+  across a narrow strait, boats of every kind, in thousands of soldiers a
+  month, built up from the day it began, against the enemy's fleet and
+  aircraft; no more soldiers fight in a province than its breadth holds,
+  and a garrison on an island far from home lives on what the sea brings
+  it. Straits are measured shore to shore from the map: Hainan, Kerch, the
+  Channel are crossed as land, the Taiwan Strait is a sea. The engine lands
+  on its own on enemy islands it can carry enough to; the game master sees
+  each war's landing targets with what each side could put ashore. A war's
+  theatres are apart: the Soviet army fighting on Malta is no longer absent
+  from Vietnam, and the game master leading one theatre leaves the others
+  to the engine. Against history on fixed seeds: Hainan 1950 falls in
+  weeks (before, a landing there was thrown back), Taiwan holds against a
+  China with no navy, Turkey takes northern Cyprus and X Corps Inchon in a
+  month, and a Normandy-sized fleet widens its beachhead where one without
+  landing ships is thrown back. A civil war's people (the two Vietnams)
+  resist at half a foreign occupier's hostility.
+- **Map markers keep their size while the map zooms.** Arrowheads, town and
+  city dots with their names, ports, protests and resource bubbles are drawn
+  in pixels around their points, and the wheel or a pinch scales them back
+  with the drawing, so they no longer swell while the map zooms and shrink
+  back when it stops (an arrowhead went from 13 to 22 px and back, a name
+  from 15 to 26 px). A city's dot no longer grows into a disc of its
+  built-up area at the closest zooms; country names still grow, as the
+  square root of the zoom, now during a gesture too. The stripes of occupied
+  and contested land stay thin while zooming as well.
+- **GDP growth says it is a yearly rate.** The top bar showed the growth
+  right after what the last turn added – "▲+$103 M +1%" – so the yearly
+  rate read as the week's change. It now reads "+1% a year ▲+$103 M a turn"
+  (в год, за ход; на рік, за хід), as do the country card and the economy
+  tab, whose debt and reserves say "a turn" too, and the hint explains that
+  the turn's change in dollars also counts the dollar's inflation, land and
+  people won or lost and men called up. The engine, the game master's
+  figures and the panels already treated growth as % a year; the game
+  master's instructions now say outright that it is not the change over one
+  turn. Shares of GDP in the economy tab use the language's decimal comma.
+- A country that lost all its land stayed at war for good in a coalition's
+  war (Turkey in the Korean War, a year and a half after the USSR took it):
+  it now capitulates or fades out of it.
+- An insurgency that holds land it does not own (the Pathet Lao in 1964,
+  Abkhazia and Chechnya in 1999) no longer fails the statistics' invariants.
+- An insurgency granted land at a peace becomes a state instead of staying
+  a dormant movement that owns land.
+
 ## [1.0.6-beta] — 2026-10-26
 
 ### Added

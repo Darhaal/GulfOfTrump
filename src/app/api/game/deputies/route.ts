@@ -7,6 +7,7 @@ import { rejectNonLocal } from "@/server/guard";
 import { completeJson } from "@/server/llm";
 import { badRequest, readGameRequest } from "@/server/requests";
 import { ndjsonResponse } from "@/server/stream";
+import { ministryOpen } from "@/engine/ministries";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
   if (parsed instanceof Response) return parsed;
   const { state, locale, model, body } = parsed;
   const ministry = body.ministry as AdvisorId;
-  if (!ADVISORS.includes(ministry)) return badRequest("Unknown ministry.");
+  if (!ADVISORS.includes(ministry) || !ministryOpen(state, ministry)) return badRequest("Unknown ministry.");
 
   return ndjsonResponse(request, async ({ signal, progress }) => {
     let chars = 0;

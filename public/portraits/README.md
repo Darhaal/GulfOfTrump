@@ -7,9 +7,17 @@ The leaders and ministers of the game, painted in oil by `npm run portraits`
   dates, the ministers, chiefs of staff, central bankers and heads of
   intelligence and science of the countries that matter on each date, their
   deputies (`deputyOf`: the post they stand in for) and the party leaders,
-  rebels and commanders the game shows, each with a Wikidata id. Most were
+  rebels and commanders the game shows, each with a Wikidata id. The famous
+  people outside office a game master names on a date – journalists, TV
+  hosts, bloggers, writers, artists, sportsmen, magnates, scientists and
+  church leaders – hold the post `media`: found by name, never a minister. Most were
   taken from the offices they held on the date (Wikidata P39 with start and
   end), the rest checked against Wikidata by name and year of birth.
+  History's successors – those the same offices passed to within twenty
+  years after a date – carry `successor` rows ("1950 usa head 1953": date,
+  country, post, the year they took it) instead of dates, so a game that
+  follows history meets them with their faces, and the figures a player
+  starts as stay those of the day.
   The script reads each person's picture (P18) and sex (P21) from Wikidata.
   `scripts/portraits/quoted.json` holds the writers and thinkers quoted while
   a turn is written who are not the game's people; `npm run portraits --
@@ -17,7 +25,8 @@ The leaders and ministers of the game, painted in oil by `npm run portraits`
   the ancients) and credits them here, but they stay out of the engine's
   index.
 - **Which photographs:** only those Commons gives a free licence — public
-  domain, CC0, CC BY, CC BY-SA or the Open Government Licence. Nothing under
+  domain, CC0, CC BY, CC BY-SA, the Open Government Licence or France's
+  Licence Ouverte. Nothing under
   NC, ND, GFDL alone or fair use.
 - **What was changed:** each photograph is cropped to head and shoulders,
   turned grey, smoothed like paint, lit on the face, given brush strokes, a
@@ -43,6 +52,8 @@ its photograph:
   does;
 - from a CC BY-SA photograph: CC BY-SA under the same version, crediting the
   photographer;
-- from an OGL photograph: the Open Government Licence.
+- from an OGL photograph: the Open Government Licence;
+- from a photograph under France's Licence Ouverte (Etalab, compatible with
+  CC BY): the Licence Ouverte, naming the source as `credits.json` does.
 
 Showing real people here does not mean they or anyone else endorse the game.

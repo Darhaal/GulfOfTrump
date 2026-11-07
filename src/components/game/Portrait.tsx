@@ -8,6 +8,9 @@ import type { Gender } from "@/engine/types";
 /** The year of the game on screen: the shadows of people without a portrait dress for its era. */
 export const PortraitYear = createContext<number | undefined>(undefined);
 
+/** The pictures the player brought for people (the leader's own photo, painted in oil), by person id and by "name:" (engine/partyEmblems.ts). */
+export const PortraitImages = createContext<Record<string, string> | undefined>(undefined);
+
 /** A little mirror's frame: an oval arch on top, soft corners below. */
 export const ARCH = "rounded-[50%_50%_14px_14px/40%_40%_14px_14px]";
 
@@ -42,8 +45,11 @@ export default function Portrait({
 }) {
   const [failed, setFailed] = useState<string | null>(null);
   const year = useContext(PortraitYear);
+  const own = useContext(PortraitImages);
   const s = SIZES[size];
-  const src = portrait && failed !== portrait ? portraitSrc({ portrait }) : portraitSrc({ gender, name, year });
+  // The player's own picture of this person comes first, then the game's portrait, then a shadow.
+  const mine = own?.[portrait ?? ""] ?? own?.[`name:${name}`];
+  const src = mine ?? (portrait && failed !== portrait ? portraitSrc({ portrait }) : portraitSrc({ gender, name, year }));
   return (
     <Image
       src={src}

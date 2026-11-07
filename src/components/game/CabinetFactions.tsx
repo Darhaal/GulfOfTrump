@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ui } from "@/components/ui/classes";
 import Dialog from "@/components/ui/Dialog";
 import DoneButton, { Hint } from "@/components/ui/DoneButton";
+import { officialTitle } from "@/engine/government";
 import { agendaOf, MINISTRY_OF } from "@/engine/interests";
 import {
   cabinetPlots,
@@ -25,6 +26,8 @@ import type { CabinetMove, GameState, Official } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
 import { cabinetPlotTitle, factionName } from "./changes";
+import { RepressMenu, roomOf } from "./politics/Repressions";
+import { targetsOf } from "@/engine/repressions";
 
 /**
  * The cabinet's intrigues as the government sees them (engine/intrigue.ts):
@@ -90,8 +93,10 @@ export function MinisterMarks({ state, person, factions }: { state: GameState; p
 }
 
 /** The moves the government can make on one minister: a favour, a seat at the top table, a swap of posts, a dismissal. */
-export function MinisterMoves({ state, person, disabled, onChange }: { state: GameState; person: Official; disabled: boolean; onChange: (next: GameState) => void }) {
-  const { t } = useI18n();
+export function MinisterMoves({ state, person, disabled, onChange, onOrder }: { state: GameState; person: Official; disabled: boolean; onChange: (next: GameState) => void; onOrder?: (order: string) => void }) {
+  const { t, text } = useI18n();
+  // A case against the minister by name is an order the engine carries out with the turn (engine/repressions.ts).
+  const target = onOrder ? targetsOf(state).find((x) => x.kind === "official" && x.name === person.name) : undefined;
   const why = useWhy();
   const [swapping, setSwapping] = useState(false);
   const others = (state.officials ?? []).filter((o) => o.name !== person.name && MINISTRY_OF[o.post] && insidersOf(state).some((p) => p.name === o.name && !p.deputy));
@@ -148,6 +153,7 @@ export function MinisterMoves({ state, person, disabled, onChange }: { state: Ga
           onAct={() => onChange(dismissMinister(state, person.name).state)}
           className={`${square} hover:border-red-200 hover:text-red-600`}
         />
+        {target && onOrder && <RepressMenu state={state} target={target} room={roomOf(state, disabled, onOrder)} />}
       </span>
       {swapping && others.length > 0 && (
         <div className="flex w-full items-end gap-1.5">
@@ -156,7 +162,7 @@ export function MinisterMoves({ state, person, disabled, onChange }: { state: Ga
             <select value={partner} onChange={(e) => setPartner(e.target.value as Official["post"])} className={`${ui.input} min-w-0 py-1.5 text-xs`}>
               {others.map((o) => (
                 <option key={o.post} value={o.post}>
-                  {o.name} – {o.title}
+                  {o.name} – {officialTitle(o, text)}
                 </option>
               ))}
             </select>

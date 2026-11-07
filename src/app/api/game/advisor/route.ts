@@ -11,6 +11,7 @@ import { completeJson } from "@/server/llm";
 import { loadMapIndex } from "@/server/maps";
 import { badRequest, MAX_MESSAGE_CHARS, readGameRequest } from "@/server/requests";
 import { ndjsonResponse } from "@/server/stream";
+import { ministryOpen } from "@/engine/ministries";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +27,8 @@ export async function POST(request: Request) {
   const { state, locale, model, body } = parsed;
 
   const advisor = body.advisor as AdvisorId;
-  if (!ADVISORS.includes(advisor)) return badRequest("Unknown advisor.");
+  // A closed ministry, or a new one's place left empty, has no one to answer.
+  if (!ADVISORS.includes(advisor) || !ministryOpen(state, advisor)) return badRequest("Unknown advisor.");
   const question = typeof body.question === "string" ? body.question.trim() : "";
   if (!question || question.length > MAX_MESSAGE_CHARS) return badRequest("The question is empty or too long.");
   // What the government is in the middle of — candidates for a post, a summit under way — when it asks.

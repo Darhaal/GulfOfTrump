@@ -36,8 +36,13 @@ function tourSeen(): boolean {
   }
 }
 
-/** Search engines and link previews read the front page as it is. */
-const isBot = () => typeof navigator !== "undefined" && /bot|crawl|spider|slurp|lighthouse|facebookexternalhit|embedly|preview/i.test(navigator.userAgent);
+/**
+ * Search engines and link previews read the front page as it is – Google's
+ * URL inspection and rich-result tests too (Google-InspectionTool,
+ * GoogleOther), and headless browsers.
+ */
+export const isBot = (userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent) =>
+  /bot|crawl|spider|slurp|lighthouse|facebookexternalhit|embedly|preview|inspectiontool|googleother|headlesschrome/i.test(userAgent);
 
 let starting: Promise<string> | null = null;
 

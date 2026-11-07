@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { isHexColor } from "./colors";
 import { applyLaws, LAW_IDS, lawsShape, type Laws, startLaws } from "./laws";
+import { ministryTitle, openMinistries } from "./ministries";
 import { en } from "./text";
-import type { AppliedChange, Bill, GameState, Localized, Politics, Proclamation } from "./types";
+import type { AppliedChange, Bill, GameState, Locale, Localized, Politics, Proclamation, Renamable, Rename } from "./types";
 
 /**
  * Acts of state. A new name for the country or one of its cities, or a new
@@ -23,7 +24,8 @@ const reaction = z
 
 export const VOTES = ["majority", "twothirds", "decree"] as const;
 
-const renameShape = z.object({ kind: z.literal("rename"), target: text(80), names: localized, reaction });
+/** A new name; "name" is the engine's, set when the act is checked: the name in the turn's language, for what keeps one. */
+const renameShape = z.object({ kind: z.literal("rename"), target: text(80), names: localized, name: z.string().optional(), reaction });
 const colorShape = z.object({ kind: z.literal("color"), color: z.string().trim(), reaction });
 /** A law or decree drafted for a vote: what it says, the laws it changes, the vote it needs, how the country takes it. */
 export const LawDraftSchema = z.object({ kind: z.literal("law"), title: text(200), text: z.string().trim().max(1500).default(""), laws: lawsShape, vote: z.enum(VOTES).catch("majority").default("majority"), reaction });
@@ -55,6 +57,41 @@ const MAX_ACTS = 4;
 const ASKS_FOR_ACTS = /renam|re-nam|new name|call (it|the|our)|colou?r|переимен|назва|назов|имен[уо]|перейменув|наймен|ім'я|цвет|перекрас|колір|кольор|перефарб/i;
 export const asksForActs = (orders: string[] | undefined) => (orders ?? []).some((o) => ASKS_FOR_ACTS.test(o));
 
+/** Every name a thing goes by, lower-cased, in any language. */
+const namesOf = (t: string | Localized | undefined): string[] => (!t ? [] : typeof t === "string" ? [t.trim().toLowerCase()] : [t.ru, t.uk, t.en].map((x) => x.trim().toLowerCase()));
+
+/**
+ * What else an order may rename, by its target: "ministry:<id>" (an open ministry of the cabinet), "party:<id or name>"
+ * (the ruling party, the player's own), "movement" (the player's, in opposition), "war:<id or name>" (a war the player
+ * fights) or "formation:<name>" (one of its formations). A target given as the thing's plain name finds it too. An
+ * opposition movement renames only itself; a government everything but a movement.
+ */
+export function renameTarget(state: GameState, target: string, opposition: boolean): { what: Renamable; target: string; from: string } | null {
+  const raw = target.trim();
+  const [head, ...rest] = raw.split(":");
+  const kind = rest.length ? head.trim().toLowerCase() : "";
+  const want = (rest.length ? rest.join(":") : raw).trim().toLowerCase();
+  const movement = state.role?.movement;
+  if (opposition) return movement && (kind === "movement" || raw.toLowerCase() === "movement" || namesOf(movement.name).includes(want)) ? { what: "movement", target: "movement", from: movement.name ?? "" } : null;
+  if (!kind || kind === "ministry")
+    for (const id of openMinistries(state)) {
+      if (want === id || namesOf(ministryTitle(state, id)).includes(want)) return { what: "ministry", target: `ministry:${id}`, from: en(ministryTitle(state, id)) };
+    }
+  if (!kind || kind === "party") {
+    const party = state.politics?.parties.find((x) => x.status === "ruling" && (x.id.toLowerCase() === want || namesOf(x.name).includes(want)));
+    if (party) return { what: "party", target: `party:${party.id}`, from: party.name };
+  }
+  if (!kind || kind === "war") {
+    const war = state.wars.find((w) => (w.attackers.includes(state.player) || w.defenders.includes(state.player)) && (w.id.toLowerCase() === want || namesOf(w.name).includes(want)));
+    if (war) return { what: "war", target: `war:${war.id}`, from: en(war.name) };
+  }
+  if (!kind || kind === "formation") {
+    const f = state.countries[state.player]?.arsenal?.organisation?.formations.find((x) => namesOf(x.name).includes(want));
+    if (f) return { what: "formation", target: `formation:${f.name}`, from: f.name };
+  }
+  return null;
+}
+
 /** A city the player may rename: its key on the map and every name it goes by now (any language, any era). */
 export interface CityName {
   key: string;
@@ -64,13 +101,15 @@ export interface CityName {
 /**
  * The acts a turn's answer brings, checked against the state: only when an
  * order asks for one; a rename of the country, or of one of the player's
- * cities named by any of its names; a real colour that is not the current
- * one; one of each at most, with the reaction within reason. An opposition
- * movement does not govern, and proclaims nothing.
+ * cities named by any of its names, or of a ministry, the ruling party, a
+ * war it fights or one of its formations (renameTarget); a real colour that
+ * is not the current one; one of each at most, with the reaction within
+ * reason. An opposition movement does not govern: it proclaims nothing but
+ * a new name of its own.
  */
-export function sanitizeActs(state: GameState, acts: z.infer<typeof actsField>, options: { orders?: string[]; cities?: CityName[]; opposition?: boolean }): { acts: TurnAct[]; dropped: number } {
+export function sanitizeActs(state: GameState, acts: z.infer<typeof actsField>, options: { orders?: string[]; cities?: CityName[]; opposition?: boolean; locale?: Locale }): { acts: TurnAct[]; dropped: number } {
   const given = acts.filter((a): a is TurnAct => Boolean(a));
-  if (options.opposition || !asksForActs(options.orders)) return { acts: [], dropped: given.length };
+  if (!asksForActs(options.orders)) return { acts: [], dropped: given.length };
   const country = state.countries[state.player];
   const byName = new Map<string, string>();
   for (const c of options.cities ?? []) for (const n of [c.key, ...c.names]) byName.set(n.trim().toLowerCase(), c.key);
@@ -80,11 +119,14 @@ export function sanitizeActs(state: GameState, acts: z.infer<typeof actsField>, 
     let act: TurnAct | null = null;
     if (a.kind === "color") {
       const color = a.color.toLowerCase();
-      if (isHexColor(color) && color !== country?.color.toLowerCase()) act = { ...a, color };
+      if (!options.opposition && isHexColor(color) && color !== country?.color.toLowerCase()) act = { ...a, color };
     } else {
       const target = a.target.trim().toLowerCase();
-      const key = target === "country" || (country && target === en(country.name).toLowerCase()) ? "country" : byName.get(target);
+      const key = options.opposition ? undefined : target === "country" || (country && target === en(country.name).toLowerCase()) ? "country" : byName.get(target);
+      const other = key ? null : renameTarget(state, a.target, Boolean(options.opposition));
       if (key) act = { ...a, target: key };
+      // What keeps one name takes it in the turn's language.
+      else if (other) act = { ...a, target: other.target, name: a.names[options.locale ?? "en"] };
     }
     const id = act ? (act.kind === "color" ? "color" : `rename:${act.target}`) : "";
     if (!act || seen.has(id) || out.length >= MAX_ACTS) continue;
@@ -94,14 +136,25 @@ export function sanitizeActs(state: GameState, acts: z.infer<typeof actsField>, 
   return { acts: out, dropped: given.length - out.length };
 }
 
+/** What a rename's target names: the country and its cities aside. */
+const renamableOf = (target: string): Renamable | null => {
+  const what = target === "movement" ? "movement" : target.split(":")[0];
+  return what === "ministry" || what === "party" || what === "movement" || what === "war" || what === "formation" ? what : null;
+};
+
 /** The acts as a proclamation, to take effect when the turn ends (engine/identity.ts). */
 export function proclamationOf(acts: TurnAct[]): Proclamation | undefined {
   const p: Proclamation = {};
   const reactions: NonNullable<Proclamation["reactions"]> = {};
+  const renames: Rename[] = [];
   for (const a of acts) {
+    const what = a.kind === "rename" ? renamableOf(a.target) : null;
     if (a.kind === "color") {
       p.color = a.color;
       reactions.color = a.reaction;
+    } else if (what) {
+      renames.push({ target: a.target, what, names: a.names, name: a.name ?? a.names.en });
+      reactions[`rename:${a.target}`] = a.reaction;
     } else if (a.target === "country") {
       p.name = a.names;
       reactions.name = a.reaction;
@@ -110,7 +163,8 @@ export function proclamationOf(acts: TurnAct[]): Proclamation | undefined {
       reactions[`place:${a.target}`] = a.reaction;
     }
   }
-  if (!p.name && !p.color && !p.places) return undefined;
+  if (renames.length) p.renames = renames;
+  if (!p.name && !p.color && !p.places && !p.renames) return undefined;
   return { ...p, reactions };
 }
 

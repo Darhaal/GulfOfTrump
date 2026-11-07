@@ -1,11 +1,14 @@
 "use client";
 
 import { Activity, Banknote, ChevronDown, Gem, Percent, PiggyBank, Scale, Shield, TrendingUp, TriangleAlert, type LucideIcon } from "lucide-react";
-import { useEffect, useRef, useState, type FocusEvent, type MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { RESOURCE_COLORS } from "@/components/map/colors";
+import { GlossaryText, Term, TextTip } from "@/components/ui/Term";
 import { type Crisis, interestRate } from "@/engine/crises";
 import { balance, type Accounts } from "@/engine/economy";
+import type { HomeFigure, HomeView } from "@/engine/official";
 import type { Economy, EconomyFigures, ScenarioId } from "@/engine/types";
+import type { TermId } from "@/i18n/glossary";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
 import ResourceLedger, { ledgerTypes, resourceState, STATE_TONE } from "./ResourceLedger";
@@ -18,21 +21,22 @@ import ResourceLedger, { ledgerTypes, resourceState, STATE_TONE } from "./Resour
  * folded into one chip — how many the country has enough of, imports or
  * lacks — that drops down into the list. The full accounts are on the
  * player's own country card. Each figure explains itself on hover, focus or
- * a tap: what it is and what moves it.
+ * a tap (components/ui/Tip.tsx): what it is and what moves it, with the
+ * glossary's terms inside opening hints of their own.
+ *
+ * A player who does not govern sees the figures their role knows
+ * (engine/official.ts): an estimate marked "≈", a secret as "?", and the
+ * row says whether these are the official figures or the post's estimates.
  */
 
-/** The hint under a figure: drawn fixed, since the row scrolls sideways and would clip it. */
-interface Hint {
-  id: string;
-  label: string;
-  text: string;
-  x: number;
-  y: number;
-}
+/** A figure's look: a button with an icon, a name and a value. */
+const FIGURE = "flex shrink-0 cursor-help items-center gap-1.5 rounded-md px-0.5 outline-none focus-visible:ring-2 focus-visible:ring-accent/50";
 
-type HintEvent = ReactMouseEvent<HTMLElement> | FocusEvent<HTMLElement>;
+/** What a figure's hint says: a glossary term, with the bar's own words on what stands beside the figure; or a sentence of its own. */
+type FigureTip = { term: TermId; extra?: MessageKey } | { text: MessageKey };
+
 /** The country's crises behind one chip: how many, the worst in red, and what each leads to. */
-function CrisisChip({ crises, economy, era, onHint }: { crises: Crisis[]; economy: Economy; era: ScenarioId; onHint: (e: HintEvent | null) => void }) {
+function CrisisChip({ crises, economy, era }: { crises: Crisis[]; economy: Economy; era: ScenarioId }) {
   const { t, locale } = useI18n();
   const num = (n: number) => n.toLocaleString(locale, { maximumFractionDigits: 1 });
   const [open, setOpen] = useState(false);
@@ -60,14 +64,13 @@ function CrisisChip({ crises, economy, era, onHint }: { crises: Crisis[]; econom
           : num(c.value);
   return (
     <div ref={box} className="relative shrink-0">
-      <button
-        type="button"
-        onClick={() => {
-          onHint(null);
-          setOpen((v) => !v);
-        }}
-        onMouseEnter={(e) => !open && onHint(e)}
-        onMouseLeave={() => onHint(null)}
+      <TextTip
+        as="button"
+        label={t("crisis.title")}
+        text={t("bar.hint.crises")}
+        pinnable={false}
+        silent={open}
+        onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         className={`flex items-center gap-1.5 rounded-lg px-2 py-1 text-2xs font-black transition-colors ${critical ? "bg-red-600 text-white hover:bg-red-700" : "bg-amber-50 text-amber-700 hover:bg-amber-100"}`}
       >
@@ -75,7 +78,7 @@ function CrisisChip({ crises, economy, era, onHint }: { crises: Crisis[]; econom
         <span className="max-sm:hidden">{t("crisis.title")}</span>
         <span className="tabular-nums">{crises.length}</span>
         <ChevronDown className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
+      </TextTip>
       {open && (
         <div className="absolute right-0 top-full z-40 mt-1.5 max-h-[min(72vh,640px)] w-[min(400px,calc(100vw-24px))] overflow-y-auto overscroll-contain rounded-xl border border-line sheet p-3 shadow-lg shadow-shade/10">
           <div className="mb-2 text-2xs font-black uppercase tracking-widest text-muted">{t("crisis.title")}</div>
@@ -108,6 +111,7 @@ export default function ResourceBar({
   era,
   unrest,
   before,
+  seen,
 }: {
   economy: Economy;
   accounts?: Accounts;
@@ -117,13 +121,18 @@ export default function ResourceBar({
   unrest?: number;
   /** The books at the start of the last turn (its chronicle entry), for what the turn changed. */
   before?: EconomyFigures;
+  /** How a role that does not govern knows each figure; `economy` then holds the figures it knows. */
+  seen?: HomeView;
 }) {
   const { t, money, moneyFine, moneyMoved, people, locale } = useI18n();
   const [shelf, setShelf] = useState(false);
-  const [hint, setHint] = useState<Hint | null>(null);
   const row = useRef<HTMLDivElement>(null);
   const chip = useRef<HTMLDivElement>(null);
-  const gap = balance(economy);
+  const gap = seen ? (seen.balance.value ?? 0) : balance(economy);
+  /** A figure as the role knows it: "≈" before an estimate, "?" for a secret. */
+  const shown = (key: HomeFigure, value: string) => (seen?.[key].sight === "secret" ? "?" : seen?.[key].sight === "estimated" ? `≈ ${value}` : value);
+  const known = (key: HomeFigure) => seen?.[key].sight !== "secret";
+  const official = seen && Object.values(seen).some((v) => v.sight === "official");
   const pct = (n: number) => `${n > 0 ? "+" : ""}${n.toLocaleString(locale, { maximumFractionDigits: 1 })}%`;
   const resources = accounts ? ledgerTypes(accounts) : [];
   const counts = { own: 0, import: 0, short: 0 };
@@ -157,22 +166,9 @@ export default function ResourceBar({
       el.scrollLeft += e.deltaY;
       e.preventDefault();
     };
-    // A hint is drawn where its figure was; once the row moves, it goes.
-    const scrolled = () => setHint(null);
     el.addEventListener("wheel", wheel, { passive: false });
-    el.addEventListener("scroll", scrolled);
-    return () => {
-      el.removeEventListener("wheel", wheel);
-      el.removeEventListener("scroll", scrolled);
-    };
+    return () => el.removeEventListener("wheel", wheel);
   }, []);
-
-  /** Shows a figure's hint under it, or hides it (null). */
-  const hintFor = (id: string, label: string) => (e: HintEvent | null) => {
-    if (!e) return setHint(null);
-    const r = e.currentTarget.getBoundingClientRect();
-    setHint({ id, label, text: t(`bar.hint.${id}` as MessageKey), x: Math.max(12, Math.min(r.left, window.innerWidth - 312)), y: r.bottom + 8 });
-  };
 
   // The shelf closes on a click elsewhere or Escape.
   useEffect(() => {
@@ -193,51 +189,82 @@ export default function ResourceBar({
   const turned = (now: number, then: number | undefined, good: "up" | "down", text: (from: number, to: number) => string) =>
     then === undefined || Math.abs(now - then) < 1e-6 ? undefined : { text: `${now > then ? "▲" : "▼"}${text(then, now)}`, good: now > then === (good === "up") };
   const moneyTurned = (now: number, then: number | undefined, good: "up" | "down") => turned(now, then, good, (from, to) => moneyMoved(from, to).delta);
-  const item = (id: string, Icon: LucideIcon, label: string, short: string, value: string, sub?: string, tone = "", minor = false, change?: { text: string; good: boolean }) => {
-    const show = hintFor(id, label);
-    return (
-      <button
-        key={id}
-        type="button"
-        onMouseEnter={show}
-        onMouseLeave={() => show(null)}
-        onFocus={show}
-        onBlur={() => show(null)}
-        // A tap on a touch screen shows it too, and a second tap hides it.
-        onClick={(e) => (hint?.id === id ? show(null) : show(e))}
-        aria-describedby={hint?.id === id ? "bar-hint" : undefined}
-        aria-label={label}
-        className="flex shrink-0 cursor-help items-center gap-1.5 rounded-md px-0.5 outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
-      >
+  /** A figure with its hint on hover, focus or a tap; a second tap hides it. */
+  const figure = (tip: FigureTip, label: string, body: ReactNode) =>
+    "term" in tip ? (
+      <Term key={label} id={tip.term} as="button" label={label} aria-label={label} extra={tip.extra && <GlossaryText text={t(tip.extra)} />} className={FIGURE}>
+        {body}
+      </Term>
+    ) : (
+      <TextTip key={label} as="button" label={label} aria-label={label} text={t(tip.text)} className={FIGURE}>
+        {body}
+      </TextTip>
+    );
+  const item = (tip: FigureTip, Icon: LucideIcon, label: string, short: string, value: string, sub?: string, tone = "", minor = false, change?: { text: string; good: boolean }) =>
+    figure(
+      tip,
+      label,
+      <>
         <Icon className="h-3.5 w-3.5 text-muted" />
         {names < 2 && <span className="text-2xs font-bold text-muted">{names === 0 ? label : short}</span>}
         <span className={`text-xs font-black tabular-nums ${tone || "text-ink"}`}>{value}</span>
+        {sub && <span className={`text-2xs font-bold tabular-nums text-muted ${minor ? "max-2xl:hidden" : ""}`}>{sub}</span>}
         {change && (
           <span className={`text-2xs font-bold tabular-nums max-md:hidden ${change.good ? "text-emerald-700" : "text-red-600"}`} title={t("econ.sinceTurn")}>
             {change.text}
           </span>
         )}
-        {sub && <span className={`text-2xs font-bold tabular-nums text-muted ${minor ? "max-2xl:hidden" : ""}`}>{sub}</span>}
-      </button>
+      </>,
     );
-  };
   const TONE = STATE_TONE;
+  // GDP carries two figures: its real growth, a yearly rate, and what the last turn added in dollars – each says which it is.
+  const gdpTurned = moneyTurned(economy.gdp, before?.gdp, "up");
 
   return (
     <div className="relative z-30 border-b border-line sheet">
       <div className="flex items-center gap-2 px-3 py-1.5">
+        {seen && (
+          <TextTip
+            as="span"
+            label={t(official ? "sight.bar.official" : "sight.bar.estimates")}
+            text={t(official ? "sight.bar.officialHint" : "sight.bar.estimatesHint")}
+            className="shrink-0 cursor-help rounded-md bg-page px-1.5 py-0.5 text-2xs font-black uppercase tracking-wider text-muted"
+          >
+            {t(official ? "sight.bar.official" : "sight.bar.estimates")}
+          </TextTip>
+        )}
         <div ref={row} className="flex min-w-0 flex-1 items-center gap-4 overflow-x-auto [scrollbar-width:none]">
-          {item("gdp", TrendingUp, t("economy.gdp"), t("economy.gdp.short"), moneyFine(economy.gdp), pct(economy.growth), economy.growth < 0 ? "text-red-600" : "", false, moneyTurned(economy.gdp, before?.gdp, "up"))}
-          {item("budget", Banknote, t("economy.budget"), t("economy.budget.short"), `${gap < 0 ? "−" : "+"}${money(Math.abs(gap))}`, undefined, gap < 0 ? "text-red-600" : "text-emerald-700")}
-          {item("debt", Scale, t("economy.debt"), t("economy.debt.short"), moneyFine(economy.debt), t("economy.debtShare", { n: Math.round((economy.debt / Math.max(0.01, economy.gdp)) * 100) }), "", true, moneyTurned(economy.debt, before?.debt, "down"))}
-          {item("reserves", PiggyBank, t("economy.reserves"), t("economy.reserves"), moneyFine(economy.reserves), undefined, "", false, moneyTurned(economy.reserves, before?.reserves, "up"))}
-          {item("inflation", Percent, t("economy.inflation"), t("economy.inflation"), pct(economy.inflation))}
           {item(
-            "troops",
+            { term: "gdp", extra: "bar.hint.gdp" },
+            TrendingUp,
+            t("economy.gdp"),
+            t("economy.gdp.short"),
+            shown("gdp", moneyFine(economy.gdp)),
+            known("growth") ? t("economy.perYear", { n: shown("growth", pct(economy.growth)) }) : undefined,
+            economy.growth < 0 ? "text-red-600" : "",
+            false,
+            gdpTurned && { ...gdpTurned, text: t("economy.perTurn", { n: gdpTurned.text }) },
+          )}
+          {item({ term: "budget" }, Banknote, t("economy.budget"), t("economy.budget.short"), shown("balance", `${gap < 0 ? "−" : "+"}${money(Math.abs(gap))}`), undefined, !known("balance") ? "" : gap < 0 ? "text-red-600" : "text-emerald-700")}
+          {item(
+            { term: "debt" },
+            Scale,
+            t("economy.debt"),
+            t("economy.debt.short"),
+            shown("debt", moneyFine(economy.debt)),
+            known("debt") && known("gdp") ? t("economy.debtShare", { n: Math.round((economy.debt / Math.max(0.01, economy.gdp)) * 100) }) : undefined,
+            "",
+            true,
+            moneyTurned(economy.debt, before?.debt, "down"),
+          )}
+          {item({ term: "reserves" }, PiggyBank, t("economy.reserves"), t("economy.reserves"), shown("reserves", moneyFine(economy.reserves)), undefined, "", false, moneyTurned(economy.reserves, before?.reserves, "up"))}
+          {item({ term: "inflation" }, Percent, t("economy.inflation"), t("economy.inflation"), shown("inflation", pct(economy.inflation)))}
+          {item(
+            { text: "bar.hint.troops" },
             Shield,
             t("economy.troops"),
             t("economy.troops.short"),
-            people(economy.troops),
+            shown("troops", people(economy.troops)),
             accounts ? `/ ${people(Math.max(0, accounts.mobilisable - economy.troops))}` : undefined,
             "",
             true,
@@ -247,45 +274,35 @@ export default function ResourceBar({
 
         {unrest !== undefined &&
           (() => {
-            const show = hintFor("unrest", t("politics.unrest"));
             const level = unrest >= 70 ? "high" : unrest >= 40 ? "raised" : "calm";
-            return (
-              <button
-                type="button"
-                onMouseEnter={show}
-                onMouseLeave={() => show(null)}
-                onFocus={show}
-                onBlur={() => show(null)}
-                onClick={(e) => (hint?.id === "unrest" ? show(null) : show(e))}
-                aria-describedby={hint?.id === "unrest" ? "bar-hint" : undefined}
-                aria-label={t("politics.unrest")}
-                className="flex shrink-0 cursor-help items-center gap-1.5 rounded-md px-0.5 outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
-              >
+            return figure(
+              { term: "unrest" },
+              t("politics.unrest"),
+              <>
                 <Activity className="h-3.5 w-3.5 text-muted" />
                 <span className="text-2xs font-bold text-muted max-xl:hidden">{t("politics.unrest")}</span>
-                <span className={`text-xs font-black tabular-nums ${level === "high" ? "text-red-600" : level === "raised" ? "text-amber-700" : "text-ink"}`}>{unrest}</span>
+                <span className={`text-xs font-black tabular-nums ${level === "high" ? "text-red-600" : level === "raised" ? "text-amber-700" : "text-ink"}`}>{shown("unrest", String(unrest))}</span>
                 <span className="h-1 w-10 overflow-hidden rounded-full bg-divider max-sm:hidden">
                   <span
                     className={`block h-full rounded-full ${level === "high" ? "bg-red-600" : level === "raised" ? "bg-amber-500" : "bg-emerald-600"}`}
                     style={{ width: `${Math.max(0, Math.min(100, unrest))}%` }}
                   />
                 </span>
-              </button>
+              </>,
             );
           })()}
 
-        <CrisisChip crises={crises} economy={economy} era={era} onHint={hintFor("crises", t("crisis.title"))} />
+        <CrisisChip crises={crises} economy={economy} era={era} />
 
         {resources.length > 0 && (
           <div ref={chip} className="relative shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                setHint(null);
-                setShelf((v) => !v);
-              }}
-              onMouseEnter={(e) => !shelf && hintFor("resources", t("bar.resources"))(e)}
-              onMouseLeave={() => setHint(null)}
+            <TextTip
+              as="button"
+              label={t("bar.resources")}
+              text={t("bar.hint.resources")}
+              pinnable={false}
+              silent={shelf}
+              onClick={() => setShelf((v) => !v)}
               aria-expanded={shelf}
               className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 transition-colors ${shelf ? "border-accent/40 bg-page" : "border-line hover:bg-page"}`}
             >
@@ -302,7 +319,7 @@ export default function ResourceBar({
                 {counts.short > 0 && <span className={TONE.short}>· {counts.short}</span>}
               </span>
               <ChevronDown className={`h-3 w-3 text-muted transition-transform ${shelf ? "rotate-180" : ""}`} />
-            </button>
+            </TextTip>
             {shelf && (
               <div className="absolute right-0 top-full z-40 mt-1.5 max-h-[min(72vh,640px)] w-[min(380px,calc(100vw-24px))] overflow-y-auto overscroll-contain rounded-xl border border-line sheet p-3 shadow-lg shadow-shade/10">
                 <div className="mb-3">
@@ -315,17 +332,6 @@ export default function ResourceBar({
           </div>
         )}
       </div>
-      {hint && (
-        <div
-          id="bar-hint"
-          role="tooltip"
-          className="pointer-events-none fixed z-50 w-[300px] max-w-[calc(100vw-24px)] rounded-xl border border-line sheet p-3 shadow-lg shadow-shade/10 animate-in fade-in duration-150"
-          style={{ left: hint.x, top: hint.y }}
-        >
-          <div className="text-2xs font-black uppercase tracking-widest text-muted">{hint.label}</div>
-          <p className="mt-1 text-xs font-medium leading-snug text-ink">{hint.text}</p>
-        </div>
-      )}
     </div>
   );
 }

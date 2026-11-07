@@ -1,6 +1,6 @@
 # Scenes
 
-The pictures of the eight start dates on the front page, painted in oil by
+The pictures of the twelve start dates on the front page, painted in oil by
 `npm run scenes` (`scripts/scenes.mjs`) from pictures on Wikimedia Commons.
 
 - **Which pictures:** one of each date's moment, chosen by hand in

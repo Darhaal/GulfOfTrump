@@ -18,22 +18,23 @@ export function homeDir(): string {
   return process.env.GOT_HOME || path.join(os.homedir(), ".gulf-of-trump");
 }
 
-const file = (name: string) => path.join(homeDir(), name);
+const file = (name: string, home = homeDir()) => path.join(home, name);
 
-async function ensureHome() {
-  await mkdir(homeDir(), { recursive: true, mode: 0o700 });
+async function ensureHome(home = homeDir()) {
+  await mkdir(home, { recursive: true, mode: 0o700 });
 }
 
-async function writePrivate(name: string, data: string | Buffer) {
-  await ensureHome();
-  await writeFile(file(name), data, { mode: 0o600 });
+/** `home` is the folder as it was when the write was asked for, for a write that waits its turn. */
+async function writePrivate(name: string, data: string | Buffer, home = homeDir()) {
+  await ensureHome(home);
+  await writeFile(file(name, home), data, { mode: 0o600 });
   // writeFile's mode applies only on creation; keep it tight on rewrite too.
-  await chmod(file(name), 0o600).catch(() => undefined);
+  await chmod(file(name, home), 0o600).catch(() => undefined);
 }
 
-async function readOptional(name: string): Promise<Buffer | null> {
+async function readOptional(name: string, home = homeDir()): Promise<Buffer | null> {
   try {
-    return await readFile(file(name));
+    return await readFile(file(name, home));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw error;
@@ -87,6 +88,24 @@ export interface StoredConnection {
 export const loadConnection = () => readEncrypted<StoredConnection>("chatgpt.json");
 export const saveConnection = (connection: StoredConnection) => writeEncrypted("chatgpt.json", connection);
 export const clearConnection = () => rm(file("chatgpt.json"), { force: true });
+
+/**
+ * The plan's latest usage numbers (chatgpt/usage.ts), beside the connection
+ * and apart from it: shares used and reset times only, nothing secret, so
+ * the file is plain JSON.
+ */
+export async function loadUsageFile(home = homeDir()): Promise<unknown> {
+  const raw = await readOptional("plan-usage.json", home);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw.toString("utf8")) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+export const saveUsageFile = (usage: unknown, home = homeDir()) => writePrivate("plan-usage.json", JSON.stringify(usage), home);
+export const clearUsageFile = (home = homeDir()) => rm(file("plan-usage.json", home), { force: true });
 
 /**
  * The OAuth client id OpenAI issues on the first sign-in from this machine.

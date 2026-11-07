@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ADVISOR_POST, ADVISOR_TITLES, ADVISORS, type AdvisorId } from "./advisors";
+import { ADVISOR_POST, ADVISOR_TITLES, ADVISORS, forNew, STANDARD_MINISTRIES, type AdvisorId } from "./advisors";
 import { divisionSize } from "./army";
 import { yearOf } from "./calendar";
 import { happens } from "./dice";
@@ -28,7 +28,7 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 const round = Math.round;
 
 /** The posts a minister can hold: the eight ministries, by the post their minister holds. */
-export const MINISTER_POSTS: OfficialPost[] = ADVISORS.map((a) => ADVISOR_POST[a]);
+export const MINISTER_POSTS: OfficialPost[] = STANDARD_MINISTRIES.map((a) => ADVISOR_POST[a]);
 export const isMinisterPost = (post: string | undefined): post is OfficialPost => MINISTER_POSTS.includes(post as OfficialPost);
 /** The ministry of a post. */
 export const ministryOf = (post: OfficialPost): AdvisorId | undefined => ADVISORS.find((a) => ADVISOR_POST[a] === post);
@@ -356,9 +356,11 @@ const COMPETENCE: Record<AdvisorId, string> = {
   interior: "the police, public order, elections, the press and censorship",
   military: "the general staff: plans, mobilisation and deployments; the leader decides on war",
   intelligence: "spies, agents and covert operations",
-  finance: "taxes, the currency, debt and the budget's execution; the budget itself is the government's",
+  finance: "taxes, the currency, debt and the budget, which the minister draws up; the government may overrule it",
   industry: "factories, resources, production, supply and trade deals",
   science: "laboratories, universities and research",
+  space: "rockets, launches and the space programme",
+  ...forNew("its own portfolio, as the government gave it"),
 };
 
 const list = (ns: number[]) => (ns.length ? ns.join(", ") : "none");
@@ -391,7 +393,7 @@ export function describeFigure(state: GameState, orders: string[], approvals: bo
 }
 
 /** The rules for a minister or a general (engine/prompts.ts): who the player is and what the orders can do, then what the answer gives. */
-export const FIGURE_ROLE = `- THE PLAYER SERVES THE GOVERNMENT, NOT LEADS IT (THE PLAYER IS NOT THE LEADER below). "The player's government" in these rules is the government the player serves, which you play like any other; the orders are the player's own within the post – a minister's within the ministry's competence, a general's for the troops under command. The engine's dice say which of them the government accepts: play an accepted order as the government's; a refused one fails, or is done only as far as the post's own means reach, and the leader may resent it. An order beyond the post (the budget, other ministries, treaties, laws, another command) is refused.`;
+export const FIGURE_ROLE = `- THE PLAYER SERVES THE GOVERNMENT, NOT LEADS IT (THE PLAYER IS NOT THE LEADER below). "The player's government" in these rules is the government the player serves, which you play like any other; the orders are the player's own within the post – a minister's within the ministry's competence, a general's for the troops under command. The engine's dice say which of them the government accepts: play an accepted order as the government's; a refused one fails, or is done only as far as the post's own means reach, and the leader may resent it. An order beyond the post (other ministries, treaties, laws, another command) is refused: what lies beyond it the player can only propose to the leader (THE PLAYER'S PROPOSALS TO THE LEADER), whose answer is the engine's dice.`;
 export const FIGURE_FIELD = `- In "figure", give what the period did to the player's standing, as changes of a few points: influence (with the leader), means (the post's budget or the troops' strength) and loyalty (of the post's people to the player); "name" (and "front") only while missing. If the player rises this period – the leader names them head of government, or their coup succeeds – say so in "figure.rise" (how: appointed|coup; note). The engine decides whether their standing allows it.`;
 export const FIGURE_SHAPE = `"figure": { "name": "string", "gender": "male|female", "front": "string", "influence": 0, "means": 0, "loyalty": 0, "successor": "string", "rise": { "how": "appointed|coup", "government": "string", "note": "string" } } (only what changed; leave "rise" out unless the player rose)`;
 

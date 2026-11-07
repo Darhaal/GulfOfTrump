@@ -10,7 +10,7 @@ import { wantsDemo } from "@/server/demo";
 import { rejectNonLocal } from "@/server/guard";
 import { completeJson } from "@/server/llm";
 import { loadMapIndex } from "@/server/maps";
-import { badRequest, readGameRequest, readOrders } from "@/server/requests";
+import { badRequest, MAX_ORDERS, readGameRequest, readOrders } from "@/server/requests";
 import { ndjsonResponse } from "@/server/stream";
 
 export const runtime = "nodejs";
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
   if (parsed instanceof Response) return parsed;
   const { state, locale, model, body } = parsed;
   const orders = readOrders(body.orders);
-  if (!orders) return badRequest("Orders must be a list of up to 12 short strings.");
+  if (!orders) return badRequest(`Orders must be a list of up to ${MAX_ORDERS} short strings.`);
   if (body.stage !== undefined && !TURN_STAGES.includes(body.stage as TurnStage)) return badRequest("Unknown stage.");
   const stage = body.stage as TurnStage | undefined;
   const story = body.story === undefined ? undefined : StoryCarrySchema.safeParse(body.story);
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   const index = await loadMapIndex(scenarioOf(state).map);
   // An order may rename one of the player's cities by any of its names.
   const cities = asksForActs(orders) ? await playerCities(state, index) : [];
-  const options = { orders, index, cities };
+  const options = { orders, index, cities, locale };
   // The tutorial's first turns are written in advance (engine/tutorial.ts): no model, no account.
   const written = scriptedNow(state);
   return ndjsonResponse(request, async ({ signal, progress }) => {

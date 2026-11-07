@@ -1,7 +1,10 @@
 import { z } from "zod";
+import { ADVISOR_POST, ADVISOR_TITLES, ADVISORS } from "./advisors";
 import { dealInterests, interestsLine } from "./interests";
 import { dressOfficial, samePerson, syncRulers } from "./people";
-import type { AppliedChange, Gender, GameState, Official, OfficialPost } from "./types";
+import { en } from "./text";
+import { describeCabinetShape, newMinistry } from "./ministries";
+import type { AppliedChange, Gender, GameState, Locale, Localized, Official, OfficialPost } from "./types";
 import { OFFICIAL_POSTS } from "./types";
 
 /**
@@ -45,7 +48,7 @@ export const CandidatesSchema = z.object({
 });
 export type Candidate = z.infer<typeof CandidatesSchema>["candidates"][number];
 
-export const OFFICIAL_CHANGES = ["appointed", "resigned", "dismissed", "died", "arrested", "fled"] as const;
+export const OFFICIAL_CHANGES = ["appointed", "resigned", "dismissed", "died", "arrested", "fled", "retitled"] as const;
 
 /** A turn's changes to the government by events (merged into OutcomeSchema as `officials`). */
 export const officialsField = z
@@ -64,7 +67,62 @@ export const officialsField = z
 // The post each minister of the cabinet holds lives with the ministers (engine/advisors.ts), kept here for its many readers.
 export { ADVISOR_POST } from "./advisors";
 
+/** What a post is called when the game gave it no title of its own: the cabinet's titles for the ministries. */
+export const POST_TITLES = {
+  head: { ru: "Глава государства", uk: "Глава держави", en: "Head of State" },
+  government: { ru: "Глава правительства", uk: "Глава уряду", en: "Head of Government" },
+  bank: { ru: "Председатель центрального банка", uk: "Голова центрального банку", en: "Governor of the Central Bank" },
+  ...Object.fromEntries(ADVISORS.map((a) => [ADVISOR_POST[a], ADVISOR_TITLES[a]])),
+} as Record<OfficialPost, Localized>;
+
+/** No title at all, or only the post's id (appointing to an empty post used to store it, so a cabinet showed "chief"). */
+const untitled = (title: string | undefined, post: OfficialPost) => !title?.trim() || title.trim().toLowerCase() === post;
+
+/** The title an official holds, or the post's usual one in the reader's language when the game named none. */
+export function officialTitle(o: Pick<Official, "post" | "title">, text: (title: Localized) => string): string {
+  return untitled(o.title, o.post) ? text(POST_TITLES[o.post]) : o.title;
+}
+
 const clampScore = (v: number) => Math.min(5, Math.max(1, Math.round(v)));
+
+
+/** A title as written, or nothing when it is empty or only a post's id ("chief"), as older saves could keep. */
+export function realTitle(title: string | undefined): string | undefined {
+  const t = title?.trim();
+  return t && !(OFFICIAL_POSTS as readonly string[]).includes(t) ? t : undefined;
+}
+
+/**
+ * The language the government's titles are written in – the interface's when
+ * the game master named them: Ukrainian by its own letters, Russian by
+ * Cyrillic, else English.
+ */
+function titlesLocale(state: Pick<GameState, "officials" | "deputies">): Locale {
+  const all = [...(state.officials ?? []).map((o) => o.title), ...(state.deputies ?? []).map((d) => d.title)].join(" ");
+  if (/[іїєґІЇЄҐ]/.test(all)) return "uk";
+  if (/[а-яёА-ЯЁ]/.test(all)) return "ru";
+  return "en";
+}
+
+/**
+ * What a post is called now: its holder's title; else the one it had when it
+ * was last filled or left – this turn's appointments and the cabinet's moves,
+ * then the chronicle, newest first; else the post's own name in the
+ * government's language. Never a post's id.
+ */
+export function postTitle(state: Pick<GameState, "officials" | "deputies" | "personnel" | "cabinet" | "chronicle" | "cabinetShape">, post: OfficialPost, locale?: Locale): string {
+  const held = realTitle(officialAt(state, post)?.title);
+  if (held) return held;
+  // A ministry the government created goes by its own name until its minister has a title of their own.
+  const created = newMinistry(state, post);
+  if (created) return created.names?.[locale ?? titlesLocale(state)] ?? created.name;
+  for (const p of [...(state.personnel ?? [])].reverse()) if (p.post === post && realTitle(p.title)) return realTitle(p.title)!;
+  for (const m of [...(state.cabinet?.moves ?? [])].reverse()) for (const o of m.removed ?? []) if (o.post === post && realTitle(o.title)) return realTitle(o.title)!;
+  for (let i = (state.chronicle?.length ?? 0) - 1; i >= 0; i--) {
+    for (const c of state.chronicle[i].applied ?? []) if (c.kind === "official" && c.post === post && realTitle(c.title)) return realTitle(c.title)!;
+  }
+  return POST_TITLES[post][locale ?? titlesLocale(state)];
+}
 
 function official(raw: z.infer<typeof person> & { post: OfficialPost; title: string }, since: string): Official {
   return {
@@ -106,7 +164,7 @@ function retitlePlayer(state: GameState, replaced?: { post: OfficialPost; name: 
     if (!ruling) return state;
   }
   const ordered = ruling ? [ruling, ...top.filter((o) => o !== ruling)] : top;
-  const line = ordered.map((o) => `${o.title} ${o.name}`).join("; ");
+  const line = ordered.map((o) => (untitled(o.title, o.post) ? o.name : `${o.title} ${o.name}`)).join("; ");
   if (player.leader === line) return state;
   const next = { ...state, countries: { ...state.countries, [state.player]: { ...player, leader: line } } };
   syncRulers(next);
@@ -153,7 +211,8 @@ export const officialAt = (state: Pick<GameState, "officials">, post: OfficialPo
  */
 export function appoint(state: GameState, post: OfficialPost, person: Omit<Official, "post" | "since" | "title"> & { title?: string; gender?: Gender }, note = "", now = new Date()): GameState {
   const before = officialAt(state, post);
-  const title = person.title || before?.title || post;
+  // A post left empty keeps its name: the title it last had, never its id.
+  const title = realTitle(person.title) ?? postTitle(state, post);
   const next: Official = {
     post,
     title,
@@ -181,15 +240,46 @@ export function appoint(state: GameState, post: OfficialPost, person: Omit<Offic
   return LEADING.includes(post) ? retitlePlayer(appointed, before ? { post, name: before.name } : undefined) : appointed;
 }
 
+/** The longest title the player may give a post. */
+export const TITLE_CHARS = 120;
+
+/**
+ * The player renames a post between turns, its holder kept: "the chief of
+ * staff is now the Commander-in-Chief". It waits in `personnel` for the next
+ * game master like an appointment. Nothing when the post is empty or the
+ * title is not a new one.
+ */
+export function retitle(state: GameState, post: OfficialPost, title: string, now = new Date()): GameState {
+  const holder = officialAt(state, post);
+  const next = realTitle(title.replace(/\s+/g, " ").slice(0, TITLE_CHARS));
+  if (!holder || !next || next === holder.title) return state;
+  const renamed: GameState = {
+    ...state,
+    officials: (state.officials ?? []).map((o) => (o === holder ? { ...o, title: next } : o)),
+    personnel: [...(state.personnel ?? []), { date: state.date, post, title: next, to: holder.name, renamed: holder.title }],
+    updatedAt: now.toISOString(),
+  };
+  return LEADING.includes(post) ? retitlePlayer(renamed) : renamed;
+}
+
 /** A turn's changes to the government: someone leaves a post, someone takes it. */
 export function applyOfficials(next: GameState, changes: z.infer<typeof officialsField>, ctx: { to: string }, applied: AppliedChange[]): void {
   for (const c of changes) {
     const before = officialAt(next, c.post);
+    // The post renamed, its holder kept: "the chief of staff is to be called Commander-in-Chief" (an order, an act, an event).
+    const title = realTitle(c.title);
+    if ((c.change === "retitled" || c.change === "appointed") && before && samePerson(before.name, c.name)) {
+      if (!title || title === before.title) continue;
+      next.officials = (next.officials ?? []).map((o) => (o === before ? { ...o, title } : o));
+      applied.push({ kind: "official", post: c.post, title, name: before.name, change: "retitled", from: before.title });
+      if (LEADING.includes(c.post)) Object.assign(next, { countries: retitlePlayer(next).countries });
+      continue;
+    }
+    if (c.change === "retitled") continue;
     if (c.change === "appointed") {
-      if (before?.name === c.name) continue;
       const taken: Official = {
         post: c.post,
-        title: c.title || before?.title || c.post,
+        title: title ?? postTitle(next, c.post),
         name: c.name,
         traits: (c.traits ?? []).slice(0, 4),
         manner: c.manner ?? "",
@@ -217,12 +307,12 @@ export function applyOfficials(next: GameState, changes: z.infer<typeof official
 const MOOD_EN = { loyal: "content", uneasy: "uneasy, warned the government", opposed: "objected to the government's course", resigning: "threatened to resign" } as const;
 
 /** The government as the model reads it, and the player's appointments since the last turn. */
-export function describeOfficials(state: Pick<GameState, "officials" | "personnel">): string[] {
-  const lines: string[] = [];
+export function describeOfficials(state: Pick<GameState, "officials" | "personnel" | "cabinetShape">): string[] {
+  const lines: string[] = [...describeCabinetShape(state)];
   if (state.officials?.length) {
     lines.push("", "THE PLAYER'S GOVERNMENT (post | title | name | traits | manner | competence 1-5 | loyalty 1-5 | faction):");
     for (const o of state.officials) {
-      lines.push(`- ${o.post} | ${o.title} | ${o.name} | ${o.traits.join(", ") || "-"} | ${o.manner || "-"} | ${o.competence} | ${o.loyalty} | ${o.faction ?? "-"}`);
+      lines.push(`- ${o.post} | ${officialTitle(o, en)} | ${o.name} | ${o.traits.join(", ") || "-"} | ${o.manner || "-"} | ${o.competence} | ${o.loyalty} | ${o.faction ?? "-"}`);
       const interests = interestsLine(o);
       if (interests) lines.push(`    interests: ${interests}`);
       if (o.mood && o.mood.stance !== "loyal") lines.push(`    after the last turn: ${MOOD_EN[o.mood.stance]}${o.mood.grievance ? ` — ${o.mood.grievance}` : ""}`);
@@ -230,11 +320,12 @@ export function describeOfficials(state: Pick<GameState, "officials" | "personne
   }
   if (state.personnel?.length) {
     lines.push("", "APPOINTMENTS BY THE GOVERNMENT SINCE THE LAST TURN (they have happened; judge what they bring):");
-    for (const p of state.personnel) lines.push(`- ${p.date}: ${p.title}: ${p.from ? `${p.from} replaced by ` : ""}${p.to}${p.note ? ` (${p.note})` : ""}`);
+    for (const p of state.personnel)
+      lines.push(p.renamed ? `- ${p.date}: the post "${p.renamed}" renamed "${p.title}", ${p.to} keeping it` : `- ${p.date}: ${officialTitle(p, en)}: ${p.from ? `${p.from} replaced by ` : ""}${p.to}${p.note ? ` (${p.note})` : ""}`);
   }
   return lines;
 }
 
 /** One person in a line, for a minister's own prompt. */
 export const officialLine = (o: Official) =>
-  `${o.name}, ${o.title}${o.faction ? ` (${o.faction})` : ""}; traits: ${o.traits.join(", ") || "—"}; manner: ${o.manner || "—"}; competence ${o.competence}/5, loyalty ${o.loyalty}/5`;
+  `${o.name}, ${officialTitle(o, en)}${o.faction ? ` (${o.faction})` : ""}; traits: ${o.traits.join(", ") || "—"}; manner: ${o.manner || "—"}; competence ${o.competence}/5, loyalty ${o.loyalty}/5`;

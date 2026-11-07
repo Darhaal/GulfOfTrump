@@ -1,11 +1,13 @@
 import { regimeAtStart } from "./abroad";
-import { menOf, menTotal, trainingQuality } from "./army";
+import { colonialOf } from "./colonialLand";
+import { loseSoldiers, menOf, menTotal, trainingQuality, WOUNDED_LOST } from "./army";
 import { baseLevel, combatPower } from "./arsenal";
 import { yearOf } from "./calendar";
 import { STEP_YEARS } from "./economy";
+import { airUnits, improvisedLift, LIFT_MONTHS, liftShare, seaLift, seaPower } from "./forces";
 import { regimeKindOf } from "./parliament";
 import { peopleIn } from "./population";
-import { distanceKm, STRAIT_KM } from "./provinces";
+import { distanceKm, islandOf, seaGapKm, STRAIT_KM } from "./provinces";
 import { roll } from "./dice";
 import { alliesOf, landHolders, powers, tieOf, warBetween } from "./relations";
 import type { GameState, MapIndex, MapRegion, RegimeKind, RegionState, Resistance, ScenarioId, Terrain, War } from "./types";
@@ -50,7 +52,7 @@ const yearsFrom = (from: string, to: string) => Math.max(0, (Date.parse(to) - Da
 const addMonths = (date: string, months: number) => new Date(Date.parse(date) + (months / 12) * YEAR_MS).toISOString().slice(0, 10);
 
 /** Months an army of each era takes to bring its reserves up to full weight. */
-export const MOBILISE_MONTHS: Record<ScenarioId, number> = { "1914": 1, "1939": 1.5, "1950": 2.5, "1964": 2.5, "1991": 3, "1999": 3, "2014": 3, "2022": 3.5 };
+export const MOBILISE_MONTHS: Record<ScenarioId, number> = { "1914": 1, "1933": 1.5, "1939": 1.5, "1950": 2.5, "1957": 2.5, "1964": 2.5, "1973": 2.5, "1979": 2.5, "1991": 3, "1999": 3, "2014": 3, "2022": 3.5 };
 
 /** Readiness on the day a war begins: for the side that chose the moment, a country that entered it later, and the side attacked. */
 const READY_START = { struck: 0.75, joined: 0.65, attacked: 0.5 } as const;
@@ -73,8 +75,12 @@ const LAND_SPAN = 3000;
 /** Across a sea: the most an expedition can bring, and the distance that halves it. */
 const SEA_MAX = 0.6;
 const SEA_SPAN = 2000;
-/** Major warships per thousand soldiers that carry and keep a whole army overseas. */
-const LIFT_NORM = 0.15;
+/** A strait an army crosses as it would a river, measured shore to shore on the map (which runs some tens of kilometres wide): the Kerch strait, Messina, the Channel. */
+export const STRAIT_LINK_KM = 35;
+/** The sea past which an enemy fleet in the way hinders a landing in full: across a narrow strait guns and aircraft cover the boats. */
+const HINDER_KM = 40;
+/** The most soldiers that can fight in a province, thousands for each kilometre of its breadth (the root of its area): a small island holds a few divisions, a great plain armies. */
+export const FRONTAGE = 5;
 /** How many provinces into the enemy's land an army fighting its way forward from its own still counts as linked by land. */
 const LINK_HOPS = 3;
 /** An army cut off inland, with no road home and no coast. */
@@ -88,6 +94,8 @@ export const HOME_EDGE = 1.15;
 
 /** Hostility of a people to an occupier at war with their country, 0–100, before how it occupies. */
 const HOSTILITY = 70;
+/** What is left of hostility where the holder's own land lies in the same country of today: a civil war, a divided nation. */
+const KIN = 0.5;
 /** How the occupation goes, by the occupier's kind of government. */
 const OCCUPIER: Record<RegimeKind, number> = { democracy: 0.75, limited: 0.95, party: 1.1, autocracy: 1.15, military: 1.1 };
 /** Years of peace over which a people comes to accept its new rulers (to about two thirds). */
@@ -105,6 +113,8 @@ const MAX_TIED = 0.5;
 const PARTISAN_TOLL = 0.04;
 /** Cover for partisans, by terrain. */
 const COVER: Record<Terrain, number> = { plains: 1, desert: 0.8, hills: 1.2, forest: 1.3, tundra: 0.8, wetlands: 1.3, jungle: 1.5, mountains: 1.5 };
+/** A provisional government's people resist it this much at no acceptance, and less as they accept it: at full acceptance a fifth of it. */
+const PUPPET = 1.2;
 /** Below this share of the means it needs, an attacker fights for a border, not a country. */
 export const LIMITED = 0.6;
 /** Below this will to fight, a side's principal weighs asking for terms, about this often a year. */
@@ -143,10 +153,12 @@ export interface Reading {
   revolts: Map<string, { provinces: number; need: number; levels: number }>;
 }
 
-export function readState(state: Pick<GameState, "regions" | "wars"> & Partial<Pick<GameState, "chronicle">>, map?: Record<string, MapRegion> | null): Reading {
+export function readState(state: Pick<GameState, "regions" | "wars"> & Partial<Pick<GameState, "chronicle" | "colonies">>, map?: Record<string, MapRegion> | null): Reading {
+  // A colonial war is fought on the colony's land: the metropole is not invaded by it, nor is a colony's province its own soil (engine/colonialLand.ts).
+  const colonial = colonialOf(state, map);
   const foes = new Map<string, Set<string>>();
   for (const w of state.wars) {
-    if (w.truce) continue;
+    if (w.truce || colonial.wars.has(w.id)) continue;
     for (const [mine, theirs] of [
       [w.attackers, w.defenders],
       [w.defenders, w.attackers],
@@ -172,7 +184,7 @@ export function readState(state: Pick<GameState, "regions" | "wars"> & Partial<P
     }
     tally.set(r.owner, t);
     const f = foes.get(r.owner);
-    if (f && (f.has(r.controller) || (r.contested !== undefined && f.has(r.contested)))) invaded.add(r.owner);
+    if (f && !colonial.land.has(id) && (f.has(r.controller) || (r.contested !== undefined && f.has(r.contested)))) invaded.add(r.owner);
     if (r.resistance && r.resistance.level >= 1) {
       const v = revolts.get(r.controller) ?? { provinces: 0, need: 0, levels: 0 };
       v.provinces += 1;
@@ -281,29 +293,42 @@ export function willToFight(state: MeansState, tag: string, map?: Record<string,
   if (home) will += HOME_SOIL;
   will -= 30 * Math.max(0, (reading.people.get(tag)?.lost ?? 0) - 0.4);
   will *= 1 - (0.9 * warWeariness(state, tag, map, reading)) / 100;
+  // A government in exile fights with no more will than it still has standing (engine/warEnd.ts).
+  const standing = state.countries[tag]?.exile?.standing;
+  if (standing !== undefined) will = Math.min(will, standing);
   return round(clamp(will, 5, 100));
 }
 
 /** What the will to fight makes of an army's strength: all of it at full will, under a third when it is gone (an army that will not fight melts away). */
 export const commitment = (will: number) => 0.3 + (0.7 * clamp(will, 0, 100)) / 100;
 
-/** A country's ships against what it takes to carry and keep its army overseas, 0.1–1. */
+/**
+ * A country's sea lift against the force a landing needs, 0.1–1: what its
+ * landing ships and transports (engine/forces.ts) carry and keep supplied
+ * over a sea, against a fifth of its army within bounds – not against the
+ * whole army, so a great land power with a real amphibious fleet is not
+ * counted as having none.
+ */
 export function navalLift(state: Pick<GameState, "countries" | "date">, tag: string): number {
-  const c = state.countries[tag];
-  const ships = c?.arsenal?.stock.ships;
-  const troops = c?.economy?.troops ?? 0;
-  if (!ships?.n || troops <= 0) return 0.1;
-  const k = ships.n * 1.4 ** (ships.level - Math.max(1, baseLevel("ships", yearOf(state.date))));
-  return round2(clamp(k / troops / LIFT_NORM, 0.1, 1));
+  return liftShare(state, tag);
 }
 
-/** A side's warships, weighed by their level. */
+/** A side's command of the sea: capital ships and carriers, escorts and submarines, weighed by their level (engine/forces.ts seaPower). */
 function fleet(state: Pick<GameState, "countries" | "date">, side: string[]): number {
+  return side.reduce((sum, tag) => sum + seaPower(state, tag), 0);
+}
+
+/** A side's aircraft in the fight for the air (fighters above all) and its air defence, by their level. */
+function airOf(state: Pick<GameState, "countries" | "date">, side: string[]): { air: number; defence: number } {
   const year = yearOf(state.date);
-  return side.reduce((sum, tag) => {
-    const s = state.countries[tag]?.arsenal?.stock.ships;
-    return sum + (s?.n ? s.n * 1.4 ** (s.level - Math.max(1, baseLevel("ships", year))) : 0);
-  }, 0);
+  let air = 0;
+  let defence = 0;
+  for (const tag of side) {
+    const s = state.countries[tag]?.arsenal?.stock;
+    if (s?.aircraft?.n) air += airUnits(s.aircraft, year) * 1.6 ** (s.aircraft.level - Math.max(1, baseLevel("aircraft", year)));
+    if (s?.airDefence?.n) defence += s.airDefence.n * 0.15 * 2 ** (s.airDefence.level - 2);
+  }
+  return { air, defence };
 }
 
 /** A province of resistance's strength: people in revolt, by their hostility and the cover the land gives, thousands. */
@@ -355,8 +380,26 @@ export function limitedAims(state: GameState, war: Pick<War, "attackers" | "defe
 export interface FrontMeans {
   /** What of a country's power reaches the fighting: readiness, will and the troops its occupations tie down. */
   force(tag: string): number;
-  /** How much of a country's force reaches a province, 0.05–1: distance from home, and across a sea, ships. */
+  /** How much of a country's force reaches a province, 0.03–1: distance from home, and across a sea to a coast its side holds, ships; a government with no land of its own reaches from its host's or allies' land, or not at all (0). */
   reach(tag: string, id: string, side: string[], enemy: string[]): number;
+  /**
+   * The most of a country's soldiers, thousands, that can fight at a
+   * province its side holds nothing near – a landing: what its landing
+   * ships, transport aircraft and, across a narrow strait, boats of every
+   * kind carry and keep supplied, against the enemy's fleet and aircraft,
+   * built up from the day the landing began. Infinity where it comes by land
+   * or into a port its side holds.
+   */
+  lift(tag: string, id: string, side: string[], enemy: string[]): number;
+  /**
+   * On an island, what command of the sea and the air does for a country whose troops come over the sea (a landing, or a
+   * garrison far from home): the side that holds the sea and the skies keeps its men supplied, 0.4–1.3; 1 elsewhere.
+   */
+  overseas(tag: string, id: string, side: string[], enemy: string[]): number;
+  /** The provinces across a strait an army crosses as if by land (STRAIT_LINK_KM). */
+  across(id: string): string[];
+  /** The most soldiers, thousands, a side can bring to bear in a province (FRONTAGE). */
+  frontage(id: string): number;
   /** HOME_EDGE where a member of the side owns the province, else 1. */
   home(side: string[], id: string): number;
   /** A side's supply at a province, cut by partisans in the occupied land behind it, 0.7–1. */
@@ -368,7 +411,54 @@ export interface FrontMeans {
 }
 
 /** Means that change nothing: for a state or map without what they read. */
-const NEUTRAL: FrontMeans = { force: () => 1, reach: () => 1, home: () => 1, partisans: () => 1, limited: () => false, will: () => 60 };
+const NEUTRAL: FrontMeans = { force: () => 1, reach: () => 1, lift: () => Infinity, overseas: () => 1, across: () => [], frontage: () => Infinity, home: () => 1, partisans: () => 1, limited: () => false, will: () => 60 };
+
+/** The straits of each map, found once: the provinces across a strait from each (STRAIT_LINK_KM, shore to shore); and its coastal provinces by cells. */
+const STRAITS = new WeakMap<object, Map<string, string[]>>();
+const GRIDS = new WeakMap<object, Map<string, string[]>>();
+
+/** The provinces an army crosses to from a province as if by land: across a narrow strait, shore to shore; without the shores, centre to centre within STRAIT_KM. */
+export function straitsOf(index: Pick<MapIndex, "neighbors"> & Partial<Pick<MapIndex, "regions" | "coasts">>, id: string): string[] {
+  const map = index.regions;
+  const p = map?.[id];
+  if (!map || !p?.at || !p.coastal) return [];
+  const key = (index.coasts ?? index.neighbors) as object;
+  let known = STRAITS.get(key);
+  if (!known) STRAITS.set(key, (known = new Map()));
+  const had = known.get(id);
+  if (had) return had;
+  // Coastal provinces by cells of four degrees, built once per map.
+  let grid = GRIDS.get(map);
+  if (!grid) {
+    grid = new Map();
+    for (const [q, r] of Object.entries(map)) {
+      if (!r.at || !r.coastal) continue;
+      const k = `${Math.floor(r.at[0] / 4)},${Math.floor(r.at[1] / 4)}`;
+      (grid.get(k) ?? grid.set(k, []).get(k)!).push(q);
+    }
+    GRIDS.set(map, grid);
+  }
+  const out: string[] = [];
+  const radius = (r: MapRegion) => Math.sqrt(Math.max(1, r.area) / Math.PI);
+  const cx = Math.floor(p.at[0] / 4);
+  const cy = Math.floor(p.at[1] / 4);
+  const near: string[] = [];
+  for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) near.push(...(grid.get(`${cx + dx},${cy + dy}`) ?? []));
+  for (const q of near) {
+    const r = map[q];
+    if (q === id || !r.at || !r.coastal) continue;
+    const centres = distanceKm(p.at, r.at);
+    if (!index.coasts) {
+      if (centres <= STRAIT_KM) out.push(q);
+      continue;
+    }
+    // Shores that cannot come within the strait's width are not measured point by point.
+    if (centres - 2.5 * (radius(p) + radius(r)) > STRAIT_LINK_KM) continue;
+    if (!(index.neighbors[id] ?? []).includes(q) && seaGapKm(index as MapIndex, id, q) <= STRAIT_LINK_KM) out.push(q);
+  }
+  known.set(id, out);
+  return out;
+}
 
 /**
  * The means at the fronts for one turn, read in the middle of the period so a
@@ -376,7 +466,7 @@ const NEUTRAL: FrontMeans = { force: () => 1, reach: () => 1, home: () => 1, par
  * scenario (an older test's bare state) the means are neutral; without the
  * map's centres, reach is full.
  */
-export function frontMeans(state: MeansState, index: Pick<MapIndex, "neighbors"> & Partial<Pick<MapIndex, "regions">>): FrontMeans {
+export function frontMeans(state: MeansState, index: Pick<MapIndex, "neighbors"> & Partial<Pick<MapIndex, "regions" | "coasts">>): FrontMeans {
   if (!state.scenarioId) return NEUTRAL;
   const full = state as GameState;
   const months = (state.step ? STEP_YEARS[state.step] : 1 / 12) * 12;
@@ -399,57 +489,43 @@ export function frontMeans(state: MeansState, index: Pick<MapIndex, "neighbors">
     return f;
   };
 
-  // Each country's home: the provinces it owns and holds, and where its people live among them.
-  const homes = new Map<string, { ids: string[]; at: [number, number][]; centre: [number, number] | null }>();
-  const homeOf = (tag: string) => {
-    let h = homes.get(tag);
-    if (!h) {
-      const ids: string[] = [];
-      const at: [number, number][] = [];
-      let x = 0;
-      let y = 0;
-      let w = 0;
+  // Each country's home: the provinces it owns and holds, and where its people live among them – every country's in one
+  // pass over the map, the first time one is asked for.
+  type Home = { ids: string[]; at: [number, number][]; centre: [number, number] | null };
+  let homes: Map<string, Home> | null = null;
+  const NO_HOME: Home = { ids: [], at: [], centre: null };
+  const homeOf = (tag: string): Home => {
+    if (!homes) {
+      const sums = new Map<string, Home & { x: number; y: number; w: number }>();
       for (const [id, r] of Object.entries(state.regions)) {
         const p = map?.[id];
-        if (r.owner !== tag || r.controller !== tag || !p?.at) continue;
-        ids.push(id);
-        at.push(p.at);
+        if (r.owner !== r.controller || !p?.at) continue;
+        let h = sums.get(r.owner);
+        if (!h) sums.set(r.owner, (h = { ids: [], at: [], centre: null, x: 0, y: 0, w: 0 }));
+        h.ids.push(id);
+        h.at.push(p.at);
         const k = Math.max(1, peopleIn(r, p));
-        x += p.at[0] * k;
-        y += p.at[1] * k;
-        w += k;
+        h.x += p.at[0] * k;
+        h.y += p.at[1] * k;
+        h.w += k;
       }
-      homes.set(tag, (h = { ids, at, centre: w > 0 ? [x / w, y / w] : null }));
+      homes = new Map([...sums].map(([t, h]) => [t, { ids: h.ids, at: h.at, centre: h.w > 0 ? ([h.x / h.w, h.y / h.w] as [number, number]) : null }]));
     }
-    return h;
+    return homes.get(tag) ?? NO_HOME;
   };
-  // Coastal provinces by cells of four degrees, for the straits an army crosses (provinces.ts STRAIT_KM).
-  let grid: Map<string, string[]> | null = null;
-  const cellOf = (at: [number, number]) => [Math.floor(at[0] / 4), Math.floor(at[1] / 4)];
-  const straits = new Map<string, string[]>();
-  const across = (id: string): string[] => {
-    let known = straits.get(id);
-    if (!known) straits.set(id, (known = crossings(id)));
-    return known;
-  };
-  const crossings = (id: string): string[] => {
-    const p = map?.[id];
-    if (!map || !p?.at || !p.coastal) return [];
-    if (!grid) {
-      grid = new Map();
-      for (const [q, r] of Object.entries(map)) {
-        if (!r.at || !r.coastal || !state.regions[q]) continue;
-        const [cx, cy] = cellOf(r.at);
-        const key = `${cx},${cy}`;
-        const list = grid.get(key);
-        if (list) list.push(q);
-        else grid.set(key, [q]);
-      }
+  // The straits an army crosses as if by land (STRAIT_LINK_KM, shore to shore on the map).
+  const across = (id: string): string[] => (state.regions[id] ? straitsOf(index, id).filter((q) => state.regions[q]) : []);
+  // Each side's friends: its members and their allies.
+  const friendsOf = new Map<string, Set<string>>();
+  const friends = (side: string[]) => {
+    const key = [...side].sort().join("+");
+    let set = friendsOf.get(key);
+    if (!set) {
+      set = new Set<string>(side);
+      if (state.alliances) for (const t of side) for (const x of alliesOf(full, t)) set.add(x);
+      friendsOf.set(key, set);
     }
-    const [cx, cy] = cellOf(p.at);
-    const out: string[] = [];
-    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (const q of grid.get(`${cx + dx},${cy + dy}`) ?? []) if (q !== id && distanceKm(p.at, map[q].at!) <= STRAIT_KM) out.push(q);
-    return out;
+    return set;
   };
   // The land a side's troops can march through, over land and across straits – its own, its members' and their allies' – in
   // connected parts, so each member's home is linked to a front or not.
@@ -458,19 +534,18 @@ export function frontMeans(state: MeansState, index: Pick<MapIndex, "neighbors">
     const key = [...side].sort().join("+");
     let label = parts.get(key);
     if (label) return label;
-    const friends = new Set<string>(side);
-    if (state.alliances) for (const t of side) for (const x of alliesOf(full, t)) friends.add(x);
+    const mine = friends(side);
     label = new Map<string, number>();
     let n = 0;
     for (const [id, r] of Object.entries(state.regions)) {
-      if (label.has(id) || !friends.has(r.controller)) continue;
+      if (label.has(id) || !mine.has(r.controller)) continue;
       n += 1;
       label.set(id, n);
       const queue = [id];
       while (queue.length) {
         const x = queue.pop()!;
         for (const y of [...(index.neighbors[x] ?? []), ...across(x)]) {
-          if (label.has(y) || !state.regions[y] || !friends.has(state.regions[y].controller)) continue;
+          if (label.has(y) || !state.regions[y] || !mine.has(state.regions[y].controller)) continue;
           label.set(y, n);
           queue.push(y);
         }
@@ -480,12 +555,28 @@ export function frontMeans(state: MeansState, index: Pick<MapIndex, "neighbors">
     return label;
   };
   /**
+   * The parts of a side's land a member's home lies in: where its people live, and its land on any mainland – but not an
+   * island it holds far from them (Malta for Britain, Hainan for the Nationalists), whose garrison is kept by the sea.
+   */
+  const homeLabels = new Map<string, Set<number | undefined>>();
+  const homeParts = (tag: string, side: string[], label: Map<string, number>) => {
+    const key = `${tag}|${[...side].sort().join("+")}`;
+    let set = homeLabels.get(key);
+    if (set) return set;
+    const people = new Map<number | undefined, number>();
+    for (const h of homeOf(tag).ids) people.set(label.get(h), (people.get(label.get(h)) ?? 0) + Math.max(1, peopleIn(state.regions[h], map?.[h])));
+    const main = [...people].sort((a, b) => b[1] - a[1])[0]?.[0];
+    set = new Set(homeOf(tag).ids.filter((h) => label.get(h) === main || !islandOf(index, h)).map((h) => label.get(h)));
+    homeLabels.set(key, set);
+    return set;
+  };
+  /**
    * Whether a member's troops reach a province by land or across a strait from home, through land its side holds:
    * next to it, or fighting their way in from it, up to LINK_HOPS provinces into the enemy's land.
    */
   const linkedTo = (tag: string, id: string, side: string[]) => {
     const label = partsOf(side);
-    const mine = new Set(homeOf(tag).ids.map((h) => label.get(h)));
+    const mine = homeParts(tag, side, label);
     if ([id, ...(index.neighbors[id] ?? []), ...across(id)].some((x) => mine.has(label.get(x)))) return true;
     const seen = new Set([id]);
     let ring = [id];
@@ -503,6 +594,30 @@ export function frontMeans(state: MeansState, index: Pick<MapIndex, "neighbors">
     }
     return false;
   };
+  /** Whether a side holds the province or land within LINK_HOPS of it by land: a port and a foothold its ships can sail into, not a hostile shore. */
+  const footholds = new Map<string, boolean>();
+  const heldNear = (side: string[], id: string) => {
+    const key = `${[...side].sort().join("+")}|${id}`;
+    let held = footholds.get(key);
+    if (held !== undefined) return held;
+    const mine = friends(side);
+    held = false;
+    const seen = new Set([id]);
+    let ring = [id];
+    for (let hop = 0; hop < LINK_HOPS && ring.length && !held; hop++) {
+      if (ring.some((x) => mine.has(state.regions[x]?.controller ?? ""))) held = true;
+      const next: string[] = [];
+      for (const x of ring)
+        for (const y of index.neighbors[x] ?? []) {
+          if (seen.has(y) || !state.regions[y]) continue;
+          seen.add(y);
+          next.push(y);
+        }
+      ring = next;
+    }
+    footholds.set(key, held);
+    return held;
+  };
   const control = new Map<string, number>();
   /** How freely a side crosses the sea against the enemy's fleet: 1 at an even fight or better. */
   const seaOf = (side: string[], enemy: string[]) => {
@@ -516,6 +631,19 @@ export function frontMeans(state: MeansState, index: Pick<MapIndex, "neighbors">
     }
     return c;
   };
+  const skies = new Map<string, number>();
+  /** What command of the air does for a landing: up to a third more with the skies its own, a third less under the enemy's (fighters against fighters and air defence). */
+  const airOver = (side: string[], enemy: string[]) => {
+    const key = `${[...side].sort().join("+")}|${[...enemy].sort().join("+")}`;
+    let a = skies.get(key);
+    if (a === undefined) {
+      const mine = airOf(state, side);
+      const theirs = airOf(state, enemy);
+      const edge = clamp(Math.log2((mine.air + 1) / (theirs.air + theirs.defence + 1)) / 3, -1, 1);
+      skies.set(key, (a = 1 + edge / 3));
+    }
+    return a;
+  };
   // When each country went to war against an enemy, for how far its expedition has built up (read in the middle of the turn).
   const midTurn = addMonths(state.date, months / 2);
   const deployed = (tag: string, enemy: string[], d: number) => {
@@ -524,37 +652,164 @@ export function frontMeans(state: MeansState, index: Pick<MapIndex, "neighbors">
     const since = yearsFrom(enteredOn(war, tag, reading.entries), midTurn) * 12;
     return DEPLOY_START + (1 - DEPLOY_START) * Math.min(1, since / (1 + d / DEPLOY_KM));
   };
-  const reaches = new Map<string, number>();
-  const reach = (tag: string, id: string, side: string[], enemy: string[]) => {
+  const distances = new Map<string, number>();
+  /** The distance from home: halfway between its nearest province and where its people live – an army is raised and supplied from the whole country. */
+  const fromHome = (tag: string, id: string): number | null => {
     const at = map?.[id]?.at;
-    if (!at) return 1;
+    const home = homeOf(tag);
+    if (!at || !home.at.length || !home.centre) return null;
+    const key = `${tag}:${id}`;
+    const known = distances.get(key);
+    if (known !== undefined) return known;
+    // The nearest province is found on a flat projection around the front (a few multiplications each), then measured on the globe.
+    const k0 = Math.cos((at[1] * Math.PI) / 180);
+    let best = home.at[0];
+    let flat = Infinity;
+    for (const h of home.at) {
+      let dx = Math.abs(h[0] - at[0]);
+      if (dx > 180) dx = 360 - dx;
+      const f = (dx * k0) ** 2 + (h[1] - at[1]) ** 2;
+      if (f < flat) {
+        flat = f;
+        best = h;
+      }
+    }
+    const d = 0.5 * distanceKm(at, best) + 0.5 * distanceKm(at, home.centre);
+    distances.set(key, d);
+    return d;
+  };
+  const landReach = (d: number) => clamp(1 / (1 + Math.max(0, d - LAND_FREE) / LAND_SPAN), 0.3, 1);
+  const reaches = new Map<string, number>();
+  /**
+   * Where a government with no land of its own fights from: its host's land (a government in exile) and its side's and its
+   * allies' – those with a home of their own among its side's friends.
+   */
+  const basesOf = (tag: string, side: string[]) => {
+    const mine = friends(side);
+    const host = state.countries[tag]?.exile?.host;
+    const allies = state.alliances ? alliesOf(full, tag) : new Set<string>();
+    return [...new Set([...(host ? [host] : []), ...side, ...allies])].filter((t) => t !== tag && mine.has(t) && homeOf(t).ids.length > 0).sort();
+  };
+  const reach = (tag: string, id: string, side: string[], enemy: string[]): number => {
     const key = `${tag}:${id}:${side.join("+")}`;
     let k = reaches.get(key);
     if (k !== undefined) return k;
-    const home = homeOf(tag);
-    if (!home.at.length || !home.centre) k = 1;
+    const d = fromHome(tag, id);
+    if (d === null && map?.[id]?.at && !homeOf(tag).ids.length) {
+      // No land of its own: it reaches as far as its host's or an ally's home and lift reach, and with neither not at all.
+      const bases = basesOf(tag, side);
+      k = bases.length ? Math.max(...bases.map((b) => reach(b, id, side, enemy))) : 0;
+    } else if (d === null) k = 1;
     else {
-      // The distance from home: halfway between its nearest province and where its people live – an army is raised and supplied from the whole country.
-      // The nearest province is found on a flat projection around the front (a few multiplications each), then measured on the globe.
-      const k0 = Math.cos((at[1] * Math.PI) / 180);
-      let best = home.at[0];
-      let flat = Infinity;
-      for (const h of home.at) {
-        let dx = Math.abs(h[0] - at[0]);
-        if (dx > 180) dx = 360 - dx;
-        const f = (dx * k0) ** 2 + (h[1] - at[1]) ** 2;
-        if (f < flat) {
-          flat = f;
-          best = h;
-        }
-      }
-      const d = 0.5 * distanceKm(at, best) + 0.5 * distanceKm(at, home.centre);
-      // Over land; across a sea, by ships; inland with no road home, no more than what lands on the coast – an encircled army fights with what it carries and what comes by air.
-      const sea = () => clamp(((navalLift(state, tag) * seaOf(side, enemy) * SEA_MAX) / (1 + d / SEA_SPAN)) * deployed(tag, enemy, d), 0.03, 1);
-      k = linkedTo(tag, id, side) ? clamp(1 / (1 + Math.max(0, d - LAND_FREE) / LAND_SPAN), 0.3, 1) : map?.[id]?.coastal ? sea() : Math.min(CUT_OFF, sea());
+      // Over land; across a sea into a port its side holds, by ships; onto a hostile shore, what reaches the beach (its numbers bounded by
+      // the lift); inland with no road home, no more than what lands on the coast – an encircled army fights with what it carries and what comes by air.
+      // A garrison in its own land overseas was there before the war: it does not build up as an expedition does.
+      const own = state.regions[id]?.owner === tag && state.regions[id]?.controller === tag;
+      const sea = () => clamp(((navalLift(state, tag) * seaOf(side, enemy) * SEA_MAX) / (1 + d / SEA_SPAN)) * (own ? 1 : deployed(tag, enemy, d)), 0.03, 1);
+      const coastal = map?.[id]?.coastal;
+      k = linkedTo(tag, id, side) ? landReach(d) : !coastal ? Math.min(CUT_OFF, sea()) : heldNear(side, id) ? sea() : landReach(d);
     }
     reaches.set(key, k);
     return k;
+  };
+
+  // Where each side's landings began: the turn a contest of the province by one of its members opened (the chronicle's record).
+  let landed: Map<string, { by: string; from: string }> | null = null;
+  const landedOn = (id: string) => {
+    if (!landed) {
+      landed = new Map();
+      for (const e of state.chronicle ?? [])
+        for (const c of e.applied) {
+          if (c.kind === "contest" && c.was === undefined) landed.set(c.region, { by: c.by, from: e.from });
+          else if ((c.kind === "occupy" || c.kind === "repel") && "region" in c) landed.delete(c.region);
+        }
+    }
+    return landed.get(id);
+  };
+  // Each country's beachheads: provinces it fights in on a hostile shore, which its lift is shared between.
+  const beachheads = new Map<string, number>();
+  // The coastal provinces anyone fights in, and who: found once, not once a country.
+  let shoreFights: [string, string][] | null = null;
+  const beachheadsOf = (tag: string, side: string[]) => {
+    let n = beachheads.get(tag);
+    if (n === undefined) {
+      shoreFights ??= Object.entries(state.regions).flatMap(([id, r]): [string, string][] => (r.contested && map?.[id]?.coastal ? [[id, r.contested]] : []));
+      n = 0;
+      for (const [id, by] of shoreFights) if (by === tag && !heldNear(side, id)) n += 1;
+      beachheads.set(tag, n);
+    }
+    return n;
+  };
+  // The coastal provinces each side holds in each part of its land, for the sea a landing crosses.
+  const shores = new Map<string, Map<number, string[]>>();
+  const shoresOf = (side: string[]) => {
+    const key = [...side].sort().join("+");
+    let byPart = shores.get(key);
+    if (byPart) return byPart;
+    byPart = new Map();
+    const label = partsOf(side);
+    for (const [id, l] of label) if (map?.[id]?.coastal) (byPart.get(l) ?? byPart.set(l, []).get(l)!).push(id);
+    shores.set(key, byPart);
+    return byPart;
+  };
+  const crossings = new Map<string, number>();
+  /** The sea a member's landing crosses: from the nearest coast its side holds that its troops reach by land from home, km. */
+  const crossing = (tag: string, id: string, side: string[]) => {
+    const key = `${tag}:${id}:${[...side].sort().join("+")}`;
+    let gap = crossings.get(key);
+    if (gap !== undefined) return gap;
+    const label = partsOf(side);
+    const byPart = shoresOf(side);
+    const target = map?.[id];
+    const mine = homeParts(tag, side, label);
+    gap = Infinity;
+    if (target?.at) {
+      const radius = (p: MapRegion) => 2.5 * Math.sqrt(Math.max(1, p.area) / Math.PI);
+      const candidates = [...mine].flatMap((l) => (l === undefined ? [] : (byPart.get(l) ?? [])));
+      // Nearest centres first, so the shores far away are never measured point by point.
+      const ranked = candidates.map((q) => ({ q, d: distanceKm(target.at!, map![q].at!) - radius(target) - radius(map![q]) })).sort((a, b) => a.d - b.d);
+      for (const { q, d } of ranked) {
+        if (d > gap) break;
+        gap = Math.min(gap, seaGapKm(index as MapIndex, q, id));
+      }
+    }
+    crossings.set(key, gap);
+    return gap;
+  };
+  const lifts = new Map<string, number>();
+  const lift = (tag: string, id: string, side: string[], enemy: string[]) => {
+    const p = map?.[id];
+    if (!p?.at || !p.coastal) return Infinity;
+    const key = `${tag}:${id}:${side.join("+")}`;
+    let cap = lifts.get(key);
+    if (cap !== undefined) return cap;
+    if (linkedTo(tag, id, side) || heldNear(side, id)) cap = Infinity;
+    else {
+      const gap = crossing(tag, id, side);
+      if (!(gap < Infinity)) cap = 0;
+      else {
+        const troops = state.countries[tag]?.economy?.troops ?? 0;
+        const carried = seaLift(state, tag, gap) + improvisedLift(troops, gap);
+        // An enemy fleet in the way hinders a landing, less across a narrow strait; command of the air helps it.
+        const sea = 1 - (1 - seaOf(side, enemy)) * Math.min(1, gap / HINDER_KM);
+        // Built up from the day the landing began; one not yet made lands what half the turn brings.
+        const r = state.regions[id];
+        const began = r?.contested && side.includes(r.contested) ? landedOn(id) : undefined;
+        const monthsIn = r?.contested && side.includes(r.contested) ? (began ? yearsFrom(began.from, midTurn) * 12 : LIFT_MONTHS) : months / 2;
+        const built = Math.min(1, (0.5 + monthsIn) / LIFT_MONTHS);
+        cap = (carried * LIFT_MONTHS * sea * airOver(side, enemy) * built) / Math.max(1, beachheadsOf(tag, side));
+      }
+    }
+    lifts.set(key, cap);
+    return cap;
+  };
+  const overseas = (tag: string, id: string, side: string[], enemy: string[]) => {
+    if (!map?.[id]?.coastal || !islandOf(index, id) || linkedTo(tag, id, side)) return 1;
+    return (0.5 + 0.5 * seaOf(side, enemy)) * airOver(side, enemy);
+  };
+  const frontage = (id: string) => {
+    const area = map?.[id]?.area;
+    return area ? FRONTAGE * Math.sqrt(area) : Infinity;
   };
   const home = (side: string[], id: string) => (side.includes(state.regions[id]?.owner ?? "") ? HOME_EDGE : 1);
   const partisans = (side: string[], id: string) => {
@@ -571,7 +826,7 @@ export function frontMeans(state: MeansState, index: Pick<MapIndex, "neighbors">
     if (l === undefined) limits.set(war.id, (l = limitedAims(full, war)));
     return l;
   };
-  return { force, reach, home, partisans, limited, will };
+  return { force, reach, lift, overseas, across, frontage, home, partisans, limited, will };
 }
 
 /** One side's means in a war, for the game master and the player: weighed by each member's strength. */
@@ -616,6 +871,14 @@ export function warMeans(
   const map = index?.regions ?? null;
   const reading = readState(state, map);
   const members: MemberMeans[] = [];
+  /** A member's reach at a front province, with what its lift lands there on a hostile shore against what it would bring. */
+  const shownReach = (tag: string, id: string, tags: string[], enemy: string[]) => {
+    const k = means.reach(tag, id, tags, enemy);
+    const cap = means.lift(tag, id, tags, enemy);
+    if (!(cap < Infinity)) return k;
+    const wanted = ((state.countries[tag]?.economy?.troops ?? 0) * k) / Math.max(1, front.length);
+    return wanted > 0 ? k * Math.min(1, cap / wanted) : k;
+  };
   const side = (tags: string[], enemy: string[], attackers: boolean): SideMeans => {
     let weight = 0;
     const sum = { ready: 0, reach: 0, will: 0, weary: 0, rear: 0 };
@@ -625,7 +888,7 @@ export function warMeans(
       const m: MemberMeans = {
         tag,
         ready: readiness(state, tag, reading),
-        reach: front.length && index ? front.reduce((s, id) => s + means.reach(tag, id, tags, enemy), 0) / front.length : 1,
+        reach: front.length && index ? front.reduce((s, id) => s + shownReach(tag, id, tags, enemy), 0) / front.length : 1,
         will: willToFight(state, tag, map, reading),
         weary: warWeariness(state, tag, map, reading),
         tied: rest.share,
@@ -666,9 +929,20 @@ export function meansLine(m: { attackers: SideMeans; defenders: SideMeans }): st
 // --- The turn: resistance in occupied land, the partisans' toll, weariness at home ---
 
 /** Where a province's resistance heads, 0–100. `owners` is every country that owns land. */
-function hostility(state: GameState, id: string, r: RegionState, rec: Resistance, neighbors: Record<string, string[]> | null, to: string, owners: Set<string>): number {
+function hostility(state: GameState, id: string, r: RegionState, rec: Resistance, neighbors: Record<string, string[]> | null, to: string, owners: Set<string>, kin = false): number {
   const holder = r.controller;
-  let t = HOSTILITY * OCCUPIER[regimeOf(state, holder)];
+  // A provisional government rules as its patron would; its people's acceptance of it calms or stirs them (engine/provisional.ts).
+  const client = state.countries[holder]?.client;
+  let t = HOSTILITY * OCCUPIER[regimeOf(state, client?.patron ?? holder)];
+  if (client) t *= PUPPET - client.accepted / 100;
+  else {
+    // Their own government on its way under this holder eases them a little.
+    const own = Object.values(state.countries).find((c) => c.client?.patron === holder && (c.client.of === rec.of || c.tag === rec.of) && !c.dormant)?.client;
+    if (own) t *= 1 - (0.3 * own.accepted) / 100;
+  }
+  // A civil war or a divided nation: the holder's own land lies in the same country of today (the two Vietnams, the two
+  // Germanies) – its people are the same people, many of them with it; it is not a foreign occupation.
+  if (kin) t *= KIN;
   // A claimant that takes land it calls its own finds some who welcome it.
   if ((state.countries[holder]?.course?.aims ?? []).some((a) => a.kind === "reclaim" && a.target === rec.of)) t *= 0.75;
   // The fighting next door keeps people's anger up – their own side's troops in sight; their country gone, hope ebbs.
@@ -694,9 +968,17 @@ function settleLevel(level: number, target: number, years: number): number {
  * long accepted forgets it. Every level heads to where hostility puts it.
  * Mutates `next.regions`.
  */
-export function moveResistance(before: GameState, next: GameState, ctx: { to: string; years: number; neighbors?: Record<string, string[]> | null }): void {
+export function moveResistance(before: GameState, next: GameState, ctx: { to: string; years: number; neighbors?: Record<string, string[]> | null; map?: Record<string, MapRegion> | null }): void {
   const neighbors = ctx.neighbors ?? null;
   const owners = new Set(Object.values(next.regions).map((r) => r.owner));
+  // The countries of today each holder's own land lies in, for a civil war or a divided nation (the map's adm0).
+  const lands = new Map<string, Set<string>>();
+  if (ctx.map)
+    for (const [id, r] of Object.entries(next.regions)) {
+      const code = ctx.map[id]?.adm0;
+      if (code && r.owner === r.controller) (lands.get(r.owner) ?? lands.set(r.owner, new Set()).get(r.owner)!).add(code);
+    }
+  const kinOf = (id: string, holder: string) => Boolean(ctx.map?.[id]?.adm0 && lands.get(holder)?.has(ctx.map[id].adm0));
   for (const [id, r] of Object.entries(next.regions)) {
     const was = before.regions[id];
     let rec = r.resistance;
@@ -711,13 +993,13 @@ export function moveResistance(before: GameState, next: GameState, ctx: { to: st
       if (!occupied && !conquered) continue;
       rec = { of: occupied ? r.owner : was!.owner, level: 0 };
       if (conquered && !warBetween(next, r.owner, rec.of)) rec.peace = ctx.to;
-      rec.level = ORGANISING * hostility(next, id, r, rec, neighbors, ctx.to, owners);
+      rec.level = ORGANISING * hostility(next, id, r, rec, neighbors, ctx.to, owners, kinOf(id, r.controller));
       r.resistance = { ...rec, level: round2(rec.level) };
       continue;
     }
     // A peace that left the province with its holder starts the people's acceptance.
     if (!rec.peace && r.owner === r.controller && !warBetween(next, r.controller, rec.of)) rec = { ...rec, peace: ctx.to };
-    const level = settleLevel(rec.level, hostility(next, id, r, rec, neighbors, ctx.to, owners), ctx.years);
+    const level = settleLevel(rec.level, hostility(next, id, r, rec, neighbors, ctx.to, owners, kinOf(id, r.controller)), ctx.years);
     if (rec.peace && level < 5 && yearsFrom(rec.peace, ctx.to) > 2 * ACCEPTANCE_YEARS) {
       delete r.resistance;
       continue;
@@ -729,7 +1011,8 @@ export function moveResistance(before: GameState, next: GameState, ctx: { to: st
 /**
  * The partisans' toll this period: soldiers of the occupier killed and
  * wounded, added to the record of the war it fights against the province's
- * people, if that war goes on. Mutates `next.wars`.
+ * people, if that war goes on; the killed and the badly wounded leave its
+ * army (engine/army.ts). Mutates `next`.
  */
 export function partisanLosses(next: GameState, years: number, map?: Record<string, MapRegion> | null): void {
   const toll = new Map<string, number>();
@@ -746,18 +1029,26 @@ export function partisanLosses(next: GameState, years: number, map?: Record<stri
     const war = next.wars.find((w) => w.id === warId);
     if (!war) continue;
     const had = war.losses?.[tag];
-    war.losses = { ...war.losses, [tag]: { ...had, killed: Math.round(((had?.killed ?? 0) + killed) * 1000) / 1000, wounded: Math.round(((had?.wounded ?? 0) + 2 * killed) * 1000) / 1000 } };
+    const r3 = (n: number) => Math.round(n * 1000) / 1000;
+    // The toll joins the period's part too (WarLosses.last), begun by the fighting's record this turn or here.
+    const last = had?.last?.turn === next.turn ? had.last : { turn: next.turn, killed: 0, wounded: 0 };
+    war.losses = {
+      ...war.losses,
+      [tag]: { ...had, killed: r3((had?.killed ?? 0) + killed), wounded: r3((had?.wounded ?? 0) + 2 * killed), last: { ...last, killed: r3(last.killed + killed), wounded: r3(last.wounded + 2 * killed) } },
+    };
+    loseSoldiers(next, tag, killed + 2 * killed * WOUNDED_LOST);
   }
 }
 
 /**
  * War-weariness at home: abroad, a war's losses hold support below where the
  * economy and the years of war (engine/abroad.ts) put it – about fifteen
- * points at the heaviest losses; for the player, they keep unrest from
- * falling below four tenths of the weariness. Runs after politics abroad
- * have moved. Mutates `next`.
+ * points at the heaviest losses, the one place support abroad pays for the
+ * war's dead; for the player, they keep unrest from falling below four
+ * tenths of the weariness: the floor returned, applied with the turn's other
+ * floors (engine/outcome.ts). Runs after politics abroad have moved. Mutates `next`.
  */
-export function wearinessAtHome(next: GameState, years: number, map?: Record<string, MapRegion> | null, reading = readState(next, map)): void {
+export function wearinessAtHome(next: GameState, years: number, map?: Record<string, MapRegion> | null, reading = readState(next, map)): number {
   const pace = 1 - 0.5 ** (years / 0.5);
   for (const [tag, c] of Object.entries(next.countries)) {
     if (tag === next.player || !c.domestic || !warsOf(next, tag).length) continue;
@@ -765,10 +1056,13 @@ export function wearinessAtHome(next: GameState, years: number, map?: Record<str
     if (pain <= 0) continue;
     c.domestic = { ...c.domestic, support: Math.round(clamp(c.domestic.support - 15 * pain * pace, 5, 90) * 100) / 100 };
   }
-  if (next.politics && warsOf(next, next.player).length) {
-    const floor = round(0.4 * warWeariness(next, next.player, map, reading));
-    if (next.politics.unrest < floor) next.politics = { ...next.politics, unrest: floor };
-  }
+  return weariFloor(next, map, reading);
+}
+
+/** The floor war-weariness puts under the player's unrest: four tenths of it, none at peace. */
+export function weariFloor(state: MeansState & Pick<GameState, "player"> & Partial<Pick<GameState, "politics">>, map?: Record<string, MapRegion> | null, reading = readState(state, map)): number {
+  if (!state.politics || !warsOf(state, state.player).length) return 0;
+  return round(0.4 * warWeariness(state, state.player, map, reading));
 }
 
 /**
@@ -802,13 +1096,19 @@ export function seekTerms(next: GameState, ctx: { turn: number; to: string; year
   }
 }
 
-/** The whole turn's means, after politics abroad have moved: resistance, the partisans' toll, weariness at home, and terms sought where the will has broken. */
-export function applyWarMeans(before: GameState, next: GameState, ctx: { to: string; years: number; map?: Record<string, MapRegion> | null; neighbors?: Record<string, string[]> | null }): void {
+/**
+ * The whole turn's means, after politics abroad have moved: resistance, the partisans' toll, weariness at home, and terms
+ * sought where the will has broken. Strategic bombing's toll on output – its plants inside it – is one loss of level, kept
+ * with the economy's others and given back once the bombers stop (engine/economy.ts outputLosses).
+ */
+export function applyWarMeans(before: GameState, next: GameState, ctx: { to: string; years: number; map?: Record<string, MapRegion> | null; neighbors?: Record<string, string[]> | null }): number {
   moveResistance(before, next, ctx);
   partisanLosses(next, ctx.years, ctx.map);
   const reading = readState(next, ctx.map);
-  wearinessAtHome(next, ctx.years, ctx.map, reading);
+  // The floor weariness puts under the player's unrest: engine/outcome.ts applies the turn's floors together.
+  const floor = wearinessAtHome(next, ctx.years, ctx.map, reading);
   seekTerms(next, { turn: before.turn, to: ctx.to, years: ctx.years, map: ctx.map }, reading);
+  return floor;
 }
 
 /**

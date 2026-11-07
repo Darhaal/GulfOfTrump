@@ -9,6 +9,7 @@ import { completeJson } from "@/server/llm";
 import { loadMapIndex } from "@/server/maps";
 import { badRequest, readGameRequest } from "@/server/requests";
 import { ndjsonResponse } from "@/server/stream";
+import { ministryOpen } from "@/engine/ministries";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
   const { state, locale, model, body } = parsed;
 
   const ministry = body.ministry as AdvisorId;
-  if (!ADVISORS.includes(ministry)) return badRequest("Unknown ministry.");
+  if (!ADVISORS.includes(ministry) || !ministryOpen(state, ministry)) return badRequest("Unknown ministry.");
   const turn = typeof body.turn === "number" ? body.turn : NaN;
   const entry = state.chronicle.find((e) => e.turn === turn);
   if (!entry?.briefs?.some((b) => b.ministry === ministry)) return badRequest("That ministry has nothing to report on that turn.");
@@ -44,8 +45,8 @@ export async function POST(request: Request) {
         locale,
         instructions: REPORT_INSTRUCTIONS(locale),
         input: [
-          { role: "user", content: buildReportDigest(state, index, entry) },
-          { role: "user", content: buildReportBrief(state, entry, ministry) },
+          { role: "user", content: buildReportDigest(state, index, entry, ministry) },
+          { role: "user", content: buildReportBrief(state, entry, ministry, locale) },
         ],
         signal,
         onDelta: (delta) => progress((chars += delta.length)),

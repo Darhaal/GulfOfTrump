@@ -15,8 +15,11 @@ import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
 import { ui } from "@/components/ui/classes";
 import { ordersFull } from "./DraftedOrders";
+import PartyPlay from "./PartyPlay";
 import Portrait from "./Portrait";
+import RenameOrder from "./RenameOrder";
 import ResignButton from "./ResignButton";
+import type { Suggest } from "./Suggestions";
 
 /** The actions the panel offers, each an order the player adds to the turn; abroad, the movement's own. */
 const ACTIONS = ["rally", "press", "coalition", "insiders", "army", "abroad", "strike", "election"] as const;
@@ -29,7 +32,9 @@ const SCORES: MovementScore[] = ["money", "press", "insiders", "army", "street"]
  * strength and the danger it is in, actions to add to the turn, and the ways
  * to power with how close it is to each (engine/role.ts). Abroad, its host and
  * the way home; anywhere, letters to governments and stepping down
- * (engine/exile.ts, engine/fate.ts).
+ * (engine/exile.ts, engine/fate.ts). It is the opposition's own panel, the
+ * party's: its organisation, its programme, its coalitions and the campaign
+ * (PartyPlay), the rallies and the press among its actions.
  */
 export default function OppositionPanel({
   state,
@@ -40,15 +45,23 @@ export default function OppositionPanel({
   onLetters,
   onResign,
   onStay,
+  onOffer,
+  onDrop,
+  onSuggest,
 }: {
   state: GameState;
   disabled: boolean;
   onOrder: (order: string) => void;
+  /** Names from the game master for the movement's new name (engine/suggest.ts); missing without one. */
+  onSuggest?: Suggest;
   onAbroad: () => void;
   onReturn: () => void;
   onLetters: () => void;
   onResign: () => void;
   onStay: () => void;
+  /** Offers a party a coalition, or takes the offer back or leaves the coalition (engine/role.ts). */
+  onOffer: (party: string) => void;
+  onDrop: (party: string) => void;
 }) {
   const { t, text, locale } = useI18n();
   const [asking, setAsking] = useState<"abroad" | "return" | null>(null);
@@ -72,9 +85,13 @@ export default function OppositionPanel({
     <div className="flex flex-col gap-4">
       <section className={`${ui.card} flex items-center gap-3 p-3`}>
         <Portrait portrait={role.person?.portrait} gender={role.person?.gender} name={name} size="xl" />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-black text-ink">{name}</div>
-          <div className="truncate text-xs font-bold text-muted">{m.name ?? t("role.movementUnnamed")}</div>
+          {/* The movement names or renames itself by order (engine/acts.ts: its one act of state). */}
+          <div className="flex flex-wrap items-center gap-x-1">
+            <span className="min-w-0 truncate text-xs font-bold text-muted">{m.name ?? t("role.movementUnnamed")}</span>
+            <RenameOrder what="movement" current={m.name ?? t("role.movementUnnamed")} onOrder={onOrder} onSuggest={onSuggest} disabled={disabled} full={full} />
+          </div>
           <div className="mt-1.5 flex flex-wrap gap-1">
             <span className="rounded-md bg-page px-1.5 py-0.5 text-2xs font-black text-ink">{t(`movement.kind.${m.kind}` as MessageKey)}</span>
             <span className={`rounded-md px-1.5 py-0.5 text-2xs font-black ${m.status === "free" ? "bg-page text-ink" : "bg-red-50 text-red-700"}`}>{t(`movement.status.${m.status}` as MessageKey)}</span>
@@ -89,6 +106,7 @@ export default function OppositionPanel({
       </section>
 
       <section className="flex flex-col gap-2.5">
+        <div className={ui.label}>{t("party.organisation")}</div>
         <div className="flex items-baseline justify-between text-xs">
           <span className="font-bold text-muted">{t("movement.support")}</span>
           <span className="font-black tabular-nums text-ink">{m.support}%</span>
@@ -108,6 +126,8 @@ export default function OppositionPanel({
           </div>
         ))}
       </section>
+
+      <PartyPlay state={state} disabled={disabled} onOrder={onOrder} onOffer={onOffer} onDrop={onDrop} />
 
       <section className="rounded-2xl bg-page p-3">
         <div className="flex items-center justify-between text-xs">

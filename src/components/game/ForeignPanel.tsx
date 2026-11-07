@@ -7,18 +7,26 @@ import { ui } from "@/components/ui/classes";
 import DoneButton, { useDone } from "@/components/ui/DoneButton";
 import Dictation from "@/components/voice/Dictation";
 import { addStep, formatDate, formatMonth } from "@/engine/calendar";
+import { relationsOf } from "@/engine/envoys";
 import { BLOC_KINDS, canHoldNow, type BlocKind } from "@/engine/foreign";
 import { planLadder, shownStage } from "@/engine/intentions";
 import { liveCrises, type CrisisView } from "@/engine/standoffs";
 import { becauseText, planKindKey, planStageKey } from "./changes";
-import type { Alliance, Because, GameState, MapIndex, Plan, Proposal, Summit, Text, War } from "@/engine/types";
+import type { Alliance, Because, ColonyCourse, GameState, MapIndex, Plan, Proposal, Summit, Text, War } from "@/engine/types";
+import { coloniesOf } from "@/engine/colonies";
+import ColoniesSection from "./ColoniesSection";
+import JointSection from "./JointSection";
+import type { JointDraft } from "@/engine/joint";
 import { lossesView, warFrontsOf } from "@/engine/warLosses";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
+import { ReadOnlyNote } from "./RoleView";
 import TalksThread from "./TalksThread";
 import WarMeans from "./WarMeans";
+import { WarAnswer, WorldBodyCases } from "./WorldAnswer";
+import WarOutlook from "./WarOutlook";
 
-export type ForeignSection = "wars" | "pacts" | "blocs" | "talks";
+export type ForeignSection = "wars" | "pacts" | "blocs" | "joint" | "talks" | "colonies";
 
 /** A crisis's five steps: incident, escalation, preparation, the decision at the brink, the outcome. */
 const CRISIS_STEPS = ["incident", "tension", "preparation", "decision", "action"] as const;
@@ -54,6 +62,14 @@ interface ForeignPanelProps {
   onOpenSummit: (summit: Summit) => void;
   /** Hold a planned meeting or a called session in person now. */
   onLive: (summit: Summit) => void;
+  /** Adds an order to the turn: the terms of a peace the player dictates (engine/warEnd.ts). */
+  onOrder?: (order: string) => void;
+  /** The player's role only reads foreign affairs (engine/remit.ts): no treaties, summits or terms here; letters, where the role writes its own. */
+  readOnly?: boolean;
+  /** The government's answer for one of its colonies (engine/colonies.ts), acted on when the turn is played. */
+  onColonyCourse?: (colony: string, course: ColonyCourse) => void;
+  /** Joint actions with allies (engine/joint.ts): a proposal answered at once, the answer to an ally's offer, walking out of one under way. */
+  onJoint?: { propose: (draft: JointDraft) => void; answer: (id: string, yes: boolean) => void; withdraw: (id: string) => void };
 }
 
 /** Full months from one date to another. */
@@ -187,6 +203,10 @@ export default function ForeignPanel({
   onSchedule,
   onOpenSummit,
   onLive,
+  onOrder,
+  readOnly = false,
+  onColonyCourse,
+  onJoint,
 }: ForeignPanelProps) {
   const { t, text, locale, people } = useI18n();
   const [form, setForm] = useState<"bloc" | "summit" | null>(null);
@@ -223,6 +243,10 @@ export default function ForeignPanel({
     return scope === "mine" && ours.length ? ours : list;
   };
   const summits = [...(state.summits ?? [])].sort((a, b) => b.date.localeCompare(a.date));
+  // Decolonisation has its own section while there are colonies in the world, or lately freed ones (engine/colonies.ts).
+  const colonies = useMemo(() => (index ? coloniesOf(state, index) : (state.colonies ?? [])), [state, index]);
+  const colonial = colonies.some((c) => !c.end || Date.parse(state.date) - Date.parse(c.end.date) < 5 * 365.25 * 86_400_000);
+  const coloniesOwned = colonies.filter((c) => !c.end && c.of === state.player).length;
   const summitTitle = (s: Summit) => {
     const bloc = s.bloc ? state.alliances.find((a) => a.id === s.bloc) : undefined;
     return bloc ? t("live.sessionOf", { name: text(bloc.name) }) : s.title;
@@ -403,6 +427,16 @@ export default function ForeignPanel({
 
         {!w.truce && <WarMeans state={state} war={w} index={index ?? null} labels={[<Flags key="a" state={state} tags={w.attackers} still />, <Flags key="d" state={state} tags={w.defenders} still />]} />}
 
+        {/* How it is likely to end, and the terms the player may dictate (engine/warEnd.ts). */}
+        <WarOutlook
+          state={state}
+          war={w}
+          index={index ?? null}
+          labels={[<Flags key="a" state={state} tags={w.attackers.slice(0, 6)} still />, <Flags key="d" state={state} tags={w.defenders.slice(0, 6)} still />]}
+          onOrder={mine(sides) && !readOnly ? onOrder : undefined}
+          disabled={disabled}
+        />
+
         <div>
           <div className={`${ui.label} mb-1`}>{t("foreign.front")}</div>
           {contested.length ? (
@@ -448,6 +482,8 @@ export default function ForeignPanel({
             <ul className="grid gap-2">{plans.map(planRow)}</ul>
           </div>
         )}
+
+        <WarAnswer state={state} war={w} />
       </li>
     );
   };
@@ -510,12 +546,39 @@ export default function ForeignPanel({
 
   return (
     <div className="flex flex-col gap-4">
+      {readOnly && <ReadOnlyNote state={state} area="foreign" />}
       <div role="tablist" className="grid grid-cols-2 gap-1 rounded-xl bg-page p-1">
-        {segment("wars", t("foreign.section.wars"), wars.length)}
-        {segment("pacts", t("foreign.section.pacts"))}
-        {segment("blocs", t("foreign.section.blocs"))}
-        {!talksOff && segment("talks", t("foreign.section.talks"))}
+        {(() => {
+          const tabs = [
+            segment("wars", t("foreign.section.wars"), wars.length),
+            segment("pacts", t("foreign.section.pacts")),
+            segment("blocs", t("foreign.section.blocs")),
+            // Joint actions with allies: the offers waiting and the actions under way (engine/joint.ts).
+            segment("joint", t("foreign.section.joint"), (state.joint ?? []).filter((j) => (j.status === "proposed" || j.status === "active") && j.members.includes(state.player)).length),
+            ...(talksOff ? [] : [segment("talks", t("foreign.section.talks"))]),
+            ...(colonial ? [segment("colonies", t("foreign.section.colonies"), coloniesOwned)] : []),
+          ];
+          // An odd tab out spans the row.
+          return tabs.map((tab, i) => (i === tabs.length - 1 && tabs.length % 2 ? <span key="last" className="col-span-2 grid">{tab}</span> : tab));
+        })()}
       </div>
+
+      {section === "colonies" && colonial && (
+        <ColoniesSection state={state} colonies={colonies} disabled={disabled} readOnly={readOnly} onCourse={(id, course) => onColonyCourse?.(id, course)} />
+      )}
+
+      {section === "joint" && (
+        <JointSection
+          state={state}
+          index={index}
+          places={places}
+          disabled={disabled}
+          readOnly={readOnly || !onJoint}
+          onPropose={(draft) => onJoint?.propose(draft)}
+          onAnswer={(id, yes) => onJoint?.answer(id, yes)}
+          onWithdraw={(id) => onJoint?.withdraw(id)}
+        />
+      )}
 
       {section === "wars" && (
         <>
@@ -602,6 +665,8 @@ export default function ForeignPanel({
             )}
           </section>
 
+          <WorldBodyCases state={state} onOrder={readOnly ? undefined : onOrder} />
+
           {(state.proposals ?? []).length > 0 && (
             <section>
               <div className={`${ui.label} mb-2`}>{t("foreign.proposals")}</div>
@@ -616,9 +681,11 @@ export default function ForeignPanel({
                         <Flags state={state} tags={p.invited} />
                       </div>
                     </div>
-                    <button type="button" disabled={disabled} onClick={() => onWithdraw(p.id)} className="text-2xs font-black uppercase tracking-wider text-muted hover:text-red-600">
-                      {t("foreign.withdraw")}
-                    </button>
+                    {!readOnly && (
+                      <button type="button" disabled={disabled} onClick={() => onWithdraw(p.id)} className="text-2xs font-black uppercase tracking-wider text-muted hover:text-red-600">
+                        {t("foreign.withdraw")}
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -654,7 +721,7 @@ export default function ForeignPanel({
                         <Flags state={state} tags={s.participants} still />
                       </div>
                     </button>
-                    {canHoldNow(state, s, periodEnd) && (
+                    {!readOnly && canHoldNow(state, s, periodEnd) && (
                       <button type="button" disabled={disabled} onClick={() => onLive(s)} className={`${ui.primary} mt-1 w-full px-3 py-2 text-2xs`}>
                         <Mic className="h-3.5 w-3.5" />
                         {(s.transcript ?? []).length ? t("foreign.resume") : t("foreign.attend")}
@@ -667,7 +734,7 @@ export default function ForeignPanel({
           </section>
 
           {/* Once the invitations or the summit have gone out, the button that opened the form says so for a moment. */}
-          {form === null && (
+          {form === null && !readOnly && (
             <div className="grid gap-2 sm:grid-cols-2">
               <DoneButton icon={Handshake} label={t("foreign.found")} doneLabel={t("done.sent")} done={sent} disabled={disabled} onAct={() => setForm("bloc")} className={`${ui.secondary} px-3 py-2.5 text-xs`} doneClassName={DONE_WIDE} />
               <DoneButton
@@ -800,7 +867,9 @@ export default function ForeignPanel({
                 <ul className="grid gap-1">
                   {threads.map(([tag, letters]) => {
                     const last = letters.at(-1)!;
-                    return countryRow(tag, `${formatDate(last.date, locale)} · ${last.text.replace(/\s+/g, " ").slice(0, 80)}`);
+                    // Relations closed by a war, broken off or with the ambassadors recalled show before the last letter (engine/envoys.ts).
+                    const ties = relationsOf(state, state.player, tag);
+                    return countryRow(tag, `${ties === "normal" ? "" : `${t(`relations.${ties}` as MessageKey)} · `}${formatDate(last.date, locale)} · ${last.text.replace(/\s+/g, " ").slice(0, 80)}`);
                   })}
                 </ul>
               )}

@@ -1,13 +1,14 @@
 "use client";
 
-import { ChevronDown, Crosshair, History, Pencil, Pin, PinOff, Plus, Repeat, ScrollText, X } from "lucide-react";
+import { ChevronDown, Crosshair, History, Pencil, Pin, PinOff, Plus, Repeat, ScrollText, SlidersHorizontal, X } from "lucide-react";
 import { useState, useSyncExternalStore, type ReactNode } from "react";
 import { ui } from "@/components/ui/classes";
 import Dictation from "@/components/voice/Dictation";
-import { MAX_ORDERS } from "@/constants/app";
+import { LONG_ORDERS, MAX_ORDERS } from "@/constants/app";
 import { useI18n } from "@/i18n/useI18n";
 import { isSendShortcut, sendModifier } from "@/lib/keys";
 import { editOrder, ORDER_CHARS, takeBack } from "@/lib/orders";
+import { SuggestButton, SuggestChips, TidyDialog, useSuggestions, type Suggest } from "./Suggestions";
 
 interface OrdersPanelProps {
   orders: string[];
@@ -23,6 +24,12 @@ interface OrdersPanelProps {
   operationsCount?: number;
   /** An order put into the box to edit and add, each time its number changes (the tutorial's suggestion). */
   fill?: { text: string; n: number } | null;
+  /** The game master drafts what is written as an order should read (engine/suggest.ts); missing without one. */
+  onSuggest?: Suggest;
+  /** An order's marks on its card – entrusted, kept from, until (components/game/OrderModifiers.tsx). */
+  badges?: (order: string) => ReactNode;
+  /** Opens an order's settings: who carries it out, who must not know, how long it runs. */
+  onConfigure?: (order: string) => void;
 }
 
 /** The platform never changes while the page is open. */
@@ -34,27 +41,29 @@ function OrderEditor({ value, onSave, onCancel }: { value: string; onSave: (text
   const [text, setText] = useState(value);
   return (
     <div className="min-w-0 flex-1">
-      <textarea
-        autoFocus
-        value={text}
-        maxLength={ORDER_CHARS}
-        // About thirty characters a line in the panel's width; never fewer than two lines, nor more than six.
-        rows={Math.min(6, Math.max(2, Math.ceil((text.length + 1) / 30)))}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.nativeEvent.isComposing) return;
-          if (e.key === "Escape") {
-            e.preventDefault();
-            e.stopPropagation();
-            onCancel();
-          } else if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            onSave(text);
-          }
-        }}
-        aria-label={t("orders.edit")}
-        className={`${ui.input} resize-none py-2 text-sm`}
-      />
+      <Dictation id="order-edit" set={setText} max={ORDER_CHARS}>
+        <textarea
+          autoFocus
+          value={text}
+          maxLength={ORDER_CHARS}
+          // About thirty characters a line in the panel's width; never fewer than two lines, nor more than six.
+          rows={Math.min(6, Math.max(2, Math.ceil((text.length + 1) / 30)))}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.nativeEvent.isComposing) return;
+            if (e.key === "Escape") {
+              e.preventDefault();
+              e.stopPropagation();
+              onCancel();
+            } else if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              onSave(text);
+            }
+          }}
+          aria-label={t("orders.edit")}
+          className={`${ui.input} resize-none py-2 text-sm`}
+        />
+      </Dictation>
       <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
         <span className="text-2xs font-medium text-muted">{t("orders.editHint")}</span>
         <div className="ml-auto flex shrink-0 gap-1">
@@ -77,12 +86,17 @@ function OrderEditor({ value, onSave, onCancel }: { value: string; onSave: (text
  * on a Mac) adds what is written; the turn's length is set over the map
  * (TurnLength). The government's special operations are a tab beside them.
  */
-export default function OrdersPanel({ orders, standing, previous, disabled, onChange, onStanding, operations, operationsCount = 0, fill = null }: OrdersPanelProps) {
+export default function OrdersPanel({ orders, standing, previous, disabled, onChange, onStanding, operations, operationsCount = 0, fill = null, onSuggest, badges, onConfigure }: OrdersPanelProps) {
   const { t } = useI18n();
   const [tab, setTab] = useState<"orders" | "operations">("orders");
   // The server knows no platform; the hint names Ctrl until the browser says otherwise.
   const modifier = useSyncExternalStore(never, () => sendModifier(navigator.platform), () => "Ctrl");
   const [draft, setDraft] = useState("");
+  // The order as the game master would draft it: two versions to pick, the box keeps the player's until one is taken.
+  const tidy = useSuggestions(onSuggest);
+  // An order already in the turn, drafted anew: which one, and the game master's versions of it.
+  const [tidying, setTidying] = useState<{ list: "draft" | "standing"; index: number; order: string } | null>(null);
+  const retidy = useSuggestions(onSuggest);
   // A suggestion put into the box once per number, while rendering, so it shows at once.
   const [filled, setFilled] = useState(0);
   if (fill && fill.n !== filled) {
@@ -102,6 +116,7 @@ export default function OrdersPanel({ orders, standing, previous, disabled, onCh
     if (!text || full) return;
     onChange([...orders, text.slice(0, ORDER_CHARS)]);
     setDraft("");
+    tidy.clear();
   };
   const save = (list: "draft" | "standing", index: number, text: string) => {
     const next = editOrder(list === "draft" ? orders : standing, index, text);
@@ -109,6 +124,33 @@ export default function OrdersPanel({ orders, standing, previous, disabled, onCh
     setEditing(null);
   };
   const isEditing = (list: "draft" | "standing", index: number) => editing?.list === list && editing.index === index;
+  const configureButton = (order: string, size: string) =>
+    onConfigure ? (
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onConfigure(order)}
+        className="-m-1 rounded-lg p-1 text-muted hover:bg-divider hover:text-ink"
+        aria-label={t("orders.mods.open")}
+        title={t("orders.mods.open")}
+      >
+        <SlidersHorizontal className={size} />
+      </button>
+    ) : null;
+  // A spark on the card: the game master drafts the order anew, the player picks a version in the pop-up.
+  const tidyButton = (list: "draft" | "standing", index: number, order: string, size: string) =>
+    onSuggest ? (
+      <SuggestButton
+        hint={t("orders.tidy.hint")}
+        size={size}
+        asking={retidy.asking && tidying?.list === list && tidying.index === index}
+        disabled={disabled}
+        onClick={() => {
+          setTidying({ list, index, order });
+          void retidy.ask({ kind: "order", text: order });
+        }}
+      />
+    ) : null;
   const editButton = (list: "draft" | "standing", index: number, size: string) => (
     <button
       type="button"
@@ -157,7 +199,13 @@ export default function OrdersPanel({ orders, standing, previous, disabled, onCh
     <div className="flex flex-col gap-4">
       {tabs}
       <div data-tour="orders-input">
-        <Dictation id="orders" set={setDraft} max={1000} disabled={disabled || full}>
+        <Dictation
+          id="orders"
+          set={setDraft}
+          max={1000}
+          disabled={disabled || full}
+          spark={onSuggest && draft.trim() && <SuggestButton hint={t("orders.tidy.hint")} asking={tidy.asking} disabled={disabled || full} onClick={() => void tidy.ask({ kind: "order", text: draft })} />}
+        >
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -173,10 +221,13 @@ export default function OrdersPanel({ orders, standing, previous, disabled, onCh
             className={`${ui.input} resize-none`}
           />
         </Dictation>
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <span className="text-2xs font-medium leading-snug text-muted">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
+          <span className="min-w-40 flex-1 text-2xs font-medium leading-snug text-muted">
             {full ? (
               t("game.orders.limit", { n: MAX_ORDERS })
+            ) : orders.length + standing.length > LONG_ORDERS ? (
+              // Past a dozen: every order is one more the game master answers, and the turn takes longer to write.
+              t("game.orders.longer", { n: orders.length + standing.length, max: MAX_ORDERS })
             ) : (
               <>
                 {t("game.orders.hint")}{" "}
@@ -184,11 +235,25 @@ export default function OrdersPanel({ orders, standing, previous, disabled, onCh
               </>
             )}
           </span>
-          <button type="button" onClick={add} disabled={disabled || full || !draft.trim()} className={`${ui.secondary} shrink-0 px-3 py-2 text-xs`}>
-            <Plus className="h-4 w-4" />
-            {t("game.orders.add")}
-          </button>
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            <button type="button" onClick={add} disabled={disabled || full || !draft.trim()} className={`${ui.secondary} shrink-0 px-3 py-2 text-xs`}>
+              <Plus className="h-4 w-4" />
+              {t("game.orders.add")}
+            </button>
+          </div>
         </div>
+        {onSuggest && (tidy.options || tidy.failed) && (
+          <div className="mt-2">
+            <SuggestChips
+              options={tidy.options}
+              failed={tidy.failed}
+              onPick={(line) => {
+                setDraft(line);
+                tidy.clear();
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {standing.length > 0 && (
@@ -204,28 +269,36 @@ export default function OrdersPanel({ orders, standing, previous, disabled, onCh
                 {isEditing("standing", i) ? (
                   <OrderEditor value={order} onSave={(text) => save("standing", i, text)} onCancel={() => setEditing(null)} />
                 ) : (
-                  <>
+                  // The text the whole width; under it the order's marks and its small buttons.
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <button
                       type="button"
                       disabled={disabled}
                       onClick={() => setEditing({ list: "standing", index: i })}
                       title={t("orders.edit")}
-                      className="min-w-0 flex-1 whitespace-pre-wrap break-words text-left text-xs font-medium text-ink"
+                      className="whitespace-pre-wrap break-words text-left text-xs font-medium text-ink"
                     >
                       {order}
                     </button>
-                    {editButton("standing", i, "h-3.5 w-3.5")}
-                    <button
-                      type="button"
-                      disabled={disabled}
-                      onClick={() => onStanding(standing.filter((o) => o !== order))}
-                      className="-m-1 rounded-lg p-1 text-muted hover:bg-divider hover:text-ink"
-                      aria-label={t("orders.unpin")}
-                      title={t("orders.unpin")}
-                    >
-                      <PinOff className="h-3.5 w-3.5" />
-                    </button>
-                  </>
+                    <div className="flex items-center gap-2">
+                      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">{badges?.(order)}</div>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        {configureButton(order, "h-3.5 w-3.5")}
+                        {tidyButton("standing", i, order, "h-3.5 w-3.5")}
+                        {editButton("standing", i, "h-3.5 w-3.5")}
+                        <button
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => onStanding(standing.filter((o) => o !== order))}
+                          className="-m-1 rounded-lg p-1 text-muted hover:bg-divider hover:text-ink"
+                          aria-label={t("orders.unpin")}
+                          title={t("orders.unpin")}
+                        >
+                          <PinOff className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </li>
             ))}
@@ -256,41 +329,49 @@ export default function OrdersPanel({ orders, standing, previous, disabled, onCh
               {isEditing("draft", i) ? (
                 <OrderEditor value={order} onSave={(text) => save("draft", i, text)} onCancel={() => setEditing(null)} />
               ) : (
-                <>
+                // The text the whole width; under it the order's marks and its small buttons.
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                   <button
                     type="button"
                     disabled={disabled}
                     onClick={() => setEditing({ list: "draft", index: i })}
                     title={t("orders.edit")}
-                    className="min-w-0 flex-1 whitespace-pre-wrap break-words text-left text-sm font-medium text-ink"
+                    className="whitespace-pre-wrap break-words text-left text-sm font-medium text-ink"
                   >
                     {order}
                   </button>
-                  {editButton("draft", i, "h-4 w-4")}
-                  <button
-                    type="button"
-                    disabled={disabled || standing.includes(order)}
-                    onClick={() => {
-                      onStanding([...standing, order]);
-                      onChange(orders.filter((_, j) => j !== i));
-                    }}
-                    className="-m-1 rounded-lg p-1 text-muted hover:bg-divider hover:text-accent"
-                    aria-label={t("orders.pin")}
-                    title={t("orders.pin")}
-                  >
-                    <Pin className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => onChange(orders.filter((_, j) => j !== i))}
-                    className="-m-1 rounded-lg p-1 text-muted hover:bg-red-50 hover:text-red-600"
-                    aria-label={t("game.orders.remove")}
-                    title={t("game.orders.remove")}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </>
+                  <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">{badges?.(order)}</div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {configureButton(order, "h-4 w-4")}
+                      {tidyButton("draft", i, order, "h-4 w-4")}
+                      {editButton("draft", i, "h-4 w-4")}
+                      <button
+                        type="button"
+                        disabled={disabled || standing.includes(order)}
+                        onClick={() => {
+                          onStanding([...standing, order]);
+                          onChange(orders.filter((_, j) => j !== i));
+                        }}
+                        className="-m-1 rounded-lg p-1 text-muted hover:bg-divider hover:text-accent"
+                        aria-label={t("orders.pin")}
+                        title={t("orders.pin")}
+                      >
+                        <Pin className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => onChange(orders.filter((_, j) => j !== i))}
+                        className="-m-1 rounded-lg p-1 text-muted hover:bg-red-50 hover:text-red-600"
+                        aria-label={t("game.orders.remove")}
+                        title={t("game.orders.remove")}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
               )}
             </li>
           ))}
@@ -333,6 +414,19 @@ export default function OrdersPanel({ orders, standing, previous, disabled, onCh
           )}
         </section>
       )}
+      <TidyDialog
+        order={tidying?.order ?? null}
+        state={retidy}
+        onPick={(line) => {
+          if (tidying) save(tidying.list, tidying.index, line);
+          setTidying(null);
+          retidy.clear();
+        }}
+        onClose={() => {
+          setTidying(null);
+          retidy.clear();
+        }}
+      />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import DownloadButton from "@/components/DownloadButton";
 import Flag from "@/components/Flag";
+import LanguageLinks from "@/components/LanguageLinks";
 import StartPills from "@/components/home/StartPills";
 import { TutorialPreparing } from "@/components/home/TutorialStart";
 import Dialog from "@/components/ui/Dialog";
@@ -20,8 +21,10 @@ import { newGameId } from "@/engine/setup";
 import type { ScenarioId, StartVariant } from "@/engine/types";
 import { ABOUT } from "@/i18n/about";
 import type { MessageKey } from "@/i18n/messages";
+import { useLocalePath } from "@/i18n/routeLocale";
 import { useI18n } from "@/i18n/useI18n";
 import { downloadFile } from "@/lib/exports";
+import { faqEntries } from "@/lib/faq";
 import { openPlayed, PLAYED_GAMES, type PlayedGame } from "@/lib/played";
 import { openSave, SAVE_EXTENSION, saveFileName, sealSave, SaveFileError } from "@/lib/saveFile";
 import { deleteSave, duplicateSave, listSaves, loadSave, renameSave, writeSave, type ListedSave } from "@/lib/saves";
@@ -148,6 +151,8 @@ function SaveMenu({ onRename, onDuplicate, onExport, onDelete }: { onRename: () 
  */
 export default function HomeClient() {
   const { t, text, locale } = useI18n();
+  // Links stay in the language of the address: /ru's dates are /ru/new/….
+  const localized = useLocalePath();
   const ago = useAgo();
   const { user, ready } = useUser();
   const demo = isDemo();
@@ -341,7 +346,16 @@ export default function HomeClient() {
             <a href="#how" className="group block min-w-0 lg:row-span-2">
               <figure>
                 <div className={`${ui.card} overflow-hidden shadow-xl shadow-shade/10 transition-all duration-300 group-hover:-translate-y-1 group-hover:border-accent/20`}>
-                  <Image src="/screens/turn.jpg" alt={t("home.how.turn.title")} width={1600} height={1000} unoptimized priority className="h-auto w-full" />
+                  {/* The page's largest picture: sized for the column it fills, and fetched first. */}
+                  <Image
+                    src="/screens/turn.jpg"
+                    alt={t("home.how.turn.title")}
+                    width={1600}
+                    height={1000}
+                    sizes="(min-width: 1152px) 620px, (min-width: 1024px) 54vw, calc(100vw - 2rem)"
+                    preload
+                    className="h-auto w-full"
+                  />
                 </div>
                 <figcaption className="mt-2.5 flex items-center gap-1.5 px-1 text-xs font-bold text-muted transition-colors group-hover:text-accent">
                   {t("home.hero.caption")}
@@ -418,11 +432,12 @@ export default function HomeClient() {
         <section id="dates" className="scroll-mt-20">
           <h2 className={`${ui.label} mb-1`}>{t("home.chooseDate")}</h2>
           <p className="mb-4 text-sm text-muted font-medium">{t("home.chooseDateHint")}</p>
+          {/* Twelve dates: three rows of four on a wide screen. */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {SCENARIO_ORDER.map((id, i) => {
               const start = startOf(id);
               const s = getScenario(id, start);
-              const href = newGamePath(id, start);
+              const href = localized(newGamePath(id, start));
               return (
                 <div
                   key={id}
@@ -453,9 +468,11 @@ export default function HomeClient() {
                     <ArrowRight className="pointer-events-none absolute right-5 top-6 z-20 h-5 w-5 text-white/60 transition-all group-hover:translate-x-1 group-hover:text-white" />
                   </div>
                   <div className="flex flex-1 flex-col gap-2 p-5">
-                    <Link href={href} className="text-lg font-black leading-tight text-ink transition-colors hover:text-accent">
-                      {text(s.title)}
-                    </Link>
+                    <h3 className="text-lg font-black leading-tight text-ink">
+                      <Link href={href} className="transition-colors hover:text-accent">
+                        {text(s.title)}
+                      </Link>
+                    </h3>
                     <p key={start ?? "day"} className="text-sm font-medium text-muted animate-in fade-in duration-300">
                       {text(s.tagline)}
                     </p>
@@ -484,7 +501,7 @@ export default function HomeClient() {
                         alt={t(`home.how.${name}.title` as MessageKey)}
                         width={width}
                         height={height}
-                        unoptimized
+                        sizes="(min-width: 1152px) 720px, (min-width: 768px) 62vw, calc(100vw - 2rem)"
                         loading="lazy"
                         className="h-auto w-full border-b border-line"
                       />
@@ -526,6 +543,21 @@ export default function HomeClient() {
                   {t("home.real.report")}
                 </a>
               </div>
+            </div>
+          </section>
+        )}
+
+        {demo && (
+          // What a visitor asks first; the page's structured data repeats these words (lib/seo.ts).
+          <section id="faq" className="mt-12 scroll-mt-20">
+            <h2 className={`${ui.label} mb-4`}>{t("home.faq.title")}</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {faqEntries(locale).map(({ id, question, answer }) => (
+                <div key={id} className={`${ui.card} p-5`}>
+                  <h3 className="text-base font-black leading-tight text-ink">{question}</h3>
+                  <p className="mt-1.5 text-sm font-medium leading-relaxed text-muted">{answer}</p>
+                </div>
+              ))}
             </div>
           </section>
         )}
@@ -682,18 +714,19 @@ export default function HomeClient() {
         <footer className="mt-16 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-6 text-xs font-medium text-muted">
           <span>
             {APP_NAME} {t("app.stage")} {APP_VERSION} · AGPL-3.0 ·{" "}
-            <Link href="/about" className="font-bold text-ink hover:text-accent">
+            <Link href={localized("/about")} className="font-bold text-ink hover:text-accent">
               {t("home.madeBy", { name: ABOUT[locale].authorName })}
             </Link>
           </span>
           <span className="flex flex-wrap items-center gap-4">
             <DownloadButton variant="link" />
-            <Link href="/about" className="hover:text-accent">
+            <Link href={localized("/about")} className="hover:text-accent">
               {t("nav.about")}
             </Link>
-            <Link href="/privacy" className="hover:text-accent">
+            <Link href={localized("/privacy")} className="hover:text-accent">
               {t("nav.privacy")}
             </Link>
+            <LanguageLinks />
             <a href={REPO_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-accent">
               <CodeXml className="h-4 w-4" />
               GitHub
@@ -711,7 +744,7 @@ export default function HomeClient() {
           story && (
             <div className="flex flex-wrap items-center justify-end gap-2">
               <DownloadButton />
-              <Link href={newGamePath(story.id, story.start)} className={`${ui.primary} px-4 py-2.5 text-sm`}>
+              <Link href={localized(newGamePath(story.id, story.start))} className={`${ui.primary} px-4 py-2.5 text-sm`}>
                 {t(storyScenario?.player ? "tutorial.begin" : "home.story.choose")}
                 <ArrowRight className="h-4 w-4" />
               </Link>

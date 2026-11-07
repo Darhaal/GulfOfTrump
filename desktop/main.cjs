@@ -17,6 +17,8 @@ const HOST = "127.0.0.1";
 // GOT_PORT moves it only for a test run beside an installed copy.
 const PORT = Number(process.env.GOT_PORT) || 41914;
 const ORIGIN = `http://${HOST}:${PORT}`;
+/** The game's Store ID (Partner Center, docs/store.md), for its reviews. */
+const STORE_ID = "9N07JX2CHMW0";
 
 /** The few words the app itself says, in the game's three languages. */
 const TEXT = {
@@ -157,7 +159,8 @@ function waitForServer(ms = 45_000) {
 
 const isGame = (url) => url === ORIGIN || url.startsWith(`${ORIGIN}/`);
 const openOutside = (url) => {
-  if (/^https?:\/\//.test(url)) void shell.openExternal(url);
+  // Pages in the browser, and a letter in the mail app (the author's address: the About page, the review prompt).
+  if (/^https?:\/\//.test(url) || /^mailto:[^\s]+$/.test(url)) void shell.openExternal(url);
 };
 
 /**
@@ -395,6 +398,10 @@ function answerThePage() {
   // Windows' speech settings, where a voice for the game's language is added; a fixed address too.
   ipcMain.handle("system:speech-settings", (event) => {
     if (fromGame(event) && process.platform === "win32") void shell.openExternal("ms-settings:speech");
+  });
+  // The game's reviews in the Microsoft Store (Store ID in docs/store.md): the Store copy only, a fixed address.
+  ipcMain.handle("store:review", (event) => {
+    if (fromGame(event) && process.windowsStore) void shell.openExternal(`ms-windows-store://review/?ProductId=${STORE_ID}`);
   });
   ipcMain.handle("updates:get", (event) => (fromGame(event) ? updatesSnapshot() : null));
   ipcMain.handle("updates:check", (event) => {

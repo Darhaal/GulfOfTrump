@@ -4,7 +4,7 @@ import { AiError } from "./errors";
 export type StreamEvent =
   | { type: "progress"; chars: number }
   | { type: "done"; [key: string]: unknown }
-  | { type: "error"; code: string; message: string; retryable: boolean };
+  | { type: "error"; code: string; message: string; retryable: boolean; resetsAt?: number };
 
 /**
  * A newline-delimited JSON response: progress events while the model writes,
@@ -38,7 +38,7 @@ export function ndjsonResponse(
       } catch (error) {
         const e = error instanceof AiError ? error : new AiError("internal_error", "Something went wrong on the game server.", true);
         if (!(error instanceof AiError)) console.error(error);
-        send({ type: "error", code: e.code, message: e.message, retryable: e.retryable });
+        send({ type: "error", code: e.code, message: e.message, retryable: e.retryable, ...(e.resetsAt !== undefined ? { resetsAt: e.resetsAt } : {}) });
       } finally {
         try {
           controller.close();

@@ -21,10 +21,11 @@ export const ARMY_INSTRUCTIONS = (locale: Locale) => `You describe how the playe
 - "divisions": whole numbers of divisions or division equivalents. All formations together should come to about the field strength given, never more than the most given. A fleet or an air force may have 0.
 - "provinces": where the formation stands, by the ids given in PROVINCES YOU MAY NAME, at most eight each; leave it empty for a fleet at sea.
 - "theatre": the front or region in a few words; "note": one short sentence on its state or task.
-- Write names, theatres and notes in ${LANGUAGE[locale]}. Never mention ids, tags or game mechanics outside "provinces". Short dashes only (–).
+- "character": with a commander, his character as a commander in two or three words, as history knew him where it did ("bold, ruthless", "careful, methodical", "reckless"); empty without one.
+- Write names, theatres, characters and notes in ${LANGUAGE[locale]}. Never mention ids, tags or game mechanics outside "provinces". Short dashes only (–).
 - At most 12 formations.
 Answer with ONE JSON object and nothing else:
-{ "formations": [{ "name": "string", "kind": "front|army|corps|fleet|air|reserve", "divisions": 0, "commander": "string", "theatre": "string", "provinces": ["id"], "note": "string" }] }`;
+{ "formations": [{ "name": "string", "kind": "front|army|corps|fleet|air|reserve", "divisions": 0, "commander": "string", "character": "string", "theatre": "string", "provinces": ["id"], "note": "string" }] }`;
 
 /** The message for the army's organisation: what the player's government has to fight with, and where. */
 export function buildArmyPrompt(state: GameState, index: Pick<MapIndex, "regions" | "neighbors">): string {

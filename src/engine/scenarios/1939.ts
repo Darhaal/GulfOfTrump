@@ -142,6 +142,21 @@ Real history for reference: Britain and France declare war on 3 September; the U
     "kp-rason": "japan",
     // A sliver of Iranian Azerbaijan that the same Sèvres-era layer gives to the USSR.
     "ir-west-azerbaijan-p2": "iran",
+    // Slivers the finer map cuts along the source's loose borders: Jehol was Manchukuo's from 1933, Erigavo in British
+    // Somaliland, the Isan bank of the Mekong Thai, Qasr-e Shirin Iranian, Nuevo Laredo Mexican, the Altai rim of
+    // Xinjiang Chinese, the Rub' al Khali Saudi, the Dniester bank of Khmelnytskyi with the rest of the province.
+    "cn-liaoning-chaoyang-p2": "japan",
+    "cn-liaoning-liaoning-west": "japan",
+    "cn-liaoning-lingyuan": "japan",
+    "sol-somaliland-erigavo-p2": "uk",
+    "th-ubon-ratchathani-p2": "thailand",
+    "th-nakhon-phanom-p2": "thailand",
+    "ir-kermanshah-qasr-e-shirin-p2": "iran",
+    "mx-tamaulipas-laredo-p2": "mexico",
+    "cn-xinjiang-koktokay-p2": "china",
+    "sa-eastern-rub-al-khali-eastern-p2": "saudi-arabia",
+    "sa-eastern-rub-al-khali-eastern-south-east-p2": "saudi-arabia",
+    "ua-khmelnytskyi-kamianets-podilskyi-p3": "poland",
   },
   // The Solomon Islands and Kuwait were British protectorates; the source
   // draws the first with the New Hebrides and Australia, the second with Iraq.
@@ -152,6 +167,8 @@ Real history for reference: Britain and France declare war on 3 September; the U
     SLB: "uk",
     KWT: "uk",
     TUR: "turkey",
+    // Borneo's north rim, which the finer map cuts off with British Malaya, and every Dutch island.
+    IDN: "netherlands",
   },
   countries: {
     germany: {

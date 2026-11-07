@@ -15,7 +15,25 @@ import { appendDictation } from "@/lib/voice/text";
  * button says so when it ran out. Only the field itself where voice input
  * does not work here or is off.
  */
-export default function Dictation({ id, set, max, disabled, children }: { id: string; set: Dispatch<SetStateAction<string>>; max?: number; disabled?: boolean; children: ReactNode }) {
+export default function Dictation({
+  id,
+  set,
+  max,
+  disabled,
+  inline,
+  spark,
+  children,
+}: {
+  id: string;
+  set: Dispatch<SetStateAction<string>>;
+  max?: number;
+  disabled?: boolean;
+  /** A one-line input: the buttons sit in the middle of its right edge; in a box of lines, in its bottom right corner. */
+  inline?: boolean;
+  /** The game master's help for the field (components/game/Suggestions.tsx SuggestButton), left of the microphone. */
+  spark?: ReactNode;
+  children: ReactNode;
+}) {
   const engine = useVoiceEngine();
   const [mic] = usePreference("mic");
   const shown = engine !== null && mic !== "off";
@@ -27,10 +45,18 @@ export default function Dictation({ id, set, max, disabled, children }: { id: st
       queueMicrotask(() => showVoiceNotice(id, { key: "voice.cut", n: max }));
       return all.slice(0, max);
     });
+  // Room in the field for what sits in its corner: one button, or the spark and the microphone side by side.
+  const buttons = (shown ? 1 : 0) + (spark ? 1 : 0);
+  const room = buttons === 2 ? "[&>textarea]:pr-[4.5rem] [&>input]:pr-[4.25rem]" : buttons === 1 ? "[&>textarea]:pr-11 [&>input]:pr-10" : "";
   return (
-    <div className={`relative ${shown ? "[&>textarea]:pr-11" : ""}`}>
+    <div className={`relative min-w-0 ${room}`}>
       {children}
-      {shown && <MicButton id={id} disabled={disabled} onText={write} />}
+      {buttons > 0 && (
+        <div className={`absolute flex items-center gap-0.5 ${inline ? "right-1 top-1/2 -translate-y-1/2" : "bottom-2 right-2"}`}>
+          {spark && <span className={`grid place-items-center ${inline ? "h-7 w-7" : "h-8 w-8"}`}>{spark}</span>}
+          {shown && <MicButton id={id} disabled={disabled} inline={inline} onText={write} />}
+        </div>
+      )}
     </div>
   );
 }
@@ -38,7 +64,7 @@ export default function Dictation({ id, set, max, disabled, children }: { id: st
 /** Seconds as the clock shows them: 0:07, 1:00. */
 const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
-function MicButton({ id, disabled, onText }: { id: string; disabled?: boolean; onText: (words: string) => void }) {
+function MicButton({ id, disabled, inline, onText }: { id: string; disabled?: boolean; inline?: boolean; onText: (words: string) => void }) {
   const { t, locale } = useI18n();
   const voice = useListener();
   const engine = useVoiceEngine();
@@ -101,7 +127,7 @@ function MicButton({ id, disabled, onText }: { id: string; disabled?: boolean; o
         aria-pressed={phase === "listening"}
         aria-label={label}
         title={label}
-        className={`absolute bottom-2 right-2 grid h-8 w-8 place-items-center rounded-lg transition-colors disabled:opacity-40 ${
+        className={`grid place-items-center rounded-lg transition-colors disabled:opacity-40 ${inline ? "h-7 w-7" : "h-8 w-8"} ${
           phase === "listening" ? "animate-pulse bg-war/15 text-war ring-1 ring-war/40" : "text-muted hover:bg-divider hover:text-accent"
         }`}
       >

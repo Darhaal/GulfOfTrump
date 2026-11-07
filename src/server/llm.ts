@@ -4,6 +4,7 @@ import { extractJson, withoutNulls } from "@/engine/json";
 import type { Locale } from "@/engine/types";
 import { accessToken } from "./chatgpt/oauth";
 import { listModels, streamText, type InputMessage, type ModelInfo, type Usage } from "./chatgpt/responses";
+import { mockPlan } from "./chatgpt/usage";
 import { AiError } from "./errors";
 import { isMockEnabled, mockComplete, streamOut } from "./mock";
 
@@ -47,6 +48,8 @@ export async function complete(request: CompletionRequest): Promise<string> {
     return text;
   }
   if (request.demo || isMockEnabled()) {
+    // GOT_MOCK_PLAN pretends to be a plan's usage report or limit (chatgpt/usage.ts).
+    mockPlan(request.demo);
     const text = await mockComplete(request.instructions, request.input, request.onDelta, request.locale, request.signal);
     request.onUsage?.({ model: "demo" });
     return text;

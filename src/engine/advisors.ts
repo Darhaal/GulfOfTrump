@@ -15,7 +15,19 @@ import { MINISTER_STANCES, type Directive, type GameState, type Localized, type 
  * each or not. The turn's game master sees the directives, not the
  * conversations.
  */
-export const ADVISORS = ["chief", "foreign", "interior", "military", "intelligence", "finance", "industry", "science"] as const;
+export const STANDARD_MINISTRIES = ["chief", "foreign", "interior", "military", "intelligence", "finance", "industry", "science"] as const;
+/**
+ * Places for ministries the government creates in play (engine/ministries.ts):
+ * eleven, so the cabinet may hold twelve ministries whichever it closed – the
+ * chief of staff's office is never closed. The same ids are posts (OFFICIAL_POSTS).
+ */
+export const NEW_MINISTRIES = ["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9", "m10", "m11"] as const;
+export type NewMinistryId = (typeof NEW_MINISTRIES)[number];
+/** The same value for every new ministry's place, for the tables kept by ministry. */
+export const forNew = <T,>(value: T) => Object.fromEntries(NEW_MINISTRIES.map((m) => [m, value])) as Record<NewMinistryId, T>;
+export type StandardMinistry = (typeof STANDARD_MINISTRIES)[number];
+// The head of the space programme (engine/space.ts) sits after the standard ministries, and only while the government runs one (cabinetAdvisors).
+export const ADVISORS = [...STANDARD_MINISTRIES, "space", ...NEW_MINISTRIES] as const;
 export type AdvisorId = (typeof ADVISORS)[number];
 
 /** The post each minister of the cabinet holds. */
@@ -28,8 +40,14 @@ export const ADVISOR_POST: Record<AdvisorId, OfficialPost> = {
   finance: "finance",
   industry: "industry",
   science: "science",
+  space: "space",
+  ...(Object.fromEntries(NEW_MINISTRIES.map((m) => [m, m])) as Record<NewMinistryId, NewMinistryId>),
 };
 
+/** A new ministry's name until the government's own (engine/ministries.ts) is read. */
+const NEW_TITLE: Localized = { ru: "Новое министерство", uk: "Нове міністерство", en: "New ministry" };
+
+/** The standard ministries' names; a new one's is its own (`ministryTitle`, engine/ministries.ts). */
 export const ADVISOR_TITLES: Record<AdvisorId, Localized> = {
   chief: { ru: "Глава администрации", uk: "Глава адміністрації", en: "Chief of Staff" },
   military: { ru: "Начальник генштаба", uk: "Начальник генштабу", en: "Chief of the General Staff" },
@@ -39,7 +57,12 @@ export const ADVISOR_TITLES: Record<AdvisorId, Localized> = {
   interior: { ru: "Министр внутренних дел", uk: "Міністр внутрішніх справ", en: "Minister of the Interior" },
   intelligence: { ru: "Глава разведки", uk: "Голова розвідки", en: "Head of Intelligence" },
   science: { ru: "Министр науки", uk: "Міністр науки", en: "Minister of Science" },
+  space: { ru: "Глава космической программы", uk: "Голова космічної програми", en: "Head of the Space Programme" },
+  ...forNew(NEW_TITLE),
 };
+
+/** A new ministry's persona until its portfolio (engine/ministries.ts) is read. */
+const NEW_PERSONA = "the minister of a ministry the government created itself: its portfolio is what the government gave it, and the minister fights to prove the ministry was worth creating. Practical; speaks of what the ministry can deliver and what it needs.";
 
 /** Who each minister is, for the model. */
 export const ADVISOR_PERSONAS: Record<AdvisorId, string> = {
@@ -59,6 +82,9 @@ export const ADVISOR_PERSONAS: Record<AdvisorId, string> = {
     "the head of intelligence: what other governments are planning in secret, their weak points, unrest, agents and propaganda. Terse; speaks in estimates and probabilities.",
   science:
     "the minister of science and research: the laboratories, the universities and the academy, the research projects under way (RESEARCH below) and what the scientists can deliver and when — new weapons, industry, medicine, harvests. Precise; speaks in years, budgets and what is physically possible, and fights for money for the scientists.",
+  space:
+    "the head of the space and rocket programme: the rockets, the launch sites, the satellites and the crews, the race with the other programmes (SPACE PROGRAMME below), what the next launch needs and when it could fly, and the missiles and spy satellites the army wants from the same rockets. Driven and proud; speaks in launches, tonnes to orbit and months, and wants a bigger share of the research money.",
+  ...forNew(NEW_PERSONA),
 };
 
 export interface AdviceMessage {
@@ -66,6 +92,8 @@ export interface AdviceMessage {
   text: string;
   date: string;
   turn: number;
+  /** Who answered: the minister or deputy then in office, so a later appointment does not rename the old answers; missing in older saves. */
+  by?: string;
   /** A special operation the minister proposes, for the government to approve. */
   operation?: Operation;
   /** A budget the economy minister proposes, checked by the engine, for the government to apply or not. */
@@ -168,11 +196,13 @@ export function addAdvice(state: GameState, advisor: AdvisorId, question: string
   const next = structuredClone(state);
   const thread = next.advice?.[advisor] ?? [];
   const asked: AdviceMessage = { from: "player", text: question, date: state.date, turn: state.turn };
+  const by = state.officials?.find((o) => o.post === ADVISOR_POST[advisor])?.name;
   const answered: AdviceMessage = {
     from: "advisor",
     text: reply.answer,
     date: state.date,
     turn: state.turn,
+    ...(by ? { by } : {}),
     ...(reply.operation ? { operation: reply.operation } : {}),
   };
   const economy = state.countries[state.player]?.economy;

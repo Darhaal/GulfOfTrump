@@ -57,7 +57,7 @@ export default function Telemetry() {
   }, []);
 
   // Never over the tutorial: a first visit goes into it from the front page, which asks once the tutorial is behind the player (lib/tutorial.ts).
-  const asking = availability === "ready" && consent === "unasked" && pathname === "/" && tutorial === "done";
+  const asking = availability === "ready" && consent === "unasked" && ["/", "/en", "/ru", "/uk"].includes(pathname) && tutorial === "done";
   return (
     <Dialog
       open={asking}

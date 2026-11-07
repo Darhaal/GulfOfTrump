@@ -2,7 +2,7 @@ import { z } from "zod";
 import { yearOf } from "./calendar";
 import { roll } from "./dice";
 import type { Laws } from "./laws";
-import type { ArmyMen, ArmyOrganisation, CountryState, Formation, GameState } from "./types";
+import type { ArmyMen, ArmyOrganisation, CountryState, Economy, Formation, GameState } from "./types";
 
 /**
  * The men of an army by their training: career soldiers (officers, NCOs and
@@ -141,6 +141,56 @@ export function advanceMen(before: ArmyMen, troopsAfter: number, months: number,
   return out;
 }
 
+/** Of the soldiers wounded, the share the army loses for good: most come back to their units, the badly wounded do not. */
+export const WOUNDED_LOST = 1 / 3;
+
+/** The soldiers a war took from an army for good, thousands: the killed, the taken prisoner and the badly wounded. */
+export const lostForGood = (l: { killed: number; wounded: number; captured?: number }) => l.killed + (l.captured ?? 0) + l.wounded * WOUNDED_LOST;
+
+/**
+ * Cuts an army to `left` thousand soldiers. The reservists called up
+ * (engine/mobilisation.ts) lose their share with the rest, so the peace sends
+ * home only those still in it and not the standing army the war spared.
+ * Mutates `e`.
+ */
+export function cutTroops(e: Economy, left: number): void {
+  const called = e.called && e.troops > 0 ? Math.round(((e.called * Math.max(0, left)) / e.troops) * 10) / 10 : 0;
+  e.troops = left;
+  if (called >= 0.1) e.called = called;
+  else delete e.called;
+}
+
+/**
+ * Takes soldiers from a country's army – the war's dead and prisoners, an army
+ * routed – and its men by training with them: the fighting takes from all
+ * three, recruits hardest. Returns the soldiers taken. Mutates `state`.
+ */
+export function loseSoldiers(state: Pick<GameState, "countries" | "date"> & Partial<Pick<GameState, "player" | "politics">>, tag: string, n: number): number {
+  const c = state.countries[tag];
+  const e = c?.economy;
+  if (!c || !e || !(n > 0) || e.troops <= 0) return 0;
+  const taken = Math.min(e.troops, n);
+  const left = Math.max(0, Math.round((e.troops - taken) * 10) / 10);
+  const men = c.arsenal ? advanceMen(menOf(state, c), left, 0, yearOf(state.date), true) : undefined;
+  const after = { ...e };
+  cutTroops(after, left);
+  c.economy = after;
+  if (men && c.arsenal) c.arsenal = { ...c.arsenal, men };
+  return e.troops - left;
+}
+
+/** Calls up recruits into a country's army: its troops rise by `n`, all of them recruits still in training. Returns the soldiers added. Mutates `state`. */
+export function callUp(state: Pick<GameState, "countries" | "date"> & Partial<Pick<GameState, "player" | "politics">>, tag: string, n: number): number {
+  const c = state.countries[tag];
+  const e = c?.economy;
+  if (!c || !e || !(n > 0)) return 0;
+  const troops = Math.round((e.troops + n) * 10) / 10;
+  const men = c.arsenal ? advanceMen(menOf(state, c), troops, 0, yearOf(state.date), true) : undefined;
+  c.economy = { ...e, troops };
+  if (men && c.arsenal) c.arsenal = { ...c.arsenal, men };
+  return troops - e.troops;
+}
+
 /**
  * A count as the army's own books would give it rather than a round
  * estimate: what the engine keeps in thousands (rifles, soldiers) in single
@@ -182,6 +232,7 @@ export const ArmyOrganisationSchema = z.object({
         kind: z.enum(FORMATION_KINDS).catch("army").default("army"),
         divisions: z.number().finite().catch(0).default(0),
         commander: z.string().trim().max(80).catch("").default(""),
+        character: z.string().trim().max(80).catch("").default(""),
         theatre: z.string().trim().max(80).catch("").default(""),
         provinces: z.array(z.string().trim()).max(40).catch([]).default([]),
         note: z.string().trim().max(240).catch("").default(""),
@@ -195,6 +246,16 @@ export const ArmyOrganisationSchema = z.object({
 export type ArmyOrganisationReply = z.infer<typeof ArmyOrganisationSchema>;
 
 /** Provinces the player's armies can stand in: its own land and what it holds or contests. */
+/**
+ * The provinces the player holds behind its lines: in its hands and fought over by no one else. A headquarters
+ * stands only there – never in land the enemy took, however much the player calls it its own.
+ */
+export function heldGround(state: Pick<GameState, "regions" | "player">): Set<string> {
+  const out = new Set<string>();
+  for (const [id, r] of Object.entries(state.regions)) if (r.controller === state.player && (!r.contested || r.contested === state.player)) out.add(id);
+  return out;
+}
+
 export function armyGround(state: Pick<GameState, "regions" | "player">): Set<string> {
   const out = new Set<string>();
   for (const [id, r] of Object.entries(state.regions)) if (r.controller === state.player || r.contested === state.player || r.owner === state.player) out.add(id);
@@ -225,6 +286,7 @@ export function sanitizeArmyOrganisation(state: Pick<GameState, "regions" | "pla
       kind: f.kind,
       divisions,
       ...(f.commander ? { commander: f.commander } : {}),
+      ...(f.commander && f.character ? { character: f.character } : {}),
       ...(f.theatre ? { theatre: f.theatre } : {}),
       provinces,
       ...(f.note ? { note: f.note } : {}),

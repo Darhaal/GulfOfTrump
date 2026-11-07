@@ -89,7 +89,7 @@ function placeChange(c: AppliedChange, ctx: Lookup): Placed | null {
     case "new-country":
       return { section: "politics", countries: [c.country], topics: [] };
     case "war":
-      return { section: "war", countries: ctx.sides(c.war), topics: [`war:${c.war}`, ...(c.plan ? [`plan:${c.plan}`] : [])] };
+      return { section: "war", countries: ctx.sides(c.war), topics: [`war:${c.war}`, ...(c.plan ? [`plan:${c.plan}`] : []), ...(c.colony ? [`colony:${c.colony}`] : [])] };
     case "peace":
     case "truce":
     case "truce-ended":
@@ -132,6 +132,21 @@ function placeChange(c: AppliedChange, ctx: Lookup): Placed | null {
       return { section: "diplomacy", countries: [c.country], topics: [] };
     case "sanction":
       return { section: "economy", countries: [c.by, c.against], topics: c.plan ? [`plan:${c.plan}`] : [] };
+    // Joint actions of allies (engine/joint.ts): an offensive or an operation is the war's, a project or a programme the economy's or the world's other news, the rest diplomacy.
+    case "joint": {
+      const section: NewsSection = c.type === "offensive" || c.type === "operation" ? "war" : c.type === "project" || c.type === "sanctions" ? "economy" : c.type === "research" || c.type === "space" || c.type === "atom" ? "other" : "diplomacy";
+      return { section, countries: [...c.members, ...(c.target ? [c.target] : [])], topics: [] };
+    }
+    // The world's answer to an aggression (engine/aggression.ts): on the war's thread, a world body's votes on its own too.
+    case "outcry":
+      return { section: "diplomacy", countries: [c.by, c.against], topics: [`war:${c.war}`] };
+    case "session":
+    case "resolution":
+      return { section: "diplomacy", countries: [c.by, c.against], topics: [`war:${c.war}`, `bloc:${c.body}`] };
+    case "aid":
+      return { section: "war", countries: [c.by, c.to], topics: [`war:${c.war}`] };
+    case "pledge":
+      return { section: "diplomacy", countries: [c.by, c.to], topics: [`country:${c.against}`] };
     case "funds": {
       // The payer may be a country, a lender (the IMF, banks) or a bloc: only a country is a country, a bloc has its own story.
       const bloc = !ctx.isCountry(c.from) && !(INSTITUTIONS as readonly string[]).includes(c.from);
@@ -139,6 +154,55 @@ function placeChange(c: AppliedChange, ctx: Lookup): Placed | null {
     }
     case "population":
       return { section: "other", countries: [c.country, ...(c.to ? [c.to] : [])], topics: [] };
+    // A war's toll on the people (engine/civilians.ts), on the war's thread.
+    case "civilians":
+      return { section: "war", countries: [c.country], topics: [`war:${c.war}`] };
+    // A long mobilisation's strain abroad is told by the governments' support; the player's own is its chronicle.
+    case "mobilisation":
+      return null;
+    // A country split, its civil war's defections, recognition, volunteers and end (engine/civilWar.ts).
+    case "civil":
+      return { section: c.change === "recognised" || c.change === "seat" ? "diplomacy" : "war", countries: [c.country, c.rebels, ...(c.by && c.by !== c.country && c.by !== c.rebels ? [c.by] : [])].filter(ctx.isCountry), topics: [`war:${c.war}`] };
+    // The space race (engine/space.ts): every feat is the world's news, a launch site lost with its province the war's.
+    case "space":
+      return { section: c.change === "captured" ? "war" : "other", countries: [c.country, ...(c.from ? [c.from] : [])], topics: [] };
+    // The Olympic Games and the World Cup (engine/sport.ts): a boycott or a ban is diplomacy, the rest the world's other news.
+    case "sport": {
+      const countries = [...new Set([...(c.hosts ?? []), ...(c.from ?? []), ...(c.countries ?? []), ...(c.leader ? [c.leader] : []), ...(c.winner ? [c.winner, c.runnerUp ?? ""] : [])])].filter(ctx.isCountry);
+      const diplomatic = c.change === "boycott" || c.change === "ban" || c.change === "unban" || c.change === "refused";
+      return { section: diplomatic ? "diplomacy" : "other", countries, topics: [] };
+    }
+    // Electricity (engine/energy.ts): a great power's plants, its first reactors, its shortages.
+    case "energy":
+      return { section: "economy", countries: [c.country], topics: [] };
+    // The atom (engine/atom.ts): only what the world could know – a test, the hydrogen bomb, a programme given up, a strike, a nuclear threat, alert or demonstration (engine/nuclear.ts); the secret stages stay secret.
+    case "atom":
+      if (c.change === "strike" || c.change === "ladder") return { section: "war", countries: [c.country, ...(c.against ? [c.against] : [])], topics: c.war ? [`war:${c.war}`] : [] };
+      if (c.change === "begun" || (c.change === "stage" && c.stage !== "test" && c.stage !== "hydrogen")) return null;
+      return { section: "other", countries: [c.country], topics: [] };
+    // How wars end and the governments set up in taken land (engine/warEnd.ts, engine/provisional.ts).
+    case "capitulation":
+      return { section: "war", countries: [c.country, ...(c.to ? [c.to] : [])], topics: [] };
+    case "terms":
+      return { section: "war", countries: [c.by, c.with], topics: [`war:${c.war}`] };
+    case "offer":
+      return { section: "war", countries: [c.by], topics: [`war:${c.war}`] };
+    case "provisional":
+      return { section: "politics", countries: [c.country, c.patron, ...(c.of ? [c.of] : [])], topics: [] };
+    // A government's mass crimes and what came of them (engine/repressions.ts).
+    case "crime":
+      return { section: "politics", countries: [c.by], topics: [] };
+    // Decolonisation (engine/colonies.ts): a colony's thread from its demands to its independence, a rising on its war's.
+    case "colony":
+      return {
+        section: c.change === "rising" || c.change === "crushed" || c.change === "agreement" ? "war" : "politics",
+        countries: [c.country, c.of, ...(c.movement && c.movement !== c.country ? [c.movement] : [])].filter(ctx.isCountry),
+        topics: [`colony:${c.colony}`, ...(c.war ? [`war:${c.war}`] : [])],
+      };
+    case "exile":
+    case "return":
+      // Another government's exile or return is the world's news; the player's own is its chronicle.
+      return { section: "politics", countries: [c.country], topics: [] };
     default:
       // The player's own affairs, already in its chronicle: parties, its elections, plots, laws, bills, officials, the
       // budget, its name and colours, its deals, its fall and exile. Protests are left out too: their changes do not say

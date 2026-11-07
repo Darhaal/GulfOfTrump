@@ -244,7 +244,10 @@ export function endWar(next: GameState, war: War, applied: AppliedChange[]): voi
   applied.push({ kind: "peace", war: war.id, name: war.name, sides: [...war.attackers, ...war.defenders] });
   const sides = new Set([...war.attackers, ...war.defenders]);
   for (const region of Object.values(next.regions)) {
-    if (region.controller !== region.owner && sides.has(region.controller) && sides.has(region.owner)) region.controller = region.owner;
+    if (region.controller !== region.owner && sides.has(region.controller) && sides.has(region.owner)) {
+      region.controller = region.owner;
+      delete region.behind;
+    }
     if (region.contested && sides.has(region.contested) && sides.has(region.controller)) {
       delete region.contested;
       delete region.held;

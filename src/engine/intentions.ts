@@ -1,16 +1,23 @@
 import { addYears, lostShares, yearsBetween } from "./abroad";
+import { alarmOf, answerAggression, calledToArms, describeAggression, growWorldBody, noteAggression, type Fresh } from "./aggression";
+import { hasBomb, nuclearShield } from "./atom";
 import { addStep } from "./calendar";
 import { roll } from "./dice";
 import { STEP_YEARS } from "./economy";
+import { relationsOf } from "./envoys";
+import { byEra } from "./era";
 import { endWar } from "./foreign";
 import { applyIncidents, castIncidents, describeIncidents, incidentParties, WAR_PLANS, type Incident, type Relevance } from "./incidents";
 import { countryName } from "./names";
+import { isNeutral, onItsSoil } from "./neutrality";
 import { acceptChance, enactPeaceful, endProgrammes, isPeaceful, openPeaceful, PEACEFUL_ACTION, PEACEFUL_LADDER, peacefulRates, peacefulWhat, settlePeaceful } from "./policies";
 import {
   actorsOf,
   addTension,
   allied,
   alliesOf,
+  areaOf,
+  closeAllies,
   easeTies,
   enemiesOf,
   freshCourse,
@@ -18,26 +25,32 @@ import {
   greatPowers,
   incidentsFromEvents,
   isMilitary,
+  isClientBond,
+  isOpen,
   isPact,
   landHolders,
   landNeighbours,
   learnFromTurn,
   newGovernments,
   occupiedBy,
+  pacted,
   powers,
   refreshCourses,
   remember,
+  sharedBlocs,
   tieOf,
   warBetween,
 } from "./relations";
+import { declareIndependence } from "./provisional";
 import { intentionsOf, type IntentionSeeds, type PlanSeed } from "./scenarios/intentions";
+import { AREAS } from "./scenarios/treaties";
 import { SCENARIOS } from "./scenarios";
 import { backingOf, becauseEn, brakesOf, deterrence, ERA_BRINK, growthBecause, guarantee, homeBecause, homeEnd, homeIn, lensOf, mediatorOf, originOf, pickFade, spursOf, standoffOf, type Lens, type Standoff } from "./standoffs";
 import { en, same } from "./text";
 import { countryCentres, distanceKm } from "./trade";
 import { STRATEGIC_KINDS } from "./types";
-import type { Aim, Alliance, AppliedChange, Because, GameEvent, GameMode, GameState, Localized, MapIndex, MapRegion, Plan, PlanEnd, PlanKind, PlanStage, Scenario, ScenarioId, War } from "./types";
-import { attackMeans, LIMITED } from "./warMeans";
+import type { Aim, Alliance, AppliedChange, Because, GameEvent, GameMode, GameState, Localized, MapIndex, MapRegion, Plan, PlanEnd, PlanKind, PlanStage, RegimeKind, Scenario, ScenarioId, TreatyArea, War } from "./types";
+import { attackMeans, LIMITED, regimeOf } from "./warMeans";
 
 /**
  * Countries with intentions. Every government that matters keeps plans that
@@ -63,9 +76,9 @@ const KEEP_ENDED = 4;
 /** A strategic plan: war, a war entered, a bloc, leaving one, peace. */
 export const isStrategic = (p: Pick<Plan, "kind">) => STRATEGIC_KINDS.includes(p.kind);
 /** New war plans a year for a government with a motive, before its appetite, reach and means. */
-const ERA_WAR: Record<ScenarioId, number> = { "1914": 0.35, "1939": 0.45, "1950": 0.25, "1964": 0.25, "1991": 0.15, "1999": 0.12, "2014": 0.12, "2022": 0.15 };
+const ERA_WAR: Record<ScenarioId, number> = { "1914": 0.35, "1933": 0.4, "1939": 0.45, "1950": 0.25, "1957": 0.25, "1964": 0.25, "1973": 0.22, "1979": 0.22, "1991": 0.15, "1999": 0.12, "2014": 0.12, "2022": 0.15 };
 /** The shortest mobilisation of each era, years. */
-const MOBILISE: Record<ScenarioId, number> = { "1914": 0.04, "1939": 0.08, "1950": 0.08, "1964": 0.08, "1991": 0.16, "1999": 0.16, "2014": 0.16, "2022": 0.16 };
+const MOBILISE: Record<ScenarioId, number> = { "1914": 0.04, "1933": 0.06, "1939": 0.08, "1950": 0.08, "1957": 0.08, "1964": 0.08, "1973": 0.1, "1979": 0.12, "1991": 0.16, "1999": 0.16, "2014": 0.16, "2022": 0.16 };
 
 /** The stages each kind of plan climbs. A war plan is a crisis: incident, escalation (tension), mobilisation, the decision at the brink, war. */
 const LADDER: Record<PlanKind, PlanStage[]> = {
@@ -127,6 +140,29 @@ interface World {
 }
 
 const strength = (w: World, tag: string) => w.power.get(tag) ?? 0;
+
+/**
+ * The anti-communist halves of divided nations, whom the ruling parties of the other camp do not recognise nor they
+ * them: the government of the other China in a Soviet treaty, or a communist Vietnam allied to Taipei, make no sense.
+ */
+const DIVIDED: Record<string, string> = { taiwan: "china", "south-korea": "north-korea", "west-germany": "east-germany", "south-vietnam": "north-vietnam" };
+
+/** Two governments that will be partners in no bloc: rival claimants of one nation, or a ruling party and the other camp's half of a divided nation. */
+export function estranged(state: Pick<GameState, "countries">, a: string, b: string): boolean {
+  if (DIVIDED[a] === b || DIVIDED[b] === a) return true;
+  const party = (t: string) => state.countries[t]?.domestic?.regime === "party" && !(t in DIVIDED);
+  return (a in DIVIDED && party(b)) || (b in DIVIDED && party(a));
+}
+
+/** Whether a province's centre lies in a treaty's area. */
+export function inArea(area: TreatyArea, at: [number, number]): boolean {
+  return AREAS[area].some(([w, s, e, n]) => at[0] >= w && at[0] <= e && at[1] >= s && at[1] <= n);
+}
+
+/** How far from a country's home its land is still home to a treaty without an area: farther lies an overseas possession (the Falklands, Goa). */
+const HOME_KM = 4500;
+/** How far a guardian's army goes over land to a war: about a closeness of 45 (engine/relations.ts), beyond it only ships take it. */
+const REACH_KM = 2250;
 const lensIn = (w: World): Lens => (w.lens ??= lensOf(w.state, w.power));
 const standoff = (w: World, p: Pick<Plan, "by" | "target" | "partners">): Standoff => standoffOf(lensIn(w), p);
 const hawkOf = (state: GameState, tag: string) => state.countries[tag]?.course?.hawk ?? 50;
@@ -146,14 +182,28 @@ function motive(state: GameState, p: Pick<Plan, "by" | "target" | "cause">): num
   return clamp(m, 0.3, 2);
 }
 
+/** How readily a patron fights a client that has declared itself independent, by the patron's regime (before its appetite and strength). */
+const KEEP_CLIENT: Record<RegimeKind, number> = { democracy: 0.2, limited: 0.4, party: 0.7, autocracy: 0.7, military: 0.8 };
+
+/** Open enemies: one distrusts the other at -50 or worse, or the tension between them is 60 or more. No bloc holds two. */
+function openEnemies(state: GameState, a: string, b: string): boolean {
+  const x = tieOf(state, a, b);
+  const y = tieOf(state, b, a);
+  return x.trust <= -50 || y.trust <= -50 || x.tension >= 60 || y.tension >= 60;
+}
+
 /**
- * Whether a military bloc's members would refuse a country: one at war, or one
- * with a claim it means (weight 50 or more) on a strong state outside the bloc
- * – a member that would drag them into its own war.
+ * Whether a military bloc's members would refuse a country: an open enemy
+ * of one of them, one at war with an enemy none of them fights already
+ * (Turkey joined NATO in 1952 while its brigade fought in Korea beside the
+ * Americans), or one with a claim it means (weight 50 or more) on a strong
+ * state outside the bloc – a member that would drag them into its own war.
  */
 function unwelcome(w: World, tag: string, bloc: Alliance): boolean {
   if (!isMilitary(bloc)) return false;
-  if (enemiesOf(w.state, tag).size > 0) return true;
+  if (bloc.members.some((m) => openEnemies(w.state, tag, m))) return true;
+  const theirs = new Set(bloc.members.flatMap((m) => [...enemiesOf(w.state, m)]));
+  if ([...enemiesOf(w.state, tag)].some((e) => !theirs.has(e))) return true;
   return (w.state.countries[tag]?.course?.aims ?? []).some((a) => (a.kind === "reclaim" || a.kind === "expand") && a.weight >= 50 && a.target && !bloc.members.includes(a.target) && strength(w, a.target) >= 0.1);
 }
 
@@ -166,6 +216,9 @@ function unwelcome(w: World, tag: string, bloc: Alliance): boolean {
 function balance(w: World, by: string, target: string, partners: string[]): number {
   return standoff(w, { by, target, partners }).ratio;
 }
+
+/** A fortnight, years: an eve's war does not fade before its day and this long after it. */
+const FORTNIGHT = 14 / 365.25;
 
 /** How the date history did it bends the dice: slower long before, much faster around it, faster after. */
 function dueFactor(due: string | undefined, at: string): number {
@@ -186,6 +239,27 @@ interface Pace {
   because?: Because;
 }
 
+/**
+ * Whether a country is fighting off another enemy than `target` now (not under a truce): with that enemy on its own
+ * soil, or attacked by a side whose strength free for that war is at least what its own side has free for it –
+ * not a border war a great power fights with a corner of its army (the Soviet Union at Khalkhin Gol in 1939 still went
+ * to war with Finland).
+ */
+function defendingElsewhere(w: World, tag: string, target: string): boolean {
+  const { state, power } = w;
+  const wars = state.wars.filter((x) => !x.truce && !x.attackers.includes(target) && !x.defenders.includes(target));
+  const free = (t: string) => (power.get(t) ?? 0) / Math.max(1, wars.filter((x) => x.attackers.includes(t) || x.defenders.includes(t)).length);
+  for (const x of wars) {
+    if (!x.defenders.includes(tag)) continue;
+    const theirs = x.attackers.reduce((s, t) => s + free(t), 0);
+    const mine = x.defenders.reduce((s, t) => s + free(t), 0);
+    if (theirs >= mine) return true;
+  }
+  const foes = enemiesOf({ wars }, tag);
+  if (!foes.size) return false;
+  return Object.values(state.regions).some((r) => r.owner === tag && (foes.has(r.controller) || (r.contested !== undefined && foes.has(r.contested))));
+}
+
 /** The pace of a plan at its stage. */
 function rates(w: World, p: Plan, at: string): Pace {
   const { state } = w;
@@ -195,11 +269,20 @@ function rates(w: World, p: Plan, at: string): Pace {
   const due = dueFactor(p.due, at);
   // History holds a plan to its date: it fades half as fast before it, and slower still around and after it.
   const slow = !p.due ? 1 : due >= 3 ? 0.3 : 0.5;
-  const era = state.scenarioId;
   const stay = { min: 0, advance: 0, fade: 0, why: "compromise" as PlanEnd };
   switch (p.kind) {
-    case "war":
-      return crisisRates(w, p, { h, hawk, reach, due, slow });
+    case "war": {
+      // A country fighting off another enemy – on its soil, or one its match – begins no new war: the plan waits and
+      // fades, history's own too (Israel, attacked by Egypt in a 1964 game, opened its 1967 front against Syria as well and
+      // lost the Negev for it).
+      if (p.target && defendingElsewhere(w, p.by, p.target)) return { min: 0, advance: 0, fade: 2, why: "outmatched" };
+      const pace = crisisRates(w, p, { h, hawk, reach, due, slow, at });
+      // The war an eve opens with is history's decision already taken: it does not fade before its day and a fortnight
+      // after, and at the brink it strikes within the week of its day; a deterrent may still stop it once that is past.
+      if (!p.begins || !p.due || yearsBetween(p.due, at) >= FORTNIGHT) return pace;
+      const strike = p.stage === "decision" && yearsBetween(at, p.due) < 8 / 365.25;
+      return { ...pace, fade: 0, ...(strike ? { advance: Math.max(pace.advance, 300) } : {}) };
+    }
     case "join": {
       const war = state.wars.find((x) => x.id === p.war);
       if (!war || !p.side) return stay;
@@ -214,7 +297,12 @@ function rates(w: World, p: Plan, at: string): Pace {
       // Going to a friend's war costs a government in trouble at home most where votes count.
       const home = homeIn(lensIn(w), p.by);
       const homeCost = (home.votes ? 0.4 : 0.2) * home.trouble;
-      const honour = clamp(0.25 + trust / 100 + hawk / 150 + (p.cause === "treaty" ? 0.25 : 0) + word - busy - homeCost - (1 - near) * 0.3 + (reachOfCourse(state, p.by) - 50) / 200, 0.05, 0.95);
+      // The enemy's bombs weigh against going, less under a treaty and less for a government with the bomb of its own or a nuclear ally (engine/atom.ts).
+      const shield = enemy ? nuclearShield(state, enemy) : 0;
+      const ownBomb = Boolean(state.countries[p.by]?.arsenal?.nuclear) || [...alliesOf(state, p.by)].some((x) => state.countries[x]?.arsenal?.nuclear);
+      const bombs = (p.cause === "treaty" ? 0.3 : 0.6) * shield * (ownBomb ? 0.5 : 1);
+      // A standing call of the world body for collective action on that side adds to the honour of going (engine/aggression.ts).
+      const honour = clamp(0.25 + trust / 100 + hawk / 150 + (p.cause === "treaty" ? 0.25 : 0) + word + calledToArms(state, p) - busy - homeCost - bombs - (1 - near) * 0.3 + (reachOfCourse(state, p.by) - 50) / 200, 0.05, 0.95);
       switch (p.stage) {
         case "tension":
           return { min: 0, advance: 3 * h * due, fade: 2 * slow, why: "compromise" };
@@ -222,7 +310,7 @@ function rates(w: World, p: Plan, at: string): Pace {
           return { min: 0, advance: 12 * honour * due, fade: 12 * (1 - honour) * slow, why: "refused", ...(homeCost >= 0.1 && homeBecause(home) ? { because: homeBecause(home) } : {}) };
         case "preparation": {
           const f = pickFade([[homeEnd(home), (home.votes ? 2.5 : 0.5) * home.trouble, homeBecause(home)]]);
-          return { min: MOBILISE[era] / 2, advance: 8 * reach * due, fade: f.fade * slow, why: f.why, ...(f.because ? { because: f.because } : {}) };
+          return { min: byEra(MOBILISE, at) / 2, advance: 8 * reach * due, fade: f.fade * slow, why: f.why, ...(f.because ? { because: f.because } : {}) };
         }
         default:
           return stay;
@@ -261,12 +349,13 @@ function rates(w: World, p: Plan, at: string): Pace {
  * mediator, trouble at home where votes count, economic pain, and at the
  * brink being outmatched or deterred by the target's friends.
  */
-function crisisRates(w: World, p: Plan, k: { h: number; hawk: number; reach: number; due: number; slow: number }): Pace {
+function crisisRates(w: World, p: Plan, k: { h: number; hawk: number; reach: number; due: number; slow: number; at: string }): Pace {
   const { state } = w;
-  const { h, hawk, reach, due, slow } = k;
+  const { h, hawk, reach, due, slow, at } = k;
   if (!p.target) return { min: 0, advance: 0, fade: 0, why: "compromise" };
-  const era = state.scenarioId;
   const t = tieOf(state, p.by, p.target);
+  // Members of one bloc are held back by the others from a war between them: braked hard, never barred (history's own less).
+  const bloc = sharedBlocs(state, p.by, p.target).length ? (p.cause === "seeded" ? 0.3 : 1) : 0;
   const m = motive(state, p);
   const s = standoff(w, p);
   const f = clamp(s.ratio - 0.3, 0.1, 1.5);
@@ -284,6 +373,9 @@ function crisisRates(w: World, p: Plan, k: { h: number; hawk: number; reach: num
   // A great power's guarantee behind the target, since the bomb: few dare a war that could draw it in.
   const g = guarantee(lensIn(w), s, p.by);
   const guaranteed = (rate: number): Parameters<typeof pickFade>[0][number] => ["deterred", rate * g.weight, g.by ? { kind: "deterrent", country: g.by } : undefined];
+  // The target's own bomb: few governments dare a war with a nuclear power, and the more warheads it has the fewer (engine/atom.ts).
+  const shield = nuclearShield(state, p.target);
+  const bombed = (rate: number): Parameters<typeof pickFade>[0][number] => ["deterred", (rate * shield) / Math.max(0.05, 1 - shield), { kind: "deterrent", country: p.target! }];
   const pace = (min: number, advance: number, parts: Parameters<typeof pickFade>[0]): Pace => {
     const x = pickFade(parts);
     return { min, advance, fade: x.fade * slow, why: x.why, ...(x.because ? { because: x.because } : {}) };
@@ -301,17 +393,19 @@ function crisisRates(w: World, p: Plan, k: { h: number; hawk: number; reach: num
       ]);
     case "preparation":
       // Mobilisation: troops to the border, partners asked. A hopeless cause and a home that will not follow show here first.
-      return pace(MOBILISE[era], 4 * reach * Math.sqrt(h) * due, [
+      return pace(byEra(MOBILISE, at), 4 * reach * Math.sqrt(h) * due, [
         [homeEnd(home), (home.votes ? 2.5 : 0.5) * home.trouble, homeBecause(home)],
+        ["compromise", 3 * bloc, undefined],
         ["economy", 1.2 * home.pain, pain],
         ["mediation", 0.8 * mediation, mediated],
         ["compromise", s.talks ? 0.8 : 0, { kind: "talks" }],
         deterrence(s, s.ratio < 0.5 ? (0.5 - s.ratio) * 3 : 0),
         guaranteed(1),
+        bombed(2),
       ]);
     case "decision": {
       // At the brink: the order to strike, or a way back.
-      const brink = ERA_BRINK[era];
+      const brink = byEra(ERA_BRINK, at);
       const compromise = ((0.4 + (s.ratio > 2 && !s.backers.length ? 0.6 : 0) + 2 * s.trade) * goodwill) / brink;
       // A hawkish government misjudges the odds: it sees itself outmatched later than a cautious one.
       // Hopelessly outmatched (a great alliance behind the target), even a hawk backs down.
@@ -323,8 +417,10 @@ function crisisRates(w: World, p: Plan, k: { h: number; hawk: number; reach: num
       const outmatched = (odds < 0.35 ? 10 : odds < 0.7 * clamp(1 - (hawk - 50) / 100, 0.5, 1.3) ? 2 : 0) + 3 * short;
       return pace(0, 6 * due * brink, [
         ["compromise", compromise, trade],
+        ["compromise", 6 * bloc, undefined],
         deterrence(s, outmatched),
         guaranteed(3),
+        bombed(6),
         ["mediation", 1.5 * mediation, mediated],
         ["compromise", s.talks ? 1 : 0, { kind: "talks" }],
         ["economy", home.pain, pain],
@@ -339,6 +435,8 @@ function crisisRates(w: World, p: Plan, k: { h: number; hawk: number; reach: num
 /** Whether a partner agrees to take part when the plan is prepared: by its trust in the planner, its appetite and its own quarrel. */
 function partnerChance(w: World, p: Plan, partner: string): number {
   const { state } = w;
+  // A neutral takes part in no one's war or bloc.
+  if (isNeutral(state, partner) && p.cause !== "seeded") return 0;
   const trust = tieOf(state, partner, p.by).trust;
   // A plan of the start date's history comes with the pledges that were given (Berlin's blank cheque to Vienna).
   const pledged = p.cause === "seeded" ? 0.2 : 0;
@@ -353,11 +451,17 @@ function partnerChance(w: World, p: Plan, partner: string): number {
 }
 
 /** Whether the enemy agrees to make peace: a dove, a beaten side, an inward-looking government, or one that seeks peace itself. */
+/** What each rung of an atomic power's escalation ladder adds to the chance its enemy grants it the peace it asks for. */
+const LADDER_PEACE = 0.08;
+
 function peaceChance(state: GameState, p: Plan, lost: Map<string, number>): number | undefined {
   const enemy = p.target;
   if (!enemy || enemy === state.player) return undefined;
   const own = (state.plans ?? []).some((x) => !x.end && x.kind === "peace" && x.by === enemy && x.war === p.war);
-  return clamp(0.25 + (1 - hawkOf(state, enemy) / 100) * 0.4 + (lost.get(enemy) ?? 0) + (reachOfCourse(state, enemy) < 35 ? 0.2 : 0) + (own ? 0.4 : 0), 0.05, 0.95);
+  // An atomic power that asks for peace from high on its escalation ladder in this war is heard: its threats, alert or strikes weigh (engine/nuclear.ts).
+  const rung = state.atom?.ladder?.[p.by];
+  const brink = rung && rung.war === p.war && rung.against === enemy ? LADDER_PEACE * rung.step : 0;
+  return clamp(0.25 + (1 - hawkOf(state, enemy) / 100) * 0.4 + (lost.get(enemy) ?? 0) + (reachOfCourse(state, enemy) < 35 ? 0.2 : 0) + (own ? 0.4 : 0) + brink, 0.05, 0.95);
 }
 
 /** A plan overtaken or made pointless by the state of the world before it moves. */
@@ -368,7 +472,8 @@ function settle(w: World, p: Plan): PlanEnd | null {
     case "war":
       if (!p.target || !stands(w, p.target)) return "target-gone";
       if (warBetween(state, p.by, p.target)) return "overtaken";
-      if (allied(state, p.by, p.target)) return "compromise";
+      // A bilateral ally is never attacked; members of a larger bloc are braked at the brink (crisisRates).
+      if (closeAllies(state, p.by, p.target)) return "compromise";
       return null;
     case "join": {
       const war = state.wars.find((x) => x.id === p.war);
@@ -389,11 +494,15 @@ function settle(w: World, p: Plan): PlanEnd | null {
         const bloc = state.alliances.find((a) => a.id === p.bloc);
         if (!bloc) return "target-gone";
         if (bloc.members.includes(p.by)) return "overtaken";
+        // A bilateral treaty takes no third party, and no treaty is signed with a government relations are broken with.
+        if (p.cause !== "seeded" && (!isOpen(bloc) || bloc.members.some((m) => relationsOf(state, p.by, m) === "broken"))) return "refused";
         return unwelcome(w, p.by, bloc) ? "refused" : null;
       }
       const partners = (p.partners ?? []).filter((x) => stands(w, x));
       if (!partners.length) return "target-gone";
-      return partners.every((x) => allied(state, p.by, x)) ? "overtaken" : null;
+      // Done when every partner already shares a bloc of this kind or a stronger one with the planner.
+      if (partners.every((x) => allied(state, p.by, x) || (p.blocKind === "pact" && pacted(state, p.by, x)))) return "overtaken";
+      return partners.every((x) => relationsOf(state, p.by, x) === "broken") ? "refused" : null;
     }
     default:
       return settlePeaceful(state, p, (tag) => stands(w, tag));
@@ -435,10 +544,12 @@ function walk(w: World, plan: Plan, steps: number, dt: number, lost: Map<string,
     }
     if (x >= fades + climbs) continue;
     p.stage = nextStage(p);
-    moved = end;
+    // An eve's war strikes on history's day when that day falls within the step.
+    const day = p.stage === "action" && p.begins && p.due && p.due >= start && p.due <= end ? p.due : end;
+    moved = day;
     // A crisis tells what drove it on: the incident it grew from, a patron's backing, a diversion from trouble at home.
     const because = p.kind === "war" && p.target ? growthBecause(state, standoff(w, p), p, p.stage) : undefined;
-    move.passed.push({ stage: p.stage, date: end, ...(because ? { because } : {}) });
+    move.passed.push({ stage: p.stage, date: day, ...(because ? { because } : {}) });
     // Partners are asked once the plan is prepared: those that refuse drop out, and a plan that needed them fails.
     if (p.stage === "preparation" && (p.kind === "war" || (p.kind === "bloc" && !p.bloc)) && p.partners?.length) {
       const refused = p.partners.filter((x) => x === state.player || roll(state.seed ?? state.id, state.turn, `partner:${p.id}:${x}`) >= partnerChance(w, p, x));
@@ -449,7 +560,7 @@ function walk(w: World, plan: Plan, steps: number, dt: number, lost: Map<string,
         if (alone) move.end = { how: "failed", why: "refused", date: end };
       }
     }
-    if (p.stage === "action") reachAction(end);
+    if (p.stage === "action") reachAction(day);
   }
   move.stage = p.stage;
   return move;
@@ -527,13 +638,17 @@ export interface PlanGate {
   /** A bloc's members as the plans allow them, or null. */
   bloc(members: string[], kind: string): string[] | null;
   accession(country: string, bloc: Alliance): boolean;
+  /** Whether a war may end as the answer says: the player's own, one a peace plan of it brings to an end this period, or one with a side left without land. */
+  peace(war: War): boolean;
 }
 
 /**
  * The check on wars and military blocs. The player's government decides its
  * own; a country born this turn or without land (a secession) is free; any
  * other comes only from a plan that reaches action this period, and a
- * government that agreed with the player this turn may join the player.
+ * government that agreed with the player this turn may join the player. A war
+ * among other governments ends only by a peace plan that reaches action, or
+ * when a side has no land left to fight from.
  */
 export function planGate(state: GameState, isNew: (tag: string) => boolean, moves = castPlans(state)): PlanGate {
   const acts = acting(state, moves);
@@ -565,8 +680,21 @@ export function planGate(state: GameState, isNew: (tag: string) => boolean, move
     },
     accession(country, bloc) {
       if (!(isMilitary(bloc) || isPact(bloc)) || country === player) return true;
+      // No treaty while relations are broken (engine/envoys.ts).
+      if (bloc.members.some((m) => relationsOf(state, country, m) === "broken")) return false;
       if (bloc.members.includes(player) && agreedWithPlayer(state, country)) return true;
       return acts.some((p) => p.kind === "bloc" && p.by === country && p.bloc === bloc.id);
+    },
+    peace(war) {
+      if (war.attackers.includes(player) || war.defenders.includes(player)) return true;
+      if (acts.some((p) => p.kind === "peace" && p.war === war.id)) return true;
+      // A side whose every member holds and fights in no province has nothing left to fight from.
+      const holding = new Set<string>();
+      for (const r of Object.values(state.regions)) {
+        holding.add(r.controller);
+        if (r.contested) holding.add(r.contested);
+      }
+      return !war.attackers.some((t) => holding.has(t)) || !war.defenders.some((t) => holding.has(t));
     },
   };
 }
@@ -597,7 +725,7 @@ export function blocName(state: GameState, kind: "alliance" | "pact", members: s
 }
 
 /** The crisis a plan belongs to: the war plan that talks were opened to defuse. */
-const crisisOfPlan = (p: Pick<Plan, "kind" | "origin">): string | undefined => (p.kind !== "war" && p.origin && !/^i\d/.test(p.origin) ? p.origin : undefined);
+const crisisOfPlan = (p: Pick<Plan, "kind" | "origin">): string | undefined => (p.kind !== "war" && p.origin && !/^[ig]\d/.test(p.origin) ? p.origin : undefined);
 
 const change = (p: Plan, stage: PlanStage, because?: Because): AppliedChange => {
   const crisis = crisisOfPlan(p);
@@ -687,18 +815,40 @@ function carryOut(next: GameState, p: Plan, move: PlanMove, ctx: { turn: number;
         mark("alliance", formed.id);
         return "carried-out";
       }
-      const members = [p.by, ...(p.partners ?? []).filter((x) => next.countries[x] && x !== next.player)];
+      // Partners fallen out with the founder or with each other since the plan was made stay out (Poland and Slovakia in 1941).
+      const members = [p.by];
+      for (const x of p.partners ?? []) if (next.countries[x] && x !== next.player && !members.some((m) => openEnemies(next, m, x))) members.push(x);
       if (members.length < 2) return "refused";
       const kind = p.blocKind ?? "alliance";
-      const bloc: Alliance = { id: `a${ctx.turn}-p${made()}`, name: blocName(next, kind, members), members, since: when, ...(kind !== "alliance" ? { kind } : {}), founder: p.by };
+      // A treaty of its time runs ten to twenty years (renewed by a new plan if the threat stands), and is kept against the threat it answers.
+      const term = 10 + Math.floor(roll(next.seed ?? next.id, ctx.turn, `term:${p.id}`) * 11);
+      const bloc: Alliance = {
+        id: `a${ctx.turn}-p${made()}`,
+        name: blocName(next, kind, members),
+        members,
+        since: when,
+        ...(kind !== "alliance" ? { kind } : {}),
+        founder: p.by,
+        until: addYears(when, term),
+        ...(p.target ? { against: p.target } : {}),
+      };
       next.alliances.push(bloc);
       p.bloc = bloc.id;
       applied.push({ kind: "alliance", alliance: bloc.id, name: bloc.name, members: [...members], plan: p.id });
+      // An alliance between partners of a pact founded in play takes its place.
+      if (kind === "alliance") {
+        for (const old of next.alliances.filter((a) => a !== bloc && a.founder && a.kind === "pact" && a.members.every((m) => members.includes(m)))) {
+          applied.push({ kind: "alliance-ended", alliance: old.id, name: old.name, members: [...old.members] });
+          next.alliances = next.alliances.filter((a) => a !== old);
+        }
+      }
       return "carried-out";
     }
     case "leave": {
       const bloc = next.alliances.find((a) => a.id === p.bloc);
       if (!bloc || !bloc.members.includes(p.by)) return "carried-out";
+      // A client's treaty with its patron ends only with its independence.
+      if (isClientBond(next, bloc)) return "refused";
       const before = [...bloc.members];
       bloc.members = bloc.members.filter((m) => m !== p.by);
       applied.push({ kind: "leave", alliance: bloc.id, name: bloc.name, country: p.by });
@@ -722,6 +872,8 @@ function carryOut(next: GameState, p: Plan, move: PlanMove, ctx: { turn: number;
         applied.push({ kind: "annex", region: id, from: r.owner, to: r.controller });
         r.owner = r.controller;
         delete r.behind;
+        // An insurgency granted land at the peace is a state from now on, not a movement.
+        if (next.countries[r.controller]?.dormant) delete next.countries[r.controller].dormant;
       }
       endWar(next, war, applied);
       return "carried-out";
@@ -789,7 +941,8 @@ function fromSeed(state: GameState, seed: PlanSeed, date: string, holders: Set<s
   let war: string | undefined = seed.war;
   switch (seed.kind) {
     case "war":
-      if (!seed.target || warBetween(state, seed.by, seed.target) || allied(state, seed.by, seed.target)) return null;
+      // History's war between members of a large bloc comes, braked (the Rio Pact's America in Panama); a bilateral ally is never attacked.
+      if (!seed.target || warBetween(state, seed.by, seed.target) || closeAllies(state, seed.by, seed.target)) return null;
       break;
     case "join": {
       const found = seededWar(state, seed.war);
@@ -896,6 +1049,10 @@ interface OpenContext {
   lost: Map<string, number>;
   /** The period's incidents, cast before it (engine/incidents.ts). */
   incidents: Incident[];
+  /** The acts of aggression this turn, judged (engine/aggression.ts). */
+  fresh: Fresh[];
+  /** Attackers put out of a bloc they shared with their victim this turn: the war, the attacker, the bloc's members left (suspendAttackers). */
+  suspended: Suspension[];
   /** The map's provinces, for the light tier's neighbours. */
   map: Record<string, MapRegion> | null;
 }
@@ -922,7 +1079,11 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
   const course = (tag: string) => (tag === player ? undefined : next.countries[tag]?.course);
   // A crisis that opens says what it grew from: the period's incident, a claim, an ambition.
   const opening = (p: Plan): Because | undefined => {
+    // The answer to an act of aggression says so: alarm at the attacker, or the world body's call over its war on the victim.
+    const answered = p.origin?.startsWith("g") ? next.aggressions?.find((a) => a.id === p.origin) : undefined;
+    if (answered) return p.cause === "treaty" ? { kind: answered.body === "un" ? "un-call" : "league-call", country: answered.against } : { kind: "aggression", country: answered.by };
     if (p.kind !== "war") return undefined;
+    if (p.cause === "independence" && p.target) return { kind: "breakaway", country: p.target };
     const i = ctx.incidents.find((x) => x.id === p.origin);
     return i ? { kind: "incident", incident: i.what, date: ctx.from.slice(0, 7) } : originOf(next, p);
   };
@@ -939,6 +1100,8 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
   const actors = [...actorsOf(next, ctx.power)].filter((t) => course(t)).sort();
   /** A side's principal: its strongest member, whose peace ends the war. */
   const principal = (side: string[]) => [...side].sort((a, b) => (ctx.power.get(b) ?? 0) - (ctx.power.get(a) ?? 0) || a.localeCompare(b))[0];
+  /** Where each country's people live, from the map once it is asked for. */
+  let centres: Map<string, [number, number]> | null | undefined;
 
   // The period's incidents land first: tension, memory, and the plan each answer opens (a war plan only while there is room for one).
   applyIncidents(
@@ -948,7 +1111,9 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
       date: ctx.to,
       open: (fields) => {
         if (fields.by === player || !next.countries[fields.by] || (fields.target && !next.countries[fields.target])) return null;
-        if (fields.kind === "war" && (!room() || busy(fields.by, "war") || live().filter((p) => p.kind === "war").length >= WAR_PLANS[era] || allied(next, fields.by, fields.target!))) return null;
+        if (fields.kind === "war" && (!room() || busy(fields.by, "war") || live().filter((p) => p.kind === "war").length >= WAR_PLANS[era] || closeAllies(next, fields.by, fields.target!))) return null;
+        // A neutral answers an incident with a war only on an attacker on its soil.
+        if (fields.kind === "war" && isNeutral(next, fields.by) && !onItsSoil(next, fields.by, fields.target!)) return null;
         if (fields.kind !== "war" && live().some((p) => p.by === fields.by && p.kind === fields.kind && p.target === fields.target)) return null;
         return open(fields);
       },
@@ -971,10 +1136,31 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
       const enemy = principal(war.attackers) === tag ? principal(war.defenders) : principal(war.attackers);
       if (enemy) open({ kind: "peace", by: tag, target: enemy, war: war.id, cause: "new-government", stage: "decision" });
     }
-    for (const bloc of next.alliances.filter((a) => isMilitary(a) && a.members.includes(tag))) {
+    for (const bloc of next.alliances.filter((a) => isMilitary(a) && a.members.includes(tag) && !isClientBond(next, a))) {
       const lead = bloc.members.filter((m) => m !== tag).sort((a, b) => (ctx.power.get(b) ?? 0) - (ctx.power.get(a) ?? 0))[0];
       if (lead && tieOf(next, tag, lead).trust < -20 && !busy(tag, "leave")) open({ kind: "leave", by: tag, bloc: bloc.id, cause: "new-government", stage: "decision" });
     }
+  }
+
+  // A client government fights its patron only in a war of independence or a civil war of its own (Artem, 5 November
+  // 2026). One turned against its patron – its trust in it at −50 or worse, or a new government there hostile to it –
+  // declares itself independent and the treaty that bound them ends; the patron lets it go or fights to keep it, as its
+  // regime, its appetite and its strength decide.
+  for (const tag of Object.keys(next.countries).sort()) {
+    const client = next.countries[tag].client;
+    // A client with no foreign course of its own reads its patron as an ally (relations.ts tieOf) and stays one.
+    if (!client || tag === player || next.countries[tag].dormant) continue;
+    const patron = client.patron;
+    const trust = tieOf(next, tag, patron).trust;
+    const fresh = ctx.changed.includes(tag);
+    if (trust > -50 && !(fresh && trust <= -20)) continue;
+    const how = next.countries[tag].domestic?.changed?.how;
+    const because: Because = trust <= -50 ? { kind: "patron", country: patron } : { kind: how === "coup" ? "coup" : how === "election" ? "election-lost" : "new-government" };
+    declareIndependence(next, tag, because, applied);
+    const pc = course(patron);
+    if (!pc || !stands(world, patron) || warBetween(next, patron, tag)) continue;
+    const keep = Math.min(0.95, KEEP_CLIENT[regimeOf(next, patron)] * clamp(pc.hawk / 50, 0.2, 2) * clamp(balance(world, patron, tag, []) - 0.5, 0, 1.5));
+    if (dice(`open:breakaway:${tag}`) < keep) open({ kind: "war", by: patron, target: tag, cause: "independence", stage: "decision" });
   }
 
   // The date's plans that wait for a war a seeded plan began (an eve's allies), in both modes, before the treaties call anyone to it.
@@ -994,14 +1180,41 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
   for (const c of applied.slice()) {
     if (c.kind !== "war" && c.kind !== "enter") continue;
     const war = next.wars.find((w) => w.id === c.war);
-    if (!war) continue;
+    // A colonial war is the metropole's alone: no treaty calls its allies against its colony's rising (engine/colonies.ts).
+    // Nor is a civil war anyone's treaty case: its own recognition, volunteers and interventions decide who comes (engine/civilWar.ts).
+    if (!war || (next.colonies ?? []).some((x) => !x.end && x.war === war.id) || civilWarOf(next, war.id)) continue;
     const inWar = (t: string) => war.attackers.includes(t) || war.defenders.includes(t);
     const call = (g: string, side: "attackers" | "defenders", cause: "treaty" | "opportunity") => {
-      // Asked once: a government already weighing this war, or that lately refused it, is not asked again.
-      if (!course(g) || inWar(g) || plans.some((p) => p.kind === "join" && p.by === g && p.war === war.id)) return;
+      // Asked once: a government already weighing this war, or that lately refused it, is not asked again. A neutral is not asked.
+      if (!course(g) || inWar(g) || isNeutral(next, g) || plans.some((p) => p.kind === "join" && p.by === g && p.war === war.id)) return;
       if (war[side === "attackers" ? "defenders" : "attackers"].some((e) => allied(next, g, e))) return;
       const enemy = principal(war[side === "attackers" ? "defenders" : "attackers"]);
+      // A treaty's call against an atomic power is weighed against its bomb: by the dice at its deterrence, half as often by a guardian with bombs of its own.
+      if (cause === "treaty" && enemy && dice(`treaty:atom:${g}:${war.id}`) < nuclearShield(next, enemy) * (hasBomb(next, g) ? 0.5 : 1)) return;
       open({ kind: "join", by: g, war: war.id, side, ...(enemy ? { target: enemy } : {}), cause, stage: cause === "treaty" ? "decision" : "tension" });
+    };
+    // Where the blow falls on a defender: what its enemies hold or fight in of its land, else its province nearest them.
+    const land = new Map<string, string[]>();
+    const landOf = (m: string) => {
+      let ids = land.get(m);
+      if (!ids) land.set(m, (ids = warLand(next, war, m, ctx.map, () => (centres ??= ctx.map ? countryCentres(next, ctx.map) : null))));
+      return ids;
+    };
+    // Whether a guardian's bond to a defender binds it here: a treaty in its area, any other bond on the defender's home land only.
+    const binds = (g: string, m: string) => {
+      if (!ctx.map) return true;
+      const ids = landOf(m);
+      if (!ids.length) return true;
+      const blocs = next.alliances.filter((a) => isMilitary(a) && a.members.includes(g) && a.members.includes(m));
+      const areas = blocs.map(areaOf);
+      const home = (centres ??= countryCentres(next, ctx.map)).get(m);
+      return ids.some((id) => {
+        const at = ctx.map![id]?.at;
+        if (!at) return true;
+        if (areas.some((a) => a && inArea(a, at))) return true;
+        // A bond with no area of its own – a bilateral treaty, a pledge – covers the defender's home, not an overseas possession.
+        return (areas.some((a) => !a) || !blocs.length) && (!home || distanceKm(home, at) <= HOME_KM);
+      });
     };
     // A defender's guardians: its allies and those who gave their word to protect it – but not one already fighting
     // another war at its side, which is not dragged into a second over the same country (Britain and France, at war
@@ -1019,7 +1232,34 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
     const follow = (g: string, side: "attackers" | "defenders", enemy: string) => {
       const gc = course(g);
       if (!gc || gc.hawk < 55 || tieOf(next, g, enemy).tension < 40) return;
+      // Nobody joins a war against a nuclear power for the opportunity, unless it has the bomb itself (engine/atom.ts).
+      if (nuclearShield(next, enemy) >= 0.2 && !next.countries[g]?.arsenal?.nuclear) return;
       if (room() && dice(`open:join:${g}:${war.id}`) < 0.5) call(g, side, "opportunity");
+    };
+    // Whether a guardian can bring its forces to the war: over land to where the blow falls (or to a defender close by,
+    // without the map), or with the ships to reach the enemy (engine/warMeans.ts).
+    const reaches = (g: string, m: string, enemy: string) => {
+      if (attackMeans(next, g, enemy).reach >= LIMITED) return true;
+      if (!ctx.map) return tieOf(next, g, m).near >= 45 || Boolean(tieOf(next, g, m).land);
+      const home = (centres ??= countryCentres(next, ctx.map)).get(g);
+      return !home || landOf(m).some((id) => {
+        const at = ctx.map![id]?.at;
+        return !at || distanceKm(home, at) <= REACH_KM;
+      });
+    };
+    // A guardian bound here is called by treaty – unless it cannot reach the war at all (the Falklands from Brussels): it
+    // declares itself at most. One whose treaty does not reach this land may still follow by opportunity.
+    // A bloc holds a member that attacked another to account only where the rest of it outweighs the attacker: no Latin
+    // American state fought the United States over Panama, nor a Warsaw Pact state the Soviet Union over Prague.
+    const overawed = (g: string, m: string) => {
+      const out = ctx.suspended.filter((s) => s.war === war.id && s.members.includes(g) && s.members.includes(m));
+      // Bound to the victim by another bloc or its own word, a guardian is called as ever.
+      if (!out.length || sharedBlocs(next, g, m).some((b) => !out.some((s) => s.bloc === b.id)) || next.countries[g]?.course?.aims.some((a) => a.kind === "protect" && a.target === m)) return false;
+      return out.every((s) => s.members.reduce((sum, x) => sum + (ctx.power.get(x) ?? 0), 0) <= (ctx.power.get(s.by) ?? 0));
+    };
+    const guard = (g: string, m: string, enemy: string) => {
+      if (!binds(g, m) || overawed(g, m)) follow(g, "defenders", enemy);
+      else if (reaches(g, m, enemy)) call(g, "defenders", "treaty");
     };
     if (c.kind === "enter") {
       const other = c.side === "attackers" ? "defenders" : "attackers";
@@ -1033,13 +1273,13 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
       for (const m of war[other]) {
         if (joiners.has(m) && tieOf(next, c.country, m).near < 60) continue;
         for (const g of guardians(m)) {
-          if (other === "defenders") call(g, other, "treaty");
+          if (other === "defenders") guard(g, m, c.country);
           else follow(g, other, c.country);
         }
       }
       continue;
     }
-    for (const m of war.defenders) for (const g of guardians(m)) call(g, "defenders", "treaty");
+    for (const m of war.defenders) for (const g of guardians(m)) guard(g, m, principal(war.attackers));
     for (const a of war.attackers) for (const g of [...alliesOf(next, a)].sort()) follow(g, "attackers", war.defenders[0]);
   }
 
@@ -1071,12 +1311,17 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
   for (const [tag, sum] of [...provoked].sort((a, b) => a[0].localeCompare(b[0]))) {
     const c = course(tag);
     if (!c || sum < 25 || warBetween(next, tag, player) || live().some((p) => p.kind === "war" && p.by === tag && p.target === player)) continue;
+    if (isNeutral(next, tag) && !onItsSoil(next, tag, player)) continue;
     if (balance(world, tag, player, []) < 0.3) continue;
-    if (dice(`provoked:${tag}`) < clamp((sum / 50) * (c.hawk / 50), 0, 0.9)) open({ kind: "war", by: tag, target: player, cause: "incident", stage: "decision" });
+    // A player with the bomb is provoked far less safely (engine/atom.ts).
+    if (dice(`provoked:${tag}`) < clamp((sum / 50) * (c.hawk / 50), 0, 0.9) * (1 - nuclearShield(next, player))) open({ kind: "war", by: tag, target: player, cause: "incident", stage: "decision" });
   }
 
   // War-weary principals seek peace: sooner when their friends turn away from them or trouble grows at home, later while the world stands by them.
   for (const war of next.wars) {
+    // A colonial war ends as the colony's way does: the metropole gives in, crushes the rising or lets it go (engine/colonies.ts);
+    // a civil war as its own engine ends it (engine/civilWar.ts).
+    if ((next.colonies ?? []).some((x) => !x.end && x.war === war.id) || civilWarOf(next, war.id)) continue;
     for (const [tag, enemy] of [
       [principal(war.attackers), principal(war.defenders)],
       [principal(war.defenders), principal(war.attackers)],
@@ -1100,10 +1345,24 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
     }
   }
 
+  // A bloc founded against a threat ends with it: at once when the threat is gone, and a member leaves when none of them
+  // fears it any more – about two years after (a treaty past its term lapses, engine/foreign.ts).
+  for (const bloc of next.alliances.filter((a) => a.against && (isMilitary(a) || isPact(a)) && !isClientBond(next, a))) {
+    const target = bloc.against!;
+    if (!stands(world, target)) {
+      applied.push({ kind: "alliance-ended", alliance: bloc.id, name: bloc.name, members: [...bloc.members] });
+      next.alliances = next.alliances.filter((a) => a !== bloc);
+      continue;
+    }
+    if (bloc.members.some((m) => tieOf(next, m, target).threat >= 30)) continue;
+    const by = bloc.members.filter((m) => course(m) && !busy(m, "leave")).sort((a, b) => (ctx.power.get(a) ?? 0) - (ctx.power.get(b) ?? 0) || a.localeCompare(b))[0];
+    if (by && dice(`open:dissolve:${bloc.id}`) < chance(0.5)) open({ kind: "leave", by, bloc: bloc.id, cause: "threat", stage: "decision" });
+  }
+
   // A government betrayed by its bloc's leader thinks of leaving it.
   for (const tag of actors) {
     if (busy(tag, "leave")) continue;
-    for (const bloc of next.alliances.filter((a) => (isMilitary(a) || isPact(a)) && a.members.includes(tag))) {
+    for (const bloc of next.alliances.filter((a) => (isMilitary(a) || isPact(a)) && a.members.includes(tag) && !isClientBond(next, a))) {
       const lead = bloc.members.filter((m) => m !== tag).sort((a, b) => (ctx.power.get(b) ?? 0) - (ctx.power.get(a) ?? 0))[0];
       if (!lead || tieOf(next, tag, lead).trust > -50) continue;
       if (dice(`open:leave:${tag}:${bloc.id}`) < chance(1)) {
@@ -1121,6 +1380,7 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
     const wars = live().filter((p) => p.kind === "war").length;
     if (wars >= WAR_PLANS[era] || !room()) break;
     if (busy(tag, "war") || c.reach < 20 || next.wars.filter((x) => x.attackers.includes(tag) || x.defenders.includes(tag)).length >= 2) continue;
+    const neutral = isNeutral(next, tag);
     const targets = new Map<string, { cause: Plan["cause"]; m: number }>();
     for (const a of c.aims) {
       if ((a.kind === "reclaim" || a.kind === "expand") && a.target) targets.set(a.target, { cause: a.kind === "reclaim" ? "claim" : "ambition", m: a.weight / 50 });
@@ -1130,10 +1390,17 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
     const appetite = home.votes ? 1 - 0.6 * home.trouble : 1 + 0.5 * home.trouble;
     let best: { target: string; cause: Plan["cause"]; rate: number } | null = null;
     for (const [target, { cause, m }] of [...targets].sort((a, b) => a[0].localeCompare(b[0]))) {
-      if (target === tag || !stands(w, target) || allied(next, tag, target) || warBetween(next, tag, target) || balance(w, tag, target, []) < 0.35) continue;
+      if (target === tag || !stands(w, target) || closeAllies(next, tag, target) || warBetween(next, tag, target) || balance(w, tag, target, []) < 0.35) continue;
+      // A neutral plans a war only on an attacker on its soil.
+      if (neutral && !onItsSoil(next, tag, target)) continue;
       const f = clamp(balance(w, tag, target, []) - 0.3, 0.1, 1.5);
       // Goodwill between the two holds a claim back: détente made no difference to China's crises over Taiwan before.
-      const rate = (ERA_WAR[era] * mode * clamp(Math.max(m, motive(next, { by: tag, target, cause })), 0.3, 2) * (c.hawk / 50) * (c.reach / 50) * f * appetite) / goodwillOf(next, tag, target);
+      // A nuclear power is far less likely to be attacked: its bombs weigh on every plan against it (engine/atom.ts).
+      // Members of one bloc seldom come to a quarrel worth a war (the crisis is braked at every step too).
+      const rate =
+        ((byEra(ERA_WAR, ctx.to) * mode * clamp(Math.max(m, motive(next, { by: tag, target, cause })), 0.3, 2) * (c.hawk / 50) * (c.reach / 50) * f * appetite) / goodwillOf(next, tag, target)) *
+        (1 - nuclearShield(next, target)) *
+        (allied(next, tag, target) ? 0.3 : 1);
       if (!best || rate > best.rate) best = { target, cause, rate };
     }
     if (!best || dice(`open:war:${tag}:${best.target}`) >= chance(best.rate)) continue;
@@ -1146,7 +1413,6 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
 
   // Blocs: against the threat a government fears most, with others who fear it too, or by joining a bloc that already stands against it.
   // How close two countries are, 0–100, from where their people live (the map), else as a course's tie says.
-  let centres: Map<string, [number, number]> | null | undefined;
   const nearOf = (a: string, b: string) => {
     centres ??= ctx.map ? countryCentres(next, ctx.map) : null;
     const pa = centres?.get(a);
@@ -1158,14 +1424,31 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
     const c = course(tag)!;
     if (busy(tag, "bloc")) continue;
     const [threat, t] = Object.entries(c.ties).sort((a, b) => b[1].threat - a[1].threat || a[0].localeCompare(b[0]))[0] ?? [];
-    if (!threat || !t || t.threat < 50 || allied(next, tag, threat)) continue;
+    // A country alarmed by the threat's attacks of the past year looks for allies sooner (engine/aggression.ts).
+    const alarm = threat ? alarmOf(next, tag, threat) : 0;
+    if (!threat || !t || t.threat < (alarm >= 0.5 ? 40 : 50) || allied(next, tag, threat)) continue;
+    // A neutral seeks no allies – unless a grave attack next door makes it give its neutrality up for an open alliance
+    // (Finland and Sweden in 2022); it founds no bloc of its own.
+    const neutral = isNeutral(next, tag);
+    if (neutral && (alarm < 1 || t.threat < 60)) continue;
     const covered = [...alliesOf(next, tag)].some((x) => tieOf(next, x, threat).threat >= 35);
     if (covered) continue;
-    if (dice(`open:bloc:${tag}:${threat}`) >= chance(0.5 * (t.threat / 50) * mode)) continue;
+    if (dice(`open:bloc:${tag}:${threat}`) >= chance(0.5 * (t.threat / 50) * mode * (1 + alarm))) continue;
     // A bloc is joined in its own part of the world: near at least one member (their people within ~2,250 km), or not at
     // all (Japan and South Korea joined NATO against China in the statistics runs); far away, a government founds its own.
+    // Only an open bloc takes members – no one joins a bilateral treaty – and none where relations with a member are broken
+    // or a member is the other half of a divided nation.
     const existing = next.alliances
-      .filter((a) => isMilitary(a) && !a.members.includes(tag) && !a.members.includes(threat) && a.members.some((m) => tieOf(next, m, threat).threat >= 50) && a.members.some((m) => nearOf(tag, m) >= 45))
+      .filter(
+        (a) =>
+          isMilitary(a) &&
+          isOpen(a) &&
+          !a.members.includes(tag) &&
+          !a.members.includes(threat) &&
+          a.members.some((m) => tieOf(next, m, threat).threat >= 50) &&
+          a.members.some((m) => nearOf(tag, m) >= 45) &&
+          !a.members.some((m) => estranged(next, tag, m) || relationsOf(next, tag, m) === "broken"),
+      )
       .find((a) => {
         const lead = [...a.members].sort((x, y) => (ctx.power.get(y) ?? 0) - (ctx.power.get(x) ?? 0))[0];
         return tieOf(next, tag, lead).trust >= 10;
@@ -1174,13 +1457,35 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
       if (!unwelcome(w, tag, existing)) open({ kind: "bloc", by: tag, target: threat, bloc: existing.id, cause: "threat", stage: "tension" });
       continue;
     }
-    // Its partners too come from its own part of the world (Egypt founded a pact with Poland and Romania in 1940).
-    const partners = actors
-      .filter((x) => x !== tag && x !== threat && !allied(next, x, threat) && !warBetween(next, tag, x) && tieOf(next, tag, x).trust >= 0 && tieOf(next, x, threat).threat >= 35 && nearOf(tag, x) >= 45)
-      .sort((a, b) => tieOf(next, b, threat).threat * (ctx.power.get(b) ?? 0) - tieOf(next, a, threat).threat * (ctx.power.get(a) ?? 0))
-      .slice(0, 2);
+    if (neutral) continue;
+    // Its partners too come from its own part of the world (Egypt founded a pact with Poland and Romania in 1940): no
+    // neutral, none it has broken relations with, none already bound to it by a bloc as strong, and none already planning
+    // a bloc with it (one plan for a pair). Two at most, and never two open enemies of each other.
+    const blocKind = t.threat >= 65 ? "alliance" : "pact";
+    const partners: string[] = [];
+    for (const x of actors
+      .filter(
+        (x) =>
+          x !== tag &&
+          x !== threat &&
+          !allied(next, x, threat) &&
+          !warBetween(next, tag, x) &&
+          tieOf(next, tag, x).trust >= 0 &&
+          tieOf(next, x, threat).threat >= 35 &&
+          nearOf(tag, x) >= 45 &&
+          !isNeutral(next, x) &&
+          !estranged(next, tag, x) &&
+          relationsOf(next, tag, x) !== "broken" &&
+          !allied(next, tag, x) &&
+          !(blocKind === "pact" && pacted(next, tag, x)) &&
+          !live().some((q) => q.kind === "bloc" && !q.bloc && q.by === x && q.partners?.includes(tag)),
+      )
+      .sort((a, b) => tieOf(next, b, threat).threat * (ctx.power.get(b) ?? 0) - tieOf(next, a, threat).threat * (ctx.power.get(a) ?? 0))) {
+      if (partners.length >= 2) break;
+      if (![tag, ...partners].some((p) => openEnemies(next, p, x))) partners.push(x);
+    }
     if (!partners.length) continue;
-    open({ kind: "bloc", by: tag, target: threat, partners, blocKind: t.threat >= 65 ? "alliance" : "pact", cause: "threat", stage: "tension" });
+    open({ kind: "bloc", by: tag, target: threat, partners, blocKind, cause: "threat", stage: "tension" });
   }
 
   // Vultures: a claim on a country that is losing its war is a reason to enter it.
@@ -1190,9 +1495,9 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
         if ((lost.get(x) ?? 0) < 0.15) continue;
         for (const tag of actors) {
           const c = course(tag)!;
-          if (!room() || war.attackers.includes(tag) || war.defenders.includes(tag) || allied(next, tag, x) || busy(tag, "join")) continue;
+          if (!room() || war.attackers.includes(tag) || war.defenders.includes(tag) || allied(next, tag, x) || busy(tag, "join") || isNeutral(next, tag)) continue;
           if (!c.aims.some((a) => (a.kind === "reclaim" || a.kind === "expand") && a.target === x)) continue;
-          if (dice(`open:vulture:${tag}:${war.id}`) < chance(c.hawk / 50)) {
+          if (dice(`open:vulture:${tag}:${war.id}`) < chance(c.hawk / 50) * (1 - nuclearShield(next, x))) {
             open({ kind: "join", by: tag, war: war.id, side: side === "attackers" ? "defenders" : "attackers", target: x, cause: "opportunity", stage: "tension" });
           }
         }
@@ -1213,6 +1518,11 @@ function openPlans(before: GameState, next: GameState, ctx: OpenContext, applied
   }
 
   // Peaceful decisions, for every government with land: policies at home, sanctions, trade agreements, talks (engine/policies.ts).
+  // The world's answer to aggression: sanctions and armament after each new act, the world body's resolutions and what they call for (engine/aggression.ts).
+  answerAggression(next, { turn: ctx.turn, from: ctx.from, to: ctx.to, power: ctx.power, holders: ctx.holders, map: ctx.map, dice, open, fresh: ctx.fresh }, applied);
+  // The world body takes in the states that came free, and China's seat passes to Beijing on its day.
+  growWorldBody(next, { turn: ctx.turn, to: ctx.to, years: ctx.years, holders: ctx.holders }, applied);
+
   openPeaceful(next, { turn: ctx.turn, to: ctx.to, years: ctx.years, power: ctx.power, holders: ctx.holders, map: ctx.map, changed: ctx.changed, dice, open });
 }
 
@@ -1230,8 +1540,6 @@ export function advanceIntentions(
 ): void {
   if (!next.plans) return;
   easeTies(next, ctx.years);
-  learnFromTurn(before, next, applied, ctx.to);
-  const raised = incidentsFromEvents(next, ctx.events);
   const holders = landHolders(next);
   const power = powers(next, holders);
   // Courses are judged at the end of the period.
@@ -1239,9 +1547,16 @@ export function advanceIntentions(
   next.date = ctx.to;
   // Programmes that ran out end before new ones are weighed.
   endProgrammes(next, ctx.to);
+  // A state that only now matters – a small one attacked this turn – has a course before the turn's deeds are remembered.
   ensureCourses(next, power);
-  // A state an incident draws into a war plan or talks keeps a course from now on, as any state in a plan does.
+  learnFromTurn(before, next, applied, ctx.to);
+  // An attacker that struck an ally is put out of the blocs it shared with its victim, so the rest are called to the victim's side.
+  const suspended = suspendAttackers(next, applied);
   const incidents = ctx.incidents ?? [];
+  // The engine's own incidents of the period are told by the game master; its story of them raises no tension twice.
+  const told = new Set(incidents.map(incidentParties).filter((x) => x.length === 2).map(([a, b]) => (a < b ? `${a}|${b}` : `${b}|${a}`)));
+  const raised = incidentsFromEvents(next, ctx.events, told);
+  // A state an incident draws into a war plan or talks keeps a course from now on, as any state in a plan does.
   const seeds = intentionsOf(next.scenarioId, next.variant);
   let occupied: ReturnType<typeof occupiedBy> | undefined;
   for (const tag of [...new Set(incidents.flatMap(incidentParties))].sort()) {
@@ -1250,10 +1565,75 @@ export function advanceIntentions(
     c.course = freshCourse(next, tag, seededFor(next, seeds, tag), ctx.to, (occupied ??= occupiedBy(next)));
   }
   const changed = newGovernments(next, ctx.from);
+  // The turn's acts of aggression are judged before the courses look at the world again: condemnation, arms, pledges (engine/aggression.ts).
+  const fresh = noteAggression(before, next, applied, { turn: ctx.turn, from: ctx.from, to: ctx.to, power, map: ctx.regions });
   refreshCourses(next, ctx.regions, power, ctx.neighbors);
-  openPlans(before, next, { turn: ctx.turn, from: ctx.from, to: ctx.to, years: ctx.years, power, holders, raised, changed, lost: lostShares(next, ctx.regions), incidents, map: ctx.regions }, applied);
+  openPlans(before, next, { turn: ctx.turn, from: ctx.from, to: ctx.to, years: ctx.years, power, holders, raised, changed, lost: lostShares(next, ctx.regions), incidents, map: ctx.regions, fresh, suspended }, applied);
   next.date = at;
   next.plans = next.plans.filter((p) => !p.end || ctx.turn - p.end.turn < KEEP_ENDED);
+}
+
+/** The civil war a war is, if it is one (engine/civilWar.ts). */
+const civilWarOf = (state: Pick<GameState, "civilWars">, war: string) => (state.civilWars ?? []).some((cw) => !cw.end && cw.war === war);
+
+/**
+ * The land a war on a defender is about: what its enemies hold or fight in of its land, else – nothing taken yet – its
+ * province nearest its enemies' home, where the blow falls (the Falklands, not London).
+ */
+function warLand(state: GameState, war: War, defender: string, map: Record<string, MapRegion> | null, centres: () => Map<string, [number, number]> | null): string[] {
+  const enemy = war.attackers.includes(defender) ? war.defenders : war.attackers;
+  const held = Object.entries(state.regions)
+    .filter(([, r]) => r.owner === defender && (enemy.includes(r.controller) || (r.contested !== undefined && enemy.includes(r.contested))))
+    .map(([id]) => id);
+  if (held.length || !map) return held;
+  const homes = enemy.map((e) => centres()?.get(e)).filter((x): x is [number, number] => Boolean(x));
+  if (!homes.length) return [];
+  let best: string | undefined;
+  let bestKm = Infinity;
+  for (const [id, r] of Object.entries(state.regions)) {
+    const at = r.owner === defender ? map[id]?.at : undefined;
+    if (!at) continue;
+    const km = Math.min(...homes.map((h) => distanceKm(h, at)));
+    if (km < bestKm || (km === bestKm && best !== undefined && id < best)) {
+      best = id;
+      bestKm = km;
+    }
+  }
+  return best ? [best] : [];
+}
+
+/**
+ * An attack on an ally: the attacker is put out of every military bloc it shared with its victim (a bilateral treaty so
+ * broken ends), so the bloc's other members are no longer bound to it and are called to the victim's side. The victim
+ * remembers the broken bond (engine/relations.ts learnFromTurn).
+ */
+interface Suspension {
+  war: string;
+  by: string;
+  bloc: string;
+  members: string[];
+}
+
+function suspendAttackers(next: GameState, applied: AppliedChange[]): Suspension[] {
+  const out: Suspension[] = [];
+  for (const c of applied.slice()) {
+    if (c.kind !== "war") continue;
+    const war = next.wars.find((w) => w.id === c.war);
+    if (!war || civilWarOf(next, war.id)) continue;
+    for (const a of war.attackers) {
+      for (const bloc of next.alliances.filter((x) => isMilitary(x) && x.members.includes(a) && war.defenders.some((d) => x.members.includes(d)))) {
+        if (bloc.members.length <= 2) {
+          applied.push({ kind: "alliance-ended", alliance: bloc.id, name: bloc.name, members: [...bloc.members] });
+          next.alliances = next.alliances.filter((x) => x !== bloc);
+          continue;
+        }
+        bloc.members = bloc.members.filter((m) => m !== a);
+        applied.push({ kind: "leave", alliance: bloc.id, name: bloc.name, country: a });
+        out.push({ war: war.id, by: a, bloc: bloc.id, members: [...bloc.members] });
+      }
+    }
+  }
+  return out;
 }
 
 const STAGE_TEXT: Record<PlanKind, Partial<Record<PlanStage, string>>> = {
@@ -1295,6 +1675,8 @@ const CAUSE_TEXT: Record<Plan["cause"], string> = {
   politics: "politics at home",
   trade: "trade",
   tension: "tension between them",
+  aggression: "an answer to another's aggression",
+  independence: "a client government breaking away",
 };
 
 const END_TEXT: Record<PlanEnd, string> = {
@@ -1405,15 +1787,18 @@ export function describeIntentions(state: GameState, name: (tag: string) => stri
     }
     lines.push(`- ${who(p.by)} ${what} (${origin ? becauseEn(origin, name) : CAUSE_TEXT[p.cause]}): ${now}${refused}${note}`);
   }
-  // The sharpest tensions besides the crises already told.
+  // The sharpest tensions besides the crises already told, each pair once, from the side that feels it most.
   const crisisPairs = new Set(crises.flatMap((p) => [`${p.by}|${p.target}`, `${p.target}|${p.by}`]));
-  const pairs: { a: string; b: string; tension: number; trust: number }[] = [];
+  const byPair = new Map<string, { a: string; b: string; tension: number; trust: number }>();
   for (const c of Object.values(state.countries)) {
     for (const [other, t] of Object.entries(c.course?.ties ?? {})) {
-      if (t.tension >= 40 && !warBetween(state, c.tag, other) && !crisisPairs.has(`${c.tag}|${other}`)) pairs.push({ a: c.tag, b: other, tension: t.tension, trust: t.trust });
+      if (t.tension < 40 || warBetween(state, c.tag, other) || crisisPairs.has(`${c.tag}|${other}`)) continue;
+      const key = c.tag < other ? `${c.tag}|${other}` : `${other}|${c.tag}`;
+      const had = byPair.get(key);
+      if (!had || t.tension > had.tension || (t.tension === had.tension && c.tag < had.a)) byPair.set(key, { a: c.tag, b: other, tension: t.tension, trust: t.trust });
     }
   }
-  const tensions = pairs.sort((x, y) => y.tension - x.tension || x.a.localeCompare(y.a)).slice(0, 5);
+  const tensions = [...byPair.values()].sort((x, y) => y.tension - x.tension || x.a.localeCompare(y.a)).slice(0, 5);
   const belligerents = new Set(state.wars.flatMap((w) => [...w.attackers, ...w.defenders]));
   const inward = Object.values(state.countries)
     .filter((c) => c.course && c.course.reach < 30 && !belligerents.has(c.tag) && [...belligerents].some((b) => allied(state, c.tag, b) || (c.course!.ties[b]?.trust ?? 0) >= 30))
@@ -1422,10 +1807,11 @@ export function describeIntentions(state: GameState, name: (tag: string) => stri
   const rel = relevanceOf(state, power, map?.neighbors);
   const peaceful = describePeaceful(state, moves, power, who, rel);
   const incidents = describeIncidents(castIncidents(state, map?.regions, map?.neighbors), name, rel);
-  if (!lines.length && !tensions.length && !inward.length && !peaceful.length && !incidents.length) return [];
+  const answer = describeAggression(state, name);
+  if (!lines.length && !tensions.length && !inward.length && !peaceful.length && !incidents.length && !answer.length) return [];
   const out = ["", "INTENTIONS ABROAD (the engine's plans and the stage each reaches this period, already decided – tell them in the story; wars, war entries and military alliances or pacts among other governments come only from here, any other is dropped; a war plan is a crisis, with what spurs it on and holds it back):"];
   out.push(...(lines.length ? lines : ["- no plan is under way"]));
-  out.push(...incidents, ...peaceful);
+  out.push(...incidents, ...peaceful, ...answer);
   if (tensions.length) out.push(`SHARPEST TENSIONS (tension, trust): ${tensions.map((x) => `${x.a} → ${x.b} ${x.tension}, ${x.trust}`).join("; ")}`);
   if (inward.length) out.push(`TURNED INWARD (crisis or weariness: they help their friends at war less): ${inward.map((c) => `${who(c.tag)} reach ${c.course!.reach}`).join("; ")}`);
   return out;

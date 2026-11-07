@@ -1,30 +1,26 @@
 "use client";
 
-import { Atom, MapPin, Plus } from "lucide-react";
 import { useState } from "react";
 import { ui } from "@/components/ui/classes";
-import DoneButton from "@/components/ui/DoneButton";
-import { divisionsOf, menOf, tally } from "@/engine/army";
-import { availableKinds, combatPower, enemiesOf, needsOf, procurement } from "@/engine/arsenal";
-import { yearOf } from "@/engine/calendar";
 import type { Accounts } from "@/engine/economy";
-import { fogOn, foreignView } from "@/engine/fog";
-import { shownStage } from "@/engine/intentions";
-import { planKindKey, planStageKey } from "./changes";
-import { provinceName } from "@/engine/provinces";
-import { WEAPON_KINDS, type GameState, type MapIndex, type MapRegion, type WeaponKind } from "@/engine/types";
+import type { ArmyOrder, GameState, MapIndex, MapRegion } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
-import { ARMS_ICONS } from "./armsText";
-import RefineButton from "./RefineButton";
-import WarMeans from "./WarMeans";
+import { usePreference } from "@/lib/preferences";
+import ArmyCommand from "./army/ArmyCommand";
+import ArmyForces from "./army/ArmyForces";
+import ArmyFronts from "./army/ArmyFronts";
+import ArmyLosses from "./army/ArmyLosses";
+import { ARMY_SECTIONS, playerWars, type ArmySection, type ShowTurn } from "./army/common";
+import { isFrontChange } from "./changes";
+import type { Suggest } from "./Suggestions";
 
 interface ArmyPanelProps {
   state: GameState;
   accounts?: Accounts;
   /** The map's provinces, for their names. */
   regions?: Record<string, MapRegion>;
-  /** The map, for each side's reach in a war (engine/warMeans.ts). */
+  /** The map, for each side's reach in a war (engine/warMeans.ts) and its fronts' theatres. */
   index?: MapIndex | null;
   disabled: boolean;
   /** The game master is describing the army. */
@@ -33,345 +29,78 @@ interface ArmyPanelProps {
   onLearn: () => void;
   /** Show these provinces on the map. */
   onShowRegions: (ids: string[]) => void;
+  /** Show a turn's changes on the map, as the chronicle does, or some provinces of it. */
+  onShowTurn?: ShowTurn;
+  /** The turn whose front changes the fronts section shows; null for the latest (the report's link sets it). */
+  frontTurn?: number | null;
+  onFrontTurn?: (turn: number | null) => void;
   /** Add an order the player wrote to the turn's orders; false when it could not be added. */
   onOrder: (order: string) => boolean;
+  /** Names from the game master for a rename by order (engine/suggest.ts); missing without one. */
+  onSuggest?: Suggest;
+  /** Give a formation an order for the coming turn, or take it back (engine/formations.ts). */
+  onArmyOrder?: (order: ArmyOrder) => void;
+  onCancelArmyOrder?: (war: string, unit: string) => void;
 }
 
 /**
- * The player's army: its soldiers by training, its weapons as the army's
- * books count them, its armies as the game master last described them,
- * and, at war, the fronts, each side's strength, the losses and the plans
- * known — with an offensive the player can order right there.
+ * The player's army in four sections, chosen at the top and remembered in
+ * this browser: its forces (soldiers by training, weapons by kind and type,
+ * their technology and what industry was told to build), the fronts and
+ * their movements (the turn's changes in full, each war's pace, means,
+ * outlook and theatres, each formation's turn, an offensive to order), what
+ * each war has cost, and the command (the formations the engine fights with and
+ * the orders to them, the organisation and its headquarters, the general's own).
  */
-export default function ArmyPanel({ state, accounts, regions, index, disabled, learning, onLearn, onShowRegions, onOrder }: ArmyPanelProps) {
-  const { t, text, money, locale } = useI18n();
-  const [target, setTarget] = useState("");
-  const [order, setOrder] = useState("");
-  const [refused, setRefused] = useState(false);
+export default function ArmyPanel({ state, accounts, regions, index, disabled, learning, onLearn, onShowRegions, onShowTurn, frontTurn, onFrontTurn, onOrder, onArmyOrder, onCancelArmyOrder, onSuggest }: ArmyPanelProps) {
+  const { t } = useI18n();
+  const [saved, setSaved] = usePreference("armySection");
+  const [ownTurn, setOwnTurn] = useState<number | null>(null);
+  const section: ArmySection = (ARMY_SECTIONS as readonly string[]).includes(saved) ? (saved as ArmySection) : "forces";
   const player = state.countries[state.player];
-  const arsenal = player?.arsenal;
-  const can = new Set(availableKinds(state));
-  const buy = procurement(state);
-  const shortages = new Set(accounts?.shortages ?? []);
-  const slowed = [...new Set(WEAPON_KINDS.flatMap((k) => needsOf(k).filter((r) => shortages.has(r))))];
-  const game = state.seed ?? state.id;
-  const num = (n: number) => n.toLocaleString(locale);
-  const count = (n: number, key: string, unit: "thousands" | "pieces" = "pieces") => num(tally(n, game, state.turn, `${state.player}:${key}`, unit));
-  const country = (tag: string) => text(state.countries[tag]?.name ?? tag);
-  const place = (id: string) => (regions?.[id] ? provinceName(regions[id], locale) : id);
-  const year = yearOf(state.date);
-  const enemies = enemiesOf(state).get(state.player) ?? new Set<string>();
-  const wars = state.wars.filter((w) => !w.truce && (w.attackers.includes(state.player) || w.defenders.includes(state.player)));
-  const organisation = arsenal?.organisation;
+  if (!player?.arsenal || !player.economy) return <p className="text-xs font-medium text-muted">{t("arms.none")}</p>;
 
-  if (!arsenal || !player?.economy) return <p className="text-xs font-medium text-muted">{t("arms.none")}</p>;
-
-  const troops = player.economy.troops;
-  const men = menOf(state, player);
-  const callable = Math.max(0, (accounts?.mobilisable ?? 0) - troops);
-
-  /** A side's divisions: the player's own exactly, others as the government knows them. */
-  const sideForce = (tags: string[]) => {
-    let low = 0;
-    let high = 0;
-    let exact = true;
-    let soldiers = 0;
-    for (const tag of tags) {
-      const n = state.countries[tag]?.economy?.troops ?? 0;
-      const seen = tag !== state.player && fogOn(state) ? foreignView(state, tag).troops : undefined;
-      if (seen && !seen.exact) exact = false;
-      low += divisionsOf(seen ? seen.low : n, year);
-      high += divisionsOf(seen ? seen.high : n, year);
-      soldiers += n;
-    }
-    return exact ? t("army.forceExact", { div: num(low), men: count(soldiers, `side:${tags.join("+")}`, "thousands") }) : t("army.forceEstimate", { low: num(low), high: num(high) });
-  };
-
-  const frontOf = (side: Set<string>, other: Set<string>) =>
-    Object.entries(state.regions).filter(([, r]) => r.contested && ((side.has(r.controller) && other.has(r.contested)) || (other.has(r.controller) && side.has(r.contested))));
-
-  const plans = (state.plans ?? []).filter((p) => {
-    if (p.end || !shownStage(p)) return false;
-    if (p.target === state.player) return true;
-    if (p.kind === "join" && p.war && wars.some((w) => w.id === p.war)) return true;
-    return p.kind === "war" && enemies.has(p.by);
-  });
-
-  const lost = Object.entries(arsenal.lost ?? {}).filter(([, n]) => (n ?? 0) > 0) as [WeaponKind, number][];
-
-  const send = (): boolean => {
-    const words = order.trim();
-    if (!words) return false;
-    const who = organisation?.formations.find((f) => f.name === target);
-    const added = onOrder(who ? `${who.name}: ${words}` : words);
-    setRefused(!added);
-    if (added) setOrder("");
-    return added;
-  };
+  // At war, with the fronts moved last turn: their section carries a dot while another is open.
+  const moved = playerWars(state).some((w) => !w.truce) && (state.chronicle.at(-1)?.applied.some(isFrontChange) ?? false);
+  const segment = (id: ArmySection) => (
+    <button
+      key={id}
+      type="button"
+      role="tab"
+      onClick={() => setSaved(id)}
+      aria-selected={section === id}
+      // The recipe's own padding would cut a section's name short in a narrow panel.
+      className={`${ui.segment} relative min-w-0 px-1! ${section === id ? `${ui.segmentOn} bg-surface shadow-sm` : ui.segmentOff}`}
+    >
+      <span className="block truncate leading-tight">{t(`army.section.${id}` as MessageKey)}</span>
+      {id === "fronts" && moved && section !== id && <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-accent" aria-hidden />}
+    </button>
+  );
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-xl bg-page p-3 text-xs font-medium text-muted">
-        <div>{t("arms.procurement", { money: money(buy.yearly) })}</div>
-        {slowed.length > 0 && <div className="mt-1 font-bold text-amber-700">{t("arms.shortage", { list: slowed.map((r) => t(`resource.${r}` as MessageKey)).join(", ") })}</div>}
-        {arsenal.nuclear && (
-          <div className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-ink px-2 py-1 text-2xs font-black uppercase tracking-wider text-on-ink">
-            <Atom className="h-3 w-3" />
-            {t("arms.nuclear")}
-          </div>
-        )}
+      <div role="tablist" aria-label={t("army.sections")} className="grid grid-cols-4 gap-1 rounded-xl bg-page p-1">
+        {ARMY_SECTIONS.map(segment)}
       </div>
 
-      <section>
-        <span className={`${ui.label} mb-1.5 block`}>{t("army.men")}</span>
-        <div className="rounded-xl border border-line sheet p-3">
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="text-xs font-bold text-muted">{t("army.underArms")}</span>
-            <span className="text-sm font-black tabular-nums text-ink">{count(troops, "troops", "thousands")}</span>
-          </div>
-          <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-divider" aria-hidden>
-            <div className="h-full bg-ink" style={{ width: `${troops ? (men.pro / troops) * 100 : 0}%` }} />
-            <div className="h-full bg-accent" style={{ width: `${troops ? (men.trained / troops) * 100 : 0}%` }} />
-            <div className="h-full bg-warm" style={{ width: `${troops ? (men.recruits / troops) * 100 : 0}%` }} />
-          </div>
-          <ul className="mt-2 grid gap-1 text-xs">
-            {(
-              [
-                ["pro", "bg-ink", men.pro],
-                ["trained", "bg-accent", men.trained],
-                ["recruits", "bg-warm", men.recruits],
-              ] as const
-            ).map(([key, dot, n]) => (
-              <li key={key} className="flex items-baseline justify-between gap-2">
-                <span className="inline-flex items-center gap-1.5 font-medium text-muted">
-                  <span className={`h-2 w-2 rounded-sm ${dot}`} />
-                  {t(`army.${key}` as MessageKey)}
-                </span>
-                <span className="font-bold tabular-nums text-ink">{count(n, `men:${key}`, "thousands")}</span>
-              </li>
-            ))}
-            {callable > 0 && (
-              <li className="flex items-baseline justify-between gap-2 border-t border-divider pt-1">
-                <span className="font-medium text-muted">{t("army.callable")}</span>
-                <span className="font-bold tabular-nums text-muted">{count(callable, "callable", "thousands")}</span>
-              </li>
-            )}
-          </ul>
-        </div>
-      </section>
-
-      <section>
-        <span className={`${ui.label} mb-1.5 block`}>{t("arms.stock")}</span>
-        <ul className="flex flex-col gap-1.5">
-          {WEAPON_KINDS.map((kind) => {
-            const Icon = ARMS_ICONS[kind];
-            const s = arsenal.stock[kind];
-            const unit = kind === "rifles" ? "thousands" : "pieces";
-            const made = arsenal.made?.[kind] ?? 0;
-            const gone = arsenal.lost?.[kind] ?? 0;
-            const got = arsenal.got?.[kind] ?? 0;
-            if (!s && !can.has(kind)) {
-              return (
-                <li key={kind} className="flex items-center gap-2.5 rounded-xl border border-dashed border-line px-3 py-2 text-xs font-medium text-muted">
-                  <Icon className="h-4 w-4 shrink-0" />
-                  <span className="min-w-0 flex-1">
-                    <span className="font-bold text-ink">{t(`arms.kind.${kind}` as MessageKey)}</span> · {t("arms.notYet")}
-                  </span>
-                </li>
-              );
-            }
-            return (
-              <li key={kind} className="flex items-center gap-2.5 rounded-xl border border-line sheet px-3 py-2">
-                <Icon className="h-4 w-4 shrink-0 text-muted" />
-                <div className="min-w-0 flex-1">
-                  <span className="block truncate text-xs font-bold text-ink">{t(`arms.kind.${kind}` as MessageKey)}</span>
-                  <div className="flex flex-wrap gap-x-2 text-2xs font-bold tabular-nums">
-                    {made > 0 && <span className="text-emerald-700">{t("arms.made", { n: count(made, `made:${kind}`, unit) })}</span>}
-                    {got > 0 && <span className="text-emerald-700">{t("arms.got", { n: count(got, `got:${kind}`, unit) })}</span>}
-                    {gone > 0 && <span className="text-red-600">{t("arms.lost", { n: count(gone, `lost:${kind}`, unit) })}</span>}
-                  </div>
-                </div>
-                <span className="text-sm font-black tabular-nums text-ink">{count(s?.n ?? 0, `stock:${kind}`, unit)}</span>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <span className={ui.label}>{t("army.formations")}</span>
-        <RefineButton label={t("army.learn")} busy={learning} disabled={disabled} asOf={organisation?.date} onClick={onLearn} />
-        {organisation?.formations.length ? (
-          <ul className="flex flex-col gap-1.5">
-            {organisation.formations.map((f) => (
-              <li key={f.name} className="rounded-xl border border-line sheet p-3">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="min-w-0 truncate text-xs font-black text-ink">{f.name}</span>
-                  <span className="shrink-0 text-2xs font-bold uppercase tracking-wider text-muted">{t(`army.kind.${f.kind}` as MessageKey)}</span>
-                </div>
-                <div className="mt-0.5 flex flex-wrap gap-x-2 text-2xs font-bold text-muted">
-                  {f.divisions > 0 && <span className="tabular-nums text-ink">{t("army.divisions", { n: num(f.divisions) })}</span>}
-                  {f.theatre && <span>{f.theatre}</span>}
-                  {f.commander && <span>{t("army.commander", { name: f.commander })}</span>}
-                </div>
-                {f.provinces.length > 0 && (
-                  <button type="button" onClick={() => onShowRegions(f.provinces)} className="mt-1 inline-flex max-w-full items-center gap-1 text-left text-2xs font-bold text-accent hover:underline">
-                    <MapPin className="h-3 w-3 shrink-0" />
-                    <span className="truncate">
-                      {f.provinces.slice(0, 3).map(place).join(", ")}
-                      {f.provinces.length > 3 ? ` +${f.provinces.length - 3}` : ""}
-                    </span>
-                  </button>
-                )}
-                {f.note && <p className="mt-1 text-2xs font-medium leading-snug text-muted">{f.note}</p>}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-xs font-medium text-muted">{t("army.formationsEmpty")}</p>
-        )}
-      </section>
-
-      {wars.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <span className={ui.label}>{t("army.fronts")}</span>
-          {wars.map((w) => {
-            const mine = w.attackers.includes(state.player) ? w.attackers : w.defenders;
-            const theirs = w.attackers.includes(state.player) ? w.defenders : w.attackers;
-            const us = mine.reduce((sum, tag) => sum + combatPower(state, tag), 0);
-            const them = theirs.reduce((sum, tag) => sum + combatPower(state, tag), 0);
-            const share = us + them > 0 ? (us / (us + them)) * 100 : 50;
-            const line = frontOf(new Set(mine), new Set(theirs));
-            return (
-              <div key={w.id} className="rounded-xl bg-page p-3">
-                <div className="truncate text-xs font-black text-ink">{text(w.name)}</div>
-                <div className="mt-2 grid gap-0.5 text-2xs font-bold">
-                  <div className="flex justify-between gap-2">
-                    <span className="text-muted">{t("army.ours")}</span>
-                    <span className="tabular-nums text-ink">{sideForce(mine)}</span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span className="text-muted">{t("army.theirs")}</span>
-                    <span className="tabular-nums text-ink">{sideForce(theirs)}</span>
-                  </div>
-                </div>
-                <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-divider">
-                  <div className="h-full bg-accent" style={{ width: `${share}%` }} />
-                </div>
-                <div className="mt-1 flex justify-between text-2xs font-bold tabular-nums text-muted">
-                  <span>{t("arms.us", { n: Math.round(share) })}</span>
-                  <span>{t("arms.them", { n: 100 - Math.round(share) })}</span>
-                </div>
-                <div className="mt-3">
-                  <WarMeans
-                    state={state}
-                    war={w}
-                    index={index ?? null}
-                    labels={w.attackers.includes(state.player) ? [t("army.ours"), t("army.theirs")] : [t("army.theirs"), t("army.ours")]}
-                    oursFirst
-                  />
-                </div>
-                <div className={`${ui.label} mt-3 mb-1`}>{t("army.frontLine")}</div>
-                {line.length ? (
-                  <ul className="grid gap-0.5 text-2xs font-medium text-muted">
-                    {line.slice(0, 10).map(([id, r]) => (
-                      <li key={id}>
-                        <button type="button" onClick={() => onShowRegions([id])} className="text-left hover:text-accent">
-                          <span className="font-bold text-ink">{place(id)}</span> · {country(r.controller)} · {t("army.holding", { who: country(r.contested!), n: r.held ?? 33 })}
-                        </button>
-                      </li>
-                    ))}
-                    {line.length > 10 && <li>+{line.length - 10}</li>}
-                  </ul>
-                ) : (
-                  <p className="text-2xs font-medium text-muted">{t("army.noFront")}</p>
-                )}
-              </div>
-            );
-          })}
-
-          {lost.length > 0 && (
-            <div className="rounded-xl bg-page p-3 text-2xs font-bold">
-              <div className={`${ui.label} mb-1`}>{t("army.lostLast")}</div>
-              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-red-600">
-                {lost.map(([kind, n]) => (
-                  <span key={kind}>
-                    {t(`arms.kind.${kind}` as MessageKey)} −{count(n, `lost:${kind}`, kind === "rifles" ? "thousands" : "pieces")}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="rounded-xl bg-page p-3">
-            <div className={`${ui.label} mb-1`}>{t("army.plans")}</div>
-            {plans.length ? (
-              <ul className="grid gap-1 text-2xs font-medium text-muted">
-                {plans.map((p) => (
-                  <li key={p.id}>
-                    <span className="font-bold text-ink">{country(p.by)}</span> · {t(planKindKey(p))} · {t(planStageKey(p, shownStage(p)!))}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-2xs font-medium text-muted">{t("army.plansNone")}</p>
-            )}
-          </div>
-
-          <div className="rounded-xl border border-line sheet p-3">
-            <div className={`${ui.label} mb-2`}>{t("army.order")}</div>
-            {organisation?.formations.length ? (
-              <label className="mb-2 flex items-center gap-2 text-2xs font-bold text-muted">
-                {t("army.orderFor")}
-                <select value={target} onChange={(e) => setTarget(e.target.value)} className={`${ui.input} py-1.5 text-xs`}>
-                  <option value="">{t("army.orderAll")}</option>
-                  {organisation.formations.map((f) => (
-                    <option key={f.name} value={f.name}>
-                      {f.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-            <textarea
-              value={order}
-              onChange={(e) => setOrder(e.target.value.slice(0, 900))}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                  e.preventDefault();
-                  send();
-                }
-              }}
-              rows={3}
-              placeholder={t("army.orderPlaceholder")}
-              disabled={disabled}
-              className={`${ui.input} resize-none text-xs`}
-            />
-            {/* A moment of "in orders" once it went in, as every action that adds an order says. */}
-            <DoneButton
-              label={t("army.orderAdd")}
-              icon={Plus}
-              doneLabel={t("done.inOrders")}
-              onAct={send}
-              disabled={disabled || !order.trim()}
-              className={`${ui.primary} mt-2 w-full px-3 py-2 text-2xs`}
-              doneClassName={`${ui.done} mt-2 flex w-full items-center justify-center gap-1 rounded-xl px-3 py-2 text-2xs font-black uppercase tracking-wider`}
-            />
-            {refused && <p className="mt-1.5 text-2xs font-bold text-amber-700">{t("army.ordersFull")}</p>}
-            {state.draft.length > 0 && (
-              <div className="mt-3">
-                <div className={`${ui.label} mb-1`}>{t("army.pending")}</div>
-                <ol className="grid gap-0.5 text-2xs font-medium text-muted">
-                  {state.draft.map((o, i) => (
-                    <li key={i} className="truncate">
-                      {i + 1}. {o}
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            )}
-          </div>
-        </section>
+      {section === "forces" && <ArmyForces state={state} accounts={accounts} />}
+      {section === "fronts" && (
+        <ArmyFronts
+          state={state}
+          regions={regions}
+          index={index ?? null}
+          disabled={disabled}
+          frontTurn={onFrontTurn ? (frontTurn ?? null) : ownTurn}
+          onFrontTurn={onFrontTurn ?? setOwnTurn}
+          onShowTurn={onShowTurn}
+          onShowRegions={onShowRegions}
+          onOrder={onOrder}
+          onSuggest={onSuggest}
+        />
+      )}
+      {section === "losses" && <ArmyLosses state={state} regions={regions} />}
+      {section === "command" && (
+        <ArmyCommand state={state} regions={regions} disabled={disabled} learning={learning} onLearn={onLearn} onShowRegions={onShowRegions} onArmyOrder={onArmyOrder} onCancelArmyOrder={onCancelArmyOrder} onOrder={onOrder} onSuggest={onSuggest} />
       )}
     </div>
   );

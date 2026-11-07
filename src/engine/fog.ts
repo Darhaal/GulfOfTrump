@@ -2,6 +2,7 @@ import { coupRiskIn, incomes, lostShares } from "./abroad";
 import { roll } from "./dice";
 import { officialAt } from "./government";
 import { intelligenceBonus } from "./researchEffects";
+import { reconSight } from "./space";
 import type { GameState, Localized, MapIndex, MapRegion, OfficialPost, PlayerRole, RegimeKind } from "./types";
 
 /**
@@ -17,7 +18,7 @@ import type { GameState, Localized, MapIndex, MapRegion, OfficialPost, PlayerRol
  */
 
 export type KnowledgeLevel = "full" | "good" | "partial" | "poor";
-export type KnowledgeReason = "open" | "closed" | "ally" | "pact" | "bloc" | "enemy" | "sanctions" | "border" | "agents" | "service-good" | "service-weak" | "signals-good" | "signals-weak" | "talks" | "post-good" | "post-weak";
+export type KnowledgeReason = "open" | "closed" | "ally" | "pact" | "bloc" | "enemy" | "sanctions" | "border" | "agents" | "service-good" | "service-weak" | "signals-good" | "signals-weak" | "satellites" | "talks" | "post-good" | "post-weak";
 
 export interface Knowledge {
   /** 0–100: how much of the country's real state the player's government knows. */
@@ -41,6 +42,8 @@ const SANCTIONS = -5;
 const BORDER = 10;
 /** An intelligence directive or operation aimed at the country. */
 const AGENTS = 20;
+/** The intelligence service's own networks in the country, worked without a directive (engine/ministers.ts). */
+const NETWORKS = 10;
 /** Per point of the head of intelligence's competence above or below 3. */
 const SERVICE = 5;
 const TALKS = 5;
@@ -121,7 +124,7 @@ function watched(state: Pick<GameState, "directives" | "countries">, tag: string
   });
 }
 
-type KnowledgeState = Pick<GameState, "player" | "countries" | "alliances" | "wars" | "sanctions" | "directives" | "officials" | "diplomacy"> & Partial<Pick<GameState, "research" | "date" | "role">>;
+type KnowledgeState = Pick<GameState, "player" | "countries" | "alliances" | "wars" | "sanctions" | "directives" | "officials" | "diplomacy"> & Partial<Pick<GameState, "research" | "date" | "role" | "space" | "ministers">>;
 
 /** How much the player's government knows of one country. `borders` is borderingPlayer's result, when the map has loaded. */
 export function knowledgeOf(state: KnowledgeState, tag: string, borders?: Set<string>): Knowledge {
@@ -146,12 +149,16 @@ export function knowledgeOf(state: KnowledgeState, tag: string, borders?: Set<st
   if ((state.sanctions ?? []).some((s) => (s.by === state.player && s.against === tag) || (s.by === tag && s.against === state.player))) parts.push(["sanctions", SANCTIONS]);
   if (borders?.has(tag)) parts.push(["border", BORDER]);
   if (watched(state, tag)) parts.push(["agents", AGENTS]);
+  else if (state.ministers?.watch === tag) parts.push(["agents", NETWORKS]);
 
   const competence = officialAt(state, "intelligence")?.competence;
   if (competence !== undefined && competence !== 3) parts.push([competence > 3 ? "service-good" : "service-weak", (competence - 3) * SERVICE]);
   // Signals, computers and satellites: the player's communications research against the world's (engine/researchEffects.ts).
   const signals = state.research?.tech && state.date ? intelligenceBonus({ research: state.research, date: state.date }) : 0;
   if (signals) parts.push([signals > 0 ? "signals-good" : "signals-weak", signals]);
+  // Reconnaissance satellites photograph every country from orbit (engine/space.ts).
+  const orbit = reconSight(state, tag);
+  if (orbit) parts.push(["satellites", orbit]);
   if ((state.diplomacy[tag] ?? []).some((m) => m.from === "them")) parts.push(["talks", TALKS]);
   // A player who does not lead sees what their post lets them see.
   const sight = postSight(state.role);
@@ -237,6 +244,8 @@ export interface ViewContext {
   map?: Record<string, MapRegion> | null;
   /** lostShares(state, map), when it is already at hand. */
   lost?: Map<string, number>;
+  /** incomes(state, map), when it is already at hand: a walk over every province, so a list of countries works it out once. */
+  income?: Map<string, number>;
 }
 
 /** A foreign country as its figures reach the player's government this turn. */
@@ -249,7 +258,8 @@ export function foreignView(state: ViewState, tag: string, ctx: ViewContext = {}
     view.gdp = estimate(c.economy.gdp, k, state, `${tag}:gdp`);
     view.growth = estimateRate(c.economy.growth, k, 8, state, `${tag}:growth`);
     view.debt = estimate(c.economy.debt, k, state, `${tag}:debt`);
-    view.troops = estimate(c.economy.troops, k - ARMY_SECRECY + armySight(state.role), state, `${tag}:troops`);
+    // Satellites count tanks and airfields from orbit: an army is known better still.
+    view.troops = estimate(c.economy.troops, k - ARMY_SECRECY + armySight(state.role) + reconSight(state, tag), state, `${tag}:troops`);
   }
   const d = c?.domestic;
   if (d && k >= POLITICS_SEEN) {
@@ -257,7 +267,7 @@ export function foreignView(state: ViewState, tag: string, ctx: ViewContext = {}
     view.stability = estimateRate(d.stability, k, 40, state, `${tag}:stability`, [0, 100]);
   }
   if (d && k >= COUP_RUMOUR) {
-    const risk = coupRiskIn(state, tag, ctx.lost ?? lostShares(state, ctx.map), incomes(state, ctx.map));
+    const risk = coupRiskIn(state, tag, ctx.lost ?? lostShares(state, ctx.map), ctx.income ?? incomes(state, ctx.map));
     const guess = estimate(risk, k, state, `${tag}:coup`).value;
     view.coup = k >= COUP_SEEN ? { level: coupLevel(guess), n: Math.round(guess * 10) / 10, rumour: false } : { level: coupLevel(guess), rumour: true };
   }
@@ -279,12 +289,14 @@ export function describeFog(state: GameState, index: Pick<MapIndex, "neighbors" 
   if (!fogOn(state)) return [];
   const borders = borderingPlayer(state, index?.neighbors);
   const lost = lostShares(state, index?.regions);
+  // The map's people, as the panel reads them (GameClient), counted once for every country.
+  const income = incomes(state, index?.regions);
   const owners = new Set(Object.values(state.regions).map((r) => r.owner));
   const groups: Record<"good" | "partial" | "poor", string[]> = { good: [], partial: [], poor: [] };
   const enemies: string[] = [];
   for (const c of Object.values(state.countries)) {
     if (c.tag === state.player || !owners.has(c.tag)) continue;
-    const view = foreignView(state, c.tag, { borders, lost });
+    const view = foreignView(state, c.tag, { borders, lost, income, map: index?.regions });
     const level = view.knowledge.level === "full" ? "good" : view.knowledge.level;
     groups[level].push(c.tag);
     const atWar = state.wars.some((w) => (w.attackers.includes(state.player) && w.defenders.includes(c.tag)) || (w.defenders.includes(state.player) && w.attackers.includes(c.tag)));

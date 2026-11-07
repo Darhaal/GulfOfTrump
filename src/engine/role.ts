@@ -30,17 +30,39 @@ export const roleOf = (state: Pick<GameState, "role" | "date">): PlayerRole => s
 export const isOpposition = (state: Pick<GameState, "role">): boolean => state.role?.kind === "opposition";
 
 /**
+ * Whether a coup or a revolution pins the player's regime: the description the
+ * game master gave at the fall still stands. Once it names the regime anew, its
+ * words rule again. A fall from before the text was kept pins it until the
+ * player plays on.
+ */
+export function regimePinned(state: Pick<GameState, "politics"> & { defeat?: GameState["defeat"] }): boolean {
+  const d = state.defeat;
+  if (!d || (d.how !== "coup" && d.how !== "revolution" && d.how !== "uprising")) return false;
+  return d.regime === undefined ? !d.continued : d.regime === (state.politics?.regime ?? "");
+}
+
+/**
  * How the player's country is governed now: by its politics once described,
  * else by the scenario's table — and no longer freely after a coup (the army
- * rules) or a revolution (a new autocracy), whatever the old description says.
+ * rules) or a revolution (a new autocracy) while the old description stands.
+ * Every reader of the player's regime goes through here (engine/parliament.ts
+ * holdsElections, the police state, the classes, the families, the courts).
  */
 export function regimeNow(state: Pick<GameState, "politics" | "scenarioId" | "player"> & { defeat?: GameState["defeat"] }): RegimeKind {
   const text = state.politics?.regime;
   const regime = text ? regimeFromText(text) : regimeAtStart(state.scenarioId, state.player);
   const free = regime === "democracy" || regime === "limited";
-  if (free && state.defeat?.how === "coup") return "military";
-  if (free && (state.defeat?.how === "revolution" || state.defeat?.how === "uprising")) return "autocracy";
+  if (free && regimePinned(state)) return state.defeat?.how === "coup" ? "military" : "autocracy";
   return regime;
+}
+
+/** The game master's line while a fall pins the regime: how the engine reads it, and that a new description lifts the pin. */
+export function regimeNote(state: Pick<GameState, "politics" | "scenarioId" | "player"> & { defeat?: GameState["defeat"] }): string[] {
+  const d = state.defeat;
+  if (!d || !regimePinned(state) || !state.politics?.regime) return [];
+  const text = regimeFromText(state.politics.regime);
+  if (text !== "democracy" && text !== "limited") return [];
+  return [`THE REGIME SINCE THE ${d.how === "coup" ? "COUP" : "REVOLUTION"} OF ${d.date}: the engine reads the country as ${d.how === "coup" ? "ruled by the army" : "a new autocracy"} while the regime above stands as it was described before the fall – give politics.regime anew once the new rulers have set up theirs.`];
 }
 
 /** Where a vote can change the government an opposition may be a party; elsewhere it starts underground. */
@@ -51,8 +73,15 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 const round1 = (v: number) => Math.round(v * 10) / 10;
 
 /** A new opposition: a small legal party where there are elections, a handful of people underground where there are not. */
-export function startingMovement(regime: RegimeKind, name?: string): Movement {
+/** How an opposition starts: a movement as the regime allows, a dissident's circle at home, or an émigré's abroad. */
+export type OppositionStart = "movement" | "dissident" | "emigre";
+
+export function startingMovement(regime: RegimeKind, name?: string, as: OppositionStart = "movement"): Movement {
   const open = OPEN[regime];
+  // A dissident: one voice and a few friends at home – samizdat, contacts, the watch of the police; a movement may grow from it.
+  if (as === "dissident") return { ...(name?.trim() ? { name: name.trim() } : {}), kind: "underground", status: open ? "free" : "harassed", support: 2, members: 1, money: 5, press: 12, insiders: 3, army: 0, street: 4 };
+  // An émigré: abroad, sheltered by a government that would (engine/exile.ts) – broadcasts home, letters, lobbying, a way back.
+  if (as === "emigre") return { ...(name?.trim() ? { name: name.trim() } : {}), kind: "exile", status: "free", support: 3, members: 2, money: 15, press: 20, insiders: 3, army: 0, street: 2 };
   return {
     ...(name?.trim() ? { name: name.trim() } : {}),
     kind: open ? "party" : "underground",
@@ -88,7 +117,7 @@ export function cleanAbout(text: string | undefined): string {
  * the player said of it — names, or a paragraph on who they are and whose
  * side they take, from which the game master names them.
  */
-export function startingRole(regime: RegimeKind, date: string, choice?: { kind: PlayerRole["kind"]; person?: string; gender?: Gender; movement?: string; about?: string }): PlayerRole {
+export function startingRole(regime: RegimeKind, date: string, choice?: { kind: PlayerRole["kind"]; person?: string; gender?: Gender; movement?: string; about?: string; as?: OppositionStart }): PlayerRole {
   // A minister or a general starts by engine/figures.ts (startingFigure).
   if (!choice || choice.kind !== "opposition") return { kind: "leader", since: date, how: "start" };
   const year = Number(date.slice(0, 4));
@@ -96,7 +125,7 @@ export function startingRole(regime: RegimeKind, date: string, choice?: { kind: 
   return {
     kind: "opposition",
     ...(choice.person?.trim() ? { person: personFor(choice.person.trim(), year, choice.gender) } : {}),
-    movement: startingMovement(regime, choice.movement),
+    movement: startingMovement(regime, choice.movement, choice.as),
     ...(about ? { about } : {}),
     since: date,
     how: "start",
@@ -193,7 +222,8 @@ export function canRise(state: Pick<GameState, "role" | "politics" | "protests" 
   const street = m.street >= 55 && ((state.politics?.unrest ?? 0) >= FALL_UNREST || (state.protests ?? []).some((p) => !p.country && p.stage === "uprising"));
   switch (how) {
     case "election":
-      return opts.election && m.kind === "party" && m.status !== "arrested" && m.support >= 25;
+      // The movement's allies bring part of their voters (blocSupport).
+      return opts.election && m.kind === "party" && m.status !== "arrested" && blocSupport(state) >= 25;
     case "revolution":
       return m.kind !== "exile" ? street : street && m.army >= 30;
     case "coup":
@@ -259,6 +289,76 @@ const sameName = (a: string | undefined, b: string | undefined) => Boolean(a && 
 export const movementParty = (state: Pick<GameState, "politics" | "role">): Party | undefined =>
   state.politics?.parties.find((p) => sameName(p.name, state.role?.movement?.name) || sameName(p.leader, state.role?.person?.name));
 
+/** Offers of a coalition the movement can have out at once. */
+export const MAX_OFFERS = 2;
+
+/** The movement's allies as the country's politics list them now: parties that still exist and are not in the government. */
+export function alliesOf(state: Pick<GameState, "politics" | "role">): Party[] {
+  const ids = state.role?.movement?.allies ?? [];
+  return (state.politics?.parties ?? []).filter((p) => ids.includes(p.id) && p.status !== "ruling" && p.status !== "coalition");
+}
+
+/** The parties the movement could offer a coalition to: any other party outside the government, not its ally already. */
+export function coalitionCandidates(state: Pick<GameState, "politics" | "role">): Party[] {
+  if (!isOpposition(state)) return [];
+  const own = movementParty(state);
+  const allies = state.role?.movement?.allies ?? [];
+  return (state.politics?.parties ?? []).filter((p) => p.id !== own?.id && p.status !== "ruling" && p.status !== "coalition" && !allies.includes(p.id));
+}
+
+/** How far apart two parties' ideas are, 0 (the same) to 1 (opposite on every axis). */
+const ideaDistance = (a: Party["stance"], b: Party["stance"]) => (Math.abs(a.economy - b.economy) + Math.abs(a.freedom - b.freedom) + Math.abs(a.nation - b.nation)) / 60;
+
+/**
+ * How likely a party is to take up the movement's offer of a coalition, 0–1:
+ * how near its ideas are to the movement's own party, how big the movement is
+ * beside it, its friends inside, and the danger of standing with a movement
+ * the state hunts – which an outlawed party has little left to fear.
+ */
+export function coalitionChance(state: Pick<GameState, "politics" | "role">, partyId: string): number {
+  const m = state.role?.movement;
+  const party = state.politics?.parties.find((p) => p.id === partyId);
+  if (!m || !party || !isOpposition(state)) return 0;
+  const own = movementParty(state);
+  const distance = own ? ideaDistance(own.stance, party.stance) : 0.4;
+  let chance = 0.55 - distance * 0.9 + (m.support - party.support) / 100 + m.insiders / 400;
+  if (m.status === "banned" || m.status === "arrested") chance -= 0.15;
+  if (m.kind === "exile") chance -= 0.1;
+  if (party.status === "underground" || party.status === "banned") chance += 0.1;
+  return Math.round(clamp(chance, 0.05, 0.85) * 100) / 100;
+}
+
+/** The movement offers a party a coalition; the party answers as the next turn is played, by the chance as it stands now. */
+export function offerCoalition(state: GameState, partyId: string, now = new Date()): GameState {
+  const m = isOpposition(state) ? state.role!.movement : undefined;
+  const offers = m?.offers ?? [];
+  if (!m || offers.length >= MAX_OFFERS || offers.some((o) => o.party === partyId) || !coalitionCandidates(state).some((p) => p.id === partyId)) return state;
+  return { ...state, role: { ...state.role!, movement: { ...m, offers: [...offers, { party: partyId, chance: coalitionChance(state, partyId) }] } }, updatedAt: now.toISOString() };
+}
+
+/** The movement takes an offer back before the turn, or leaves a coalition. */
+export function dropCoalition(state: GameState, partyId: string, now = new Date()): GameState {
+  const m = isOpposition(state) ? state.role!.movement : undefined;
+  if (!m || !(m.offers?.some((o) => o.party === partyId) || m.allies?.includes(partyId))) return state;
+  const movement: Movement = { ...m, offers: (m.offers ?? []).filter((o) => o.party !== partyId), allies: (m.allies ?? []).filter((id) => id !== partyId) };
+  if (!movement.offers!.length) delete movement.offers;
+  if (!movement.allies!.length) delete movement.allies;
+  return { ...state, role: { ...state.role!, movement }, updatedAt: now.toISOString() };
+}
+
+/** Which of the movement's offers the parties take up this turn, by the game's dice. */
+export function castCoalitions(state: Pick<GameState, "role" | "seed" | "id" | "turn">): boolean[] {
+  const offers = state.role?.kind === "opposition" ? (state.role.movement?.offers ?? []) : [];
+  return offers.map((o) => happens(o.chance, state.seed ?? state.id, state.turn, `coalition:${o.party}`));
+}
+
+/** The support the movement and its allies bring to a vote together: its own, and half of each ally's, whose voters do not all follow. */
+export function blocSupport(state: Pick<GameState, "politics" | "role">): number {
+  const m = state.role?.movement;
+  if (!m) return 0;
+  return round1(m.support + alliesOf(state).reduce((sum, p) => sum + p.support / 2, 0));
+}
+
 /**
  * Applies a turn to the movement: the state's dice first, then what the game
  * master says the period did to it, then — if it took power and the engine
@@ -272,6 +372,8 @@ export function applyOpposition(
   applied: AppliedChange[],
 ): void {
   if (!isOpposition(next)) return;
+  // The parties the movement offered a coalition answer first, by the chance each had when offered.
+  const answers = castCoalitions(next);
   const role = (next.role = { ...next.role! });
   let m: Movement = { ...role.movement! };
   if (repression) {
@@ -299,6 +401,19 @@ export function applyOpposition(
       if (m.kind === "underground" && OPEN[regimeNow(next)]) m.kind = "party";
       applied.push({ kind: "movement", change: "released", name: m.name ?? "" });
     }
+  }
+  (m.offers ?? []).forEach((offer, i) => {
+    const party = next.politics?.parties.find((p) => p.id === offer.party);
+    if (!party) return;
+    if (answers[i] && party.status !== "ruling" && party.status !== "coalition") m.allies = [...new Set([...(m.allies ?? []), party.id])];
+    applied.push({ kind: "movement", change: answers[i] ? "allied" : "refused", name: party.name });
+  });
+  delete m.offers;
+  // An ally gone from politics, or gone over to the government, is no ally.
+  if (m.allies) {
+    const still = alliesOf({ politics: next.politics, role: { ...role, movement: m } }).map((p) => p.id);
+    if (still.length) m.allies = still;
+    else delete m.allies;
   }
   role.movement = m;
   // The movement's party keeps its status in the country's politics.
@@ -328,7 +443,10 @@ export function takePower(next: GameState, how: RiseHow, government: string | un
     const own = movementParty(next);
     next.politics = {
       ...next.politics,
-      parties: next.politics.parties.map((p) => (p === own ? { ...p, status: "ruling" } : p.status === "ruling" || p.status === "coalition" ? { ...p, status: "opposition" } : p)),
+      // Its allies govern with it.
+      parties: next.politics.parties.map((p) =>
+        p === own ? { ...p, status: "ruling" } : m.allies?.includes(p.id) ? { ...p, status: "coalition" } : p.status === "ruling" || p.status === "coalition" ? { ...p, status: "opposition" } : p,
+      ),
       plots: [],
     };
   }
@@ -434,22 +552,31 @@ export function intoExile(state: GameState, now = new Date()): GameState {
 }
 
 /**
- * A government whose party lost the vote this turn — out of the ruling seat
- * and out of the coalition — has lost power: a fall like any other, after
- * which the player chooses to stay with the country or with the person. The
- * winner's leader leads the country.
+ * A government whose party is out of power at the turn's end — out of the
+ * ruling seat and out of the coalition — has fallen: by a lost vote, or
+ * outside an election by a lost vote of confidence or a coalition broken
+ * (deposed), as a minister falls with the same change (engine/fate.ts). A
+ * fall like any other, after which the player chooses to stay with the
+ * country or with the person; the new government's leader leads the country.
+ * Outside an election a party that merely vanished from the list (renamed,
+ * merged) is no fall.
  */
 export function checkElectionDefeat(state: GameState, next: GameState, ctx: { turn: number; to: string; election: boolean }, applied: AppliedChange[]): void {
-  if (!ctx.election || roleOf(state).kind !== "leader" || (state.defeat && !state.defeat.continued) || (next.defeat && !next.defeat.continued)) return;
+  if (roleOf(state).kind !== "leader" || (state.defeat && !state.defeat.continued) || (next.defeat && !next.defeat.continued)) return;
   const before = rulingParty(state);
   if (!before || !next.politics) return;
   const after = next.politics.parties.find((p) => p.id === before.id);
   if (after && (after.status === "ruling" || after.status === "coalition")) return;
+  if (!after && !ctx.election) return;
+  const how = ctx.election ? "election" : "deposed";
   const winner = rulingParty(next) ?? [...next.politics.parties].sort((a, b) => b.support - a.support)[0];
   const fallen = leaderOf(state, state.player);
-  next.defeat = { date: ctx.to, turn: ctx.turn, how: "election", by: winner?.name ?? "", note: next.politics.lastElection?.note ?? "", party: before.name, ...(fallen ? { fallen } : {}) };
+  // A vote of confidence the government lost since the last turn (engine/parliament.ts confidenceLost).
+  const lost = (next.politics.sessions ?? []).some((s) => s.turn === state.turn && s.motion.kind === "confidence" && (s.motion.by === "opposition" ? s.status === "passed" : s.status === "failed"));
+  const note = ctx.election ? (next.politics.lastElection?.note ?? "") : lost ? "lost the confidence of parliament" : "";
+  next.defeat = { date: ctx.to, turn: ctx.turn, how, by: winner?.name ?? "", note, party: before.name, ...(fallen ? { fallen } : {}), regime: next.politics.regime };
   if (winner?.leader) next.countries[next.player].leader = winner.leader;
-  applied.push({ kind: "overthrown", how: "election", by: winner?.name ?? "" });
+  applied.push({ kind: "overthrown", how, by: winner?.name ?? "" });
 }
 
 const KIND_LINE: Record<MovementKind, string> = {
@@ -488,6 +615,21 @@ export function describeRole(state: GameState, repression: Repression | null): s
       : []),
     `THE PLAYER'S MOVEMENT: support ${m.support}% of the country; ${m.members} thousand members; money ${m.money}/100; press ${m.press}/100; friends in the government ${m.insiders}/100; friends in the army ${m.army}/100; the street ${m.street}/100. The state's risk to it: ${movementRisk(state)}% a month.`,
     ...(repression ? [`THE ENGINE'S DICE THIS PERIOD: ${REPRESSION_LINE[repression]} — show it in the story.`] : []),
+    ...describeCoalition(state),
     "",
+  ];
+}
+
+/** The prompt's lines on the movement's coalition: its allies, and the answers the dice gave to its offers this period. */
+function describeCoalition(state: GameState): string[] {
+  const m = state.role?.movement;
+  if (!m) return [];
+  const allies = alliesOf(state);
+  const answers = castCoalitions(state);
+  const name = (id: string) => state.politics?.parties.find((p) => p.id === id)?.name ?? id;
+  const offers = (m.offers ?? []).map((o, i) => `${name(o.party)} ${answers[i] ? "ACCEPTS and joins the movement's coalition" : "REFUSES"}`);
+  return [
+    ...(allies.length ? [`THE MOVEMENT'S COALITION: ${allies.map((p) => p.name).join(", ")}; together they would bring ${blocSupport(state)}% to a vote.`] : []),
+    ...(offers.length ? [`THE MOVEMENT OFFERED A COALITION; THE ENGINE'S DICE: ${offers.join("; ")} – show the talks and their end.`] : []),
   ];
 }

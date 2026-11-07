@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     let chars = 0;
     const onDelta = (delta: string) => progress((chars += delta.length));
     const answer = await completeJson(
-      { model, demo, locale, instructions: SESSION_INSTRUCTIONS(locale), input: [{ role: "user", content: buildSessionPrompt(state, session, opening ? undefined : line) }], signal, onDelta },
+      { model, demo, locale, instructions: SESSION_INSTRUCTIONS(locale), input: [{ role: "user", content: buildSessionPrompt(state, session, opening ? undefined : line, locale) }], signal, onDelta },
       SessionTalkSchema,
     );
     return { speeches: answer.speeches, sway: opening ? [] : answer.sway };

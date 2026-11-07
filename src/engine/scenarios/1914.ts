@@ -108,6 +108,8 @@ Real history for reference: Austria's ultimatum to Serbia on 23 July; war declar
   modernOwners: {
     NCL: "france",
     SLB: "uk",
+    // Borneo's north rim, which the finer map cuts off with British Malaya, and every Dutch island.
+    IDN: "netherlands",
   },
   // The 1914 source draws Romania with its post-1920 borders and Kars as
   // Ottoman; in 1914 Bessarabia and Kars were Russian, Transylvania Hungarian.
@@ -133,6 +135,21 @@ Real history for reference: Austria's ultimatum to Serbia on 23 July; war declar
     "tr-istanbul": "ottoman",
     "tr-edirne": "ottoman",
     "tr-k-rklareli": "ottoman",
+    // Slivers the finer map cuts along the source's loose borders: Belfort stayed French in 1871, Trieste was Austrian,
+    // Nuevo Laredo Mexican, Qasr-e Shirin Persian, the Isan bank of the Mekong Siamese, the rims of Jilin and the Altai
+    // Chinese, the Rub' al Khali's unmarked sands Nejd's as the rest of the province.
+    "fr-territoire-de-belfort": "france",
+    // Metz and the west of the Moselle, German since 1871, which the source's border leaves French.
+    "fr-moselle-p2": "germany",
+    "it-trieste": "austria-hungary",
+    "mx-tamaulipas-laredo-p2": "mexico",
+    "ir-kermanshah-qasr-e-shirin-p2": "persia",
+    "th-ubon-ratchathani-p2": "siam",
+    "th-nakhon-phanom-p2": "siam",
+    "cn-jilin-jilin-south-east-p2": "china",
+    "cn-xinjiang-koktokay-p2": "china",
+    "sa-eastern-rub-al-khali-eastern-p2": "nejd",
+    "sa-eastern-rub-al-khali-eastern-south-east-p2": "nejd",
     "tr-tekirdag": "ottoman",
     "id-riau-islands": "netherlands",
     "pt-madeira": "portugal",

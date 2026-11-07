@@ -22,20 +22,25 @@
 // from GeoNames (CC BY 4.0).
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import mapshaper from "mapshaper";
 import { describeLand } from "./land.mjs";
 import { POPULATION, POPULATION_YEAR, PROVINCE_POPULATION, REGION_GROWTH } from "./population.mjs";
-import { parseResources, RESOURCE_SIDES, RESOURCES } from "./resources.mjs";
-import { NAMED_COUNTRIES, parseTowns, taggedNames, unzip } from "./towns.mjs";
+import { parseResources, RESOURCE_POINTS, RESOURCE_SIDES, RESOURCES } from "./resources.mjs";
+import { parseTowns, taggedNames, townCountries, townIds, unzip, wikidataLabels } from "./towns.mjs";
 import { railSince } from "./transport.mjs";
+import { innerPoint, splitLarge } from "./split.mjs";
 import { geoArea, geoCentroid, geoDistance } from "d3-geo";
+import { feature as topoFeature } from "topojson-client";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const CACHE = path.join(ROOT, "scripts", ".cache");
 const OUT = path.join(ROOT, "public", "maps");
+/** The finer map's part ids, frozen (scripts/split.mjs). */
+const SPLIT_IDS = path.join(ROOT, "scripts", "split-ids.json");
 
 const HIST_REPO = "aourednik/historical-basemaps";
 const HIST_COMMIT = "da7a4b735ecef70aebdc9c73e409d8a2500d50f3";
@@ -48,6 +53,8 @@ const EARTH_KM = 6371.0088;
 const MIN_PART_SHARE = 0.15;
 /** …and at least this much land, so a coastal mismatch never makes a province. */
 const MIN_PART_KM2 = 1500;
+/** On the finer map, a country merged by region keeps divisions this large on average (scripts/split.mjs splits the big ones). */
+const FINE_UNIT_KM2 = 2500;
 
 /** Region and owner ids: lowercase ASCII words joined by dashes. */
 export function slug(name) {
@@ -266,8 +273,13 @@ async function historicalLayer(year) {
  * to play: a country of many tiny units is merged by its `region` field
  * (England's regions instead of 232 councils), or into one province when it
  * has no regions; microstates are always one province.
+ *
+ * With `fine` (the finer prototype), a country merged by region whose
+ * divisions average FINE_UNIT_KM2 or more keeps them (France's departments,
+ * Japan's prefectures, Thailand's provinces); each remembers its region's
+ * name (`upName`) for the resources table.
  */
-function groupAdmin1(admin1) {
+function groupAdmin1(admin1, { fine = false } = {}) {
   const byCountry = new Map();
   for (const f of admin1.features) {
     // Antarctica is a strip along the bottom edge that nobody plays.
@@ -284,6 +296,7 @@ function groupAdmin1(admin1) {
     return candidate;
   };
   const features = [];
+  const ungroup = [];
   for (const [adm0, list] of byCountry) {
     const p0 = list[0].feature.properties;
     const n = list.length;
@@ -324,16 +337,42 @@ function groupAdmin1(admin1) {
       const ownAdm0 = iso === "UA" ? "UKR" : adm0;
       const pid = unique(mode === "one" ? prefix : `${ownPrefix}-${slug(name)}`);
       for (const f of group) {
+        if (fine && mode === "region" && area / n >= FINE_UNIT_KM2) ungroup.push({ at: features.length, unit: f.properties, upName: name, prefix });
         features.push({ type: "Feature", properties: { pid, name, ru, uk, adm0: ownAdm0 }, geometry: f.geometry });
       }
+    }
+  }
+  if (ungroup.length) {
+    // The kept divisions' ids, unique among every other province's.
+    const kept = new Set(ungroup.map((u) => u.at));
+    const fineUsed = new Set(features.filter((_, i) => !kept.has(i)).map((f) => f.properties.pid));
+    for (const { at, unit, upName, prefix } of ungroup) {
+      const name = unit.name_en || unit.name || unit.woe_name || unit.gn_name || unit.name_alt || unit.adm1_code;
+      const iso = (unit.iso_3166_2 || "").split("-")[0];
+      const base = `${/^[A-Z]{2}$/.test(iso) ? iso.toLowerCase() : prefix}-${slug(name)}`;
+      let pid = base;
+      for (let i = 2; fineUsed.has(pid); i += 1) pid = `${base}-${i}`;
+      fineUsed.add(pid);
+      features[at].properties = { pid, name, ru: unit.name_ru ?? null, uk: unit.name_uk ?? null, adm0: features[at].properties.adm0, upName };
     }
   }
   return { type: "FeatureCollection", features };
 }
 
-/** Strategic resources from scripts/resources.mjs, on the provinces they name. */
+/**
+ * Strategic resources from scripts/resources.mjs, on the provinces they
+ * name. On the finer map a region the table names that was kept as its
+ * divisions puts them on its most populous division.
+ */
 function attachResources(provinces) {
-  const byKey = new Map(provinces.features.map((f) => [`${f.properties.adm0}|${f.properties.name}`.toLowerCase(), f]));
+  // The parts of a split division are named after towns: only the part that keeps the division's name matches.
+  const byKey = new Map(provinces.features.filter((f) => f.properties.up == null || f.properties.up === f.properties.pid).map((f) => [`${f.properties.adm0}|${f.properties.name}`.toLowerCase(), f]));
+  for (const f of provinces.features) {
+    if (!f.properties.upName) continue;
+    const key = `${f.properties.adm0}|${f.properties.upName}`.toLowerCase();
+    const known = byKey.get(key);
+    if (!known || (known.properties.upName && (f.properties.pop ?? 0) > (known.properties.pop ?? 0))) byKey.set(key, f);
+  }
   const missing = [];
   for (const [adm0, name, spec] of RESOURCES) {
     const f = byKey.get(`${adm0}|${name}`.toLowerCase());
@@ -362,6 +401,8 @@ function shareResources(geometries) {
   }
   for (const list of parts.values()) {
     const main = list.find((g) => !/-p\d+$/.test(g.properties.id));
+    // Output the finer map placed by its mines (placeMines) is where it belongs already.
+    if (list.some((g) => g.properties.mined)) continue;
     if (list.length < 2 || !main?.properties.res) continue;
     const sides = RESOURCE_SIDES[`${main.properties.adm0}|${main.properties.name}`] ?? {};
     for (const g of list) {
@@ -374,6 +415,57 @@ function shareResources(geometries) {
         .filter(([, curve]) => curve.some(([, v]) => v > 0));
       if (res.length) g.properties.res = res;
       else delete g.properties.res;
+    }
+  }
+}
+
+/**
+ * On a finer map, the output of a region RESOURCE_POINTS knows goes from the
+ * provinces the table put it on (its most populous division, or every piece
+ * of a cut one) to the provinces holding its mines, each the share dug
+ * there (output adds as squares: a share's points are its root).
+ */
+function placeMines(features, year) {
+  const find = locator(features, 0.2);
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  for (const [key, mines] of Object.entries(RESOURCE_POINTS)) {
+    const entry = RESOURCES.find(([adm0, name]) => `${adm0}|${name}` === key);
+    if (!entry) continue;
+    const curves = parseResources(entry[2]);
+    let placed = false;
+    for (const f of features) {
+      if (!f.properties.res) continue;
+      const res = JSON.parse(f.properties.res);
+      const kept = res.filter((r) => !curves.some((c) => same(c, r)));
+      if (kept.length === res.length) continue;
+      placed = true;
+      f.properties.res = kept.length ? JSON.stringify(kept) : "";
+    }
+    if (!placed) continue;
+    const shares = new Map();
+    for (const mine of mines) {
+      const i = find(mine.at);
+      if (i < 0) {
+        log(`${year}: ${key}: no province holds the mine at ${mine.at}`);
+        continue;
+      }
+      const s = shares.get(i) ?? {};
+      for (const [type] of curves) if (mine[type]) s[type] = (s[type] ?? 0) + mine[type];
+      shares.set(i, s);
+    }
+    for (const [i, s] of shares) {
+      const f = features[i];
+      const res = f.properties.res ? JSON.parse(f.properties.res) : [];
+      for (const [type, curve] of curves) {
+        if (!s[type]) continue;
+        if (res.some((r) => r[0] === type)) {
+          log(`${year}: ${key}: ${f.properties.id} has ${type} of its own; the mine's is left out`);
+          continue;
+        }
+        res.push([type, curve.map(([y, v]) => [y, Math.round(v * Math.sqrt(Math.min(1, s[type])) * 10) / 10])]);
+      }
+      if (res.length) f.properties.res = JSON.stringify(res);
+      f.properties.mined = "1";
     }
   }
 }
@@ -480,15 +572,22 @@ function attachPopulation(features, year, { places, countries }) {
     for (const i of list) rural[i] = (towns > 0 ? (0.5 * towned(i)) / towns : 0) + (land > 0 ? ((towns > 0 ? 0.5 : 1) * fields(i)) / land : 0);
     const census = PROVINCE_POPULATION[adm0];
     if (census) {
-      // A province cut by a historical border shares its figure by area.
-      const base = (i) => features[i].properties.id.replace(/-p\d+$/, "");
+      // A province cut by a historical border shares its figure by area; the
+      // parts of a division split on the finer map (`up`), by its towns and land.
+      const base = (i) => features[i].properties.up ?? features[i].properties.id.replace(/-p\d+$/, "");
       const areaOf = new Map();
-      for (const i of list) areaOf.set(base(i), (areaOf.get(base(i)) ?? 0) + features[i].properties.area);
+      const ruralOf = new Map();
+      for (const i of list) {
+        areaOf.set(base(i), (areaOf.get(base(i)) ?? 0) + features[i].properties.area);
+        ruralOf.set(base(i), (ruralOf.get(base(i)) ?? 0) + rural[i]);
+      }
       const known = list.filter((i) => census[base(i)] !== undefined);
       // Thousands today; in earlier years only the people outside today's
       // big cities, since the cities are counted on their own.
       const weight = (i) => {
-        const today = (census[base(i)] * 1000 * features[i].properties.area) / areaOf.get(base(i));
+        const today = features[i].properties.up != null && ruralOf.get(base(i)) > 0
+          ? (census[base(i)] * 1000 * rural[i]) / ruralOf.get(base(i))
+          : (census[base(i)] * 1000 * features[i].properties.area) / areaOf.get(base(i));
         return POPULATION_YEAR[year] === 2022 ? today : Math.max(today - urbanToday[i], today * 0.03);
       };
       // Provinces the table leaves out keep their towns, in the table's units.
@@ -661,29 +760,96 @@ async function buildCities(places) {
 }
 
 const GEONAMES = "https://download.geonames.org/export/dump";
+const WIKIDATA_SPARQL = "https://query.wikidata.org/sparql";
+
+/** One answer of Wikidata's query service, kept in the cache by its query; asked again after a pause on a 429 or 5xx, which it gives now and then. */
+async function askWikidata(query) {
+  const file = path.join(CACHE, `geonames/wikidata/${createHash("sha1").update(query).digest("hex").slice(0, 16)}.json`);
+  if (existsSync(file)) return JSON.parse(await readFile(file, "utf8"));
+  let text = null;
+  for (let attempt = 0; text === null; attempt += 1) {
+    // A dropped connection is asked again like a refusal.
+    const response = await fetch(WIKIDATA_SPARQL, {
+      method: "POST",
+      headers: { accept: "application/sparql-results+json", "content-type": "application/x-www-form-urlencoded", "user-agent": "GulfOfTrump-maps/1.0" },
+      body: new URLSearchParams({ query }),
+    }).catch((error) => ({ ok: false, status: error.code ?? error.message }));
+    if (response.ok) text = await response.text().catch(() => null);
+    if (text !== null) break;
+    if (attempt >= 5) throw new Error(`Wikidata: ${response.status}`);
+    await new Promise((resolve) => setTimeout(resolve, 5000 * (attempt + 1)));
+  }
+  await mkdir(path.dirname(file), { recursive: true });
+  await writeFile(file, text);
+  return JSON.parse(text);
+}
+
+/**
+ * The Russian and Ukrainian names of a GeoNames list's places: as GeoNames
+ * tags them in the alternate names of every country they lie in, and where it
+ * tags none, Wikidata's labels of the same places (by their GeoNames id).
+ */
+async function placeNames(text, what) {
+  const tagged = new Map();
+  const ids = townIds(text);
+  const countries = townCountries(text);
+  for (const country of countries) {
+    const zip = await cachedBuffer(`geonames/${country}.zip`, `${GEONAMES}/alternatenames/${country}.zip`).catch(() => null);
+    if (!zip) {
+      log(`${what}: no alternate names for ${country}`);
+      continue;
+    }
+    taggedNames(unzip(zip, `${country}.txt`), tagged, ids);
+  }
+  const untagged = [...ids].filter((id) => !tagged.get(id)?.ru || !tagged.get(id)?.uk);
+  const labels = await wikidataLabels(untagged, askWikidata);
+  log(`${what}: tagged names of ${countries.length} countries; Wikidata labels for ${labels.size} of ${untagged.length} places GeoNames does not name`);
+  return { tagged, labels };
+}
+
+/**
+ * GeoNames' places of 1,000 to 15,000 people (cities1000), as splitLarge's
+ * towns: they name the finer map's parts no town lies in. Kept in the cache
+ * once made (delete scripts/.cache/geonames/villages.json to make it again).
+ */
+async function loadVillages() {
+  const cached = path.join(CACHE, "geonames", "villages.json");
+  if (existsSync(cached)) return JSON.parse(await readFile(cached, "utf8"));
+  const all = unzip(await cachedBuffer("geonames/cities1000.zip", `${GEONAMES}/cities1000.zip`), "cities1000.txt");
+  const text = all
+    .split("\n")
+    .filter((line) => {
+      const people = Number(line.split("\t")[14]);
+      return people >= 1000 && people < 15000;
+    })
+    .join("\n");
+  const { tagged, labels } = await placeNames(text, "villages");
+  const villages = parseTowns(text, [], tagged, labels, { min: 1000, max: 15000 }).map(([name, x, y, people, , ru, uk]) => [x, y, people, name, ru || null, uk || null]);
+  await writeFile(cached, JSON.stringify(villages));
+  return villages;
+}
 
 /** Towns of 15,000 people and more from GeoNames that cities.json does not hold (see scripts/towns.mjs). */
 async function buildTowns(cities) {
   const text = unzip(await cachedBuffer("geonames/cities15000.zip", `${GEONAMES}/cities15000.zip`), "cities15000.txt");
-  const tagged = new Map();
-  for (const country of NAMED_COUNTRIES) {
-    taggedNames(unzip(await cachedBuffer(`geonames/${country}.zip`, `${GEONAMES}/alternatenames/${country}.zip`), `${country}.txt`), tagged);
-  }
-  const towns = parseTowns(text, cities, tagged);
-  const out = JSON.stringify({ source: "GeoNames cities15000 (CC BY 4.0), https://www.geonames.org/", towns });
+  const { tagged, labels } = await placeNames(text, "towns");
+  const towns = parseTowns(text, cities, tagged, labels);
+  const named = towns.filter((t) => t[5] || t[6]).length;
+  log(`towns: ${named} of ${towns.length} with a Russian or Ukrainian name`);
+  const out = JSON.stringify({ source: "GeoNames cities15000 (CC BY 4.0), https://www.geonames.org/; Russian and Ukrainian names also from Wikidata (CC0)", towns });
   await writeFile(path.join(OUT, "towns.json"), out);
   log(`towns.json  ${towns.length} towns  ${(out.length / 1024).toFixed(0)} KB`);
 }
 
-async function buildProvinces() {
+async function buildProvinces({ fine = null } = {}) {
   const admin1 = await neFile("ne_10m_admin_1_states_provinces");
-  const grouped = groupAdmin1(admin1);
+  const grouped = groupAdmin1(admin1, { fine: Boolean(fine) });
   log("grouped admin-1");
   // Simplify once here, before every era's cut, so the cuts stay fast.
-  const provinces = await run(
+  let provinces = await run(
     // Simplify before dissolving: the 10m source is detailed enough that
     // dissolving and cleaning it at full resolution takes many minutes.
-    "-i base.json -simplify 5% weighted keep-shapes -dissolve pid copy-fields=name,ru,uk,adm0 -clean -o out.json format=geojson",
+    `-i base.json -simplify 5% weighted keep-shapes -dissolve pid copy-fields=name,ru,uk,adm0${fine ? ",upName" : ""} -clean -o out.json format=geojson`,
     { "base.json": grouped },
   );
   provinces.features = provinces.features.filter((f) => f.geometry);
@@ -695,11 +861,73 @@ async function buildProvinces() {
   const rivers = await neFile("ne_10m_rivers_lake_centerlines");
   describeLand(provinces, regions, rivers, { bbox, contains, centroid });
   log("terrain and fertility");
+  if (fine) {
+    provinces = await splitProvinces(provinces, { ...fine, regions });
+    describeLand(provinces, regions, rivers, { bbox, contains, centroid });
+    log("finer provinces: terrain and fertility of the parts");
+  }
   attachResources(provinces);
   attachRivers(provinces, rivers);
   log("resources and rivers");
   log(`${provinces.features.length} base provinces`);
   return provinces;
+}
+
+/**
+ * The finer prototype's split (scripts/split.mjs): each division's people
+ * in 1991 are estimated the way an era's are, then the large ones are cut
+ * into parts. A part keeps its division's id in `up` through the build.
+ */
+async function splitProvinces(provinces, { allPlaces, countries, regions }) {
+  const estimate = provinces.features.map((f) => ({ ...f, properties: { ...f.properties, id: f.properties.pid, area: Math.round(km2(f)) } }));
+  attachPopulation(estimate, 1994, { places: allPlaces, countries });
+  provinces.features.forEach((f, i) => {
+    f.properties.area = estimate[i].properties.area;
+    f.properties.pop = estimate[i].properties.pop;
+  });
+  const places = allPlaces.features
+    .filter((f) => f.geometry)
+    .map((f) => {
+      const p = f.properties;
+      return [...f.geometry.coordinates, ownPopulation(p), p.NAME_EN || p.NAME, p.NAME_RU || null, p.NAME_UK || null];
+    });
+  // GeoNames' towns name the parts with no Natural Earth place (the committed towns.json: [name, x, y, people, seat, ru?, uk?]).
+  const towns = JSON.parse(readFileSync(path.join(OUT, "towns.json"), "utf8")).towns.map(([name, x, y, people, , ru, uk]) => [x, y, people, name, ru || null, uk || null]);
+  // Places of 1,000 people and more name the parts no town lies in, before a landform or a side – those with a Russian name only:
+  // "Córdoba (north)" reads in Cyrillic, a hamlet with no Cyrillic name would not.
+  const villages = (await loadVillages()).filter((v) => v[4]);
+  // Natural Earth's landforms (ranges, plateaus, deserts, plains, not islands or coasts, which many provinces share) name the parts with no town at all, the most local first.
+  const LANDFORMS = new Set(["Range/mtn", "Plateau", "Desert", "Plain", "Basin", "Lowland", "Valley", "Wetlands", "Tundra", "Delta", "Foothills", "Depression", "Gorge"]);
+  const caps = (s) => (s === s.toUpperCase() ? s.toLowerCase().replace(/(^|[\s-])\p{L}/gu, (m) => m.toUpperCase()) : s);
+  // The selva has no Russian name in Natural Earth and a Ukrainian one in capitals; its parts are the emptiest of all, with no village to be named after.
+  const LAND_NAMES = { Selva: { ru: "Сельва", uk: "Сельва" } };
+  const lands = regions.features
+    .filter((f) => f.geometry && f.properties.NAME && LANDFORMS.has(f.properties.FEATURECLA))
+    .map((f) => {
+      const name = caps(f.properties.NAME_EN || f.properties.NAME);
+      const ru = LAND_NAMES[name]?.ru ?? (f.properties.NAME_RU ? caps(f.properties.NAME_RU) : null);
+      const uk = LAND_NAMES[name]?.uk ?? (f.properties.NAME_UK ? caps(f.properties.NAME_UK) : null);
+      return { name, ru, uk, rank: f.properties.SCALERANK, box: bbox(f.geometry), geometry: f.geometry };
+    })
+    .sort((a, b) => b.rank - a.rank || a.name.localeCompare(b.name));
+  // The parts' ids as earlier builds gave them (scripts/split.mjs): saves keep provinces by id, so a renamed part keeps its own.
+  const frozen = existsSync(SPLIT_IDS) ? JSON.parse(readFileSync(SPLIT_IDS, "utf8")) : {};
+  const { collection, summary } = await splitLarge(provinces, places, towns, lands, { bbox, contains, slug, run, frozen, villages });
+  log(`finer provinces: ${summary.split} divisions split into ${summary.parts} parts (${summary.unnamed} named by direction; too thin to split: ${summary.skipped.join(", ") || "none"})`);
+  if (summary.refrozen.length) console.warn(`finer provinces: new ids for divisions whose parts changed in number (old saves lose them): ${summary.refrozen.join(", ")}`);
+  // New divisions and changed ones are frozen as they came; the rest stay as they were.
+  const table = { ...frozen };
+  for (const [pid, ids] of Object.entries(summary.ids)) if (!table[pid] || summary.refrozen.includes(pid)) table[pid] = ids;
+  const sorted = Object.fromEntries(Object.keys(table).sort().map((key) => [key, table[key]]));
+  await writeFile(SPLIT_IDS, `${JSON.stringify(sorted, null, 1)}\n`);
+  // Mends the T-junctions where a part's edge meets a neighbour's border, so neighbours share their arcs.
+  const cleaned = await run("-i parts.json -clean -o out.json format=geojson", { "parts.json": collection });
+  cleaned.features = cleaned.features.filter((f) => f.geometry);
+  for (const f of cleaned.features) {
+    delete f.properties.area;
+    delete f.properties.cell;
+  }
+  return cleaned;
 }
 
 // ---------------------------------------------------------------------------
@@ -746,7 +974,43 @@ function nameParts(collection) {
   }
 }
 
-async function buildEra(year, provinces, { allPlaces, countries, rails }) {
+/**
+ * On the finer map, a historical side holding enough of a whole division for
+ * a province of its own (as the standard map cuts it) keeps one though no
+ * single part of the division holds enough of it: its largest piece, which
+ * the standard map's province then lies in (German Upper Silesia in 1914,
+ * spread over two parts of the Silesian Voivodeship). A side that is some
+ * part's own, or has a piece of its own already, changes nothing.
+ */
+function keepDivisionSides(year, shares, partKey, divisionOf) {
+  const divisions = new Map();
+  for (const [pid, { total, by }] of shares) {
+    const up = divisionOf(pid);
+    const d = divisions.get(up) ?? { total: 0, by: new Map(), best: new Map(), kept: new Set() };
+    d.total += total;
+    for (const [hid, area] of by) {
+      d.by.set(hid, (d.by.get(hid) ?? 0) + area);
+      if (partKey.has(`${pid}|${hid}`)) d.kept.add(hid);
+      const best = d.best.get(hid);
+      if (!best || area > best.area) d.best.set(hid, { pid, area });
+    }
+    divisions.set(up, d);
+  }
+  const taken = new Set(partKey.values());
+  for (const [up, d] of divisions) {
+    for (const [hid, area] of d.by) {
+      if (d.kept.has(hid) || area / d.total < MIN_PART_SHARE || area / 1e6 < MIN_PART_KM2) continue;
+      const { pid } = d.best.get(hid);
+      let n = 2;
+      while (taken.has(`${pid}-p${n}`)) n += 1;
+      partKey.set(`${pid}|${hid}`, `${pid}-p${n}`);
+      taken.add(`${pid}-p${n}`);
+      log(`${year}: ${pid}-p${n} keeps ${hid}'s ${Math.round(area / 1e6)} km² of ${up}`);
+    }
+  }
+}
+
+async function buildEra(year, provinces, { allPlaces, countries, rails }, { fine = false } = {}) {
   const hist = await historicalLayer(year);
   log(`${year}: historical layer`);
   const histById = new Map(hist.features.map((f) => [f.properties.hid, f.properties]));
@@ -787,6 +1051,7 @@ async function buildEra(year, provinces, { allPlaces, countries, rails }) {
       if (area / total >= MIN_PART_SHARE && area / 1e6 >= MIN_PART_KM2) partKey.set(`${pid}|${hid}`, `${pid}-p${n++}`);
     }
   }
+  if (fine) keepDivisionSides(year, shares, partKey, (pid) => provinceById.get(pid).properties.up ?? pid);
 
   const features = [];
   for (const piece of pieces.features) {
@@ -800,7 +1065,7 @@ async function buildEra(year, provinces, { allPlaces, countries, rails }) {
       type: "Feature",
       properties: {
         id, name: base.name, ru: base.ru, uk: base.uk, adm0: base.adm0, res: base.res, rv: base.rv,
-        hist: side, owner: h.owner, terrain: base.terrain, fertility: base.fertility,
+        hist: side, owner: h.owner, terrain: base.terrain, fertility: base.fertility, ...(fine ? { up: base.up } : {}),
       },
       geometry: piece.geometry,
     });
@@ -812,13 +1077,13 @@ async function buildEra(year, provinces, { allPlaces, countries, rails }) {
     const base = province.properties;
     features.push({
       type: "Feature",
-      properties: { id: pid, name: base.name, ru: base.ru, uk: base.uk, adm0: base.adm0, res: base.res, rv: base.rv, hist: near.hid, owner: near.owner, terrain: base.terrain, fertility: base.fertility },
+      properties: { id: pid, name: base.name, ru: base.ru, uk: base.uk, adm0: base.adm0, res: base.res, rv: base.rv, hist: near.hid, owner: near.owner, terrain: base.terrain, fertility: base.fertility, ...(fine ? { up: base.up } : {}) },
       geometry: province.geometry,
     });
   }
 
   const merged = await run(
-    "-i pieces.json -dissolve id copy-fields=name,ru,uk,adm0,res,rv,hist,owner,terrain,fertility -o out.json format=geojson",
+    `-i pieces.json -dissolve id copy-fields=name,ru,uk,adm0,res,rv,hist,owner,terrain,fertility${fine ? ",up" : ""} -o out.json format=geojson`,
     { "pieces.json": { type: "FeatureCollection", features } },
   );
 
@@ -847,6 +1112,10 @@ async function buildEra(year, provinces, { allPlaces, countries, rails }) {
     if (income) f.properties.inc = Math.round(income / 100) * 100;
   }
   log(`${year}: population (${guessed} countries by regional growth) and railways`);
+  if (fine) {
+    attachCoarse(merged.features, year);
+    placeMines(merged.features, year);
+  }
 
   const topo = await run(
     "-i provinces.json -simplify 45% keep-shapes -o out.json format=topojson quantization=60000",
@@ -864,41 +1133,99 @@ async function buildEra(year, provinces, { allPlaces, countries, rails }) {
     let coastal = false;
     walk(g.arcs, (a) => { if (uses.get(a < 0 ? ~a : a) === 1) coastal = true; });
     g.properties.coastal = coastal;
-    for (const k of ["ru", "uk", "city", "res", "rv", "rail", "inc", "gr"]) if (g.properties[k] == null || g.properties[k] === "") delete g.properties[k];
+    for (const k of ["ru", "uk", "city", "res", "rv", "rail", "inc", "gr", "was"]) if (g.properties[k] == null || g.properties[k] === "") delete g.properties[k];
+    delete g.properties.up;
     if (g.properties.res) g.properties.res = JSON.parse(g.properties.res);
     if (g.properties.rv) g.properties.rv = g.properties.rv.split("|");
     if (g.properties.at) g.properties.at = g.properties.at.split(",").map(Number);
   }
   shareResources(topo.objects.regions.geometries);
+  for (const g of topo.objects.regions.geometries) delete g.properties.mined;
 
   topo.meta = {
     sources: [`${NE_REPO}@${NE_COMMIT} (public domain)`, `${HIST_REPO}@${HIST_COMMIT} world_${year}.geojson (GPL-3.0)`],
     license: "GPL-3.0",
+    ...(fine ? { fine: `scripts/split.mjs; was: the province of world_${year}.json each lies in` } : {}),
   };
-  const file = path.join(OUT, `world_${year}.json`);
+  const name = fine ? `world_${year}_fine.json` : `world_${year}.json`;
   const text = JSON.stringify(topo);
-  await writeFile(file, text);
+  await writeFile(path.join(OUT, name), text);
   const split = topo.objects.regions.geometries.filter((g) => /-p\d+$/.test(g.properties.id)).length;
-  console.log(`world_${year}.json  ${topo.objects.regions.geometries.length} provinces (${split} split parts)  ${(text.length / 1024).toFixed(0)} KB`);
+  console.log(`${name}  ${topo.objects.regions.geometries.length} provinces (${split} split parts)  ${(text.length / 1024).toFixed(0)} KB`);
 }
+
+/**
+ * On the finer map, each province records the province of the standard map
+ * it lies in (`was`, where the id differs): a point well inside it, looked
+ * up in that era's world_<year>.json. Saves and scenario data written for
+ * the standard map find their provinces through it (engine/refine.ts).
+ */
+function attachCoarse(features, year) {
+  const coarse = JSON.parse(readFileSync(path.join(OUT, `world_${year}.json`), "utf8"));
+  const regions = topoFeature(coarse, coarse.objects.regions).features;
+  const find = locator(regions, 0.5);
+  const ids = new Set(regions.map((r) => r.properties.id));
+  let moved = 0;
+  for (const f of features) {
+    // A province the standard map has by the same id is that province (an enclave like Daejeon has no hole in its neighbour to be found by).
+    if (ids.has(f.properties.id)) continue;
+    const i = find(innerPoint(f.geometry));
+    // An islet the standard map's outline left out lies in its division's province.
+    const up = f.properties.up;
+    const was = i >= 0 ? regions[i].properties.id : up && ids.has(up) ? up : null;
+    if (was && was !== f.properties.id) {
+      f.properties.was = was;
+      moved += 1;
+    }
+  }
+  // A standard province no finer one's inner point fell in (a sliver cut by a historical border) takes the finer province
+  // holding its own inner point, where that one's standard province keeps other parts: every standard id stays resolvable.
+  const coarseOf = (f) => f.properties.was ?? f.properties.id;
+  const count = new Map();
+  for (const f of features) count.set(coarseOf(f), (count.get(coarseOf(f)) ?? 0) + 1);
+  const fineFind = locator(features, 0.5);
+  const lost = [];
+  for (const r of regions) {
+    if (count.has(r.properties.id)) continue;
+    const i = fineFind(innerPoint(r.geometry));
+    const f = i >= 0 ? features[i] : null;
+    if (!f || ids.has(f.properties.id) || (count.get(coarseOf(f)) ?? 0) < 2) {
+      lost.push(r.properties.id);
+      continue;
+    }
+    count.set(coarseOf(f), count.get(coarseOf(f)) - 1);
+    f.properties.was = r.properties.id;
+    count.set(r.properties.id, 1);
+    log(`${year}: ${f.properties.id} stands for ${r.properties.id}, which no finer province lay in`);
+  }
+  log(`${year}: ${moved} finer provinces lie in a standard province of another id; standard provinces with no finer one: ${lost.length ? lost.join(", ") : "none"}`);
+}
+
+// `npm run maps -- --era 1994` builds one era's map and nothing else;
+// `npm run maps -- --fine 1994` builds that era's finer prototype,
+// world_1994_fine.json (scripts/split.mjs), from its standard map.
+const args = process.argv.slice(2);
+const flag = (name) => (args.includes(name) ? Number(args[args.indexOf(name) + 1]) : null);
+const fineYear = flag("--fine");
+const only = fineYear ?? flag("--era");
+if (only !== null && !YEARS.includes(only)) throw new Error(`--era, --fine: one of ${YEARS.join(", ")}`);
 
 await mkdir(CACHE, { recursive: true });
 await mkdir(OUT, { recursive: true });
-const provinces = await buildProvinces();
 const allPlaces = await neFile("ne_10m_populated_places");
+const countries = new Map(
+  (await neFile("ne_50m_admin_0_countries")).features.map((f) => [
+    f.properties.ADM0_A3,
+    { pop: f.properties.POP_EST, region: f.properties.REGION_UN, income: f.properties.POP_EST > 0 ? (f.properties.GDP_MD * 1e6) / f.properties.POP_EST : 0 },
+  ]),
+);
+const provinces = await buildProvinces({ fine: fineYear === null ? null : { allPlaces, countries } });
 const railroads = await neFile("ne_10m_railroads");
-const context = {
-  allPlaces,
-  countries: new Map(
-    (await neFile("ne_50m_admin_0_countries")).features.map((f) => [
-      f.properties.ADM0_A3,
-      { pop: f.properties.POP_EST, region: f.properties.REGION_UN, income: f.properties.POP_EST > 0 ? (f.properties.GDP_MD * 1e6) / f.properties.POP_EST : 0 },
-    ]),
-  ),
-  rails: railSegments(railroads),
-};
+const context = { allPlaces, countries, rails: railSegments(railroads) };
 log("places, countries and railways");
-for (const year of YEARS) await buildEra(year, provinces, context);
-await buildWater();
-await buildTransport(railroads);
-await buildTowns(await buildCities(allPlaces));
+for (const year of only === null ? YEARS : [only]) await buildEra(year, provinces, context, { fine: fineYear !== null });
+if (only === null) {
+  await buildWater();
+  await buildTransport(railroads);
+  await buildTowns(await buildCities(allPlaces));
+}

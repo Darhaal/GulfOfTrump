@@ -106,6 +106,8 @@ export interface ChangedProvince {
   kind: MoveKind | "annex" | "hold";
   /** The side pushed back, when the holder of a contested province gained ground. */
   against?: string;
+  /** Who held it before: the side it was taken, freed or pushed from. */
+  from?: string;
 }
 
 export interface TurnMove {
@@ -118,44 +120,82 @@ export interface TurnMove {
   count: number;
   /** No land of the mover borders it: a landing. */
   sea: boolean;
+  /** The provinces of this push, for its card on the map. */
+  regions: string[];
+  /** The side it was against: who held most of them before, or the side the holder threw back. */
+  against?: string;
+  /** The holder throwing the other side back, rather than a side pushing in. */
+  back?: boolean;
+}
+
+export interface TurnMovesOptions {
+  /** The most arrows drawn, the largest pushes first; every one by default. */
+  limit?: number;
+  /**
+   * The map as it stood before the turn (engine/history.ts undoTurn): a push
+   * starts from the land its side held then, which the map after the turn,
+   * or after later turns, may no longer show.
+   */
+  before?: Record<string, RegionState>;
 }
 
 /**
  * The turn's changes as the map tells them: every province that changed
- * hands, and arrows — one per stretch of land a side took, from the land it
- * held next to it (or, for a landing, from its nearest province).
+ * hands or where the front moved, and arrows — one per stretch of land a side
+ * took or pushed into, from the land it held next to it before the turn (or,
+ * for a landing, from its nearest province), and one per stretch where the
+ * holder threw the other side back, towards the land the other side holds.
  */
 export function turnMoves(
   applied: AppliedChange[],
   regions: Record<string, RegionState>,
   centre: (id: string) => Point | undefined,
   neighbours: (id: string) => string[],
-  limit = 30,
+  { limit = Infinity, before }: TurnMovesOptions = {},
 ): { changed: Map<string, ChangedProvince>; moves: TurnMove[] } {
   const changed = new Map<string, ChangedProvince>();
   for (const c of applied) {
     // An entry from before provinces names whole-country regions the map no longer has.
     if ("region" in c && !regions[c.region]) continue;
-    if (c.kind === "occupy" && c.from !== c.to) changed.set(c.region, { by: c.to, kind: "take" });
-    else if (c.kind === "liberate") changed.set(c.region, { by: c.to, kind: "free" });
+    if (c.kind === "occupy" && c.from !== c.to) changed.set(c.region, { by: c.to, kind: "take", from: c.from });
+    else if (c.kind === "liberate") changed.set(c.region, { by: c.to, kind: "free", from: c.from });
     else if (c.kind === "annex" && c.from !== c.to) changed.set(c.region, { by: c.to, kind: "annex" });
     else if (c.kind === "contest") {
       // A smaller share than before: the holder won ground back.
       const back = c.held !== undefined && c.was !== undefined && c.held < c.was;
-      changed.set(c.region, back ? { by: c.holder, kind: "hold", against: c.by } : { by: c.by, kind: "push" });
-    } else if (c.kind === "repel") changed.set(c.region, { by: c.holder, kind: "hold", against: c.by });
+      changed.set(c.region, back ? { by: c.holder, kind: "hold", against: c.by } : { by: c.by, kind: "push", from: c.holder });
+    } else if (c.kind === "repel" && !c.settled) changed.set(c.region, { by: c.holder, kind: "hold", against: c.by });
+    // A front a peace closed is no push: no arrow, no changed province.
   }
 
-  // Stretches of land one side took the same way in this turn.
+  // Where a side stood before the turn: the map before it, or else today's without what the turn changed.
+  const stood = (id: string, side: string) => (before ? before[id]?.controller === side : regions[id]?.controller === side && !changed.has(id));
+  const nearest = (side: string, to: Point): Point | undefined => {
+    let best: Point | undefined;
+    let bestDist = Infinity;
+    for (const id of Object.keys(before ?? regions)) {
+      if (!stood(id, side)) continue;
+      const c = centre(id);
+      if (!c) continue;
+      const d = (c[0] - to[0]) ** 2 + (c[1] - to[1]) ** 2;
+      if (d < bestDist) {
+        bestDist = d;
+        best = c;
+      }
+    }
+    return best;
+  };
+
+  // Stretches of land one side took, freed or pushed into the same way, and stretches where a holder threw the same enemy back.
   const groups = new Map<string, string[]>();
   for (const [id, c] of changed) {
-    if (c.kind === "annex" || c.kind === "hold") continue;
-    const key = `${c.by}|${c.kind}`;
+    if (c.kind === "annex") continue;
+    const key = c.kind === "hold" ? `${c.by}|hold|${c.against ?? ""}` : `${c.by}|${c.kind}`;
     groups.set(key, [...(groups.get(key) ?? []), id]);
   }
   const moves: TurnMove[] = [];
   for (const [key, ids] of groups) {
-    const [by, kind] = key.split("|") as [string, MoveKind];
+    const [by, kind, against] = key.split("|") as [string, MoveKind | "hold", string | undefined];
     const pending = new Set(ids);
     for (const start of ids) {
       if (!pending.has(start)) continue;
@@ -171,46 +211,88 @@ export function turnMoves(
       }
       const target = mean(part.map(centre));
       if (!target) continue;
-      // Where the push came from: the mover's own land on the edge of the stretch.
       const inPart = new Set(part);
-      const edge = new Set<string>();
-      for (const id of part) {
-        for (const n of neighbours(id)) if (!inPart.has(n) && !changed.has(n) && regions[n]?.controller === by) edge.add(n);
+      if (kind === "hold") {
+        // The holder pushing the other side back: from the stretch towards the land the other side held next to it, or its nearest.
+        if (!against) continue;
+        const edge = new Set<string>();
+        for (const id of part) for (const n of neighbours(id)) if (!inPart.has(n) && (before ?? regions)[n]?.controller === against) edge.add(n);
+        const enemy = mean([...edge].map(centre)) ?? nearest(against, target);
+        if (!enemy || (enemy[0] === target[0] && enemy[1] === target[1])) continue;
+        const to: Point = [target[0] + (enemy[0] - target[0]) * 0.7, target[1] + (enemy[1] - target[1]) * 0.7];
+        moves.push({ key: `${key}|${start}`, by, kind: "push", from: target, to, count: part.length, sea: false, regions: part, against, back: true });
+        continue;
       }
+      // Where the push came from: the mover's own land on the edge of the stretch.
+      const edge = new Set<string>();
+      for (const id of part) for (const n of neighbours(id)) if (!inPart.has(n) && stood(n, by)) edge.add(n);
       let source = mean([...edge].map(centre));
       let sea = false;
       if (!source) {
         // A landing: from the mover's nearest province.
-        let best: Point | undefined;
-        let bestDist = Infinity;
-        for (const [id, r] of Object.entries(regions)) {
-          if (r.controller !== by || changed.has(id)) continue;
-          const c = centre(id);
-          if (!c) continue;
-          const d = (c[0] - target[0]) ** 2 + (c[1] - target[1]) ** 2;
-          if (d < bestDist) {
-            bestDist = d;
-            best = c;
-          }
-        }
-        source = best;
+        source = nearest(by, target);
         sea = true;
       }
       if (!source || (source[0] === target[0] && source[1] === target[1])) continue;
-      moves.push({ key: `${key}|${start}`, by, kind, from: source, to: target, count: part.length, sea });
+      const from = mostOf(part.map((id) => changed.get(id)?.from));
+      moves.push({ key: `${key}|${start}`, by, kind, from: source, to: target, count: part.length, sea, regions: part, ...(from ? { against: from } : {}) });
     }
-  }
-  // The holder pushing the other side back: from the province towards the land the other side holds next to it.
-  for (const [id, c] of changed) {
-    if (c.kind !== "hold" || !c.against) continue;
-    const from = centre(id);
-    const enemy = mean(neighbours(id).filter((n) => regions[n]?.controller === c.against).map(centre));
-    if (!from || !enemy) continue;
-    const to: Point = [from[0] + (enemy[0] - from[0]) * 0.7, from[1] + (enemy[1] - from[1]) * 0.7];
-    moves.push({ key: `${c.by}|hold|${id}`, by: c.by, kind: "push", from, to, count: 1, sea: false });
   }
   moves.sort((a, b) => b.count - a.count);
   return { changed, moves: moves.slice(0, limit) };
+}
+
+/**
+ * Where a formation's headquarters stands: of the provinces it stands in,
+ * the one nearest their middle, so the marker sits on its own ground even
+ * when the formation holds a long, bent line.
+ */
+/**
+ * Where a formation's headquarters may stand: those of its provinces the player holds behind its lines; when the
+ * whole sector is in the enemy's hands or fought over, the held province nearest its middle.
+ */
+export function headquartersGround(provinces: string[], held: Set<string>, centre: (id: string) => Point | undefined): string[] {
+  const behind = provinces.filter((id) => held.has(id));
+  if (behind.length) return behind;
+  const middle = mean(provinces.map(centre));
+  if (!middle) return [];
+  let best: string | undefined;
+  let bestDist = Infinity;
+  for (const id of held) {
+    const p = centre(id);
+    if (!p || !Number.isFinite(p[0]) || !Number.isFinite(p[1])) continue;
+    const d = (p[0] - middle[0]) ** 2 + (p[1] - middle[1]) ** 2;
+    if (d < bestDist) {
+      bestDist = d;
+      best = id;
+    }
+  }
+  return best ? [best] : [];
+}
+
+export function headquartersAt(provinces: string[], centre: (id: string) => Point | undefined): { region: string; at: Point } | null {
+  const points = provinces.map((id) => [id, centre(id)] as const).filter((p): p is readonly [string, Point] => Boolean(p[1]) && Number.isFinite(p[1]![0]) && Number.isFinite(p[1]![1]));
+  const middle = mean(points.map(([, p]) => p));
+  if (!middle) return null;
+  let best = points[0];
+  let bestDist = Infinity;
+  for (const p of points) {
+    const d = (p[1][0] - middle[0]) ** 2 + (p[1][1] - middle[1]) ** 2;
+    if (d < bestDist) {
+      bestDist = d;
+      best = p;
+    }
+  }
+  return { region: best[0], at: best[1] };
+}
+
+/** The value most of a list has, if any. */
+function mostOf(values: (string | undefined)[]): string | undefined {
+  const counts = new Map<string, number>();
+  for (const v of values) if (v) counts.set(v, (counts.get(v) ?? 0) + 1);
+  let best: string | undefined;
+  for (const [v, n] of counts) if (best === undefined || n > counts.get(best)!) best = v;
+  return best;
 }
 
 function mean(points: (Point | undefined)[]): Point | undefined {
@@ -223,9 +305,11 @@ function mean(points: (Point | undefined)[]): Point | undefined {
  * An arrow from a to b as SVG paths in map units: a gentle curve and its
  * head. `head` is the head's length in map units (screen pixels / zoom).
  * A push across a short border would make a stub, so an arrow is at least
- * five heads long, reaching back along its direction.
+ * five heads long, reaching back along its direction. The line stops
+ * `inset` heads short of the point (at the head's base by default); `angle`
+ * is the head's direction in degrees, for a head drawn on its own.
  */
-export function arrowPath(to: Point, origin: Point, head: number): { line: string; tip: string } {
+export function arrowPath(to: Point, origin: Point, head: number, inset = 1): { line: string; tip: string; angle: number } {
   let dx = to[0] - origin[0];
   let dy = to[1] - origin[1];
   let length = Math.hypot(dx, dy) || 1;
@@ -250,7 +334,8 @@ export function arrowPath(to: Point, origin: Point, head: number): { line: strin
   const base: Point = [to[0] - hx * head, to[1] - hy * head];
   const half = head * 0.55;
   const tip = `M${to[0]},${to[1]}L${base[0] - hy * half},${base[1] + hx * half}L${base[0] + hy * half},${base[1] - hx * half}Z`;
-  return { line: `M${from[0]},${from[1]}Q${cx},${cy} ${base[0]},${base[1]}`, tip };
+  const end: Point = [to[0] - hx * head * inset, to[1] - hy * head * inset];
+  return { line: `M${from[0]},${from[1]}Q${cx},${cy} ${end[0]},${end[1]}`, tip, angle: (Math.atan2(hy, hx) * 180) / Math.PI };
 }
 
 /** The provinces a turn changed: taken, freed, annexed, fought over or held. */

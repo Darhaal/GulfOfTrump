@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { roll } from "./dice";
+import { familiesQuietUntil } from "./mobilisation";
 import { loyaltyOf } from "./politics";
 import { ownProtests } from "./unrest";
 import { PROTEST_STAGES, TALK_RESULTS, type GameState, type Loyalty, type Politics, type Protest, type Talk, type TalkLine, type TalkResult } from "./types";
@@ -119,9 +120,12 @@ export function settleTalks(state: GameState, id: string, proposal: z.infer<type
   let plots = politics.plots;
   let unrest = politics.unrest;
   const loyalty: Loyalty = { ...loyaltyOf(politics) };
+  let quiet = politics.familiesQuiet;
   if (talk.with === "protest") {
     const p = protests.find((x) => x.id === talk.target);
     if (p) {
+      // The families of the men under arms, given what they asked, stay home a while (engine/mobilisation.ts).
+      if (result === "concession" && p.kind === "mobilisation") quiet = familiesQuietUntil(state.date, "conceded");
       if (result === "deal") protests = protests.map((x) => (x === p ? { ...x, size: Math.round(x.size * 0.5), stage: stepStage(x.stage, -1) } : x));
       if (result === "concession") protests = protests.filter((x) => x !== p);
       if (result === "split") protests = protests.map((x) => (x === p ? { ...x, size: Math.round(x.size * 0.7), organisation: clamp((x.organisation ?? 50) - 20, 0, 100) } : x));
@@ -143,7 +147,7 @@ export function settleTalks(state: GameState, id: string, proposal: z.infer<type
   return {
     ...state,
     protests,
-    politics: { ...politics, plots, unrest: clamp(unrest, 0, 100), loyalty, talks: politics.talks!.map((t) => (t.id === id ? done : t)) },
+    politics: { ...politics, plots, unrest: clamp(unrest, 0, 100), loyalty, talks: politics.talks!.map((t) => (t.id === id ? done : t)), ...(quiet ? { familiesQuiet: quiet } : {}) },
     updatedAt: now.toISOString(),
   };
 }

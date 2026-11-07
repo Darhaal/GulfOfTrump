@@ -65,7 +65,7 @@ export default function TalkDialog({ talk, busy, disabled, onSay, onFinish, onDr
                   <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${mine ? "rounded-tr-md bg-ink text-on-ink" : "rounded-tl-md border border-line sheet text-ink"}`}>
                     <div className={`mb-0.5 flex items-center gap-2 text-2xs font-black uppercase tracking-widest ${mine ? "text-on-ink/60" : "text-muted"}`}>
                       {mine ? t("diplomacy.you") : l.speaker || talk.counterpart}
-                      {!mine && <SpeakButton id={`talk-${talk.id}-${i}`} text={l.text} className="-my-1 ml-auto" />}
+                      {!mine && <SpeakButton id={`talk-${talk.id}-${i}`} text={l.text} who={{ name: l.speaker || talk.counterpart }} className="-my-1 ml-auto" />}
                     </div>
                     <p className="whitespace-pre-wrap font-medium leading-relaxed">{l.text}</p>
                   </div>

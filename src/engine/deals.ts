@@ -1,24 +1,32 @@
 import { z } from "zod";
 import { addStep } from "./calendar";
+import { roll } from "./dice";
 import { type Accounts, nationalAccounts, type WorldScale } from "./economy";
 import { BARRELS_PER_TONNE } from "./units";
+import { countryName } from "./names";
 import { countsFor } from "./occupation";
 import { peopleIn } from "./population";
+import { addTension, allied, remember, tieOf } from "./relations";
 import type { ResourceType } from "./resources";
+import { same } from "./text";
 import { countryCentres, distanceKm } from "./trade";
-import type { AppliedChange, Economy, GameState, MapRegion, ScenarioId, TradeDeal, TradeGood } from "./types";
+import type { AppliedChange, DealBreach, DealCondition, DealTerms, Economy, GameState, Localized, MapRegion, ScenarioId, TradeDeal, TradeGood } from "./types";
 
 /**
  * Trade deals: contracts of the player's government with another to sell or
  * buy a good for a few years at an agreed price. Each turn the market offers
  * some — buyers short of what the country has in surplus (grain from its
  * fields, oil, coal, metals from its mines), sellers of what it lacks, arms
- * dealers when it is at war — which the player signs or turns down at once.
- * The player can also propose a deal of its own; the other government
- * answers in the next turn. A signed deal brings or costs hard currency
- * every turn, refills the stores of a resource bought, shows in the trade
- * books, and the game master hears of it: partners honour deals unless
- * war, sanctions or a blockade give them reason to break them.
+ * dealers when it is at war — which the player signs, turns down, or
+ * bargains over; the player can also propose a deal of its own or reopen one
+ * in force (the talks and the other side's answers: engine/negotiation.ts).
+ * A signed deal brings or costs hard currency every turn (or adds to what
+ * the buyer owes, on credit, or is paid in goods), refills the stores of a
+ * resource bought and shows in the trade books. Deliveries fall short under
+ * a blockade, sanctions or a shortage at the seller's, and a deal cut below
+ * most of its volume two turns running breaks. A deal binds both sides: its
+ * partner's trust grows while it runs, and tearing it up costs it. The game
+ * master hears of all of it.
  */
 
 export const TRADE_GOODS = ["grain", "oil", "gas", "coal", "metals", "uranium", "arms"] as const;
@@ -26,22 +34,28 @@ export const TRADE_GOODS = ["grain", "oil", "gas", "coal", "metals", "uranium", 
 const METALS: ResourceType[] = ["iron", "copper", "nickel", "tin", "bauxite"];
 
 /** Below this, $bn a year, a surplus or a lack is not worth a contract: less in the far smaller economies of the world wars. */
-const MIN_TRADE: Record<ScenarioId, number> = { "1914": 0.02, "1939": 0.03, "1950": 0.03, "1964": 0.04, "1991": 0.08, "1999": 0.08, "2014": 0.08, "2022": 0.08 };
+export const MIN_TRADE: Record<ScenarioId, number> = { "1914": 0.02, "1933": 0.025, "1939": 0.03, "1950": 0.03, "1957": 0.035, "1964": 0.04, "1973": 0.05, "1979": 0.06, "1991": 0.08, "1999": 0.08, "2014": 0.08, "2022": 0.08 };
 /** The smallest contract offered, $bn a year. */
-const smallest = (era: ScenarioId) => Math.max(0.01, round(MIN_TRADE[era] * 0.6));
+export const smallest = (era: ScenarioId) => Math.max(0.01, round(MIN_TRADE[era] * 0.6));
 /** Offers on the market each turn. */
 const MAX_OFFERS = 6;
-/** New contracts a government can negotiate in one turn: signed offers and its own proposals together. */
+/** New contracts a government can negotiate in one turn: signed offers, talks and its own proposals together. */
 export const MAX_NEW_DEALS = 3;
 /** Most a country spends on arms from abroad a year, as a share of its GDP. */
-const ARMS_SHARE = 0.04;
+export const ARMS_SHARE = 0.04;
+/** Most of its GDP an arms maker sells by contract a year. */
+export const ARMS_SALES = 0.004;
 /** A good the country does not lack can still be bought for stores, up to this share of GDP a year. */
-const STOCKPILE_SHARE = 0.01;
+export const STOCKPILE_SHARE = 0.01;
+/** Delivered below this share of the volume, a deal is cut short; two turns running and it breaks. */
+const STRAIN = 0.6;
+/** A shortfall this small the stores cover. */
+const SLACK = 0.9;
 /** Share of a deal's yearly value that moves the reserves (the rest is the ordinary flow of trade). */
 const RESERVE_SHARE = 0.2;
 
 /** Value of the world's grain harvest as a share of world output, by era. */
-const GRAIN_MARKET: Record<ScenarioId, number> = { "1914": 0.05, "1939": 0.035, "1950": 0.03, "1964": 0.022, "1991": 0.012, "1999": 0.01, "2014": 0.011, "2022": 0.01 };
+const GRAIN_MARKET: Record<ScenarioId, number> = { "1914": 0.05, "1933": 0.04, "1939": 0.035, "1950": 0.03, "1957": 0.026, "1964": 0.022, "1973": 0.02, "1979": 0.017, "1991": 0.012, "1999": 0.01, "2014": 0.011, "2022": 0.01 };
 /** How yields and grain eaten per head grow with income. */
 const YIELD = 0.3;
 const APPETITE = 0.25;
@@ -49,14 +63,19 @@ const APPETITE = 0.25;
 const FARMLAND: Record<string, number> = { plains: 1, hills: 0.55, forest: 0.25, wetlands: 0.2, jungle: 0.15, mountains: 0.08, desert: 0.02, tundra: 0 };
 
 /** How much distance puts buyers off, by good: pipelines and coal stay near, grain and uranium go anywhere by sea. */
-const REACH: Record<TradeGood, number> = { gas: 1.6, coal: 1.1, oil: 0.9, metals: 0.9, grain: 0.8, uranium: 0.3, arms: 0.3 };
+export const REACH: Record<TradeGood, number> = { gas: 1.6, coal: 1.1, oil: 0.9, metals: 0.9, grain: 0.8, uranium: 0.3, arms: 0.3 };
 
 /** The big arms makers of each era, the only ones that sell arms by the contract. */
-const ARMOURERS: Record<ScenarioId, string[]> = {
+export const ARMOURERS: Record<ScenarioId, string[]> = {
   "1914": ["germany", "uk", "france", "usa", "austria-hungary", "russia", "italy", "japan"],
+  // Germany's armourers were barred by Versailles and sold through Dutch and Swedish fronts.
+  "1933": ["uk", "france", "usa", "czechoslovakia", "italy", "sweden", "belgium", "japan", "ussr"],
   "1939": ["usa", "uk", "germany", "france", "ussr", "italy", "japan", "czechoslovakia", "sweden"],
   "1950": ["usa", "ussr", "uk", "france", "czechoslovakia", "sweden", "belgium"],
+  "1957": ["usa", "ussr", "uk", "france", "czechoslovakia", "sweden", "belgium", "italy"],
   "1964": ["usa", "ussr", "uk", "france", "west-germany", "czechoslovakia", "china", "sweden", "italy", "belgium"],
+  "1973": ["usa", "ussr", "france", "uk", "west-germany", "czechoslovakia", "china", "italy", "sweden", "israel", "belgium"],
+  "1979": ["usa", "ussr", "france", "uk", "west-germany", "czechoslovakia", "china", "italy", "israel", "sweden", "brazil"],
   "1991": ["usa", "ussr", "russia", "france", "uk", "china", "germany", "italy", "israel", "czechoslovakia", "sweden"],
   "1999": ["usa", "russia", "france", "uk", "germany", "china", "israel", "italy", "sweden", "ukraine", "netherlands"],
   "2014": ["usa", "russia", "france", "china", "germany", "italy", "uk", "spain", "israel", "ukraine", "sweden", "czechia"],
@@ -66,9 +85,16 @@ const ARMOURERS: Record<ScenarioId, string[]> = {
 /** Prices of the day for the volumes on a contract: $ per tonne (barrel for oil, 1000 m³ for gas, kg for uranium). */
 const PRICES: Record<ScenarioId, Partial<Record<TradeGood, number>>> = {
   "1914": { grain: 30, oil: 0.8, coal: 2.5, metals: 3 },
+  // Wheat and copper at the Depression's lowest, oil at under a dollar.
+  "1933": { grain: 18, oil: 0.9, gas: 12, coal: 3, metals: 3 },
   "1939": { grain: 22, oil: 1.1, gas: 15, coal: 3.5, metals: 4 },
   "1950": { grain: 85, oil: 2.5, gas: 5, coal: 8, metals: 8, uranium: 20 },
+  "1957": { grain: 75, oil: 2.1, gas: 7, coal: 9, metals: 9, uranium: 19 },
   "1964": { grain: 65, oil: 1.8, gas: 10, coal: 9, metals: 10, uranium: 17 },
+  // October 1973: the posted price is raised from $3 to $5.12 on the 16th; wheat dear after the Soviet purchases of 1972.
+  "1973": { grain: 160, oil: 3.5, gas: 25, coal: 12, metals: 18, uranium: 18 },
+  // December 1979: oil above thirty dollars after Iran's revolution, uranium near its peak.
+  "1979": { grain: 160, oil: 30, gas: 80, coal: 35, metals: 30, uranium: 110 },
   "1991": { grain: 110, oil: 20, gas: 90, coal: 40, metals: 30, uranium: 25 },
   "1999": { grain: 110, oil: 17.5, gas: 70, coal: 30, metals: 25, uranium: 26 },
   "2014": { grain: 240, oil: 100, gas: 400, coal: 80, metals: 110, uranium: 75 },
@@ -116,8 +142,8 @@ export interface TradeOffer {
   need: number;
 }
 
-const round = (v: number, digits = 2) => Math.round(v * 10 ** digits) / 10 ** digits;
-const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+export const round = (v: number, digits = 2) => Math.round(v * 10 ** digits) / 10 ** digits;
+export const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
 /** A steady pseudo-random number in [0, 1) for a key, so offers stay put within a turn. */
 function hash(key: string): number {
@@ -189,7 +215,7 @@ export function grainBooks(state: Pick<GameState, "countries" | "regions" | "sce
 }
 
 /** Surplus (+) or lack (−) of one good for a country, $bn a year. Arms are judged separately. */
-function balanceOf(good: TradeGood, a: Accounts | undefined, grain: number): number {
+export function balanceOf(good: TradeGood, a: Accounts | undefined, grain: number): number {
   if (good === "grain") return grain;
   if (!a) return 0;
   if (good === "metals") return METALS.reduce((s, t) => s + (a.trade[t] ?? 0), 0);
@@ -198,7 +224,7 @@ function balanceOf(good: TradeGood, a: Accounts | undefined, grain: number): num
 }
 
 /** Whether two governments can sign anything: not at war, not under full sanctions either way. */
-function canTrade(state: Pick<GameState, "wars" | "sanctions">, a: string, b: string): boolean {
+export function canTrade(state: Pick<GameState, "wars" | "sanctions">, a: string, b: string): boolean {
   for (const w of state.wars) {
     if (w.truce) continue;
     if ((w.attackers.includes(a) && w.defenders.includes(b)) || (w.attackers.includes(b) && w.defenders.includes(a))) return false;
@@ -206,8 +232,8 @@ function canTrade(state: Pick<GameState, "wars" | "sanctions">, a: string, b: st
   return !(state.sanctions ?? []).some((s) => s.scope === "full" && ((s.by === a && s.against === b) || (s.by === b && s.against === a)));
 }
 
-/** Countries the player is at war with. */
-function enemiesOf(state: Pick<GameState, "wars">, tag: string): Set<string> {
+/** Countries a country fights, truces aside. */
+export function foesOf(state: Pick<GameState, "wars">, tag: string): Set<string> {
   const out = new Set<string>();
   for (const w of state.wars) {
     if (w.truce) continue;
@@ -216,32 +242,58 @@ function enemiesOf(state: Pick<GameState, "wars">, tag: string): Set<string> {
   }
   return out;
 }
+const enemiesOf = foesOf;
 
-const open = (d: TradeDeal) => d.status === "active" || d.status === "proposed";
+export const open = (d: TradeDeal) => d.status === "active" || d.status === "proposed";
 
-/** $bn a year already under contract (in force or proposed) for a good, one way; with one partner if named. */
-function committed(deals: TradeDeal[], good: TradeGood, side: "sell" | "buy", partner?: string): number {
-  return deals.filter((d) => open(d) && d.good === good && d.side === side && (!partner || d.partner === partner)).reduce((s, d) => s + d.value, 0);
+/** $bn a year already under contract (in force or on the table) for a good, one way; with one partner if named; one deal left out. */
+export function committed(deals: TradeDeal[], good: TradeGood, side: "sell" | "buy", partner?: string, except?: string): number {
+  return deals.filter((d) => open(d) && d.id !== except && d.good === good && d.side === side && (!partner || d.partner === partner)).reduce((s, d) => s + d.value, 0);
 }
 
-/** New contracts the player can still make this turn. */
+/** New contracts the player can still make this turn: deals signed this turn and talks under way count alike. */
 export function dealsLeft(state: Pick<GameState, "deals" | "turn">): number {
-  const made = (state.deals ?? []).filter((d) => d.turn === state.turn && ((d.status === "active" && d.origin === "offer") || (d.status === "proposed" && d.origin === "player"))).length;
+  const made = (state.deals ?? []).filter((d) => d.turn === state.turn && open(d)).length;
   return Math.max(0, MAX_NEW_DEALS - made);
 }
 
+/** A deal in force by which the player sells or buys a good from one partner alone. */
+export function exclusiveWith(state: Pick<GameState, "deals">, good: TradeGood, side: "sell" | "buy"): string | undefined {
+  return (state.deals ?? []).find((d) => d.status === "active" && d.good === good && d.side === side && d.conditions?.some((c) => c.kind === "exclusivity" && c.by === "player"))?.partner;
+}
+
+/** The books a deal is judged by, worked out once: every country's accounts and grain. */
+export interface TradeBooksNow {
+  accounts: Map<string, Accounts>;
+  grain: Map<string, number>;
+}
+
+export function booksNow(state: GameState, map: Record<string, MapRegion>): TradeBooksNow {
+  return { accounts: nationalAccounts(state, map), grain: grainBalances(state, map) };
+}
+
+/** Whether the player's government makes arms to sell by contract. */
+export const makesArms = (state: Pick<GameState, "scenarioId">, tag: string) => ARMOURERS[state.scenarioId].includes(tag);
+
 /**
  * How much more of a good the player can contract, $bn a year: a surplus to
- * sell or a lack to buy, less what is already under contract; arms up to a
- * share of GDP; a good it does not lack, a little for its stores.
+ * sell or a lack to buy, less what is already under contract (but the deal
+ * named, when its own terms are being changed); arms up to a share of GDP,
+ * and sold only by an arms maker; a good it does not lack, a little for its
+ * stores. Nothing to anyone else of a good the player has promised one
+ * partner alone.
  */
-export function capacity(state: GameState, map: Record<string, MapRegion>, good: TradeGood, side: "sell" | "buy"): number {
+export function capacity(state: GameState, map: Record<string, MapRegion> | null, good: TradeGood, side: "sell" | "buy", books?: TradeBooksNow, except?: string): number {
   const gdp = state.countries[state.player]?.economy?.gdp ?? 0;
   const deals = state.deals ?? [];
-  if (good === "arms") return side === "buy" ? round(Math.max(0, gdp * ARMS_SHARE - committed(deals, "arms", "buy"))) : 0;
-  const balance = balanceOf(good, nationalAccounts(state, map).get(state.player), grainBalances(state, map).get(state.player) ?? 0);
+  const exclusive = exclusiveWith(state, good, side);
+  if (exclusive && exclusive !== deals.find((d) => d.id === except)?.partner) return 0;
+  if (good === "arms") return side === "buy" ? round(Math.max(0, gdp * ARMS_SHARE - committed(deals, "arms", "buy", undefined, except))) : makesArms(state, state.player) ? round(Math.max(0, gdp * ARMS_SALES - committed(deals, "arms", "sell", undefined, except))) : 0;
+  const b = books ?? (map ? booksNow(state, map) : null);
+  if (!b) return 0;
+  const balance = balanceOf(good, b.accounts.get(state.player), b.grain.get(state.player) ?? 0);
   const room = side === "sell" ? Math.max(0, balance) : Math.max(-balance, gdp * STOCKPILE_SHARE);
-  return round(Math.max(0, room - committed(deals, good, side)));
+  return round(Math.max(0, room - committed(deals, good, side, undefined, except)));
 }
 
 /**
@@ -281,6 +333,8 @@ export function tradeOffers(state: GameState, map: Record<string, MapRegion>): T
     return b < 0 ? Math.min(0, b + committed(deals, good, "sell", tag)) : Math.max(0, b - committed(deals, good, "buy", tag));
   };
   const offer = (side: "sell" | "buy", good: TradeGood, have: number) => {
+    // A good promised to one partner alone is offered to no one else.
+    if (exclusiveWith(state, good, side)) return;
     // The partner who wants it most, nearer and keener first, with a little luck of the turn.
     let best: { tag: string; score: number; need: number } | null = null;
     for (const c of partners) {
@@ -357,167 +411,460 @@ export function tradePosition(state: GameState, map: Record<string, MapRegion>):
     .sort((a, b) => b.balance - a.balance);
 }
 
-function years(from: string, n: number): string {
+/** A date some whole years on. */
+export function yearsFrom(from: string, n: number): string {
   let d = from;
   for (let i = 0; i < n; i++) d = addStep(d, "year");
   return d;
+}
+const years = yearsFrom;
+
+/** The terms alone of a deal or an offer, money and no conditions left out. */
+export function termsOf(t: DealTerms): DealTerms {
+  return {
+    value: t.value,
+    premium: t.premium,
+    years: t.years,
+    ...(t.pay && t.pay !== "money" ? { pay: t.pay } : {}),
+    ...(t.pay === "goods" && t.payGood ? { payGood: t.payGood } : {}),
+    ...(t.conditions?.length ? { conditions: t.conditions.map((c) => ({ kind: c.kind, by: c.by })) } : {}),
+  };
+}
+
+/** A deal put on the table this turn, with the terms given. */
+export function tableDeal(state: Pick<GameState, "turn" | "date">, o: Pick<TradeOffer, "partner" | "good" | "side"> & DealTerms, origin: TradeDeal["origin"]): TradeDeal {
+  return {
+    id: `deal-${state.turn}-${o.side}-${o.good}-${o.partner}`,
+    partner: o.partner,
+    good: o.good,
+    side: o.side,
+    ...termsOf(o),
+    since: state.date,
+    until: years(state.date, o.years),
+    status: "proposed",
+    origin,
+    turn: state.turn,
+  };
 }
 
 /** The player signs an offer the market has now (looked up again, so a stale or repeated click does nothing): in force at once. */
 export function signOffer(state: GameState, id: string, map: Record<string, MapRegion>, now = new Date()): GameState {
   const offer = tradeOffers(state, map).find((o) => o.id === id);
   if (!offer) return state;
-  const deal: TradeDeal = {
-    id: `deal-${state.turn}-${offer.side}-${offer.good}-${offer.partner}`,
-    partner: offer.partner,
-    good: offer.good,
-    side: offer.side,
-    value: offer.value,
-    premium: offer.premium,
-    years: offer.years,
-    since: state.date,
-    until: years(state.date, offer.years),
-    status: "active",
-    origin: "offer",
-    turn: state.turn,
-  };
+  const deal: TradeDeal = { ...tableDeal(state, offer, "offer"), status: "active" };
   return { ...state, deals: [...(state.deals ?? []).filter((d) => d.id !== deal.id), deal], updatedAt: now.toISOString() };
 }
 
 /** The player turns an offer down; it leaves the market for this turn. */
 export function declineOffer(state: GameState, offer: TradeOffer, now = new Date()): GameState {
-  const deal: TradeDeal = { ...offerAsDeal(state, offer), status: "declined" };
+  const deal: TradeDeal = { ...tableDeal(state, offer, "player"), status: "declined" };
   return { ...state, deals: [...(state.deals ?? []), deal], updatedAt: now.toISOString() };
 }
 
-const offerAsDeal = (state: GameState, o: TradeOffer): TradeDeal => ({
-  id: `deal-${state.turn}-${o.side}-${o.good}-${o.partner}`,
-  partner: o.partner,
-  good: o.good,
-  side: o.side,
-  value: o.value,
-  premium: o.premium,
-  years: o.years,
-  since: state.date,
-  until: years(state.date, o.years),
-  status: "proposed",
-  origin: "player",
-  turn: state.turn,
-});
-
-/** The player proposes a deal of its own; the other government answers next turn. */
-export function proposeDeal(state: GameState, terms: Pick<TradeOffer, "partner" | "good" | "side" | "value" | "premium" | "years">, map: Record<string, MapRegion>, now = new Date()): GameState {
+/**
+ * A proposal of the player's put on the table as it stands, cut to what the
+ * country can deliver, with no answer yet. The talks (engine/negotiation.ts)
+ * answer at once; a proposal left like this (a save from before the talks)
+ * gets the engine's answer when the turn is played.
+ */
+export function proposeDeal(state: GameState, terms: Pick<TradeOffer, "partner" | "good" | "side"> & DealTerms, map: Record<string, MapRegion>, now = new Date()): GameState {
   const mine = state.countries[state.player]?.economy;
   if (!mine || !state.countries[terms.partner] || terms.partner === state.player || !dealsLeft(state)) return state;
   const room = capacity(state, map, terms.good, terms.side);
   if (room < 0.01) return state;
-  const deal = offerAsDeal(state, {
-    ...terms,
-    id: "",
-    need: 0,
-    value: round(clamp(terms.value, 0.01, room)),
-    premium: Math.round(clamp(terms.premium, -50, 50)),
-    years: Math.round(clamp(terms.years, 1, 10)),
-  });
+  const deal = tableDeal(
+    state,
+    {
+      ...terms,
+      value: round(clamp(terms.value, 0.01, room)),
+      premium: Math.round(clamp(terms.premium, -50, 50)),
+      years: Math.round(clamp(terms.years, 1, 10)),
+    },
+    "player",
+  );
   return { ...state, deals: [...(state.deals ?? []).filter((d) => d.id !== deal.id), deal], updatedAt: now.toISOString() };
 }
 
-/** The player withdraws a proposal or tears up a deal in force. */
+/** The player withdraws a proposal or tears up a deal in force: the partner remembers it when the turn is played. */
 export function cancelDeal(state: GameState, id: string, now = new Date()): GameState {
-  const deals = (state.deals ?? []).flatMap((d) => (d.id !== id ? [d] : d.status === "active" ? [{ ...d, status: "ended" as const, note: "cancelled" }] : []));
+  const deals = (state.deals ?? []).flatMap((d) => {
+    if (d.id !== id) return [d];
+    if (d.status !== "active") return [];
+    const ended: TradeDeal = { ...d, status: "ended", note: "cancelled" };
+    delete ended.talking;
+    return [ended];
+  });
   return { ...state, deals, updatedAt: now.toISOString() };
 }
 
-/** The model's answers to proposals and news of broken deals. */
+/** The model's notes on the turn's deals and news of broken ones; its verdicts on proposals count only for a save from before the talks played without the map. */
 export const dealsField = z
   .array(z.object({ deal: z.string().trim().min(1).max(120), status: z.enum(["accepted", "rejected", "broken"]), note: z.string().trim().max(400).default("") }))
   .max(12)
   .default([]);
 
 /**
- * A turn for the deals: proposals answered, deals broken by the partner or
- * made impossible by war and full sanctions, deals run out, turned-down
- * offers forgotten. Every change goes into the chronicle.
+ * How much a deal binds its two sides, 0–100: what it is worth against the
+ * partner's economy, for how long, and the political terms it carries. A
+ * long gas contract with a small neighbour binds it closely; a year of grain
+ * sold to a great power hardly at all.
  */
-export function applyDeals(next: GameState, changes: z.infer<typeof dealsField>, ctx: { turn: number; to: string }, applied: AppliedChange[]): void {
+export function bindingOf(state: Pick<GameState, "countries">, d: Pick<TradeDeal, "partner" | "value" | "years" | "conditions">): number {
+  const gdp = Math.max(0.01, state.countries[d.partner]?.economy?.gdp ?? 0);
+  const political = (d.conditions ?? []).filter((c) => c.kind !== "exclusivity" && c.kind !== "technology").length;
+  return Math.round(clamp((d.value / gdp) * 1500 * clamp(d.years / 5, 0.4, 1.6) + 8 * political, 0, 100));
+}
+
+/** The offers the player made in a deal's talks. */
+export const playerRounds = (d: Pick<TradeDeal, "rounds">) => (d.rounds ?? []).filter((r) => r.by === "player").length;
+
+/** Whether a partner the game master says broke a deal had a cause the engine sees: deliveries cut, sanctions between them, distrust, a new government, or the land that made the good lost. */
+function causeToBreak(next: GameState, d: TradeDeal, books: TradeBooksNow | null): boolean {
+  if (d.strain) return true;
+  const player = next.player;
+  if ((next.sanctions ?? []).some((s) => (s.by === d.partner && s.against === player) || (s.by === player && s.against === d.partner))) return true;
+  if (tieOf(next, d.partner, player).trust <= -20) return true;
+  const course = next.countries[d.partner]?.course;
+  if (course && course.set.how !== "start" && course.set.date > d.since) return true;
+  // A partner that sells and has lost what it sold from.
+  if (books && d.side === "buy" && d.good !== "arms") {
+    const left = balanceOf(d.good, books.accounts.get(d.partner), books.grain.get(d.partner) ?? 0);
+    if (left < STRAIN * committed(next.deals ?? [], d.good, "buy", d.partner)) return true;
+  }
+  return false;
+}
+
+/** The name of a treaty of mutual assistance a deal's terms found. */
+function treatyName(state: GameState, a: string, b: string): Localized {
+  const names = (tag: string): Localized => {
+    const n = state.countries[tag]?.name;
+    if (n && typeof n !== "string") return n;
+    return countryName(tag) ?? same(n ?? tag);
+  };
+  const x = names(a);
+  const y = names(b);
+  return { en: `${x.en}–${y.en} Treaty of Mutual Assistance`, ru: `${x.ru} – ${y.ru}: договор о взаимной помощи`, uk: `${x.uk} – ${y.uk}: договір про взаємну допомогу` };
+}
+
+/** A deal that ends takes the alliance its terms founded with it. */
+function endAlliance(next: GameState, d: TradeDeal, applied: AppliedChange[]): void {
+  if (!d.alliance) return;
+  const a = next.alliances.find((x) => x.id === d.alliance);
+  if (!a) return;
+  next.alliances = next.alliances.filter((x) => x !== a);
+  applied.push({ kind: "alliance-ended", alliance: a.id, name: a.name, members: [...a.members] });
+}
+
+/** What a buyer on credit owes is paid to the seller when the deal ends, or written off when the buyer goes to war with it. */
+function settleOwed(next: GameState, d: TradeDeal, repudiated: boolean): void {
+  if (!d.owed) return;
+  const seller = d.side === "sell" ? next.player : d.partner;
+  const buyer = d.side === "sell" ? d.partner : next.player;
+  const s = next.countries[seller]?.economy;
+  const b = next.countries[buyer]?.economy;
+  if (repudiated) {
+    if (b) b.debt = round(Math.max(0, b.debt - d.owed));
+  } else if (s) s.reserves = round(s.reserves + d.owed);
+}
+
+/**
+ * A turn for the deals: the talks of the turn told (signed, refused, lapsed,
+ * renegotiated), the terms of a deal just signed put in force (a treaty of
+ * mutual assistance among them), deals torn up by the player remembered by
+ * the partner, deals made impossible by war and full sanctions broken,
+ * deals the game master says the partner broke broken if the engine sees a
+ * cause, deals run out and their credit repaid. Every change goes into the
+ * chronicle. A proposal from before the talks (an old save) that the engine
+ * could not answer takes the model's verdict, as it used to.
+ */
+export function applyDeals(next: GameState, changes: z.infer<typeof dealsField>, ctx: { turn: number; to: string; from?: string; books?: TradeBooksNow | null }, applied: AppliedChange[]): void {
   const list: TradeDeal[] = [];
+  const player = next.player;
   for (const d of next.deals ?? []) {
-    if (d.status === "declined" || d.status === "ended" || d.status === "broken") continue;
     const answer = changes.find((c) => c.deal === d.id);
+    const note = answer?.note || undefined;
+    const talked = (d.rounds ?? []).some((r) => r.turn === ctx.turn);
+    const rounds = playerRounds(d);
+    const record = (change: Extract<AppliedChange, { kind: "deal" }>["change"], extra: Partial<Extract<AppliedChange, { kind: "deal" }>> = {}) =>
+      applied.push({ kind: "deal", partner: d.partner, good: d.good, side: d.side, value: d.value, change, ...(note ? { note } : {}), ...extra });
+    if (d.status === "broken") continue;
+    if (d.status === "ended") {
+      if (d.note === "cancelled") {
+        record("cancelled");
+        remember(next, d.partner, player, "broke-deal", -(5 + bindingOf(next, d) / 3), ctx.to);
+        settleOwed(next, d, false);
+        endAlliance(next, d, applied);
+      }
+      continue;
+    }
+    if (d.status === "declined") {
+      // Talks the partner ended are news; an offer passed over, or talks the player left, are not.
+      const last = d.rounds?.at(-1);
+      if (talked && last?.by === "player" && last.answer === "refused") record("rejected", { reason: last.reason, rounds });
+      continue;
+    }
     const partnerGone = !next.countries[d.partner] || next.countries[d.partner].dormant || !next.countries[d.partner].economy;
-    const record = (change: "signed" | "rejected" | "broken" | "ended", note?: string) =>
-      applied.push({ kind: "deal", partner: d.partner, good: d.good, side: d.side, value: d.value, change, ...(note ? { note } : {}) });
     if (d.status === "proposed") {
-      if (answer?.status === "accepted" && !partnerGone && canTrade(next, next.player, d.partner)) {
-        list.push({ ...d, status: "active", since: ctx.to, until: years(ctx.to, d.years), note: answer.note || undefined });
-        record("signed", answer.note);
-      } else if (answer?.status === "rejected" || partnerGone || d.turn < ctx.turn) {
-        // Unanswered for a whole turn counts as a refusal.
-        record("rejected", answer?.note);
-      } else list.push(d);
+      if (d.rounds?.length) {
+        // The partner's counter left unanswered lapses with the turn.
+        record("lapsed", { rounds });
+        continue;
+      }
+      // A proposal from before the talks: the model's verdict, as it used to be.
+      if (answer?.status === "accepted" && !partnerGone && canTrade(next, player, d.partner)) {
+        list.push({ ...d, status: "active", since: ctx.to, until: years(ctx.to, d.years), note });
+        record("signed");
+      } else if (answer?.status === "rejected" || partnerGone || d.turn < ctx.turn) record("rejected");
+      else list.push(d);
       continue;
     }
-    if (partnerGone || !canTrade(next, next.player, d.partner) || answer?.status === "broken") {
-      record("broken", answer?.note);
+    const war = Boolean(next.wars.some((w) => !w.truce && ((w.attackers.includes(player) && w.defenders.includes(d.partner)) || (w.attackers.includes(d.partner) && w.defenders.includes(player)))));
+    if (partnerGone || !canTrade(next, player, d.partner)) {
+      record("broken", { by: "partner", ...(war ? { cause: "war" as const } : partnerGone ? {} : { cause: "sanctions" as const }) });
+      settleOwed(next, d, war);
+      endAlliance(next, d, applied);
       continue;
     }
+    if (answer?.status === "broken" && causeToBreak(next, d, ctx.books ?? null)) {
+      record("broken", { by: "partner", ...(d.strain ? { cause: d.strain.cause } : {}) });
+      settleOwed(next, d, false);
+      endAlliance(next, d, applied);
+      continue;
+    }
+    const fresh = ctx.from !== undefined ? d.since === ctx.from : d.turn === ctx.turn;
+    const kept: TradeDeal = { ...d };
+    delete kept.talking;
+    if (fresh) {
+      record("signed", rounds ? { rounds } : {});
+      // A deal signed brings the governments closer, the more for the political terms it carries; a treaty of mutual assistance among them is founded.
+      const political = (d.conditions ?? []).filter((c) => c.kind !== "exclusivity" && c.kind !== "technology").length;
+      remember(next, d.partner, player, "aided", 2 + 3 * political, ctx.to, false);
+      if (d.conditions?.some((c) => c.kind === "alliance") && !allied(next, player, d.partner)) {
+        const id = `a${ctx.turn}-t-${d.partner}`;
+        const name = treatyName(next, player, d.partner);
+        next.alliances.push({ id, name, members: [player, d.partner], since: ctx.to, kind: "alliance", until: d.until, founder: player });
+        applied.push({ kind: "alliance", alliance: id, name, members: [player, d.partner] });
+        kept.alliance = id;
+      }
+    } else if (talked && d.rounds?.at(-1)?.answer === "accepted") record("renegotiated", { rounds });
     if (d.until <= ctx.to) {
       record("ended");
+      settleOwed(next, d, false);
+      endAlliance(next, kept, applied);
       continue;
     }
-    list.push(d);
+    list.push(kept);
   }
   next.deals = list;
   if (!list.length) delete next.deals;
 }
 
+/** What the turn's deliveries depend on beyond the books: blockades, the land routes, and where to tell what went short. */
+export interface DealSettling {
+  /** Share of each country's trade by sea that blockade and raiders cut this period (engine/forces.ts seaCuts). */
+  blockade?: Map<string, number>;
+  /** Whether two countries trade overland, out of a blockade's reach. */
+  overland?: (a: string, b: string) => boolean;
+  /** The turn's chronicle: deliveries cut short and deals broken go into it. Without it nothing is recorded or broken. */
+  applied?: AppliedChange[];
+  seed?: string;
+  turn?: number;
+  to?: string;
+}
+
+/** The share of a deal delivered over the turn, and what held it back most: a blockade of either side's sea trade, sanctions between them, the player's shortage of what it sells. */
+export function deliveryOf(
+  state: Pick<GameState, "player" | "sanctions">,
+  d: TradeDeal,
+  ctx: { blockade?: Map<string, number>; overland?: (a: string, b: string) => boolean; shortage?: (seller: string, good: TradeGood) => number },
+): { share: number; cause?: DealBreach; by?: "player" | "partner" } {
+  const seller = d.side === "sell" ? state.player : d.partner;
+  const buyer = d.side === "sell" ? d.partner : state.player;
+  const side = (tag: string): "player" | "partner" => (tag === state.player ? "player" : "partner");
+  let share = 1;
+  let worst = 1;
+  let cause: DealBreach | undefined;
+  let by: "player" | "partner" | undefined;
+  const cut = (factor: number, why: DealBreach, who: string) => {
+    if (factor >= 0.999) return;
+    share *= factor;
+    if (factor < worst) {
+      worst = factor;
+      cause = why;
+      by = side(who);
+    }
+  };
+  if (ctx.blockade && !ctx.overland?.(seller, buyer)) {
+    const s = ctx.blockade.get(seller) ?? 0;
+    const b = ctx.blockade.get(buyer) ?? 0;
+    cut(1 - Math.max(s, b), "blockade", s >= b ? seller : buyer);
+  }
+  const sanction = (state.sanctions ?? []).find((s) => s.scope !== "full" && ((s.by === seller && s.against === buyer) || (s.by === buyer && s.against === seller)));
+  if (sanction) cut(0.5, "sanctions", sanction.by);
+  if (ctx.shortage && seller === state.player && d.good !== "arms") cut(ctx.shortage(seller, d.good), "shortage", seller);
+  return { share: round(share, 3), ...(cause ? { cause, by } : {}) };
+}
+
 /**
  * The money and goods of the deals in force over a turn: the seller's
- * reserves gain what the buyer's lose, and a resource bought refills the
- * buyer's stores in proportion to the lack it covers.
+ * reserves gain what the buyer's lose (on credit the buyer owes it instead,
+ * paid when the deal ends; paid in goods, no money moves and the goods
+ * refill the seller's stores), a resource bought refills the buyer's
+ * stores in proportion to the lack it covers – all of it as far as the
+ * goods got through. A strategic resource the national accounts already
+ * trade (economy.ts nationalAccounts: the seller's surplus is exported and
+ * paid for there, the buyer's lack imported and paid for there) is not paid
+ * for twice: within those flows a deal moves only its premium, and the full
+ * price only for the volume beyond them (`counted`); grain and arms are
+ * outside the accounts and paid in full. A deal delivered below most of its
+ * volume is cut short; two turns running, it breaks, and a partner the
+ * player failed remembers it. A deal in force draws its partner closer.
  */
-export function settleDeals(state: Pick<GameState, "deals" | "player" | "countries" | "regions" | "scenarioId" | "date">, economies: Record<string, Economy>, span: number, map: Record<string, MapRegion> | null): void {
+export function settleDeals(state: GameState, economies: Record<string, Economy>, span: number, map: Record<string, MapRegion> | null, ctx: DealSettling = {}): void {
   const active = (state.deals ?? []).filter((d) => d.status === "active");
   if (!active.length) return;
   const accounts = map ? nationalAccounts(state, map) : null;
+  const grain = map && active.some((d) => d.good === "grain" && d.side === "sell") ? grainBalances(state, map) : null;
+  // What the player has to deliver of each good it sells, against what it has.
+  const sold = new Map<TradeGood, number>();
+  for (const d of active) if (d.side === "sell") sold.set(d.good, (sold.get(d.good) ?? 0) + d.value);
+  const shortage = accounts
+    ? (seller: string, good: TradeGood) => {
+        const total = sold.get(good) ?? 0;
+        const have = balanceOf(good, accounts.get(seller), grain?.get(seller) ?? 0);
+        return total > 0 && have < total * SLACK ? clamp(Math.max(0, have) / total, 0, 1) : 1;
+      }
+    : undefined;
+  // What the player buys of each good, against its lack.
+  const bought = new Map<TradeGood, number>();
+  for (const d of active) if (d.side === "buy") bought.set(d.good, (bought.get(d.good) ?? 0) + d.value);
+  /** Of a deal's volume, the share the accounts already trade for one side: within its surplus (selling) or its lack (buying). */
+  const counted = (tag: string, d: TradeDeal, selling: boolean): number => {
+    if (!accounts || d.good === "grain" || d.good === "arms") return 0;
+    const flow = balanceOf(d.good, accounts.get(tag), 0) * (selling ? 1 : -1);
+    const total = tag === state.player ? ((selling ? sold : bought).get(d.good) ?? d.value) : d.value;
+    return total > 0 ? clamp(flow / total, 0, 1) : 0;
+  };
+  let broke = false;
   for (const d of active) {
     const seller = d.side === "sell" ? state.player : d.partner;
     const buyer = d.side === "sell" ? d.partner : state.player;
-    const money = d.value * (1 + d.premium / 100) * span * RESERVE_SHARE;
-    if (economies[seller]) economies[seller].reserves = round(economies[seller].reserves + money);
-    // A buyer pays from its reserves and borrows what they cannot cover.
-    const payer = economies[buyer];
-    if (payer) {
-      const paid = Math.min(payer.reserves, money);
-      payer.reserves = round(payer.reserves - paid);
-      payer.debt = round(payer.debt + (money - paid));
+    const got = deliveryOf(state, d, { blockade: ctx.blockade, overland: ctx.overland, shortage });
+    const base = d.value * span * RESERVE_SHARE * got.share;
+    const premium = d.premium / 100;
+    const earned = base * (premium + 1 - counted(seller, d, true));
+    const owes = base * (premium + 1 - counted(buyer, d, false));
+    const pay = d.pay ?? "money";
+    if (pay === "money") {
+      if (economies[seller]) economies[seller].reserves = round(Math.max(0, economies[seller].reserves + earned));
+      // A buyer pays from its reserves and borrows what they cannot cover.
+      const payer = economies[buyer];
+      if (payer && owes > 0) {
+        const paid = Math.min(payer.reserves, owes);
+        payer.reserves = round(payer.reserves - paid);
+        payer.debt = round(payer.debt + (owes - paid));
+      } else if (payer) payer.reserves = round(payer.reserves - owes);
+    } else if (pay === "credit") {
+      // On credit the buyer owes it and the seller is paid when the deal has run: one sum for both, so the claim and the debt move together.
+      if (economies[buyer]) economies[buyer].debt = round(Math.max(0, economies[buyer].debt + owes));
+      if (ctx.applied) d.owed = round(Math.max(0, (d.owed ?? 0) + owes), 3);
+    } else if (d.payGood) refill(economies[seller], accounts?.get(seller), d.payGood, Math.max(0, earned) / RESERVE_SHARE / Math.max(span, 1e-6), span);
+    refill(economies[buyer], accounts?.get(buyer), d.good, d.value * got.share, span);
+
+    if (!ctx.applied) continue;
+    const record = (change: "strained" | "broken", extra: Partial<Extract<AppliedChange, { kind: "deal" }>>) =>
+      ctx.applied!.push({ kind: "deal", partner: d.partner, good: d.good, side: d.side, value: d.value, change, ...extra });
+    if (got.share >= 0.98 || !got.cause) delete d.strain;
+    else {
+      const low = got.share < STRAIN;
+      const turns = low ? (d.strain?.turns ?? 0) + 1 : 0;
+      const before = d.strain;
+      d.strain = { cause: got.cause, by: got.by!, share: round(got.share), turns };
+      if (low && turns >= 2) {
+        // Cut short two turns running: the deal breaks. A partner the player failed by its own shortage remembers it.
+        d.status = "broken";
+        d.note = got.cause;
+        broke = true;
+        record("broken", { cause: got.cause, by: got.by, share: round(got.share) });
+        if (got.by === "player" && got.cause === "shortage") remember(state, d.partner, state.player, "broke-deal", -(3 + bindingOf(state, d) / 5), ctx.to ?? state.date);
+        settleOwed(state, d, false);
+        endAlliance(state, d, ctx.applied);
+        continue;
+      }
+      if (!before || before.cause !== got.cause || (low && !before.turns)) record("strained", { cause: got.cause, by: got.by, share: round(got.share) });
     }
-    // Metals cover every metal the buyer lacks, each in proportion to its lack, as their value was summed for the contract.
-    const types: ResourceType[] = d.good === "metals" ? METALS : d.good === "oil" || d.good === "gas" || d.good === "coal" || d.good === "uranium" ? [d.good] : [];
-    const store = economies[buyer];
-    // The lack at the day's price, unrounded: bauxite's is worth less than a cent of a billion, and still empties a store.
-    const a = accounts?.get(buyer);
-    const short = (t: ResourceType) => Math.max(0, (a?.need[t] ?? 0) - (a?.production[t] ?? 0)) * (a?.world?.price[t] ?? 0);
-    const lacking = types.filter((t) => short(t) > 0);
-    const lack = lacking.reduce((s, t) => s + short(t), 0);
-    if (store && lack > 0) for (const t of lacking) store.stocks[t] = round(clamp((store.stocks[t] ?? 3) + (d.value / lack) * span * 12, 0, 12), 1);
+    // A deal in force draws the partner closer, by how much it binds it.
+    if (ctx.seed !== undefined && ctx.turn !== undefined && roll(ctx.seed, ctx.turn, `bind:${d.id}`) < (bindingOf(state, d) / 100) * 6 * span * got.share) {
+      remember(state, d.partner, state.player, "aided", 1, ctx.to ?? state.date, false);
+      addTension(state, d.partner, state.player, -1);
+    }
+  }
+  if (broke) {
+    state.deals = (state.deals ?? []).filter((d) => d.status !== "broken");
+    if (!state.deals.length) delete state.deals;
   }
 }
 
-/** The deals and proposals for the game master. */
+/** A resource bought refills the buyer's stores in proportion to the lack it covers: metals every metal, each by its lack. */
+function refill(store: Economy | undefined, a: Accounts | undefined, good: TradeGood, value: number, span: number): void {
+  const types: ResourceType[] = good === "metals" ? METALS : good === "oil" || good === "gas" || good === "coal" || good === "uranium" ? [good] : [];
+  // The lack at the day's price, unrounded: bauxite's is worth less than a cent of a billion, and still empties a store.
+  const short = (t: ResourceType) => Math.max(0, (a?.need[t] ?? 0) - (a?.production[t] ?? 0)) * (a?.world?.price[t] ?? 0);
+  const lacking = types.filter((t) => short(t) > 0);
+  const lack = lacking.reduce((s, t) => s + short(t), 0);
+  if (store && lack > 0) for (const t of lacking) store.stocks[t] = round(clamp((store.stocks[t] ?? 3) + (value / lack) * span * 12, 0, 12), 1);
+}
+
+/** A political term in words: who grants it to whom. */
+const CONDITION_LINE: Record<DealCondition["kind"], (by: string, to: string) => string> = {
+  recognition: (by, to) => `${by} recognises ${to}'s government and borders`,
+  votes: (by, to) => `${by} votes with ${to} at the world body`,
+  base: (by, to) => `${by} lets ${to} station forces on its soil`,
+  alliance: (by, to) => `${by} and ${to} sign a treaty of mutual assistance`,
+  technology: (by, to) => `${by} shares its technology with ${to}`,
+  exclusivity: (by, to) => `${by} deals in this good with ${to} alone`,
+};
+
+/** A deal's terms for the game master: value, price, term, payment and conditions. */
+export function termsLine(state: Pick<GameState, "player">, d: DealTerms & Pick<TradeDeal, "partner" | "good">): string {
+  const pay = d.pay === "credit" ? " | on credit, paid when it ends" : d.pay === "goods" && d.payGood ? ` | paid in ${d.payGood}` : "";
+  const conditions = (d.conditions ?? []).map((c) => (c.by === "player" ? CONDITION_LINE[c.kind](state.player, d.partner) : CONDITION_LINE[c.kind](d.partner, state.player)));
+  return `$${d.value}bn a year | price ${d.premium >= 0 ? "+" : ""}${d.premium}% to the market | ${d.years} years${pay}${conditions.length ? ` | terms: ${conditions.join("; ")}` : ""}`;
+}
+
+/** The deals, the turn's talks and proposals for the game master. */
 export function describeDeals(state: GameState, world?: WorldScale): string[] {
-  const deals = (state.deals ?? []).filter(open);
-  if (!deals.length) return [];
-  const line = (d: TradeDeal) => {
+  const all = state.deals ?? [];
+  const deals = all.filter(open);
+  const talks = all.filter((d) => (d.rounds ?? []).some((r) => r.turn === state.turn));
+  if (!deals.length && !talks.length) return [];
+  const what = (d: TradeDeal) => {
     const volume = volumeOf(d.good, d.value, state.scenarioId, world);
     const unit = UNITS[d.good];
     const amount = volume !== null && unit ? ` (about ${volume} ${{ mt: "million tonnes", mbbl: "million barrels", bcm: "bcm", t: "tonnes" }[unit]} a year)` : "";
-    return `- ${d.id} | ${d.side === "sell" ? "sells" : "buys"} ${d.good}${amount} | ${d.side === "sell" ? "to" : "from"} ${d.partner} | $${d.value}bn a year | price ${d.premium >= 0 ? "+" : ""}${d.premium}% to the market | ${d.years} years${d.status === "active" ? ` | until ${d.until}` : ""}`;
+    return `${d.side === "sell" ? "sells" : "buys"} ${d.good}${amount} | ${d.side === "sell" ? "to" : "from"} ${d.partner}`;
   };
+  const line = (d: TradeDeal) => {
+    const binding = bindingOf(state, d);
+    const strain = d.strain ? ` | DELIVERED ${Math.round(d.strain.share * 100)}% last period (${d.strain.cause}, at the ${d.strain.by === "player" ? "player's" : "partner's"} end)` : "";
+    return `- ${d.id} | ${what(d)} | ${termsLine(state, d)}${d.status === "active" ? ` | until ${d.until}` : ""}${binding >= 25 ? ` | binds them${binding >= 60 ? " closely" : ""}` : ""}${strain}`;
+  };
+  const offerLine = (d: TradeDeal, r: NonNullable<TradeDeal["rounds"]>[number]) =>
+    // The answer to an offer is the other side's: the partner's to the player's offers (with its reason), the player's to the partner's counters.
+    `${r.by === "player" ? state.player : d.partner} offered ${termsLine(state, { ...r.terms, partner: d.partner, good: d.good })}${r.answer ? ` -> ${r.by === "player" ? d.partner : state.player} ${r.answer}${r.by === "player" && r.reason ? ` (${r.reason})` : ""}` : ""}`;
+  const outcome = (d: TradeDeal) =>
+    d.status === "active" ? (d.rounds?.at(-1)?.answer === "accepted" ? (d.turn === state.turn ? "SIGNED" : "RENEGOTIATED, in force on the new terms") : d.talking ? "still talking; the deal stands as it was" : "the deal stands as it was") : d.status === "declined" ? (d.rounds?.at(-1)?.by === "player" && d.rounds.at(-1)?.answer === "refused" ? "REFUSED" : "the player left the talks") : "the partner's counter awaits the player";
   const active = deals.filter((d) => d.status === "active");
-  const proposed = deals.filter((d) => d.status === "proposed");
+  const legacy = deals.filter((d) => d.status === "proposed" && !d.rounds?.length);
   return [
-    ...(active.length ? ["", "PLAYER'S TRADE DEALS IN FORCE (id | what | partner | value | price | term):", ...active.map(line)] : []),
-    ...(proposed.length ? ["", "PLAYER'S TRADE PROPOSALS awaiting the partner's answer this turn:", ...proposed.map(line)] : []),
+    ...(active.length ? ["", "PLAYER'S TRADE DEALS IN FORCE (id | what | partner | value | price | term | payment and terms):", ...active.map(line)] : []),
+    ...(talks.length
+      ? [
+          "",
+          "PLAYER'S TRADE TALKS THIS PERIOD (the engine's dice gave each answer: show them, in the partner's voice where it fits):",
+          ...talks.map((d) => `- ${d.id} | ${what(d)} | ${(d.rounds ?? []).filter((r) => r.turn === state.turn).map((r) => offerLine(d, r)).join("; ")} | ${outcome(d)}`),
+        ]
+      : []),
+    ...(legacy.length ? ["", "PLAYER'S TRADE PROPOSALS awaiting the partner's answer this turn (the engine answers them; give the partner's reason in note):", ...legacy.map(line)] : []),
   ];
 }

@@ -17,21 +17,36 @@ interface DialogProps {
   tourId?: string;
 }
 
+/** The dialogs open, the last on top: Escape closes only the top one (a picker opened from a dialog). */
+const openDialogs: symbol[] = [];
+
 /**
  * The app's own modal — never window.confirm. Escape and the backdrop close it.
  * It is drawn into the page's body, so a parent with a filter or transform
- * (the blurred sticky header) cannot clip it to its own box.
+ * (the blurred sticky header) cannot clip it to its own box. One may open
+ * over another; Escape closes the top one.
  */
 export default function Dialog({ open, onClose, title, children, footer, wide, huge, tourId }: DialogProps) {
   const panel = useRef<HTMLDivElement>(null);
+  const close = useRef(onClose);
+  useEffect(() => {
+    close.current = onClose;
+  });
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const me = Symbol("dialog");
+    openDialogs.push(me);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && openDialogs.at(-1) === me) close.current();
+    };
     window.addEventListener("keydown", onKey);
     panel.current?.focus();
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      openDialogs.splice(openDialogs.indexOf(me), 1);
+    };
+  }, [open]);
 
   if (!open) return null;
   const dialog = (

@@ -414,7 +414,8 @@ export const ministryOfDeputy = (deputy: Pick<Deputy, "deputyOf">): AdvisorId | 
 export function addDeputyAdvice(state: GameState, deputyId: string, question: string, reply: AdviceReply, now = new Date()): GameState {
   const thread = state.deputyAdvice?.[deputyId] ?? [];
   const asked: AdviceMessage = { from: "player", text: question, date: state.date, turn: state.turn };
-  const answered: AdviceMessage = { from: "advisor", text: reply.answer, date: state.date, turn: state.turn };
+  const by = state.deputies?.find((x) => x.id === deputyId)?.name;
+  const answered: AdviceMessage = { from: "advisor", text: reply.answer, date: state.date, turn: state.turn, ...(by ? { by } : {}) };
   // A word in private may win the deputy over or put them off, as with a minister.
   const mood = swayOf(state.deputies?.find((d) => d.id === deputyId), reply, state.turn);
   return {

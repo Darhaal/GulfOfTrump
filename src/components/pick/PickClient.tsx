@@ -1,7 +1,9 @@
 "use client";
 
+import Dictation from "@/components/voice/Dictation";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Flag, Loader2, Search } from "lucide-react";
+import { ChevronDown, Flag, Loader2, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import CountryFlag from "@/components/Flag";
 import AppHeader from "@/components/AppHeader";
@@ -10,11 +12,11 @@ import CountryDetails from "@/components/game/CountryDetails";
 import Portrait from "@/components/game/Portrait";
 import WorldMap from "@/components/map/WorldMap";
 import { ui } from "@/components/ui/classes";
-import { ADVISOR_POST, ADVISOR_TITLES, ADVISORS } from "@/engine/advisors";
+import { ADVISOR_POST, ADVISOR_TITLES, STANDARD_MINISTRIES } from "@/engine/advisors";
 import { formatDate, yearOf } from "@/engine/calendar";
 import { figuresOn } from "@/engine/figures";
 import { personName } from "@/engine/people";
-import { getScenario, newGamePath, startsOf } from "@/engine/scenarios";
+import { getScenario, newGamePath, SCENARIO_ORDER, startsOf } from "@/engine/scenarios";
 import { nationalAccounts, seedEconomies } from "@/engine/economy";
 import { peopleByOwner } from "@/engine/provinces";
 import { ABOUT_CHARS } from "@/engine/role";
@@ -22,24 +24,32 @@ import { createGame, regionsByOwner, startingWorld } from "@/engine/setup";
 import { sidesOf } from "@/engine/sides";
 import { tr } from "@/engine/text";
 import { COMMAND_SCOPES, GAME_MODES, ROLE_KINDS, type CommandScope, type GameMode, type OfficialPost, type RoleKind, type ScenarioId, type StartVariant } from "@/engine/types";
+import { useLocalePath } from "@/i18n/routeLocale";
 import { useI18n } from "@/i18n/useI18n";
+import { plainDate } from "@/lib/faq";
 import { useMap } from "@/lib/maps";
 import { writeSave } from "@/lib/saves";
 import { trackGameStart } from "@/lib/telemetry/game";
+
+/** The roles to pick: the four, and two ways to start in opposition alone – a dissident at home, an émigré abroad. */
+type PickedRole = RoleKind | "dissident" | "emigre";
+const PICKED_ROLES: readonly PickedRole[] = [...ROLE_KINDS.slice(0, 2), "dissident", "emigre", ...ROLE_KINDS.slice(2)];
 
 /** Pick a country for a scenario: the start-date map, a searchable list, the briefing, and the start (the date's day or the week before). */
 export default function PickClient({ scenarioId, variant = null }: { scenarioId: ScenarioId; variant?: StartVariant | null }) {
   const router = useRouter();
   const { t, text, locale } = useI18n();
+  // Addresses stay in the page's language: /ru/new/1939/eve.
+  const localized = useLocalePath();
   // The start the card chose, switched here without leaving the page: the address follows, so a reload or a shared link opens the same start.
   const [chosen, setChosen] = useState<StartVariant | null>(variant);
   const starts = startsOf(scenarioId);
   const scenario = getScenario(scenarioId, chosen);
   const chooseStart = (next: StartVariant | null) => {
     // A start played as one country (the tutorial) has nothing to pick here: it begins at once.
-    if (next && getScenario(scenarioId, next).player) return router.push(newGamePath(scenarioId, next));
+    if (next && getScenario(scenarioId, next).player) return router.push(localized(newGamePath(scenarioId, next)));
     setChosen(next);
-    window.history.replaceState(null, "", newGamePath(scenarioId, next));
+    window.history.replaceState(null, "", localized(newGamePath(scenarioId, next)));
   };
   const { map, error } = useMap(scenario.map);
   const [selected, setSelected] = useState<string | null>(scenario.featured[0] ?? null);
@@ -47,7 +57,9 @@ export default function PickClient({ scenarioId, variant = null }: { scenarioId:
   const [starting, setStarting] = useState(false);
   const [mode, setMode] = useState<GameMode>(GAME_MODES[0]);
   // Who the player is: the country's leader, or its opposition as they describe it in a paragraph (engine/role.ts).
-  const [role, setRole] = useState<RoleKind>("leader");
+  // The role picked, and how an opposition starts (engine/role.ts OppositionStart): a dissident or an émigré is an opposition of one.
+  const [picked, setPicked] = useState<PickedRole>("leader");
+  const role: RoleKind = picked === "dissident" || picked === "emigre" ? "opposition" : picked;
   const [about, setAbout] = useState("");
   // A minister's ministry or a general's command, and who they are: a person of the date or one of the player's own (engine/figures.ts).
   const [post, setPost] = useState<OfficialPost>("foreign");
@@ -95,7 +107,7 @@ export default function PickClient({ scenarioId, variant = null }: { scenarioId:
     if (!map || !selected) return;
     setStarting(true);
     try {
-      const chosen = figureRole ? { kind: role, post, scope, front, ...(personId ? { personId } : { person: figureName }) } : { kind: role, about };
+      const chosen = figureRole ? { kind: role, post, scope, front, ...(personId ? { personId } : { person: figureName }) } : { kind: role, about, ...(picked === "dissident" || picked === "emigre" ? { as: picked } : {}) };
       const state = createGame(scenario, map.regions, selected, new Date(), locale, { mode, role: chosen });
       await writeSave(state);
       trackGameStart(state);
@@ -171,7 +183,7 @@ export default function PickClient({ scenarioId, variant = null }: { scenarioId:
   // move the country under the map, phones stack everything.
   return (
     <div className="flex min-h-screen flex-col xl:h-dvh xl:min-h-0 xl:overflow-hidden">
-      <AppHeader back="/" title={text(scenario.title)} subtitle={`${formatDate(scenario.startDate, locale)} · ${t("pick.title")}`} />
+      <AppHeader back={localized("/")} title={<h1 className="truncate">{text(scenario.title)}</h1>} subtitle={`${formatDate(scenario.startDate, locale)} · ${t("pick.title")}`} />
 
       <main className="mx-auto grid w-full max-w-[1600px] flex-1 items-start gap-4 p-4 lg:grid-cols-[240px_minmax(0,1fr)] xl:min-h-0 xl:grid-cols-[260px_minmax(0,1fr)_360px] xl:grid-rows-[minmax(0,1fr)] xl:items-stretch">
         <aside className="order-2 lg:order-none lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:self-stretch xl:row-span-1 xl:min-h-0">{list}</aside>
@@ -224,7 +236,7 @@ export default function PickClient({ scenarioId, variant = null }: { scenarioId:
                 <p className="mt-2 text-xs font-medium text-muted">{t(chosen ? "pick.start.eve.hint" : "pick.start.day.hint")}</p>
               </div>
             )}
-            <div className={`${ui.label} mb-2`}>{t("pick.briefing")}</div>
+            <h2 className={`${ui.label} mb-2`}>{t("pick.briefing")}</h2>
             <p key={chosen ?? "day"} className="text-sm font-medium leading-relaxed text-ink animate-in fade-in duration-300">
               {text(scenario.briefing)}
             </p>
@@ -242,13 +254,13 @@ export default function PickClient({ scenarioId, variant = null }: { scenarioId:
             <div className="mt-4 border-t border-divider pt-4">
               <div className={`${ui.label} mb-2`}>{t("pick.role")}</div>
               <div className="flex flex-wrap gap-1" role="radiogroup" aria-label={t("pick.role")}>
-                {ROLE_KINDS.map((r) => (
-                  <button key={r} type="button" role="radio" aria-checked={role === r} onClick={() => setRole(r)} className={`${ui.segment} ${role === r ? ui.segmentOn : ui.segmentOff}`}>
+                {PICKED_ROLES.map((r) => (
+                  <button key={r} type="button" role="radio" aria-checked={picked === r} onClick={() => setPicked(r)} className={`${ui.segment} ${picked === r ? ui.segmentOn : ui.segmentOff}`}>
                     {t(`pick.role.${r}`)}
                   </button>
                 ))}
               </div>
-              <p className="mt-2 text-xs font-medium text-muted">{t(`pick.role.${role}.hint`)}</p>
+              <p className="mt-2 text-xs font-medium text-muted">{t(`pick.role.${picked}.hint`)}</p>
               {role === "opposition" && (
                 <label className="mt-3 block">
                   <span className={`${ui.label} mb-1 flex items-baseline justify-between gap-2`}>
@@ -257,14 +269,16 @@ export default function PickClient({ scenarioId, variant = null }: { scenarioId:
                       {about.length}/{ABOUT_CHARS}
                     </span>
                   </span>
-                  <textarea
-                    value={about}
-                    onChange={(e) => setAbout(e.target.value)}
-                    maxLength={ABOUT_CHARS}
-                    rows={4}
-                    placeholder={t("pick.role.aboutPlaceholder")}
-                    className={`${ui.input} resize-y py-2 text-sm leading-relaxed`}
-                  />
+                  <Dictation id="pick-about" set={setAbout} max={ABOUT_CHARS}>
+                    <textarea
+                      value={about}
+                      onChange={(e) => setAbout(e.target.value)}
+                      maxLength={ABOUT_CHARS}
+                      rows={4}
+                      placeholder={t("pick.role.aboutPlaceholder")}
+                      className={`${ui.input} resize-y py-2 text-sm leading-relaxed`}
+                    />
+                  </Dictation>
                 </label>
               )}
               {figureRole && (
@@ -273,7 +287,7 @@ export default function PickClient({ scenarioId, variant = null }: { scenarioId:
                     <div>
                       <div className={`${ui.label} mb-2`}>{t("pick.figure.post")}</div>
                       <div className="flex flex-wrap gap-1" role="radiogroup" aria-label={t("pick.figure.post")}>
-                        {ADVISORS.map((a) => (
+                        {STANDARD_MINISTRIES.map((a) => (
                           <button key={a} type="button" role="radio" aria-checked={post === ADVISOR_POST[a]} onClick={() => setPost(ADVISOR_POST[a])} className={`${ui.segment} ${post === ADVISOR_POST[a] ? ui.segmentOn : ui.segmentOff}`}>
                             {text(ADVISOR_TITLES[a])}
                           </button>
@@ -341,6 +355,37 @@ export default function PickClient({ scenarioId, variant = null }: { scenarioId:
               )}
             </div>
             <DownloadButton variant="link" why className="mt-3 text-xs" />
+          </div>
+
+          {/* The world of the start in a few paragraphs, folded away under the briefing, and the way to the other dates. */}
+          <div className={`${ui.card} p-5`}>
+            <details key={chosen ?? "day"} className="group">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+                <h2 className={ui.label}>{t("pick.story.title", { date: plainDate(scenario.startDate, locale) })}</h2>
+                <ChevronDown className="h-4 w-4 shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden />
+              </summary>
+              <div className="mt-3 grid gap-3 text-sm font-medium leading-relaxed text-ink">
+                {text(scenario.story)
+                  .split(/\n\s*\n/)
+                  .map((paragraph, i) => (
+                    <p key={i}>{paragraph}</p>
+                  ))}
+              </div>
+            </details>
+            <nav aria-labelledby="other-dates" className="mt-4 border-t border-divider pt-4">
+              <h2 id="other-dates" className={`${ui.label} mb-2`}>
+                {t("pick.otherDates")}
+              </h2>
+              <ul className="flex flex-wrap gap-1.5">
+                {SCENARIO_ORDER.filter((id) => id !== scenarioId).map((id) => (
+                  <li key={id}>
+                    <Link href={localized(newGamePath(id))} title={text(getScenario(id).title)} className={`${ui.secondary} px-3 py-1.5 text-xs tabular-nums`}>
+                      {id} · {text(getScenario(id).title)}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
           </div>
         </div>
 

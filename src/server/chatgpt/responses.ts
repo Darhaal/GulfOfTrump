@@ -1,6 +1,8 @@
 import "server-only";
 import { AiError, fromApiError } from "../errors";
+import { usageFromEvent, usageFromHeaders } from "./limits";
 import { API_BASE } from "./oauth";
+import { noteLimit, recordAnswer, recordWindows } from "./usage";
 
 export interface InputMessage {
   role: "user" | "assistant" | "developer";
@@ -43,6 +45,8 @@ const TIMEOUT_MS = 6 * 60_000;
  * One Responses API call on the ChatGPT plan. The plan-usage route requires
  * `store: false` and `stream: true`, rejects sampling parameters such as
  * temperature, and counts an answer as complete only on `response.completed`.
+ * Whatever the answer says of the plan's usage (headers, a `codex.rate_limits`
+ * event, a usage-limit error) is kept for Settings (usage.ts).
  */
 export async function streamText(token: string, request: StreamRequest): Promise<string> {
   const signal = AbortSignal.any([request.signal ?? new AbortController().signal, AbortSignal.timeout(TIMEOUT_MS)]);
@@ -72,9 +76,10 @@ export async function streamText(token: string, request: StreamRequest): Promise
     throw new AiError("network_error", `Could not reach ChatGPT (${(error as Error).name}).`, true);
   }
 
+  recordWindows(usageFromHeaders(response.headers));
   if (!response.ok || !response.body) {
     const body = await response.json().catch(() => null);
-    throw fromApiError(body, response.status);
+    throw noteLimit(fromApiError(body, response.status, response.headers));
   }
 
   const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
@@ -97,7 +102,7 @@ export async function streamText(token: string, request: StreamRequest): Promise
           .map((line) => line.slice(5).trimStart())
           .join("\n");
         if (!data || data === "[DONE]") continue;
-        let event: { type?: string; delta?: unknown; response?: { error?: unknown; usage?: { input_tokens?: unknown; output_tokens?: unknown } }; error?: unknown };
+        let event: { type?: string; delta?: unknown; response?: { error?: unknown; usage?: { input_tokens?: unknown; output_tokens?: unknown } }; error?: unknown; rate_limits?: unknown };
         try {
           event = JSON.parse(data);
         } catch {
@@ -108,15 +113,18 @@ export async function streamText(token: string, request: StreamRequest): Promise
           text += delta;
           if (text.length > MAX_CHARS) throw new AiError("response_too_large", "The answer was too long.");
           request.onDelta?.(delta);
+        } else if (event.type === "codex.rate_limits") {
+          recordWindows(usageFromEvent(event) ?? []);
         } else if (event.type === "response.failed") {
-          throw fromApiError(event.response?.error ?? event.response, response.status);
+          throw noteLimit(fromApiError(event.response?.error ?? event.response, response.status, response.headers));
         } else if (event.type === "error") {
-          throw fromApiError(event.error ?? event, response.status);
+          throw noteLimit(fromApiError(event.error ?? event, response.status, response.headers));
         } else if (event.type === "response.incomplete") {
           throw new AiError("response_incomplete", "ChatGPT stopped before finishing. Try again.", true);
         } else if (event.type === "response.completed") {
           const usage = event.response?.usage;
           request.onUsage?.({ model: request.model, input: count(usage?.input_tokens), output: count(usage?.output_tokens) });
+          recordAnswer();
           completed = true;
           break;
         }

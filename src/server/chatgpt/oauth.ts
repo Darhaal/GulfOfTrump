@@ -5,6 +5,7 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 import { AiError, fromApiError } from "../errors";
 import { appReturnPage } from "../returnPage";
 import { clearConnection, hostId, loadClientId, loadConnection, saveClientId, saveConnection, type StoredConnection } from "./store";
+import { forgetUsage } from "./usage";
 
 /**
  * Sign in with ChatGPT, written against OpenAI's published protocol
@@ -209,6 +210,8 @@ export async function startSignIn(returnTo: string): Promise<{ authUrl: string }
         });
         if (typeof data.id_token !== "string") throw new AiError("invalid_id_token", "ChatGPT returned no identity.");
         const identity = await verifyIdToken(data.id_token, clientId, nonce);
+        // The plan's usage numbers on record were the last account's.
+        await forgetUsage();
         await saveConnection({
           version: 1,
           clientId,
@@ -333,6 +336,7 @@ export async function disconnect(): Promise<{ revoked: boolean }> {
   globals.lastError = undefined;
   const connection = await loadConnection();
   await clearConnection();
+  await forgetUsage();
   if (!connection?.refreshToken) return { revoked: true };
   try {
     const config = await discovery();

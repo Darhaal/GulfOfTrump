@@ -86,7 +86,7 @@ export async function commons(titles, width = 900) {
   return out;
 }
 
-/** Free enough to paint and publish: public domain, CC0, CC BY, CC BY-SA, OGL, GODL-India, KOGL Type 1, FAL, the European Parliament's, no known restrictions. */
+/** Free enough to paint and publish: public domain, CC0, CC BY, CC BY-SA, OGL, GODL-India, KOGL Type 1, FAL, the European Parliament's, Licence Ouverte, no known restrictions, copyrighted free use. */
 export function freeLicence({ licence, code }) {
   const s = `${licence} ${code}`.toLowerCase();
   if (/\bnc\b|-nc|noncommercial|\bnd\b|-nd|noderiv|fair use|non-free/.test(s)) return null;
@@ -102,8 +102,12 @@ export function freeLicence({ licence, code }) {
   if (/\bfal\b|free art licen[cs]e|licence art libre/.test(s)) return "FAL";
   // The European Parliament's photographs: free to reuse with the source named.
   if (/european parliament/.test(s)) return "European Parliament";
+  // France's open licence (Etalab), CC BY-compatible: free to reuse and adapt, with the source and its date named.
+  if (/licence ouverte|etalab|open licen[cs]e \(france\)/.test(s)) return "Licence Ouverte";
   // Flickr Commons and archives that know of no copyright on the picture.
   if (/no (known )?(copyright )?restrictions/.test(s)) return "no known restrictions";
+  // Commons' "Copyrighted free use": the holder allows any use, changes and commercial use included (Artem, 6 November 2026).
+  if (/copyrighted free use/.test(s)) return "copyrighted free use";
   return null;
 }
 

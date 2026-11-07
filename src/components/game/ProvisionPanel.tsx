@@ -3,6 +3,7 @@
 import { Apple, ArrowDown, ArrowUp, Flame, HeartPulse, Home, ShoppingBag, Users, type LucideIcon } from "lucide-react";
 import { useMemo } from "react";
 import { ui } from "@/components/ui/classes";
+import { GlossaryText, Term, TextTip } from "@/components/ui/Term";
 import { type ProvisionCause, type ProvisionKind, provisionOf } from "@/engine/provision";
 import type { GameState, MapRegion } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
@@ -13,14 +14,17 @@ const ICONS: Record<ProvisionKind, LucideIcon> = { food: Apple, energy: Flame, g
 /** Green when people have what they need, amber when they go short, red in a crisis. */
 const tone = (level: number) => (level >= 90 ? { bar: "bg-emerald-600", text: "text-emerald-700" } : level >= 70 ? { bar: "bg-amber-500", text: "text-amber-700" } : { bar: "bg-red-600", text: "text-red-600" });
 
-/** The lines whose name says on hover what would raise them. */
+/** The lines whose hint says, under what the need is, what would raise it. */
 const HINTS: Partial<Record<ProvisionKind, MessageKey>> = { goods: "supply.hint.goods", energy: "supply.hint.energy" };
 /** The causes the player's budget and trade set, which say on hover what they do. */
 const WHY: Partial<Record<ProvisionCause, MessageKey>> = {
   warEconomy: "supply.why.warEconomy",
+  mobilisation: "supply.why.mobilisation",
   austerity: "supply.why.austerity",
   industry: "supply.why.industry",
   imports: "supply.why.imports",
+  heavy: "supply.why.heavy",
+  light: "supply.why.light",
 };
 
 /** What pulls a line down or holds it up, behind an arrow that says which. */
@@ -36,9 +40,9 @@ function Causes({ causes, label, Arrow, tone = "" }: { causes: ProvisionCause[];
             <span key={x}>
               {i > 0 && " · "}
               {why ? (
-                <span className="cursor-help underline decoration-dotted decoration-1 underline-offset-2" title={t(why)}>
+                <TextTip text={t(why)} label={t(`supply.cause.${x}` as MessageKey)} className="cursor-help underline decoration-dotted decoration-1 underline-offset-2">
                   {t(`supply.cause.${x}` as MessageKey)}
-                </span>
+                </TextTip>
               ) : (
                 t(`supply.cause.${x}` as MessageKey)
               )}
@@ -54,7 +58,7 @@ function Causes({ causes, label, Arrow, tone = "" }: { causes: ProvisionCause[];
  * How well the player's people are supplied — food, energy, goods, housing,
  * medicine — as the engine reads it off the land, the trade, the budget and
  * the war (engine/provision.ts), with what pulls each one down and what
- * holds it up.
+ * holds it up. Each need's name opens its glossary term.
  */
 export default function ProvisionPanel({ state, regions }: { state: GameState; regions: Record<string, MapRegion> | null }) {
   const { t } = useI18n();
@@ -65,7 +69,7 @@ export default function ProvisionPanel({ state, regions }: { state: GameState; r
     <section className="grid gap-3">
       <div className={`${ui.label} flex items-center gap-1.5`}>
         <Users className="h-3.5 w-3.5" />
-        {t("supply.title")}
+        <Term id="provision">{t("supply.title")}</Term>
       </div>
       <p className="text-2xs font-medium leading-snug text-muted">{t("supply.lead")}</p>
       <div className="rounded-xl bg-page p-3">
@@ -87,9 +91,11 @@ export default function ProvisionPanel({ state, regions }: { state: GameState; r
             <li key={l.kind} className="grid gap-1">
               <div className="flex items-center gap-2 text-xs">
                 <Icon className="h-3.5 w-3.5 shrink-0 text-muted" />
-                {/* Goods and energy say on hover what would raise them and refill the stores. */}
-                <span className={`min-w-0 flex-1 truncate font-bold text-ink ${hint ? "cursor-help" : ""}`} title={hint ? t(hint) : undefined}>
-                  {t(`supply.${l.kind}` as MessageKey)}
+                {/* Each need says what it is; goods and energy also what would raise them and refill the stores. */}
+                <span className="min-w-0 flex-1 truncate font-bold text-ink">
+                  <Term id={l.kind} label={t(`supply.${l.kind}` as MessageKey)} extra={hint && <GlossaryText text={t(hint)} />}>
+                    {t(`supply.${l.kind}` as MessageKey)}
+                  </Term>
                 </span>
                 <span className={`font-black tabular-nums ${c.text}`}>{l.level}%</span>
               </div>

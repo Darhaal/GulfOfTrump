@@ -23,6 +23,11 @@ extraResources:
     to: server/node_modules
     filter:
       - "**/*"
+# Chromium's own translations only for the game's three languages: the other fifty-odd are forty megabytes nobody reads.
+electronLanguages:
+  - en-US
+  - ru
+  - uk
 win:
   target:
     - target: nsis

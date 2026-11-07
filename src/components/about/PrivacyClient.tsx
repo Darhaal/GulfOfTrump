@@ -5,16 +5,18 @@ import AppHeader from "@/components/AppHeader";
 import { ui } from "@/components/ui/classes";
 import { APP_NAME, CONTENT_REPORT_URL } from "@/constants/app";
 import { PRIVACY } from "@/i18n/privacy";
+import { useLocalePath } from "@/i18n/routeLocale";
 import { useI18n } from "@/i18n/useI18n";
 
 /** The privacy policy: what the game sends where, and how to report the AI's text. */
 export default function PrivacyClient() {
   const { locale, t } = useI18n();
+  const localized = useLocalePath();
   const p = PRIVACY[locale];
 
   return (
     <div className="min-h-screen">
-      <AppHeader back="/" title={p.title} subtitle={APP_NAME} />
+      <AppHeader back={localized("/")} title={p.title} subtitle={APP_NAME} />
       <main className="mx-auto grid max-w-3xl gap-4 px-4 py-8">
         <section className="pb-2">
           <h1 className="text-3xl md:text-4xl font-black tracking-tighter leading-none text-ink">

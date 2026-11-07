@@ -1,6 +1,8 @@
 import "server-only";
 import { isDemo } from "@/constants/app";
 import { regimeFromText } from "@/engine/abroad";
+import { FIGURES } from "@/engine/figures.data";
+import { aliveIn, knownById } from "@/engine/people";
 import type { Locale } from "@/engine/types";
 import { leaderName } from "@/i18n/leaders";
 import type { InputMessage } from "./chatgpt/responses";
@@ -36,6 +38,26 @@ const SAY = {
     en: "The ChatGPT game master writes this person's life; the offline demo keeps it short.",
     ru: "Жизнь этого человека описывает ведущий ChatGPT; в офлайн-демо – только эта строка.",
     uk: "Життя цієї людини описує ведучий ChatGPT; в офлайн-демо – лише цей рядок.",
+  },
+  speechRegister: {
+    en: "Plain and businesslike, in short sentences.",
+    ru: "Просто и по-деловому, короткими фразами.",
+    uk: "Просто й по-діловому, короткими фразами.",
+  },
+  speechArgues: {
+    en: "Keeps to the point and to their own line; closes with what must be done.",
+    ru: "Держится сути и своей линии; заканчивает тем, что нужно сделать.",
+    uk: "Тримається суті й своєї лінії; закінчує тим, що треба зробити.",
+  },
+  speechArguesFrom: {
+    en: "As their character leads them – {traits}: keeps to the point and to their own line.",
+    ru: "Как велит характер – {traits}: держится сути и своей линии.",
+    uk: "Як велить характер – {traits}: тримається суті й своєї лінії.",
+  },
+  speechAvoids: {
+    en: "Promises they cannot keep, and matters outside their field.",
+    ru: "Обещаний, которых не сдержать, и дел не по своей части.",
+    uk: "Обіцянок, яких не дотримати, і справ не зі своєї частини.",
   },
   ordersUnderWay: { en: "The government's orders are under way:", ru: "Приказы правительства выполняются:", uk: "Накази уряду виконуються:" },
   actionsUnderWay: { en: "The movement's actions are under way:", ru: "Действия движения идут своим чередом:", uk: "Дії руху тривають:" },
@@ -201,7 +223,7 @@ function turnStageOf(instructions: string): "story" | "world" | "home" | null {
 const STAGE_KEYS = {
   story: ["headline", "narrative", "orders"],
   world: ["events", "transfers", "newCountries", "warsStarted", "warsJoined", "warsEnded", "alliancesFormed", "alliancesJoined", "alliancesLeft", "leaders", "invitations", "summitsHeld", "sessions", "population"],
-  home: ["opposition", "figure", "economy", "ministries", "protests", "trade", "bills", "acts"],
+  home: ["opposition", "figure", "economy", "politics", "ministries", "protests", "trade", "bills", "acts"],
 } as const;
 
 /**
@@ -242,6 +264,8 @@ export async function mockComplete(instructions: string, input: InputMessage[], 
   const officials = instructions.includes('{ "officials": [');
   const answer = instructions.includes('{ "bio": "string" }')
     ? JSON.stringify({ bio: say(locale, "bio") })
+    : instructions.includes('{ "register": "string"')
+    ? mockSpeech(prompt, locale)
     : instructions.includes('{ "formations": [')
     ? mockArmy(prompt, locale)
     : instructions.includes('{ "speeches": [')
@@ -262,6 +286,8 @@ export async function mockComplete(instructions: string, input: InputMessage[], 
             ? JSON.stringify({ outcome: say(locale, "keepTalking"), agreements: [say(locale, "workingGroup")] })
             : instructions.includes('{ "candidates": [')
               ? mockCandidates(locale)
+              : instructions.includes('{ "options": [')
+                ? mockSuggestions(instructions, prompt, locale)
               : instructions.includes('"regime": "string"')
                 ? mockPolitics(prompt, locale, officials)
                 : officials
@@ -270,6 +296,25 @@ export async function mockComplete(instructions: string, input: InputMessage[], 
                     ? mockDiplomacy(locale)
                     : JSON.stringify(mockTurn(prompt, locale));
   return streamOut(answer, onDelta);
+}
+
+/**
+ * A plain way of speaking (engine/speech.ts) from the traits and manner the
+ * prompt gives: the manner is the register, the traits lead the argument,
+ * and no turns of phrase – the stand-in cannot know anyone's.
+ */
+function mockSpeech(prompt: string, locale: Locale): string {
+  const found = /^Traits: ([^;\n]*); manner: (.*?)\.?$/m.exec(prompt);
+  const traits = found?.[1]?.trim() ?? "";
+  const manner = found?.[2]?.trim() ?? "";
+  const register = manner && manner !== "plain" ? `${manner[0].toUpperCase()}${manner.slice(1)}.` : say(locale, "speechRegister");
+  return JSON.stringify({
+    register,
+    phrases: [],
+    argues: traits && traits !== "reserved" ? say(locale, "speechArguesFrom", { traits }) : say(locale, "speechArgues"),
+    avoids: say(locale, "speechAvoids"),
+    tics: "",
+  });
 }
 
 /** Streams an answer in a few pieces so the progress indicator has something to show. */
@@ -327,8 +372,13 @@ function mockTurn(prompt: string, locale: Locale): Record<string, unknown> {
     .map(([, id, title]) => ({ summit: id, outcome: say(locale, "meetAgain", { title: title.trim() }) }));
   // An order that calls a session: of the bloc it names, or else the first organisation the player belongs to.
   const blocs = [...section("ALLIANCES, PACTS AND ORGANISATIONS").matchAll(/^- ([\w-]+) \| ([^|]+) \| (\w+) \| ([^|\n]+)/gm)]
-    .map(([, id, name, kind, members]) => ({ id, name: name.trim().toLowerCase(), kind, members: members.split(",").map((m) => m.trim()) }))
-    .filter((b) => b.members.includes(player));
+    .map(([, id, name, kind, members]) => {
+      // A bloc most of the world belongs to is written by the countries outside it (engine/prompts.ts blocMembers).
+      const but = /every country but (.*)$/.exec(members.trim());
+      const listed = (but ? but[1] : members).split(",").map((m) => m.trim());
+      return { id, name: name.trim().toLowerCase(), kind, member: but ? !listed.includes(player) : listed.includes(player) };
+    })
+    .filter((b) => b.member);
   const calling = orderLines.map((l) => l.trim().replace(/^\d+\.\s*/, "")).find((o) => /заседан|засідан|session|созва|скликат|convene/i.test(o));
   const called = calling ? (blocs.find((b) => calling.toLowerCase().includes(b.name) || calling.includes(b.id)) ?? blocs.find((b) => b.kind === "organization")) : undefined;
   const sessions = calling && called ? [{ bloc: called.id, agenda: calling.slice(0, 200) }] : [];
@@ -382,9 +432,12 @@ function mockTurn(prompt: string, locale: Locale): Record<string, unknown> {
           ...(successor ? { successor: say(locale, "successorName") } : {}),
         }
       : undefined;
+  // The parties the engine made get their names (engine/partyLife.ts).
+  const named = mockNamed(prompt, locale);
   return {
     ...(opposition ? { opposition } : {}),
     ...(figure ? { figure } : {}),
+    ...(named.length ? { politics: { named } } : {}),
     headline: say(locale, "headline"),
     narrative,
     events: [
@@ -571,6 +624,23 @@ function mockOfficials(prompt: string, locale: Locale) {
   ];
 }
 
+/** Names for a rename, or an order tidied: enough to try the buttons without a plan (engine/suggest.ts). */
+function mockSuggestions(instructions: string, prompt: string, locale: Locale): string {
+  if (instructions.includes("choose a new name")) {
+    const current = /now called "([^"]*)"/.exec(prompt)?.[1] ?? "";
+    const words = { en: ["National", "Supreme", "People's", "State"], ru: ["Национальный", "Верховный", "Народный", "Государственный"], uk: ["Національний", "Верховний", "Народний", "Державний"] }[locale];
+    return JSON.stringify({ options: words.map((w) => `${w} ${current}`.trim()) });
+  }
+  if (instructions.includes("You correct the description of a ministry")) {
+    // Without a game master the correction only tidies: a capital, one space, a full stop.
+    const text = (/THE PLAYER'S DESCRIPTION: (.*)/.exec(prompt)?.[1] ?? "").replace(/\s+/g, " ").trim().replace(/[.;,]+$/, "");
+    return JSON.stringify({ options: [`${text.replace(/^./, (c) => c.toUpperCase())}.`] });
+  }
+  const draft = prompt.split("THE DRAFT ORDER:")[1]?.trim() ?? "";
+  const tidy = draft.replace(/\s+/g, " ").replace(/^./, (c) => c.toUpperCase()).replace(/[.!]*$/, ".");
+  return JSON.stringify({ options: [tidy, tidy.replace(/\.$/, ` – ${{ en: "without delay", ru: "без промедления", uk: "без зволікання" }[locale]}.`)] });
+}
+
 function mockCandidates(locale: Locale): string {
   const pick = (t: Text) => t[locale];
   return JSON.stringify({
@@ -624,6 +694,39 @@ const PARTIES: { name: Text; short: string; color: string; leader: Text; ideolog
   { name: { en: "Red Front", ru: "Красный фронт", uk: "Червоний фронт" }, short: "RF", color: "#8b1a1a", leader: { en: "E. Roth", ru: "Э. Рот", uk: "Е. Рот" }, ideology: { en: "Communist", ru: "Коммунисты", uk: "Комуністи" }, support: 6, seats: 0, status: "underground", stance: { economy: -9, freedom: -6, nation: -3 } },
   { name: { en: "Homeland First", ru: "Родина прежде всего", uk: "Батьківщина понад усе" }, short: "HF", color: "#5b3a8c", leader: { en: "F. Kral", ru: "Ф. Краль", uk: "Ф. Краль" }, ideology: { en: "Nationalist", ru: "Националисты", uk: "Націоналісти" }, support: 5, seats: 18, status: "opposition", stance: { economy: 3, freedom: -7, nation: 9 } },
 ];
+
+/** A name for a party of each camp the engine makes (engine/partyLife.ts), with a leader of no particular country. */
+const NEW_PARTIES: Record<string, { name: Text; short: Text; ideology: Text }> = {
+  communist: { name: { en: "Workers' Vanguard", ru: "Рабочий авангард", uk: "Робітничий авангард" }, short: { en: "WV", ru: "РА", uk: "РА" }, ideology: { en: "Revolutionary communist", ru: "Революционные коммунисты", uk: "Революційні комуністи" } },
+  socialist: { name: { en: "Movement for Social Justice", ru: "Движение за социальную справедливость", uk: "Рух за соціальну справедливість" }, short: { en: "MSJ", ru: "ДСС", uk: "РСС" }, ideology: { en: "Democratic socialist", ru: "Демократические социалисты", uk: "Демократичні соціалісти" } },
+  agrarian: { name: { en: "Land and Bread League", ru: "Лига «Земля и хлеб»", uk: "Ліга «Земля і хліб»" }, short: { en: "LBL", ru: "ЗХ", uk: "ЗХ" }, ideology: { en: "Agrarian populist", ru: "Аграрные популисты", uk: "Аграрні популісти" } },
+  liberal: { name: { en: "Union of Free Citizens", ru: "Союз свободных граждан", uk: "Союз вільних громадян" }, short: { en: "UFC", ru: "ССГ", uk: "СВГ" }, ideology: { en: "Liberal", ru: "Либералы", uk: "Ліберали" } },
+  conservative: { name: { en: "Order and Tradition", ru: "Порядок и традиция", uk: "Порядок і традиція" }, short: { en: "OT", ru: "ПТ", uk: "ПТ" }, ideology: { en: "Conservative", ru: "Консерваторы", uk: "Консерватори" } },
+  nationalist: { name: { en: "National Revival", ru: "Национальное возрождение", uk: "Національне відродження" }, short: { en: "NR", ru: "НВ", uk: "НВ" }, ideology: { en: "Nationalist", ru: "Националисты", uk: "Націоналісти" } },
+  religious: { name: { en: "Faith and Family", ru: "Вера и семья", uk: "Віра і родина" }, short: { en: "FF", ru: "ВС", uk: "ВР" }, ideology: { en: "Religious conservative", ru: "Религиозные консерваторы", uk: "Релігійні консерватори" } },
+  green: { name: { en: "Green Alternative", ru: "Зелёная альтернатива", uk: "Зелена альтернатива" }, short: { en: "GA", ru: "ЗА", uk: "ЗА" }, ideology: { en: "Green", ru: "Зелёные", uk: "Зелені" } },
+};
+const NEW_LEADERS: Text[] = [
+  { en: "N. Veres", ru: "Н. Верес", uk: "Н. Верес" },
+  { en: "I. Dorn", ru: "И. Дорн", uk: "І. Дорн" },
+  { en: "L. Marek", ru: "Л. Марек", uk: "Л. Марек" },
+  { en: "S. Halden", ru: "С. Халден", uk: "С. Халден" },
+];
+
+/**
+ * Names for the parties the engine made, as the turn's prompt lists them
+ * ("- [id] a new movement of the socialist camp …"): the camp's name, and a
+ * number after it when another party has that name already.
+ */
+function mockNamed(prompt: string, locale: Locale): unknown[] {
+  const section = prompt.split("NEW PARTIES THE ENGINE MADE")[1]?.split("\n\n")[0] ?? "";
+  return [...section.matchAll(/^- \[([\w-]+)\] .*? of the (\w+) camp/gm)].map(([, id, camp], i) => {
+    const pick = NEW_PARTIES[camp] ?? NEW_PARTIES.socialist;
+    let name = pick.name[locale];
+    for (let n = 2; prompt.includes(`- ${name} |`); n += 1) name = `${pick.name[locale]} ${n}`;
+    return { party: id, name, short: pick.short[locale], leader: NEW_LEADERS[i % NEW_LEADERS.length][locale], ideology: pick.ideology[locale] };
+  });
+}
 
 /** A date some years after another. */
 const yearsAfter = (date: string, years: number) => {
@@ -762,7 +865,24 @@ function mockArmy(prompt: string, locale: Locale): string {
     { name: NAMES.fleet[locale], kind: "fleet", divisions: 0, theatre: "", provinces: [], note: "" },
     { name: NAMES.air[locale], kind: "air", divisions: 0, theatre: "", provinces: [], note: "" },
   ];
+  // The date's real generals command the armies, as the engine names them (engine/formations.ts generalFor).
+  const generals = generalsIn(prompt, locale);
+  formations.forEach((f, i) => {
+    if (i < 3 && generals[i]) (f as { commander?: string }).commander = generals[i];
+  });
   return JSON.stringify({ formations });
+}
+
+/** The military people of the army's country on the start date nearest before its date (engine/figures.data.ts), in the player's language. */
+function generalsIn(prompt: string, locale: Locale): string[] {
+  const tag = /^COUNTRY: .*\[([a-z0-9-]+)\]/m.exec(prompt)?.[1];
+  const year = Number(/^DATE: (\d{4})/m.exec(prompt)?.[1] ?? 0);
+  if (!tag || !year) return [];
+  const date = Object.keys(FIGURES).filter((d) => Number(d) <= year).sort().at(-1);
+  return (date ? (FIGURES[date]?.[tag]?.military ?? []) : []).flatMap((id) => {
+    const p = knownById(id);
+    return p && aliveIn(p, year) ? [p.name[locale] ?? p.name.en] : [];
+  });
 }
 
 function mockDiplomacy(locale: Locale): string {

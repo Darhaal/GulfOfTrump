@@ -32,6 +32,8 @@ public repository's latest release.
    | Name | Value |
    |------|-------|
    | `NEXT_PUBLIC_GOT_DEMO` | `1` |
+   | `NEXT_PUBLIC_YANDEX_VERIFICATION` | Yandex Webmaster's code, once there is one ([seo.md](seo.md)) |
+   | `NEXT_PUBLIC_BING_VERIFICATION` | Bing Webmaster Tools' code, once there is one |
 
    Leave the Supabase variables unset: the demo has no accounts, and saves
    stay in the visitor's browser.

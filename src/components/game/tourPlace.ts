@@ -20,6 +20,8 @@ export interface Placement {
 
 /** The card's widest, the room between it and the target, and the window's edge it keeps off. */
 export const CARD = 340;
+/** The card with its narrator's portrait beside the words (Tour.tsx). */
+export const CARD_WIDE = 540;
 export const GAP = 14;
 export const MARGIN = 12;
 /** How far the arrow keeps from the card's corners. */

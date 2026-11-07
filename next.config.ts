@@ -2,8 +2,18 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
-  // The desktop app ships its own small server (desktop/README.md).
-  ...(process.env.GOT_DESKTOP === "1" ? { output: "standalone" as const } : {}),
+  // Every page lives under app/[lang] (src/proxy.ts), so an address that
+  // matches none gets app/global-not-found.tsx.
+  experimental: { globalNotFound: true },
+  // The desktop app ships its own small server (desktop/README.md). Its pictures are served as they are – they sit on the
+  // player's own disk – so it needs no image optimiser, and sharp (ten megabytes) stays out of the package.
+  ...(process.env.GOT_DESKTOP === "1"
+    ? {
+        output: "standalone" as const,
+        images: { unoptimized: true },
+        outputFileTracingExcludes: { "*": ["node_modules/sharp/**/*", "node_modules/@img/**/*"] },
+      }
+    : {}),
   // The game routes read the map files from disk; on a host such as Vercel
   // they must travel with the functions.
   outputFileTracingIncludes: {

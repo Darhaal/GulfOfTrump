@@ -47,6 +47,66 @@ export function pickVoice<V extends VoiceLike>(voices: readonly V[], locale: Loc
   return { voice: null, standIn: true };
 }
 
+/** Who says a text: a minister, a leader, a speaker – so each is read in a voice of their own. */
+export interface SpeakerLike {
+  name: string;
+  gender?: "male" | "female";
+}
+
+/** Voices whose names say they are a woman's or a man's (the Web Speech API does not say); a woman's tested first, since "female" holds "male". */
+const FEMALE_VOICE = /female|woman|zira|irina|svetlana|milena|katya|katerina|ekaterina|dari(y)?a|anna|elena|olena|alena|lesya|polina|natali|natasha|tatyana|tetiana|oksana|samantha|victoria|susan|hazel|libby|sonia|aria|jenny|emma|ava\b|michelle|lada|google .*female/i;
+const MALE_VOICE = /\bmale\b|\bman\b|david|mark|pavel|dmitr|maxim|yuri|george|guy|ryan|daniel|alex|ostap|james|thomas|andrew|brian|christopher|eric|roger|steffan|mykyta|google .*male/i;
+
+/** A voice's sex as its name tells it, or null. */
+export function voiceSex(v: Pick<VoiceLike, "name">): "male" | "female" | null {
+  if (FEMALE_VOICE.test(v.name)) return "female";
+  if (MALE_VOICE.test(v.name)) return "male";
+  return null;
+}
+
+/** A stable number for a name (FNV-1a): the same person is read the same way every time. */
+export function nameHash(name: string): number {
+  let h = 0x811c9dc5;
+  for (const ch of name.trim().toLowerCase()) {
+    h ^= ch.codePointAt(0)!;
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h;
+}
+
+/**
+ * The voice a person is read in: among the best voices of the language (or
+ * of its stand-in), those of their sex first, one picked by their name; and
+ * a pitch of their own – a little higher or lower by the name, lower for a
+ * man and higher for a woman when no voice of their sex exists – so people
+ * differ even on a computer with a single voice.
+ */
+export function personVoice<V extends VoiceLike>(voices: readonly V[], locale: Locale, who: SpeakerLike): { voice: V | null; pitch: number; standIn: boolean } {
+  const hash = nameHash(who.name);
+  const spread = ((hash % 17) - 8) / 100;
+  for (const [i, lang] of VOICE_LANGS[locale].entries()) {
+    const own = voices.filter((v) => baseLang(v.lang) === lang);
+    if (!own.length) continue;
+    const same = who.gender ? own.filter((v) => voiceSex(v) === who.gender) : [];
+    const pool = same.length ? same : who.gender ? own.filter((v) => voiceSex(v) === null).concat(own.filter((v) => voiceSex(v) !== null)) : own;
+    const best = Math.max(...pool.map(quality));
+    const top = pool.filter((v) => quality(v) === best).sort((a, b) => a.name.localeCompare(b.name));
+    const voice = top[(hash >>> 5) % top.length];
+    const sex = voiceSex(voice);
+    const shift = who.gender && sex && sex !== who.gender ? (who.gender === "male" ? -0.25 : 0.2) : 0;
+    return { voice, pitch: Math.round(Math.min(1.4, Math.max(0.6, 1 + spread + shift)) * 100) / 100, standIn: i > 0 };
+  }
+  return { voice: null, pitch: Math.round((1 + spread) * 100) / 100, standIn: true };
+}
+
+/** Which of the game's own speakers reads a person: one of their sex, picked by their name. */
+export function builtinSpeakerFor(speakers: readonly { id: number; sex: "male" | "female" }[], who: SpeakerLike): number {
+  const hash = nameHash(who.name);
+  const same = who.gender ? speakers.filter((s) => s.sex === who.gender) : [];
+  const pool = same.length ? same : speakers;
+  return pool[(hash >>> 5) % pool.length]?.id ?? 0;
+}
+
 /**
  * Who reads a locale's text: its voice as pickVoice finds it, or `missing`
  * when the system has voices and none of them reads the language. Then

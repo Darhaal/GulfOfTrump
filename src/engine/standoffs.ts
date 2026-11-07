@@ -1,3 +1,5 @@
+import { byEra } from "./era";
+import { deterrenceOf } from "./space";
 import { homeFront, type HomeFront } from "./politics";
 import { bondsOf, greatPowers, isMilitary, isPact, powers, tieOf, type Bonds } from "./relations";
 import type { Because, GameState, Plan, PlanEnd, PlanStage, ScenarioId } from "./types";
@@ -28,7 +30,7 @@ import type { Because, GameState, Plan, PlanEnd, PlanStage, ScenarioId } from ".
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 /** How readily governments crossed the brink in each era, once mobilised: the decision to strike. */
-export const ERA_BRINK: Record<ScenarioId, number> = { "1914": 1.3, "1939": 1.4, "1950": 1, "1964": 0.9, "1991": 0.9, "1999": 0.85, "2014": 0.85, "2022": 0.85 };
+export const ERA_BRINK: Record<ScenarioId, number> = { "1914": 1.3, "1933": 1.3, "1939": 1.4, "1950": 1, "1957": 0.95, "1964": 0.9, "1973": 0.9, "1979": 0.9, "1991": 0.9, "1999": 0.85, "2014": 0.85, "2022": 0.85 };
 
 /** Blocs this big (the OSCE, the Council of Europe) are too loose for their strongest member to speak for them. */
 const CLOSE_BLOC = 32;
@@ -45,6 +47,8 @@ export interface Lens {
   guards: Map<string, Map<string, number>>;
   /** Who sanctions each country. */
   sanctioners: Map<string, Set<string>>;
+  /** Who sends each victim of an aggression arms against its attacker: "victim|attacker" → givers (engine/aggression.ts). */
+  aid: Map<string, Set<string>>;
   /** Close friends of each country: friend → trust (40 or more). */
   friends: Map<string, Map<string, number>>;
   homes: Map<string, HomeFront>;
@@ -70,7 +74,13 @@ export function lensOf(state: GameState, power: Map<string, number> = powers(sta
     if (!set) sanctioners.set(s.against, (set = new Set()));
     set.add(s.by);
   }
-  return { state, power, bonds: bondsOf(state), great: greatPowers(power), guards, sanctioners, friends, homes: new Map(), wills: new Map(), standoffs: new Map() };
+  const aid = new Map<string, Set<string>>();
+  for (const a of state.aggressions ?? []) {
+    if (a.closed || !a.aid?.length) continue;
+    const key = `${a.against}|${a.by}`;
+    aid.set(key, new Set([...(aid.get(key) ?? []), ...a.aid]));
+  }
+  return { state, power, bonds: bondsOf(state), great: greatPowers(power), guards, sanctioners, aid, friends, homes: new Map(), wills: new Map(), standoffs: new Map() };
 }
 
 const NONE = new Set<string>();
@@ -112,13 +122,14 @@ export interface Supporter {
 /**
  * Those who would stand by a country against an enemy, the firmest first:
  * its military allies (fully), its guardians (by the weight of their word),
- * those who sanction the enemy and its close friends (a little). A
- * government allied to the enemy stays out; one bound to it by a pact counts
- * half.
+ * those who send it arms against that enemy (engine/aggression.ts), those
+ * who sanction the enemy and its close friends (a little). A government
+ * allied to the enemy stays out; one bound to it by a pact counts half.
  */
 export function supportersOf(lens: Lens, tag: string, enemy: string, skip: readonly string[] = []): Supporter[] {
   const { state, power } = lens;
-  const candidates = new Set<string>([...alliesIn(lens, tag), ...(lens.guards.get(tag)?.keys() ?? []), ...(lens.sanctioners.get(enemy) ?? []), ...(lens.friends.get(tag)?.keys() ?? [])]);
+  const arming = lens.aid.get(`${tag}|${enemy}`);
+  const candidates = new Set<string>([...alliesIn(lens, tag), ...(lens.guards.get(tag)?.keys() ?? []), ...(arming ?? []), ...(lens.sanctioners.get(enemy) ?? []), ...(lens.friends.get(tag)?.keys() ?? [])]);
   const out: Supporter[] = [];
   for (const g of [...candidates].sort()) {
     if (g === tag || g === enemy || skip.includes(g) || !power.has(g) || !state.countries[g]) continue;
@@ -127,6 +138,7 @@ export function supportersOf(lens: Lens, tag: string, enemy: string, skip: reado
     // A guardian has given its word: as binding as a treaty once it weighs 40 or more.
     const word = lens.guards.get(tag)?.get(g) ?? 0;
     if (word > 0) commit = Math.max(commit, clamp(0.6 + word / 100, 0, 1));
+    if (arming?.has(g)) commit = Math.max(commit, 0.4);
     if (lens.sanctioners.get(enemy)?.has(g)) commit = Math.max(commit, 0.3);
     if (lens.friends.get(tag)?.has(g)) commit = Math.max(commit, 0.2);
     if (commit <= 0) continue;
@@ -213,7 +225,11 @@ export function standoffOf(lens: Lens, p: Pick<Plan, "by" | "target" | "partners
   // Russia's place in the CSTO made Armenia, a tenth of Azerbaijan's strength with Turkey behind it, the stronger side.
   const quarrel = (g: string) => lens.sanctioners.get(target)?.has(g) || tieOf(state, g, target).tension >= 30 || tieOf(state, g, target).trust <= -20;
   const patrons = supportersOf(lens, p.by, target, [...partners, ...backers.map((x) => x.tag)]).filter((x) => quarrel(x.tag));
-  const own = strength(p.by) + partners.reduce((s, x) => s + strength(x), 0);
+  // What the planner and its partners have free for it: an army already fighting a war elsewhere is shared with it
+  // (Israel, at war with Egypt in a 1964 game, weighs a war on Syria with half of its strength).
+  const elsewhere = (tag: string) => state.wars.filter((w) => !w.truce && (w.attackers.includes(tag) || w.defenders.includes(tag)) && !w.attackers.includes(target) && !w.defenders.includes(target)).length;
+  const free = (tag: string) => strength(tag) / (1 + elsewhere(tag));
+  const own = free(p.by) + partners.reduce((s, x) => s + free(x), 0);
   const mine = own + 0.3 * patrons.reduce((s, x) => s + x.weight, 0);
   const theirs = strength(target) + 0.7 * backers.reduce((s, x) => s + x.weight, 0);
   const trade = Math.min(1, ((tieOf(state, p.by, target).trade ?? 0) + backers.slice(0, 3).reduce((s, x) => s + (tieOf(state, p.by, x.tag).trade ?? 0) * x.commit, 0)) / 100);
@@ -255,7 +271,7 @@ export const homeBecause = (home: HomeFront): Because | undefined => (home.why ?
 export const homeEnd = (home: HomeFront): PlanEnd => (home.why === "slump" || home.why === "inflation" || home.why === "sanctions" ? "economy" : "unrest");
 
 /** How much a great power's guarantee weighs in each era: since the bomb, few dare a war that could draw one in. */
-const GUARANTEE: Record<ScenarioId, number> = { "1914": 0, "1939": 0, "1950": 0.6, "1964": 1, "1991": 1, "1999": 1, "2014": 1, "2022": 1 };
+const GUARANTEE: Record<ScenarioId, number> = { "1914": 0, "1933": 0, "1939": 0, "1950": 0.6, "1957": 0.8, "1964": 1, "1973": 1, "1979": 1, "1991": 1, "1999": 1, "2014": 1, "2022": 1 };
 
 /**
  * The weight of a great power's guarantee behind the target, 0–2: a great
@@ -265,11 +281,13 @@ const GUARANTEE: Record<ScenarioId, number> = { "1914": 0, "1939": 0, "1950": 0.
  * weight or more): then they deter each other and the balance decides.
  */
 export function guarantee(lens: Lens, s: Standoff, by: string): { weight: number; by?: string } {
-  const era = GUARANTEE[lens.state.scenarioId];
+  // The era by the date, not the date the game began (engine/era.ts).
+  const era = byEra(GUARANTEE, lens.state.date);
   const guard = s.backers.find((b) => lens.great.has(b.tag) && b.commit >= 0.8);
   if (!era || !guard) return { weight: 0 };
   const firm = (tag: string) => (lens.power.get(tag) ?? 0) * willIn(lens, tag);
-  const theirs = firm(guard.tag);
+  // A guarantor whose missiles reach the planner weighs a little more (engine/space.ts).
+  const theirs = firm(guard.tag) * deterrenceOf(lens.state, guard.tag);
   if (s.patrons.some((p) => p.commit >= 0.8 && firm(p.tag) >= 0.5 * theirs)) return { weight: 0 };
   return { weight: era * clamp(theirs / Math.max(0.01, lens.power.get(by) ?? 0), 0, 2), by: guard.tag };
 }
@@ -395,5 +413,25 @@ export function becauseEn(b: Because, name: (tag: string) => string): string {
       return "defeats in war";
     case "tenure":
       return "long years in power";
+    case "aggression":
+      return `alarm at ${name(b.country ?? "?")}'s aggression`;
+    case "un-call":
+      return `the UN's call over its war on ${name(b.country ?? "?")}`;
+    case "league-call":
+      return `the League of Nations' call over its war on ${name(b.country ?? "?")}`;
+    case "war-home":
+      return "war on its own soil";
+    case "war-near":
+      return `${name(b.country ?? "?")} at its door`;
+    case "martial-law":
+      return "martial law";
+    case "suspended":
+      return "elections suspended by law";
+    case "atrocity":
+      return `${name(b.country ?? "?")}'s mass crimes`;
+    case "patron":
+      return `turned against its patron ${name(b.country ?? "?")}`;
+    case "breakaway":
+      return `to keep ${name(b.country ?? "?")} from breaking away`;
   }
 }

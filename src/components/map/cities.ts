@@ -1,3 +1,4 @@
+import { geoBounds, geoContains, geoDistance, type GeoPermissibleObjects } from "d3-geo";
 import type { Locale, ScenarioId, Localized } from "@/engine/types";
 
 /** One place from public/maps/cities.json (populations in thousands). */
@@ -99,7 +100,7 @@ const HISTORICAL_NAMES: Record<string, Partial<Record<ScenarioId, Names>>> = {
   Ankara: { "1914": N("Angora", "Ангора", "Ангора") },
   Tver: { "1950": N("Kalinin", "Калинин", "Калінін"), "1964": N("Kalinin", "Калинин", "Калінін") },
   Perm: { "1950": N("Molotov", "Молотов", "Молотов") },
-  Vladikavkaz: { "1950": N("Dzaudzhikau", "Дзауджикау", "Дзауджикау"), "1964": N("Ordzhonikidze", "Орджоникидзе", "Орджонікідзе") },
+  Vladikavkaz: { "1950": N("Dzaudzhikau", "Дзауджикау", "Дзауджикау"), "1957": N("Ordzhonikidze", "Орджоникидзе", "Орджонікідзе"), "1964": N("Ordzhonikidze", "Орджоникидзе", "Орджонікідзе") },
   Mariupol: { "1950": N("Zhdanov", "Жданов", "Жданов"), "1964": N("Zhdanov", "Жданов", "Жданов") },
   Varna: { "1950": N("Stalin", "Сталин", "Сталін") },
   Gyumri: { "1950": N("Leninakan", "Ленинакан", "Ленінакан"), "1964": N("Leninakan", "Ленинакан", "Ленінакан") },
@@ -108,7 +109,44 @@ const HISTORICAL_NAMES: Record<string, Partial<Record<ScenarioId, Names>>> = {
   Podgorica: { "1950": N("Titograd", "Титоград", "Тітоград"), "1964": N("Titograd", "Титоград", "Тітоград") },
   Kisangani: { "1950": N("Stanleyville", "Стэнливиль", "Стенлівіль"), "1964": N("Stanleyville", "Стэнливиль", "Стенлівіль") },
   Lubumbashi: { "1950": N("Élisabethville", "Элизабетвиль", "Елізабетвіль"), "1964": N("Élisabethville", "Элизабетвиль", "Елізабетвіль") },
+  Salekhard: { "1914": N("Obdorsk", "Обдорск", "Обдорськ") },
 };
+
+/**
+ * The names of 1933, 1973 and 1979 where they differ from the date they
+ * borrow the rest from (FALLBACK): today's name where the city had not yet
+ * been renamed, or had been renamed back.
+ */
+const LATER_NAMES: Record<string, Partial<Record<ScenarioId, Names>>> = {
+  Samara: { "1933": N("Samara", "Самара", "Самара") },
+  Luhansk: { "1933": N("Lugansk", "Луганск", "Луганськ"), "1973": N("Voroshilovgrad", "Ворошиловград", "Ворошиловград"), "1979": N("Voroshilovgrad", "Ворошиловград", "Ворошиловград") },
+  Kropyvnytskyi: { "1933": N("Zinovyevsk", "Зиновьевск", "Зінов'євськ") },
+  Klaipėda: { "1933": N("Klaipėda", "Клайпеда", "Клайпеда") },
+  Uzhhorod: { "1933": N("Užhorod", "Ужгород", "Ужгород") },
+  Kirov: { "1933": N("Vyatka", "Вятка", "Вятка") },
+  Tbilisi: { "1933": N("Tiflis", "Тифлис", "Тифліс") },
+  Vladikavkaz: { "1933": N("Ordzhonikidze", "Орджоникидзе", "Орджонікідзе") },
+  Jakarta: { "1973": N("Jakarta", "Джакарта", "Джакарта"), "1979": N("Jakarta", "Джакарта", "Джакарта") },
+  Kinshasa: { "1973": N("Kinshasa", "Киншаса", "Кіншаса"), "1979": N("Kinshasa", "Киншаса", "Кіншаса") },
+  Kisangani: { "1973": N("Kisangani", "Кисангани", "Кісангані"), "1979": N("Kisangani", "Кисангани", "Кісангані") },
+  Lubumbashi: { "1973": N("Lubumbashi", "Лубумбаши", "Лубумбаші"), "1979": N("Lubumbashi", "Лубумбаши", "Лубумбаші") },
+  Maputo: { "1979": N("Maputo", "Мапуту", "Мапуту") },
+  "Ho Chi Minh City": { "1979": N("Ho Chi Minh City", "Хошимин", "Хошимін") },
+  Beijing: { "1979": N("Beijing", "Пекин", "Пекін") },
+  Guangzhou: { "1979": N("Guangzhou", "Гуанчжоу", "Гуанчжоу") },
+};
+
+/** The date whose names a date has where it has none of its own: Stalingrad, Stanislav and Akmolinsk were renamed after 1957; 1933 is 1939 but a few, 1973 and 1979 are 1964 but a few. */
+const FALLBACK: Partial<Record<ScenarioId, ScenarioId>> = { "1933": "1939", "1957": "1950", "1973": "1964", "1979": "1964" };
+
+/** A city's name of a date. */
+function historicalName(city: string, era: ScenarioId): Names | undefined {
+  const later = LATER_NAMES[city]?.[era];
+  if (later) return later.en === city ? undefined : later;
+  const names = HISTORICAL_NAMES[city];
+  const fallback = FALLBACK[era];
+  return names?.[era] ?? (fallback ? names?.[fallback] : undefined);
+}
 
 /** Cities that did not exist yet, or were villages, before a year. */
 const FOUNDED: Record<string, number> = {
@@ -128,12 +166,40 @@ const FOUNDED: Record<string, number> = {
   Dodoma: 1973,
   Lilongwe: 1965,
   Gdynia: 1926,
+  // The gas towns of the Yamal north, built from nothing.
+  "Novy Urengoy": 1975,
+  Noyabrsk: 1976,
+  Nadym: 1972,
+};
+
+/**
+ * People where Natural Earth's series is wrong or missing, thousands: the
+ * censuses of 1989 and 2021 (Novy Urengoy is the Yamal-Nenets okrug's
+ * largest city, Noyabrsk second).
+ */
+const CENSUS: Record<string, Partial<Pick<CityRecord, "p50" | "p90" | "p20">>> = {
+  "Novy Urengoy": { p90: 94, p20: 108 },
+  Noyabrsk: { p90: 86, p20: 107 },
 };
 
 /** Places that matter on a start date whatever their size: flashpoints of the scenario. */
 const NOTABLE: Record<string, ScenarioId[]> = {
   Sarajevo: ["1914", "1999"],
-  Sevastopol: ["1914", "1939", "1950", "1964", "1991", "1999", "2014", "2022"],
+  Sevastopol: ["1914", "1933", "1939", "1950", "1957", "1964", "1973", "1979", "1991", "1999", "2014", "2022"],
+  Algiers: ["1957"],
+  Damascus: ["1957", "1973"],
+  Qinhuangdao: ["1933"],
+  Saarbrücken: ["1933"],
+  Gdańsk: ["1933", "1991", "2022"],
+  Leticia: ["1933"],
+  Suez: ["1973"],
+  Ismailia: ["1973"],
+  Quneitra: ["1973"],
+  "Tel Aviv": ["1973"],
+  "Phnom Penh": ["1973", "1979"],
+  Herat: ["1979"],
+  Kandahar: ["1979"],
+  Tehran: ["1979"],
   Busan: ["1950"],
   Incheon: ["1950"],
   Daegu: ["1950"],
@@ -151,15 +217,24 @@ const NOTABLE: Record<string, ScenarioId[]> = {
   Narvik: ["1939"],
   Tobruk: ["1939"],
   Kaunas: ["1939"],
-  Gdańsk: ["1991", "2022"],
   Lviv: ["1991", "2014", "2022"],
   Kharkiv: ["1914", "1939", "1991", "2014", "2022"],
 };
 
-const START_YEAR: Record<ScenarioId, number> = { "1914": 1914, "1939": 1939, "1950": 1950, "1964": 1964, "1991": 1991, "1999": 1999, "2014": 2014, "2022": 2022 };
+const START_YEAR: Record<ScenarioId, number> = {
+  "1914": 1914, "1933": 1933, "1939": 1939, "1950": 1950, "1957": 1957, "1964": 1964, "1973": 1973, "1979": 1979, "1991": 1991, "1999": 1999, "2014": 2014, "2022": 2022,
+};
 
-/** National capitals on each start date (Natural Earth names); 1991, 1999 and later use today's, corrected. */
+/** National capitals on each start date (Natural Earth names); 1973 and later use today's, corrected. */
 const CAPITALS: Partial<Record<ScenarioId, string[]>> = {
+  // January 1933: Nanjing is the Nationalists' capital, Changchun (Hsinking) Manchukuo's, Kaunas Lithuania's; Vienna, Prague, Tirana and Addis Ababa stand.
+  "1933": [
+    "London", "Paris", "Berlin", "Moscow", "Rome", "Warsaw", "Prague", "Vienna", "Tokyo", "Washington", "Nanjing", "Changchun", "Madrid",
+    "Budapest", "Bucharest", "Helsinki", "Ankara", "Belgrade", "Athens", "Tirana", "Amsterdam", "Brussels", "Stockholm", "Oslo", "Copenhagen",
+    "Bern", "Lisbon", "Kaunas", "Riga", "Tallinn", "Sofia", "Dublin", "Ottawa", "Canberra", "Pretoria", "Wellington", "Rio de Janeiro",
+    "Buenos Aires", "Mexico City", "Ulaanbaatar", "Tehran", "Baghdad", "Cairo", "Riyadh", "Sanaa", "Bangkok", "Kabul", "Addis Ababa",
+    "Luxembourg", "Havana", "Lima", "Santiago", "Bogotá", "Caracas", "Montevideo", "Asunción", "Quito", "Monrovia",
+  ],
   "1914": [
     "London", "Paris", "Berlin", "Saint Petersburg", "Vienna", "Rome", "Istanbul", "Belgrade", "Washington", "Tokyo", "Madrid",
     "Lisbon", "Brussels", "Amsterdam", "Stockholm", "Oslo", "Copenhagen", "Bern", "Bucharest", "Sofia", "Athens", "Beijing",
@@ -184,6 +259,17 @@ const CAPITALS: Partial<Record<ScenarioId, string[]>> = {
     "Baghdad", "Damascus", "Beirut", "Amman", "Jerusalem", "Riyadh", "Sanaa", "Cairo", "Addis Ababa", "Monrovia", "Pretoria", "Canberra",
     "Wellington", "Manila", "Jakarta",
   ],
+  // October 1957: Tunis, Rabat, Khartoum, Tripoli, Accra and Kuala Lumpur newly sovereign, Hanoi the North's; Lhasa is China's.
+  "1957": [
+    "London", "Paris", "Berlin", "Moscow", "Rome", "Warsaw", "Prague", "Budapest", "Bucharest", "Sofia", "Belgrade", "Tirana", "Athens",
+    "Ankara", "Vienna", "Bern", "Brussels", "Amsterdam", "Luxembourg", "Copenhagen", "Oslo", "Stockholm", "Helsinki", "Reykjavík", "Dublin",
+    "Lisbon", "Madrid", "Washington", "Ottawa", "Mexico City", "Havana", "Guatemala City", "San Salvador", "Tegucigalpa", "Managua",
+    "San José", "Panama City", "Bogotá", "Caracas", "Quito", "Lima", "La Paz", "Santiago", "Buenos Aires", "Montevideo", "Asunción",
+    "Rio de Janeiro", "Port-au-Prince", "Santo Domingo", "Tokyo", "Seoul", "Pyongyang", "Beijing", "Taipei", "Ulaanbaatar", "Hanoi",
+    "Ho Chi Minh City", "Phnom Penh", "Vientiane", "Bangkok", "Yangon", "Kuala Lumpur", "Jakarta", "Manila", "New Delhi", "Karachi",
+    "Colombo", "Kathmandu", "Kabul", "Tehran", "Baghdad", "Damascus", "Beirut", "Amman", "Jerusalem", "Riyadh", "Sanaa", "Cairo",
+    "Khartoum", "Tripoli", "Tunis", "Rabat", "Accra", "Addis Ababa", "Monrovia", "Pretoria", "Canberra", "Wellington",
+  ],
   "1964": [
     "London", "Paris", "Berlin", "Moscow", "Rome", "Warsaw", "Prague", "Budapest", "Bucharest", "Sofia", "Belgrade", "Tirana", "Athens",
     "Ankara", "Vienna", "Bern", "Brussels", "Amsterdam", "Luxembourg", "Copenhagen", "Oslo", "Stockholm", "Helsinki", "Reykjavík", "Dublin",
@@ -201,6 +287,25 @@ const CAPITALS: Partial<Record<ScenarioId, string[]>> = {
 
 /** On the dates that use today's capitals: the countries whose capital was not yet a national one, and the capitals of the day instead. */
 const TODAY_CAPITALS: Partial<Record<ScenarioId, { not: Set<string>; extra: string[] }>> = {
+  // October 1973: the Soviet and Yugoslav republics, Portugal's colonies, Namibia and the last British islands not yet sovereign; Saigon and Aden capitals.
+  "1973": {
+    not: new Set([
+      "UKR", "BLR", "LTU", "LVA", "EST", "MDA", "GEO", "ARM", "AZE", "KAZ", "UZB", "TKM", "KGZ", "TJK",
+      "SVN", "HRV", "BIH", "MKD", "MNE", "KOS", "SVK", "ERI", "SDS", "TLS", "NAM", "AGO", "MOZ", "GNB", "CPV", "STP", "COM", "DJI",
+      "SUR", "PNG", "SLB", "VUT", "KIR", "TUV", "SYC", "DMA", "LCA", "VCT", "ATG", "KNA", "BLZ", "BRN", "GRD", "PSX",
+      "NGA", "MMR", "TZA", "CIV", "MWI", "LKA",
+    ]),
+    extra: ["Lagos", "Yangon", "Dar es Salaam", "Abidjan", "Zomba", "Colombo", "Ho Chi Minh City", "Aden"],
+  },
+  // December 1979: Portugal's colonies, the Comoros, Djibouti, Suriname and Papua New Guinea free; Saigon no longer a capital.
+  "1979": {
+    not: new Set([
+      "UKR", "BLR", "LTU", "LVA", "EST", "MDA", "GEO", "ARM", "AZE", "KAZ", "UZB", "TKM", "KGZ", "TJK",
+      "SVN", "HRV", "BIH", "MKD", "MNE", "KOS", "SVK", "ERI", "SDS", "TLS", "NAM", "VUT", "ATG", "KNA", "BLZ", "BRN", "PSX",
+      "NGA", "MMR", "TZA", "CIV", "LKA",
+    ]),
+    extra: ["Lagos", "Yangon", "Dar es Salaam", "Abidjan", "Colombo", "Aden"],
+  },
   "1991": {
     not: new Set([
       "UKR", "BLR", "LTU", "LVA", "EST", "MDA", "GEO", "ARM", "AZE", "KAZ", "UZB", "TKM", "KGZ", "TJK",
@@ -212,11 +317,17 @@ const TODAY_CAPITALS: Partial<Record<ScenarioId, { not: Set<string>; extra: stri
 };
 
 /** Population on the start date in thousands: the series where it exists, between its years where the date falls between them, else today's scaled back. */
-function eraPopulation(c: CityRecord, era: ScenarioId): number {
+function eraPopulation(record: CityRecord, era: ScenarioId): number {
+  const c = CENSUS[record.n] ? { ...record, ...CENSUS[record.n] } : record;
   if (era === "2022" || era === "2014") return c.p20;
   if (era === "1999") return c.p90 && c.p20 ? c.p90 * (c.p20 / c.p90) ** 0.3 : c.p20 * 0.85;
   if (era === "1991") return c.p90 || c.p20 * 0.65;
+  // 1973 and 1979 lie between the series' 1950 and 1990, by their years.
+  if (era === "1979") return c.p50 && c.p90 ? c.p50 * (c.p90 / c.p50) ** 0.725 : c.p90 ? c.p90 * 0.85 : c.p20 * 0.55;
+  if (era === "1973") return c.p50 && c.p90 ? c.p50 * (c.p90 / c.p50) ** 0.575 : c.p90 ? c.p90 * 0.75 : c.p20 * 0.5;
+  if (era === "1933") return c.p50 ? c.p50 * 0.72 : c.p20 * 0.27;
   if (era === "1964") return c.p50 && c.p90 ? c.p50 * (c.p90 / c.p50) ** 0.35 : c.p90 ? c.p90 * 0.6 : c.p20 * 0.4;
+  if (era === "1957") return c.p50 && c.p90 ? c.p50 * (c.p90 / c.p50) ** 0.17 : c.p50 || c.p20 * 0.35;
   if (era === "1950") return c.p50 || c.p20 * 0.3;
   return c.p50 ? c.p50 * (era === "1914" ? 0.55 : 0.8) : c.p20 * (era === "1914" ? 0.2 : 0.3);
 }
@@ -242,7 +353,7 @@ const priorityOf = (kind: CityKind, pop: number, notable: boolean) => (kind === 
 
 /** A city's name on a scenario's map: proclaimed in play, else the era's, else today's. */
 export function cityNameIn(c: CityRecord, era: ScenarioId, locale: Locale, renamed: Record<string, Localized> = {}): string {
-  const historical = HISTORICAL_NAMES[c.n]?.[era];
+  const historical = historicalName(c.n, era);
   return renamed[c.n] ? renamed[c.n][locale] : historical ? historical[locale] : locale === "ru" ? (c.ru ?? c.n) : locale === "uk" ? (c.uk ?? c.n) : c.n;
 }
 
@@ -262,7 +373,7 @@ export function eraCities(cities: CityRecord[], era: ScenarioId, locale: Locale,
   const out: EraCity[] = [];
   for (const c of cities) {
     if ((FOUNDED[c.n] ?? 0) > year) continue;
-    const historical = HISTORICAL_NAMES[c.n]?.[era];
+    const historical = historicalName(c.n, era);
     // A city renamed in this era, or a flashpoint of it, is shown early whatever its size.
     const notable = Boolean(historical) || Boolean(NOTABLE[c.n]?.includes(era));
     const pop = eraPopulation(c, era);
@@ -279,7 +390,7 @@ export function eraCities(cities: CityRecord[], era: ScenarioId, locale: Locale,
  * on earlier dates a town counts as a fraction of it, like the cities do.
  */
 /** What a town of today counted on each date. */
-const TOWN_SCALE: Record<ScenarioId, number> = { "1914": 0.25, "1939": 0.35, "1950": 0.38, "1964": 0.5, "1991": 0.7, "1999": 0.8, "2014": 1, "2022": 1 };
+const TOWN_SCALE: Record<ScenarioId, number> = { "1914": 0.25, "1933": 0.32, "1939": 0.35, "1950": 0.38, "1957": 0.44, "1964": 0.5, "1973": 0.58, "1979": 0.63, "1991": 0.7, "1999": 0.8, "2014": 1, "2022": 1 };
 
 export function eraTowns(towns: TownRecord[], era: ScenarioId, locale: Locale): EraCity[] {
   const scale = TOWN_SCALE[era];
@@ -291,4 +402,34 @@ export function eraTowns(towns: TownRecord[], era: ScenarioId, locale: Locale): 
     const name = locale === "ru" ? ru || n : locale === "uk" ? uk || n : n;
     return { name, key: n, x, y, kind, minZoom, pop, priority: pop + (seat ? 20 : 0) };
   });
+}
+
+/**
+ * The biggest city standing in a province on the start date: the era's
+ * cities inside its outline, by their people then, with the name it had (or
+ * was given in play). None when no city of cities.json stands there.
+ */
+export function largestCityIn(cities: CityRecord[], outline: GeoPermissibleObjects, era: ScenarioId, locale: Locale, renamed: Record<string, Localized> = {}): EraCity | undefined {
+  const [[w, s], [e, n]] = geoBounds(outline);
+  // A province across the antimeridian wraps round.
+  const across = w > e;
+  let best: EraCity | undefined;
+  for (const c of eraCities(cities, era, locale, renamed)) {
+    if (c.y < s || c.y > n || (across ? c.x < w && c.x > e : c.x < w || c.x > e)) continue;
+    if ((!best || c.pop > best.pop) && geoContains(outline, [c.x, c.y])) best = c;
+  }
+  return best;
+}
+
+/** A city the map file names, in the locale and as it was called on the date: the one of that name nearest the province. */
+export function cityNamed(cities: CityRecord[], name: string, near: [number, number], era: ScenarioId, locale: Locale, renamed: Record<string, Localized> = {}): string {
+  let best: CityRecord | undefined;
+  let gap = Infinity;
+  for (const c of cities) {
+    if (c.n !== name) continue;
+    const d = geoDistance([c.x, c.y], near);
+    if (d < gap) [best, gap] = [c, d];
+  }
+  // Farther than about 600 km it is another place of the same name.
+  return best && gap < 0.1 ? cityNameIn(best, era, locale, renamed) : name;
 }

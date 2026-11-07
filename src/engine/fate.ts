@@ -16,7 +16,9 @@ import {
   toppleChance,
   type FigureChange,
 } from "./figures";
+import { describeHomeSight } from "./official";
 import { dressOfficial, knownById, leaderOf, personFor, samePerson } from "./people";
+import { applyProposals, castProposals, describeProposals } from "./remit";
 import { castRepression, describeRole, goAbroad, openRegime, regimeNow, roleOf, startingMovement } from "./role";
 import { FALL_UNREST } from "./unrest";
 import type { AppliedChange, DeathCause, Fall, FallHow, GameState, Movement, Person, PlayerRole } from "./types";
@@ -40,6 +42,8 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 export interface Fate {
   /** A minister's or a general's orders: which the government accepts. */
   approvals: boolean[];
+  /** A minister's or a general's proposals beyond their post: which the leader takes up (engine/remit.ts). */
+  proposals: boolean[];
   death?: DeathCause;
   /** The player resigns this turn, as they asked. */
   resigned: boolean;
@@ -50,7 +54,7 @@ export interface Fate {
   coup: boolean;
 }
 
-const NO_FATE: Fate = { approvals: [], resigned: false, topple: false, dismissed: false, coup: false };
+const NO_FATE: Fate = { approvals: [], proposals: [], resigned: false, topple: false, dismissed: false, coup: false };
 
 /** The person a role is about: the player's own, or for a leader the one who leads the country now. */
 export function playerPerson(state: GameState): (Person & { title?: string }) | undefined {
@@ -137,6 +141,7 @@ export function castFate(state: GameState, orders: string[]): Fate {
   const resigned = !death && Boolean(role.resigning);
   return {
     approvals: castApprovals(state, orders),
+    proposals: castProposals(state),
     ...(death ? { death } : {}),
     resigned,
     topple: resigned && role.kind === "minister" && happens(toppleChance(state), state.seed ?? state.id, state.turn, "topple"),
@@ -175,7 +180,13 @@ export function describeFate(state: GameState, fate: Fate): string[] {
 /** The prompt's lines on who the player is when they do not govern, and what the dice decided for them and their movement. */
 export function describePerson(state: GameState, orders: string[]): string[] {
   const fate = castFate(state, orders);
-  const lines = [...describeRole(state, castRepression(state)).filter(Boolean), ...describeFigure(state, orders, fate.approvals, fate.coup), ...describeFate(state, fate)];
+  const lines = [
+    ...describeRole(state, castRepression(state)).filter(Boolean),
+    ...describeFigure(state, orders, fate.approvals, fate.coup),
+    ...describeProposals(state, fate.proposals),
+    ...describeHomeSight(state),
+    ...describeFate(state, fate),
+  ];
   return lines.length ? [...lines, ""] : [];
 }
 
@@ -191,12 +202,13 @@ function vacatePost(next: GameState, role: PlayerRole, successor: string | undef
 }
 
 /** The person falls from a role that does not govern: the role waits on the player's choice. In place. */
-function fallFrom(next: GameState, how: FallHow, cause: DeathCause | undefined, successor: string | undefined, ctx: { turn: number; to: string }, applied: AppliedChange[]): void {
+export function fallFrom(next: GameState, how: FallHow, cause: DeathCause | undefined, successor: string | undefined, ctx: { turn: number; to: string }, applied: AppliedChange[]): void {
   const role = next.role!;
   vacatePost(next, role, successor, ctx.to);
   const fall: Fall = { how, from: role.kind, date: ctx.to, turn: ctx.turn, ...(cause ? { cause } : {}), ...(successor ? { successor } : {}) };
   const kept: PlayerRole = { ...role, fall };
   delete kept.resigning;
+  delete kept.proposals;
   next.role = kept;
   applied.push({ kind: "fate", event: how, role: role.kind, name: role.person?.name ?? "", ...(cause ? { cause } : {}) });
 }
@@ -244,6 +256,7 @@ export function applyFate(state: GameState, next: GameState, change: FigureChang
     // The government the player served was overthrown by others, or a minister's party lost the government: its people go with it.
     if (applied.some((c) => c.kind === "overthrown") || (before === "minister" && rulingPartyFell(state, next))) return fallFrom(next, "dismissed", undefined, successor, ctx, applied);
     applyFigureStanding(next, change, fate.approvals, ctx, applied);
+    applyProposals(next, fate.proposals, applied);
     if (fate.death) return fallFrom(next, "died", fate.death, successor, ctx, applied);
     if (fate.resigned) {
       if (fate.topple) return figureTakesOffice(next, "cabinet", undefined, ctx.to, applied);

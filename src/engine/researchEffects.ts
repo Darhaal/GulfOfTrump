@@ -71,8 +71,7 @@ export function populationBonus(state: ResearchState): number {
   return clamp(0.02 * aheadOf(state, "medicine"), -0.1, 0.2);
 }
 
-/** Points added to what the government knows of other countries: signals, computers and, early, satellites. */
+/** Points added to what the government knows of other countries: signals and computers (satellites in orbit are the space programme's: engine/space.ts). */
 export function intelligenceBonus(state: ResearchState): number {
-  const satellites = techYear(state, "strategic") >= 1957 && yearFraction(state.date) < 1957 ? 5 : 0;
-  return Math.round(clamp(aheadOf(state, "communications"), -5, 10)) + satellites;
+  return Math.round(clamp(aheadOf(state, "communications"), -5, 10));
 }

@@ -10,6 +10,7 @@ import type { AdvisorId } from "@/engine/advisors";
 import { activeIntrigue, agreePrice, approachDeputy, cannotApproach, deputiesOf, dropIntrigue, type ApproachAnswer } from "@/engine/deputies";
 import { ADVISOR_POST, officialAt } from "@/engine/government";
 import { agendaOf } from "@/engine/interests";
+import { speechOf } from "@/engine/speech";
 import { INTRIGUE_GOALS, type GameState, type Intrigue, type IntrigueGoal, type IntriguePrice, type Official } from "@/engine/types";
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
@@ -43,7 +44,7 @@ const STAGE_TONE: Record<Intrigue["stage"], string> = { active: "text-accent", d
  * deputy out, agreeing a price and calling a plot off are the engine's.
  */
 export default function MinistryPeople({ state, advisor, disabled, anyBusy, onSetup, onAsk, onChange }: MinistryPeopleProps) {
-  const { t, text } = useI18n();
+  const { t, text, locale } = useI18n();
   const post = ADVISOR_POST[advisor];
   const chief = officialAt(state, post);
   const deputies = deputiesOf(state, post);
@@ -72,6 +73,7 @@ export default function MinistryPeople({ state, advisor, disabled, anyBusy, onSe
     );
 
   const d = deputy!;
+  const voice = speechOf(state, d.name, locale);
   const thread = state.deputyAdvice?.[d.id] ?? [];
   const going = activeIntrigue(state, d.id);
   const why = cannotApproach(state, d.id, goal, goal === "sabotage" ? directive : undefined);
@@ -115,6 +117,12 @@ export default function MinistryPeople({ state, advisor, disabled, anyBusy, onSe
             <Traits traits={d.traits} />
           </div>
         )}
+        {/* How the deputy speaks: their manner and, once written, the pet phrases of their speech profile (engine/speech.ts). */}
+        {(d.manner || voice?.phrases.length) && (
+          <div className="mt-1 text-2xs font-medium text-muted" title={[voice?.register, voice?.argues, voice?.avoids && t("cabinet.voice.avoids", { what: voice.avoids })].filter(Boolean).join(" · ") || undefined}>
+            {[d.manner, voice?.phrases.map((p) => `«${p}»`).join(" · ")].filter(Boolean).join(" – ")}
+          </div>
+        )}
         <div className="mt-1.5 flex flex-wrap gap-3">
           <Pips value={d.competence} label={t("gov.competence")} />
           <Pips value={d.loyalty} label={t("gov.loyalty")} />
@@ -148,9 +156,9 @@ export default function MinistryPeople({ state, advisor, disabled, anyBusy, onSe
             {thread.map((m, i) => (
               <div key={i} className={`max-w-[92%] rounded-2xl px-3.5 py-2.5 text-sm ${m.from === "player" ? "ml-auto rounded-br-md bg-ink text-on-ink" : "rounded-bl-md border border-line sheet text-ink"}`}>
                 <div className={`mb-1 flex items-center gap-2 text-2xs font-black uppercase tracking-widest ${m.from === "player" ? "text-on-ink/60" : "text-muted"}`}>
-                  {m.from === "player" ? t("diplomacy.you") : name}
+                  {m.from === "player" ? t("diplomacy.you") : (m.by ?? name)}
                   <span className="font-medium normal-case tracking-normal tabular-nums">{m.date}</span>
-                  {m.from !== "player" && <SpeakButton id={`deputy-${d.id}-${i}`} text={m.text} className="-my-1 ml-auto" />}
+                  {m.from !== "player" && <SpeakButton id={`deputy-${d.id}-${i}`} text={m.text} who={{ name: m.by ?? d.name, gender: d.gender }} className="-my-1 ml-auto" />}
                 </div>
                 <p className="whitespace-pre-wrap break-words font-medium leading-relaxed">{m.text}</p>
               </div>

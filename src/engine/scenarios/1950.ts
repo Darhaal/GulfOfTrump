@@ -2,6 +2,8 @@ import type { Scenario } from "../types";
 import { all, CZECHOSLOVAK, EAST_GERMAN, L, MODERN, seed, SOVIET, YUGOSLAV, ADEN } from "./coldwar";
 import { TERMS_1950, TREATIES_1950, withTreaties } from "./treaties";
 
+/** The Red River Delta's provinces (on the finer map), which the Viet Minh contest a third of. */
+const RED_RIVER_DELTA = ["vn-vinh-phuc", "vn-bac-ninh", "vn-hai-duong", "vn-haiphong", "vn-thai-binh", "vn-nam-inh", "vn-ninh-binh", "vn-ha-nam"];
 const COMMUNIST = L("One-party communist state", "Однопартийное коммунистическое государство", "Однопартійна комуністична держава");
 const PEOPLES_REPUBLIC = L("People's republic", "Народная республика", "Народна республіка");
 
@@ -96,20 +98,30 @@ Real history for reference: the UN Security Council condemned the invasion on 25
   },
   // The Viet Minh hold most of the north-central coast (their Interzone IV); the French keep Hue and the towns south of it.
   provinceControllers: { "vn-bac-trung-bo": "viet-minh" },
-  // The 38th parallel runs through three provinces of the map; the front starts inside them.
+  // The 38th parallel runs through three provinces of the map; the front starts inside them. In Indochina the French
+  // hold Hue and the road north of it to Quang Tri, and the Viet Minh a third of the Red River Delta's countryside.
   provinceContested: {
     "kr-gangwon": "north-korea",
     "kp-north-hwanghae": "south-korea",
     "kp-south-hwanghae": "south-korea",
-    "vn-bac-trung-bo": "vietnam",
-    "vn-ong-bang-song-hong": "viet-minh",
+    "vn-thua-thien-hue": "vietnam",
+    "vn-quang-tri": "vietnam",
+    ...all("viet-minh", RED_RIVER_DELTA),
   },
-  provinceHeld: { "kr-gangwon": 27, "kp-north-hwanghae": 31, "kp-south-hwanghae": 28, "vn-bac-trung-bo": 35, "vn-ong-bang-song-hong": 30 },
+  provinceHeld: {
+    "kr-gangwon": 27,
+    "kp-north-hwanghae": 31,
+    "kp-south-hwanghae": 28,
+    "vn-thua-thien-hue": 75,
+    "vn-quang-tri": 50,
+    ...Object.fromEntries(RED_RIVER_DELTA.map((id) => [id, 30])),
+  },
   provinceTaken: {
     "kr-gangwon": ["Sokcho", "Kosong", "Cheorwon", "Yanggu", "Hwacheon"],
     "kp-north-hwanghae": ["Kaesong"],
     "kp-south-hwanghae": ["Paech’ŏn-ŭp", "Ch’ŏngdan-ŭp", "Kangnyŏng", "Ongjin", "Yŏnan-ŭp"],
-    "vn-bac-trung-bo": ["Huế", "Phong Điền", "Quảng Trị", "Cam Lộ", "Đông Hà"],
+    "vn-thua-thien-hue": ["Huế", "Phong Điền"],
+    "vn-quang-tri": ["Quảng Trị", "Cam Lộ", "Đông Hà"],
   },
   // People in 1950 within today's borders (UN estimates, thousands); the rest at four tenths of 1991.
   people: {
@@ -198,6 +210,8 @@ Real history for reference: the UN Security Council condemned the invasion on 25
       attackers: ["china"],
       defenders: ["taiwan"],
       since: "1946-06-26",
+      // The Nationalists' rump on Taiwan: a peace leaves each what it holds.
+      civil: { of: "china", rebels: "taiwan", how: "secession", legitimacy: { government: 55, rebels: 45 } },
     },
   ],
   alliances: withTreaties(

@@ -75,7 +75,7 @@ export default function EconomyPanel({
           {t("economy.title")}
         </div>
         <div className="grid gap-1.5">
-          {row(t("economy.gdp"), figure("gdp", money), <span className={growth < 0 ? "text-red-600" : ""}>{figure("growth", pct)}</span>)}
+          {row(t("economy.gdp"), figure("gdp", money), <span className={growth < 0 ? "text-red-600" : ""}>{t("economy.perYear", { n: figure("growth", pct) })}</span>)}
           {perCapita > 0 && <div className="-mt-1 text-right text-2xs font-bold text-muted">{approx}{t("economy.perCapita", { value: `$${Math.round(perCapita).toLocaleString(locale)}` })}</div>}
           {row(t("economy.debt"), figure("debt", money), `${approx}${t("economy.debtShare", { n: debtShare })}`)}
           {row(t("economy.troops"), t("economy.people", { value: figure("troops", people) }))}

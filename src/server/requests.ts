@@ -1,8 +1,9 @@
 import "server-only";
+import { MAX_ORDERS } from "@/constants/app";
 import { parseGameState } from "@/engine/schema";
 import { LOCALES, type GameState, type Locale } from "@/engine/types";
 
-export const MAX_ORDERS = 12;
+export { MAX_ORDERS };
 export const MAX_ORDER_CHARS = 1000;
 export const MAX_MESSAGE_CHARS = 2000;
 

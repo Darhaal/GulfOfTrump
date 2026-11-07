@@ -1,14 +1,28 @@
 // Towns for the close-in map: GeoNames' places of 15,000 people and more
 // (cities15000, CC BY 4.0, https://www.geonames.org/), minus the ones
 // cities.json already holds. GeoNames lists every known name of a place
-// without saying which language it is. For the countries where Russian and
-// Ukrainian names matter most, GeoNames' per-country alternate names (tagged
-// by language) give them exactly; elsewhere they are picked from the Cyrillic
-// names by how close they sound to the English one and by the letters each
+// without saying which language it is; its per-country alternate names,
+// tagged by language, give the Russian and Ukrainian ones exactly – they are
+// downloaded for every country the towns lie in. Where a town has no tagged
+// name, Wikidata's Russian and Ukrainian labels of the item carrying its
+// GeoNames id are taken (CC0); failing those, one is picked from its Cyrillic
+// names by how close it sounds to the English one and by the letters each
 // alphabet has.
 
-/** Countries whose tagged alternate names are downloaded (ISO 3166 alpha-2). */
-export const NAMED_COUNTRIES = ["UA", "RU", "BY", "KZ", "MD", "GE", "AM", "AZ", "UZ", "TM", "KG", "TJ", "LT", "LV", "EE", "PL"];
+/** The countries (ISO 3166 alpha-2) the towns of cities15000.txt lie in, each a file of tagged alternate names. */
+export function townCountries(text) {
+  const out = new Set();
+  for (const line of text.split("\n")) {
+    const f = line.split("\t");
+    if (f.length >= 15 && /^[A-Z]{2}$/.test(f[8])) out.add(f[8]);
+  }
+  return [...out].sort();
+}
+
+/** The GeoNames ids of cities15000.txt's places: the only ones whose names are kept. */
+export function townIds(text) {
+  return new Set(text.split("\n").map((line) => line.split("\t")[0]).filter(Boolean));
+}
 
 import { inflateRawSync } from "node:zlib";
 
@@ -36,13 +50,15 @@ export function unzip(buffer, name) {
 
 /**
  * Russian and Ukrainian names by GeoNames id, from an alternateNamesV2 file:
- * preferred names first, short, colloquial and historic ones left out.
+ * preferred names first, short, colloquial and historic ones left out; with
+ * `ids`, only for those places.
  */
-export function taggedNames(text, into = new Map()) {
+export function taggedNames(text, into = new Map(), ids = null) {
   for (const line of text.split("\n")) {
     const f = line.split("\t");
     const lang = f[2];
     if ((lang !== "ru" && lang !== "uk") || f[5] === "1" || f[6] === "1" || f[7] === "1") continue;
+    if (ids && !ids.has(f[1])) continue;
     const entry = into.get(f[1]) ?? {};
     if (!entry[lang] || f[4] === "1") entry[lang] = f[3];
     into.set(f[1], entry);
@@ -95,6 +111,33 @@ export function cyrillicNames(english, alternates) {
   return { ru, uk };
 }
 
+/**
+ * Russian and Ukrainian names of places by GeoNames id from Wikidata's labels
+ * (the items that carry the GeoNames id, P1566; CC0): asked in batches,
+ * answered as SPARQL JSON. `ask` fetches one batch's answer.
+ */
+export async function wikidataLabels(ids, ask) {
+  const out = new Map();
+  const list = [...ids];
+  for (let i = 0; i < list.length; i += 400) {
+    const values = list.slice(i, i + 400).map((id) => `"${id}"`).join(" ");
+    const query = `SELECT ?gn ?ru ?uk WHERE { VALUES ?gn { ${values} } ?item wdt:P1566 ?gn . OPTIONAL { ?item rdfs:label ?ru FILTER(LANG(?ru) = "ru") } OPTIONAL { ?item rdfs:label ?uk FILTER(LANG(?uk) = "uk") } }`;
+    const answer = await ask(query, i / 400);
+    // A label may carry what tells it apart ("Бинга (город)") or a second name after a comma: the name alone.
+    const clean = (s) => s?.replace(/\s*\([^)]*\)/g, "").split(",")[0].trim();
+    for (const b of answer.results.bindings) {
+      const id = b.gn.value;
+      const entry = out.get(id) ?? {};
+      const ru = clean(b.ru?.value);
+      const uk = clean(b.uk?.value);
+      if (ru && CYRILLIC.test(ru) && !LATIN.test(ru)) entry.ru ??= ru;
+      if (uk && CYRILLIC.test(uk) && !LATIN.test(uk)) entry.uk ??= uk;
+      if (entry.ru || entry.uk) out.set(id, entry);
+    }
+  }
+  return out;
+}
+
 /** Feature codes that are not towns of their own: parts of cities, abandoned or historical places. */
 const SKIP = new Set(["PPLX", "PPLH", "PPLQ", "PPLW", "PPLCH", "STLMT"]);
 
@@ -102,9 +145,11 @@ const SKIP = new Set(["PPLX", "PPLH", "PPLQ", "PPLW", "PPLCH", "STLMT"]);
  * Towns from cities15000.txt that cities.json does not have (none of its
  * places within 0.1°): [name, x, y, population in thousands, seat (1 for a
  * provincial or district seat), Russian name, Ukrainian name] — the names
- * left out when they match the English one.
+ * left out when they match the English one. `min` and `max` bound the
+ * people: the villages of cities1000 that name the finer map's emptiest
+ * parts are the places of 1,000 to 15,000.
  */
-export function parseTowns(text, cities, tagged = new Map()) {
+export function parseTowns(text, cities, tagged = new Map(), labels = new Map(), { min = 15000, max = Infinity } = {}) {
   const grid = new Map();
   const key = (x, y) => `${Math.floor(x * 5)},${Math.floor(y * 5)}`;
   for (const c of cities) grid.set(key(c.x, c.y), [...(grid.get(key(c.x, c.y)) ?? []), c]);
@@ -121,13 +166,19 @@ export function parseTowns(text, cities, tagged = new Map()) {
     const f = line.split("\t");
     if (f.length < 15 || SKIP.has(f[7])) continue;
     const pop = Number(f[14]);
-    if (!(pop >= 15000)) continue;
+    if (!(pop >= min) || pop >= max) continue;
     const x = Math.round(Number(f[5]) * 100) / 100;
     const y = Math.round(Number(f[4]) * 100) / 100;
     if (taken(x, y)) continue;
     const name = f[1];
-    const known = tagged.get(f[0]);
-    const { ru, uk } = known ? { ru: known.ru, uk: known.uk ?? known.ru } : cyrillicNames(name, f[3] ? f[3].split(",") : []);
+    // GeoNames' own tagged names first, then Wikidata's labels of the same place, then a guess among the Cyrillic alternates;
+    // without a Ukrainian one, a Ukrainian-looking alternate, else the Russian name.
+    const known = tagged.get(f[0]) ?? {};
+    const label = labels.get(f[0]) ?? {};
+    const sure = known.ru ?? label.ru;
+    const guess = !sure || !(known.uk ?? label.uk) ? cyrillicNames(name, f[3] ? f[3].split(",") : []) : {};
+    const ru = sure ?? guess.ru;
+    const uk = known.uk ?? label.uk ?? (guess.uk && UKRAINIAN.test(guess.uk) ? guess.uk : undefined) ?? sure ?? guess.uk;
     const seat = /^PPLA[12]?$/.test(f[7]) ? 1 : 0;
     const row = [name, x, y, Math.round(pop / 1000), seat];
     if (ru || uk) row.push(ru ?? 0, uk ?? 0);

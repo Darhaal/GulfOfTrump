@@ -1,6 +1,6 @@
 import type { CountrySeed, Localized, Scenario, Stats } from "../types";
 import { TERMS_1991, TREATIES_1991, withTreaties } from "./treaties";
-import { COUNTRIES_TODAY, ISLANDS_TODAY } from "./islands";
+import { BORDERS_TODAY, COUNTRIES_TODAY, ISLANDS_TODAY } from "./islands";
 
 const SOVIET_REPUBLIC: Localized = {
   ru: "Союзная республика в составе СССР",
@@ -96,7 +96,7 @@ Real history for reference: the coup collapses on 21 August; Ukraine declares in
     "western-sahara": "morocco",
   },
   // Islands and slivers the 1994 source draws with a neighbour (islands.ts).
-  modernOwners: COUNTRIES_TODAY,
+  modernOwners: { ...BORDERS_TODAY, ...COUNTRIES_TODAY },
   provinceOwners: ISLANDS_TODAY,
   countries: {
     ussr: {

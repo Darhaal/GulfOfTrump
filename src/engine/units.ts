@@ -34,9 +34,13 @@ export const MEASURE: Record<ResourceType, "t" | "m3"> = {
  */
 export const WORLD_OUTPUT: Record<ScenarioId, Record<ResourceType, number>> = {
   "1914": { oil: 55e6, gas: 17e9, coal: 1340e6, iron: 175e6, copper: 1.0e6, gold: 700, nickel: 30e3, tin: 130e3, bauxite: 540e3, rubber: 120e3, uranium: 0 },
+  "1933": { oil: 180e6, gas: 50e9, coal: 1100e6, iron: 110e6, copper: 0.9e6, gold: 750, nickel: 22e3, tin: 100e3, bauxite: 1.6e6, rubber: 0.7e6, uranium: 0 },
   "1939": { oil: 285e6, gas: 75e9, coal: 1450e6, iron: 200e6, copper: 2.2e6, gold: 1200, nickel: 120e3, tin: 180e3, bauxite: 4.4e6, rubber: 1.0e6, uranium: 800 },
   "1950": { oil: 523e6, gas: 190e9, coal: 1820e6, iron: 250e6, copper: 2.5e6, gold: 1000, nickel: 150e3, tin: 170e3, bauxite: 8.2e6, rubber: 1.86e6, uranium: 3e3 },
+  "1957": { oil: 880e6, gas: 420e9, coal: 2250e6, iron: 420e6, copper: 3.6e6, gold: 1050, nickel: 270e3, tin: 190e3, bauxite: 21e6, rubber: 1.9e6, uranium: 25e3 },
   "1964": { oil: 1420e6, gas: 640e9, coal: 2800e6, iron: 560e6, copper: 5.0e6, gold: 1300, nickel: 400e3, tin: 190e3, bauxite: 35e6, rubber: 2.3e6, uranium: 30e3 },
+  "1973": { oil: 2600e6, gas: 1150e9, coal: 3050e6, iron: 780e6, copper: 7.0e6, gold: 1300, nickel: 650e3, tin: 240e3, bauxite: 66e6, rubber: 3.0e6, uranium: 20e3 },
+  "1979": { oil: 3050e6, gas: 1400e9, coal: 3600e6, iron: 830e6, copper: 7.6e6, gold: 1200, nickel: 680e3, tin: 240e3, bauxite: 82e6, rubber: 3.7e6, uranium: 36e3 },
   "1991": { oil: 3150e6, gas: 2050e9, coal: 4700e6, iron: 950e6, copper: 9.0e6, gold: 2150, nickel: 930e3, tin: 180e3, bauxite: 110e6, rubber: 5.2e6, uranium: 40e3 },
   "1999": { oil: 3460e6, gas: 2380e9, coal: 4300e6, iron: 1020e6, copper: 12.6e6, gold: 2570, nickel: 1.13e6, tin: 280e3, bauxite: 130e6, rubber: 6.8e6, uranium: 31e3 },
   "2014": { oil: 4130e6, gas: 3370e9, coal: 7900e6, iron: 2250e6, copper: 18.3e6, gold: 3000, nickel: 2.6e6, tin: 300e3, bauxite: 280e6, rubber: 12e6, uranium: 59.6e3 },

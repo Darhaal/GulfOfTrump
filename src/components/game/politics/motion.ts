@@ -12,5 +12,7 @@ export function useMotionLabel() {
       ? `${t(`law.${m.law}` as MessageKey)}: ${t(`law.${m.law}.${m.option}` as MessageKey)}`
       : m.text && (m.kind === "bill" || m.kind === "constitution")
         ? `${t(`politics.motion.${m.kind}` as MessageKey)}: ${m.text}`
-        : t(`politics.motion.${m.kind}` as MessageKey);
+        : m.kind === "confidence" && m.by === "opposition"
+          ? t("politics.motion.noconfidence")
+          : t(`politics.motion.${m.kind}` as MessageKey);
 }

@@ -8,11 +8,15 @@ import { RESEARCH_DIRECTIONS, type GameState, type ResearchDirection } from "@/e
 import type { MessageKey } from "@/i18n/messages";
 import { useI18n } from "@/i18n/useI18n";
 import { DIRECTION_ICONS, researchLabel, versusText } from "./armsText";
+import AtomPanel from "./AtomPanel";
+import SpacePanel from "./SpacePanel";
 
 interface SciencePanelProps {
   state: GameState;
   disabled: boolean;
   onShares: (shares: Record<ResearchDirection, number>) => void;
+  /** The space programme's share and focus, set here (engine/space.ts). */
+  onState?: (next: GameState) => void;
 }
 
 /** Points a click on a direction's stepper moves its share. */
@@ -24,7 +28,7 @@ const STEP = 5;
  * history, and what it gives now; then the breakthroughs this game has made.
  * The science minister speaks in the advisor strip above it, when asked.
  */
-export default function SciencePanel({ state, disabled, onShares }: SciencePanelProps) {
+export default function SciencePanel({ state, disabled, onShares, onState }: SciencePanelProps) {
   const i18n = useI18n();
   const { t, text, locale } = i18n;
   const view = state.research?.shares ? state : { ...state, research: startingResearch(state) };
@@ -119,7 +123,7 @@ export default function SciencePanel({ state, disabled, onShares }: SciencePanel
                   </div>
                   <div className="mt-1 text-2xs font-bold text-ink">{t("research.next", { name: text(v.next.name) })}</div>
                   <div className="text-2xs font-medium tabular-nums text-muted">
-                    {t("research.expected", { year: Math.round(v.expected!) })} · {t("research.history", { year: v.next.year })} ·{" "}
+                    {t("research.expected", { year: Math.round(v.expected!) })} · {t("research.history", { year: Math.floor(v.next.year) })} ·{" "}
                     <span className={`font-bold ${v.versus! >= 0.5 ? "text-accent" : v.versus! <= -0.5 ? "text-amber-700" : ""}`}>{versusText(v.versus!, t)}</span>
                   </div>
                 </>
@@ -150,6 +154,10 @@ export default function SciencePanel({ state, disabled, onShares }: SciencePanel
           );
         })}
       </ul>
+
+      <AtomPanel state={view} />
+
+      {onState && <SpacePanel state={state} disabled={disabled} onState={onState} />}
 
       <div>
         <span className={`${ui.label} mb-1.5 block`}>{t("research.done")}</span>

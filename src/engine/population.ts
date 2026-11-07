@@ -38,8 +38,8 @@ export type PopulationChange = z.infer<typeof populationField>[number];
 /** People in a province now, thousands. */
 export const peopleIn = (region: RegionState | undefined, map: Pick<MapRegion, "pop"> | undefined): number => region?.pop ?? map?.pop ?? 0;
 
-/** Fighting inside a province drives out this share of its people a month. */
-const FRONT_LOSS_PER_MONTH = 0.005;
+/** Fighting inside a province drives out this share of its people a month (engine/civilians.ts records them as the war's). */
+export const FRONT_LOSS_PER_MONTH = 0.005;
 /** A turn's losses for one country cannot exceed this share of its people per month, nor a quarter of them in all. */
 const MAX_LOSS_PER_MONTH = 0.04;
 const MAX_LOSS = 0.25;
@@ -63,7 +63,12 @@ export function growPopulation(regions: Record<string, RegionState>, map: Record
  * A period's losses: people driven out of contested provinces where the two
  * sides fight (a line of contact between sides at peace, an eve's, is quiet),
  * then the model's dead and refugees, limited to what a country could lose in
- * the period. Changes `regions` in place and logs the losses for the report.
+ * the period. The dead the engine already took this period (`taken`, by
+ * country: the war's civilians, engine/civilians.ts; its soldiers, takeDead;
+ * mass crimes, engine/repressions.ts; nuclear strikes, engine/atom.ts) are
+ * part of the model's deaths, not on top of them. `fighting` says whether two
+ * sides fight now – not under a truce, whose line stays quiet. Changes
+ * `regions` in place and logs the losses for the report.
  */
 export function losePopulation(
   regions: Record<string, RegionState>,
@@ -72,6 +77,7 @@ export function losePopulation(
   years: number,
   applied: AppliedChange[],
   fighting: (a: string, b: string) => boolean = () => true,
+  taken: ReadonlyMap<string, number> = new Map(),
 ): void {
   const months = years * 12;
   for (const [id, r] of Object.entries(regions)) {
@@ -92,8 +98,10 @@ export function losePopulation(
     const people = total(ids);
     if (people <= 0) continue;
     const cap = people * Math.min(MAX_LOSS, MAX_LOSS_PER_MONTH * Math.max(months, 0.25));
-    const scale = c.deaths + c.refugees > cap ? cap / (c.deaths + c.refugees) : 1;
-    const deaths = c.deaths * scale;
+    // The dead the engine took have left their provinces already: the model's figure counts them among its own.
+    const reported = Math.max(0, c.deaths - (taken.get(c.country) ?? 0));
+    const scale = reported + c.refugees > cap ? cap / (reported + c.refugees) : 1;
+    const deaths = reported * scale;
     const refugees = c.refugees * scale;
     if (deaths + refugees <= 0) continue;
     // War falls hardest where the fighting is: contested and occupied provinces count three times.
@@ -119,6 +127,26 @@ export function losePopulation(
       ...(host?.length && refugees > 0 ? { to: c.to } : {}),
       cause: c.cause,
     });
+  }
+}
+
+/**
+ * The soldiers a war killed leave their country's people once: from the
+ * provinces it owns, by their people (an army is called up from the whole
+ * country). The game master's deaths are then read net of them
+ * (losePopulation's `taken`). Changes `regions` in place.
+ */
+export function takeDead(regions: Record<string, RegionState>, map: Record<string, MapRegion>, dead: ReadonlyMap<string, number>): void {
+  if (!dead.size) return;
+  const byOwner = new Map<string, string[]>();
+  for (const [id, r] of Object.entries(regions)) if (map[id] && dead.has(r.owner)) (byOwner.get(r.owner) ?? byOwner.set(r.owner, []).get(r.owner)!).push(id);
+  for (const [tag, n] of dead) {
+    const ids = byOwner.get(tag);
+    if (!ids?.length || !(n > 0)) continue;
+    const people = ids.reduce((s, id) => s + peopleIn(regions[id], map[id]), 0);
+    if (people <= 0) continue;
+    const share = Math.min(1, n / people);
+    for (const id of ids) regions[id].pop = round(Math.max(0, peopleIn(regions[id], map[id]) * (1 - share)));
   }
 }
 

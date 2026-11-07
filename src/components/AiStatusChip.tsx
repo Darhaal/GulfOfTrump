@@ -14,7 +14,7 @@ import GameMasterChoice from "./GameMasterChoice";
  */
 export default function AiStatusChip() {
   const { t } = useI18n();
-  const { status, chatgpt, demo, canChoose } = useGameMaster();
+  const { status, chatgpt, demo, canChoose, limited } = useGameMaster();
   const [choosing, setChoosing] = useState(false);
   const ok = chatgpt || demo;
   const className = `group hidden sm:inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition-all ${
@@ -22,14 +22,15 @@ export default function AiStatusChip() {
   }`;
   const content = (
     <>
-      <span className={`h-2 w-2 rounded-full ${ok ? "bg-emerald-500" : "bg-amber-500"}`} />
+      {/* Red while the plan's usage limit stands and ChatGPT cannot answer. */}
+      <span className={`h-2 w-2 rounded-full ${limited && !demo ? "bg-war" : ok ? "bg-emerald-500" : "bg-amber-500"}`} />
       <Sparkles className="h-3.5 w-3.5" />
       {status === null ? "…" : demo ? t("demo.chip") : chatgpt ? "ChatGPT" : t("ai.notConnected")}
     </>
   );
   if (ok || !canChoose || status === null)
     return (
-      <button type="button" onClick={() => openAppDialog("settings")} className={className}>
+      <button type="button" onClick={() => openAppDialog("settings")} title={limited ? t("limit.title") : undefined} className={className}>
         {content}
       </button>
     );
